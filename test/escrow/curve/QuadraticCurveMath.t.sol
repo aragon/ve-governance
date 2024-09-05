@@ -1,38 +1,12 @@
 pragma solidity ^0.8.17;
 
-import {Test} from "forge-std/Test.sol";
 import {console2 as console} from "forge-std/console2.sol";
 
 import {QuadraticIncreasingEscrow, IVotingEscrow, IEscrowCurve} from "src/escrow/increasing/QuadraticIncreasingEscrow.sol";
 import {IVotingEscrowIncreasing, ILockedBalanceIncreasing} from "src/escrow/increasing/interfaces/IVotingEscrowIncreasing.sol";
+import {QuadraticCurveBase} from "./QuadraticCurveBase.t.sol";
 
-contract MockEscrow {
-    address public token;
-    QuadraticIncreasingEscrow public curve;
-
-    function setCurve(QuadraticIncreasingEscrow _curve) external {
-        curve = _curve;
-    }
-
-    function checkpoint(
-        uint256 _tokenId,
-        IVotingEscrow.LockedBalance memory _oldLocked,
-        IVotingEscrow.LockedBalance memory _newLocked
-    ) external {
-        return curve.checkpoint(_tokenId, _oldLocked, _newLocked);
-    }
-}
-
-contract TestLinearIncreasingCurve is Test, ILockedBalanceIncreasing {
-    QuadraticIncreasingEscrow curve;
-    MockEscrow escrow;
-
-    function setUp() public {
-        escrow = new MockEscrow();
-        curve = new QuadraticIncreasingEscrow(address(escrow));
-        escrow.setCurve(curve);
-    }
-
+contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
     function test_votingPowerComputesCorrect() public {
         /**
             Period	Result
@@ -53,8 +27,6 @@ contract TestLinearIncreasingCurve is Test, ILockedBalanceIncreasing {
         uint256 cubic = uint256(coefficients[3]);
 
         assertEq(const, amount);
-        // assertEq(const, amount);
-        // assertEq(const, amount);
         assertEq(cubic, 0);
 
         console.log("Coefficients: %st^2 + %st + %s", quadratic, linear, const);
@@ -66,6 +38,7 @@ contract TestLinearIncreasingCurve is Test, ILockedBalanceIncreasing {
             console.log("Period: %d Voting Power Raw: %s\n", i, curve.getBiasUnbound(period, 100e18));
         }
 
+        // uncomment to see the full curve
         // for (uint i; i <= 14 * 6; i++) {
         //     uint day = i * 1 days;
         //     uint week = day / 7 days;
@@ -77,19 +50,6 @@ contract TestLinearIncreasingCurve is Test, ILockedBalanceIncreasing {
         // }
     }
 
-    // tests we can write
-    // 1. Precompute a set of values for a curve and check that they are correct for amounts
-    // 100 tokens, 420.696969696969696969 tokens, 1 token
-
-    // understand at what boundary the curve starts to break down by doing a very small and very large
-    // deposit
-
-    // test the bound bias caps at the boundary
-
-    // test that the cooldown correcty  calculates
-
-    // test a checkpoint correctly saves the user point
-
     // write a new checkpoint
     function testWritesCheckpoint() public {
         uint tokenIdFirst = 1;
@@ -99,13 +59,13 @@ contract TestLinearIncreasingCurve is Test, ILockedBalanceIncreasing {
         uint start = 52 weeks;
 
         // initial conditions, no balance
-        // assertEq(curve.votingPowerAt(tokenId, 0), 0, "Balance before deposit");
+        assertEq(curve.votingPowerAt(tokenIdFirst, 0), 0, "Balance before deposit");
 
         vm.warp(start);
         vm.roll(420);
 
         // still no balance
-        // assertEq(curve.votingPowerAt(tokenId, 0), 0, "Balance before deposit");
+        assertEq(curve.votingPowerAt(tokenIdFirst, 0), 0, "Balance before deposit");
 
         escrow.checkpoint(tokenIdFirst, LockedBalance(0, 0), LockedBalance(depositFirst, 0));
         escrow.checkpoint(tokenIdSecond, LockedBalance(0, 0), LockedBalance(depositSecond, 0));
@@ -178,8 +138,4 @@ contract TestLinearIncreasingCurve is Test, ILockedBalanceIncreasing {
             "Balance incorrect after 10 years"
         );
     }
-
-    // test the fetched NFT balance from a point in time
-
-    // test that the cooldown is respected for the NFT balance
 }

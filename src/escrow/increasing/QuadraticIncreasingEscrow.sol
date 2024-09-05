@@ -1,14 +1,19 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.17;
 
-import {IVotingEscrowIncreasing as IVotingEscrow} from "./interfaces/IVotingEscrowIncreasing.sol";
+// interfaces
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IVotingEscrowIncreasing as IVotingEscrow} from "@escrow-interfaces/IVotingEscrowIncreasing.sol";
+import {IEscrowCurveIncreasing as IEscrowCurve} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
+
+// libraries
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {EpochDurationLib} from "@libs/EpochDurationLib.sol";
-import {IEscrowCurveIncreasing as IEscrowCurve} from "./interfaces/IEscrowCurveIncreasing.sol";
-import {SignedFixedPointMath} from "./SignedFixedPointMath.sol";
+import {SignedFixedPointMath} from "@libs/SignedFixedPointMathLib.sol";
+
+// contracts
+import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 import {console2 as console} from "forge-std/console2.sol";
 
@@ -128,7 +133,7 @@ contract QuadraticIncreasingEscrow is IEscrowCurve, ReentrancyGuard {
 
         int256 t = SignedFixedPointMath.toFP(timeElapsed.toInt256());
 
-        // y = ax^2 + bx + c
+        // bias = a.t^2 + b.t + c
         int256 bias = quadratic.mul(t.pow(SD2)).add(linear.mul(t)).add(const);
         // never return negative values
         // in the increasing case, this should never happen
@@ -161,7 +166,7 @@ contract QuadraticIncreasingEscrow is IEscrowCurve, ReentrancyGuard {
 
     /// @notice Returns whether the NFT is warm
     function isWarm(uint256 tokenId) public view returns (bool) {
-        uint256 _epoch = getPastUserPointIndex(tokenId, block.timestamp);
+        uint256 _epoch = _getPastUserPointIndex(tokenId, block.timestamp);
         UserPoint memory point = _userPointHistory[tokenId][_epoch];
         if (point.bias == 0) return false;
         else return _isWarm(point, block.timestamp);
@@ -180,7 +185,7 @@ contract QuadraticIncreasingEscrow is IEscrowCurve, ReentrancyGuard {
 
     /// @notice Binary search to get the user point index for a token id at or prior to a given timestamp
     /// @dev If a user point does not exist prior to the timestamp, this will return 0.
-    function getPastUserPointIndex(uint256 _tokenId, uint256 _timestamp) internal view returns (uint256) {
+    function _getPastUserPointIndex(uint256 _tokenId, uint256 _timestamp) internal view returns (uint256) {
         uint256 _userEpoch = userPointEpoch[_tokenId];
         if (_userEpoch == 0) return 0;
         // First check most recent balance
@@ -205,7 +210,7 @@ contract QuadraticIncreasingEscrow is IEscrowCurve, ReentrancyGuard {
     }
 
     function votingPowerAt(uint256 _tokenId, uint256 _t) external view returns (uint256) {
-        uint256 _epoch = getPastUserPointIndex(_tokenId, _t);
+        uint256 _epoch = _getPastUserPointIndex(_tokenId, _t);
         // epoch 0 is an empty point
         if (_epoch == 0) return 0;
         UserPoint memory lastPoint = _userPointHistory[_tokenId][_epoch];

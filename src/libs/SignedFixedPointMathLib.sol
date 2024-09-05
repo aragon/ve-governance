@@ -3,6 +3,8 @@ pragma solidity ^0.8.0;
 
 import "@solmate/utils/SignedWadMath.sol";
 
+error NegativeBase();
+
 // shared interface for fixed point math implementations.
 library SignedFixedPointMath {
     // solmate does this unchecked to save gas, easier to do this here
@@ -34,7 +36,7 @@ library SignedFixedPointMath {
     }
 
     function pow(int256 x, int256 y) internal pure returns (int256) {
-        require(x >= 0, "FixedPointMath: x < 0");
+        if (x < 0) revert NegativeBase();
         if (x == 0) return 0;
         return wadPow(x, y);
     }
