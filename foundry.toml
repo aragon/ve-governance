@@ -1,0 +1,33 @@
+# Full reference https://github.com/foundry-rs/foundry/tree/master/config
+
+[profile.default]
+auto_detect_solc = false
+bytecode_hash = "none"
+cbor_metadata = false
+fuzz = { runs = 256 }
+gas_reports = ["*"]
+libs = ["lib"]
+optimizer = true
+optimizer_runs = 10_000
+out = "out"
+script = "script"
+solc = "0.8.17"
+src = "src"
+test = "test"
+verbosity = 3
+
+[profile.ci]
+fuzz = { runs = 10_000 }
+verbosity = 4
+
+[rpc_endpoints]
+arbitrum_one = "https://arbitrum-mainnet.infura.io/v3/${API_KEY_INFURA}"
+avalanche = "https://avalanche-mainnet.infura.io/v3/${API_KEY_INFURA}"
+bnb_smart_chain = "https://bsc-dataseed.binance.org"
+gnosis_chain = "https://rpc.gnosischain.com"
+goerli = "https://goerli.infura.io/v3/${API_KEY_INFURA}"
+localhost = "http://localhost:8545"
+mainnet = "https://mainnet.infura.io/v3/${API_KEY_INFURA}"
+optimism = "https://optimism-mainnet.infura.io/v3/${API_KEY_INFURA}"
+polygon = "https://polygon-mainnet.infura.io/v3/${API_KEY_INFURA}"
+sepolia = "https://sepolia.infura.io/v3/${API_KEY_INFURA}"
