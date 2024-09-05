@@ -66,6 +66,8 @@ contract ExitQueue is IExitQueue, DaoAuthorizable {
         emit ExitQueued(_tokenId, _ticketHolder);
     }
 
+    /// @notice Exits the queue for that tokenID.
+    /// @dev The holder is not checked. This is left up to the escrow contract to manage.
     function exit(uint256 _tokenId) external {
         if (msg.sender != address(escrow)) revert OnlyEscrow();
         if (!canExit(_tokenId)) revert CannotExit();
@@ -80,8 +82,8 @@ contract ExitQueue is IExitQueue, DaoAuthorizable {
     //////////////////////////////////////////////////////////////*/
 
     /// @return true if the tokenId corresponds to a valid ticket and the cooldown period has passed
+    /// @dev If the admin chages the cooldown, this will affect all ticket holders. We may not want this.
     function canExit(uint256 _tokenId) public view returns (bool) {
-        if (cooldown == 0) return true;
         Ticket memory ticket = _queue[_tokenId];
         if (ticket.holder == address(0)) return false;
 

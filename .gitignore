@@ -22,3 +22,6 @@ lcov.info
 src/escrow/decreasing/*
 
 decreasing/*
+
+report/*
+lcov*
