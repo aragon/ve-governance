@@ -330,7 +330,7 @@ contract VotingEscrow is IVotingEscrow, ReentrancyGuard, DaoAuthorizable, ERC721
         address owner = _ownerOf(_tokenId);
         // todo: should we call queue first or second
         // todo - do we write a checkpoint here?
-        // _transferFrom(_msgSender(), address(this), _tokenId, _msgSender());
+        _transfer(_msgSender(), address(this), _tokenId);
         IExitQueue(queue).queueExit(_tokenId, owner);
     }
 

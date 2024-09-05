@@ -14,6 +14,7 @@ import {MockERC20} from "@mocks/MockERC20.sol";
 import "./helpers/OSxHelpers.sol";
 
 import {IWithdrawalQueueErrors} from "src/escrow/increasing/interfaces/IVotingEscrowIncreasing.sol";
+import {IGaugeVote} from "src/voting/ISimpleGaugeVoter.sol";
 import {VotingEscrowSetup, VotingEscrow, QuadraticIncreasingEscrow, ExitQueue} from "src/escrow/increasing/VotingEscrowSetup.sol";
 import {SimpleGaugeVoter, SimpleGaugeVoterSetup} from "src/voting/SimpleGaugeVoterSetup.sol";
 
@@ -32,7 +33,7 @@ import {SimpleGaugeVoter, SimpleGaugeVoterSetup} from "src/voting/SimpleGaugeVot
  * - Queue a withdraw
  * - Withdraw
  */
-contract TestE2E is Test, IWithdrawalQueueErrors {
+contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote {
     MultisigSetup multisigSetup;
     VotingEscrowSetup veSetup;
     SimpleGaugeVoterSetup voterSetup;
@@ -141,17 +142,13 @@ contract TestE2E is Test, IWithdrawalQueueErrors {
     }
 
     function _vote() internal {
-        address[] memory targets = new address[](2);
-        uint256[] memory weights = new uint256[](2);
-        targets[0] = gaugeTheFirst;
-        targets[1] = gaugeTheSecond;
-
-        weights[0] = 25;
-        weights[1] = 75;
+        GaugeVote[] memory votes = new GaugeVote[](2);
+        votes[0] = GaugeVote({gauge: gaugeTheFirst, weight: 25});
+        votes[1] = GaugeVote({gauge: gaugeTheSecond, weight: 75});
 
         vm.startPrank(user);
         {
-            voter.vote(tokenId, targets, weights);
+            voter.vote(tokenId, votes);
         }
         vm.stopPrank();
 
@@ -160,8 +157,8 @@ contract TestE2E is Test, IWithdrawalQueueErrors {
         uint expectedFirst = (6 * DEPOSIT) / 4;
         uint expectedSecond = (6 * DEPOSIT) - expectedFirst;
 
-        assertEq(voter.weights(gaugeTheFirst), expectedFirst, "First gauge weight incorrect");
-        assertEq(voter.weights(gaugeTheSecond), expectedSecond, "Second gauge weight incorrect");
+        assertEq(voter.totalWeights(gaugeTheFirst), expectedFirst, "First gauge weight incorrect");
+        assertEq(voter.totalWeights(gaugeTheSecond), expectedSecond, "Second gauge weight incorrect");
     }
 
     function _createGaugesActivateVoting() internal {
@@ -171,14 +168,14 @@ contract TestE2E is Test, IWithdrawalQueueErrors {
         actions[0] = IDAO.Action({
             to: address(voter),
             value: 0,
-            data: abi.encodeWithSelector(voter.createGaugeWithMetadata.selector, gaugeTheFirst, "First Gauge")
+            data: abi.encodeWithSelector(voter.createGauge.selector, gaugeTheFirst, "First Gauge")
         });
 
         // action 1: create the second gauge
         actions[1] = IDAO.Action({
             to: address(voter),
             value: 0,
-            data: abi.encodeWithSelector(voter.createGaugeWithMetadata.selector, gaugeTheSecond, "Second Gauge")
+            data: abi.encodeWithSelector(voter.createGauge.selector, gaugeTheSecond, "Second Gauge")
         });
 
         // action 2: activate the voting
