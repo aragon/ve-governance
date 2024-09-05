@@ -14,5 +14,5 @@ url = https://github.com/aragon/osx
 path = lib/openzeppelin-contracts-upgradeable
 url = https://github.com/Openzeppelin/openzeppelin-contracts-upgradeable
 [submodule "lib/solmate"]
-path = lib/solmate
-url = https://github.com/transmissions11/solmate
+	path = lib/solmate
+	url = https://github.com/transmissions11/solmate
