@@ -2,10 +2,10 @@
 pragma solidity ^0.8.17;
 
 // token interfaces
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {IERC721, ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import {IERC721Metadata} from "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
-import {ERC721Enumerable} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import {IERC721Upgradeable as IERC721, ERC721Upgradeable as ERC721} from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
+import {IERC721MetadataUpgradeable as IERC721Metadata} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/IERC721MetadataUpgradeable.sol";
+import {ERC721EnumerableUpgradeable as ERC721Enumerable} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 
 // veGovernance
 import {IEscrowCurveIncreasing as IEscrowCurve} from "./interfaces/IEscrowCurveIncreasing.sol";
@@ -15,18 +15,19 @@ import {ISimpleGaugeVoter} from "../../voting/ISimpleGaugeVoter.sol";
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 
 // libraries
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import {SafeCastUpgradeable as SafeCast} from "@openzeppelin/contracts-upgradeable/utils/math/SafeCastUpgradeable.sol";
 import {EpochDurationLib} from "@libs/EpochDurationLib.sol";
 
 // parents
-import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import {DaoAuthorizable} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizable.sol";
+import {ReentrancyGuardUpgradeable as ReentrancyGuard} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import {PausableUpgradeable as Pausable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
 
 // tools - delete
 import {console2 as console} from "forge-std/console2.sol";
 
-contract VotingEscrow is IVotingEscrow, ReentrancyGuard, DaoAuthorizable, ERC721Enumerable {
+contract VotingEscrow is IVotingEscrow, ReentrancyGuard, Pausable, DaoAuthorizable, ERC721Enumerable {
     using SafeERC20 for IERC20;
     using SafeCast for uint256;
 
@@ -35,15 +36,15 @@ contract VotingEscrow is IVotingEscrow, ReentrancyGuard, DaoAuthorizable, ERC721
     /// @notice Role required to manage the Escrow curve, this typically will be the DAO
     bytes32 public constant ESCROW_ADMIN_ROLE = keccak256("ESCROW_ADMIN");
 
+    /// @notice Role required to pause the contract - can be given to emergency contracts
+    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+
     /*//////////////////////////////////////////////////////////////
                               NFT Data
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Decimals of the NFT contract
     uint8 public constant decimals = 18;
-
-    /// @notice The current version of the contract
-    string public version = "1.0.0";
 
     /// @notice Autoincrementing ID of each new NFT minted
     /// @dev add to the mint function
@@ -84,10 +85,14 @@ contract VotingEscrow is IVotingEscrow, ReentrancyGuard, DaoAuthorizable, ERC721
     /// @dev tokenId => block number of ownership change
     /// Used to prevent flash NFT explots by restricting same block actions
     /// todo check this
-    // mapping(uint256 => uint256) internal ownershipChange;
+    mapping(uint256 => uint256) internal ownershipChange;
 
     /// @dev tracks the locked balance of each NFT
     mapping(uint256 => LockedBalance) internal _locked;
+
+    /// @dev Reserved storage space to allow for layout changes in the future.
+    /// TODO: move to the end of the contract once version is finalised
+    uint256[40] private __gap;
 
     /*//////////////////////////////////////////////////////////////
                               ERC165
@@ -95,29 +100,24 @@ contract VotingEscrow is IVotingEscrow, ReentrancyGuard, DaoAuthorizable, ERC721
 
     // / @inheritdoc IVotingEscrow
     function supportsInterface(bytes4 _interfaceId) public view override(ERC721Enumerable) returns (bool) {
-        bytes4 ERC4906_INTERFACE_ID = 0x49064906;
-        bytes4 ERC6372_INTERFACE_ID = 0xda287a1d;
-        return
-            _interfaceId == ERC4906_INTERFACE_ID ||
-            _interfaceId == ERC6372_INTERFACE_ID ||
-            super.supportsInterface(_interfaceId);
+        return super.supportsInterface(_interfaceId);
     }
 
     /*//////////////////////////////////////////////////////////////
                               Initialization
     //////////////////////////////////////////////////////////////*/
 
-    constructor(
-        address _token,
-        address _dao,
-        string memory _name,
-        string memory _symbol
-    ) DaoAuthorizable(IDAO(_dao)) ERC721(_name, _symbol) {
-        initialize(_token, _dao, _name, _symbol);
+    constructor() {
+        _disableInitializers();
     }
 
     // todo add the initializer inheritance chain
-    function initialize(address _token, address, string memory, string memory) public {
+    function initialize(address _token, address _dao, string memory _name, string memory _symbol) public initializer {
+        __DaoAuthorizableUpgradeable_init(IDAO(_dao));
+        __ReentrancyGuard_init();
+        __Pausable_init();
+        __ERC721_init(_name, _symbol);
+
         token = _token;
 
         // allow sending tokens to this contract
@@ -229,14 +229,12 @@ contract VotingEscrow is IVotingEscrow, ReentrancyGuard, DaoAuthorizable, ERC721
     function _mint(address _to, uint256 _tokenId) internal override {
         // // TODO Update voting checkpoints
         super._mint(_to, _tokenId);
-        // _checkpointDelegator(_tokenId, 0, _to);
     }
 
     /// @dev Must be called prior to updating `LockedBalance`
     function _burn(uint256 _tokenId) internal override {
         // // TODO Update voting checkpoints
         super._burn(_tokenId);
-        // _checkpointDelegator(_tokenId, 0, address(0));
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -294,7 +292,7 @@ contract VotingEscrow is IVotingEscrow, ReentrancyGuard, DaoAuthorizable, ERC721
     /// @dev Deposit `_value` tokens for `_to` and lock for `_lockDuration`
     /// @param _value Amount to deposit
     /// @param _to Address to deposit
-    function _createLock(uint256 _value, address _to) internal returns (uint256) {
+    function _createLockFor(uint256 _value, address _to) internal returns (uint256) {
         // uint256 unlockTime = ((block.timestamp + _lockDuration) / EpochDurationLib.EPOCH_DURATION) *
         //     EpochDurationLib.EPOCH_DURATION; // Locktime is rounded down to weeks
         // TODO replace with starttime
@@ -310,12 +308,12 @@ contract VotingEscrow is IVotingEscrow, ReentrancyGuard, DaoAuthorizable, ERC721
 
     // / @inheritdoc IVotingEscrow
     function createLock(uint256 _value) external nonReentrant returns (uint256) {
-        return _createLock(_value, _msgSender());
+        return _createLockFor(_value, _msgSender());
     }
 
     // / @inheritdoc IVotingEscrow
     function createLockFor(uint256 _value, address _to) external nonReentrant returns (uint256) {
-        return _createLock(_value, _to);
+        return _createLockFor(_value, _to);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -339,7 +337,6 @@ contract VotingEscrow is IVotingEscrow, ReentrancyGuard, DaoAuthorizable, ERC721
     function withdraw(uint256 _tokenId) external nonReentrant {
         address sender = _msgSender();
 
-        // todo custom error
         if (!(IExitQueue(queue).ticketHolder(_tokenId) == sender)) revert NotTicketHolder();
         if (!(IExitQueue(queue).canExit(_tokenId))) revert CannotExit();
 
