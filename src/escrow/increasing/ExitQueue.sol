@@ -9,7 +9,7 @@ import {IExitQueue} from "./interfaces/IExitQueue.sol";
 /// After a cooldown period, the ticket holder can exit the NFT.
 contract ExitQueue is IExitQueue, DaoAuthorizable {
     /// @notice role required to manage the exit queue
-    bytes32 public constant EXIT_QUEUE_MANAGER_ROLE = keccak256("EXIT_QUEUE_MANAGER");
+    bytes32 public constant QUEUE_ADMIN_ROLE = keccak256("QUEUE_ADMIN");
 
     /// @notice address of the escrow contract
     address public immutable escrow;
@@ -38,7 +38,7 @@ contract ExitQueue is IExitQueue, DaoAuthorizable {
 
     /// @notice The exit queue manager can set the cooldown period
     /// @param _cooldown time in seconds between exit and withdrawal
-    function setCooldown(uint256 _cooldown) external auth(EXIT_QUEUE_MANAGER_ROLE) {
+    function setCooldown(uint256 _cooldown) external auth(QUEUE_ADMIN_ROLE) {
         _setCooldown(_cooldown);
     }
 

@@ -16,7 +16,11 @@ contract TestExitQueue is Test, IExitQueueEvents, IExitQueueErrors {
     function setUp() public {
         dao = createTestDAO(address(this));
         queue = new ExitQueue({_escrow: address(this), _cooldown: 0, _dao: address(dao)});
-        dao.grant({_who: address(this), _where: address(queue), _permissionId: queue.EXIT_QUEUE_MANAGER_ROLE()});
+        dao.grant({
+            _who: address(this),
+            _where: address(queue),
+            _permissionId: queue.QUEUE_ADMIN_ROLE()
+        });
     }
 
     // test inital state - escrow, queue, cooldown is set in constructor + dao
@@ -43,7 +47,7 @@ contract TestExitQueue is Test, IExitQueueEvents, IExitQueueErrors {
             address(dao),
             address(queue),
             _notThis,
-            queue.EXIT_QUEUE_MANAGER_ROLE()
+            queue.QUEUE_ADMIN_ROLE()
         );
         vm.expectRevert(data);
         vm.prank(_notThis);

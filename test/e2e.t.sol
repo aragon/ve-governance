@@ -1,6 +1,7 @@
 pragma solidity ^0.8.17;
 
 import {Test} from "forge-std/Test.sol";
+import {console2 as console} from "forge-std/console2.sol";
 
 // aragon contracts
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
@@ -13,10 +14,11 @@ import {MockERC20} from "@mocks/MockERC20.sol";
 
 import "./helpers/OSxHelpers.sol";
 
+import {EpochDurationLib} from "@libs/EpochDurationLib.sol";
+import {IEscrowCurveUserStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
 import {IWithdrawalQueueErrors} from "src/escrow/increasing/interfaces/IVotingEscrowIncreasing.sol";
 import {IGaugeVote} from "src/voting/ISimpleGaugeVoter.sol";
-import {VotingEscrowSetup, VotingEscrow, QuadraticIncreasingEscrow, ExitQueue} from "src/escrow/increasing/VotingEscrowSetup.sol";
-import {SimpleGaugeVoter, SimpleGaugeVoterSetup} from "src/voting/SimpleGaugeVoterSetup.sol";
+import {VotingEscrow, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams} from "src/voting/SimpleGaugeVoterSetup.sol";
 
 /**
  * This is going to be a simple E2E test that will build the contracts on Aragon and run a deposit / withdraw flow.
@@ -33,13 +35,11 @@ import {SimpleGaugeVoter, SimpleGaugeVoterSetup} from "src/voting/SimpleGaugeVot
  * - Queue a withdraw
  * - Withdraw
  */
-contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote {
+contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserStorage {
     MultisigSetup multisigSetup;
-    VotingEscrowSetup veSetup;
     SimpleGaugeVoterSetup voterSetup;
 
     // permissions
-    PermissionLib.MultiTargetPermission[] veSetupPermissions;
     PermissionLib.MultiTargetPermission[] voterSetupPermissions;
 
     MockPluginSetupProcessor psp;
@@ -78,15 +78,15 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote {
         // new block for multisig
         vm.roll(1);
         // Define our pluginSetup contract to deploy the VE
-        _setupVeContracts();
         _setupVoterContracts();
 
         // apply the installation (nothing needed just yet)
-        _applyVeSetup();
+        _applySetup();
 
         _addLabels();
 
         // main test
+
         _makeDeposit();
         _checkBalanceOverTime();
 
@@ -158,7 +158,11 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote {
         uint expectedSecond = (6 * DEPOSIT) - expectedFirst;
 
         assertEq(voter.totalWeights(gaugeTheFirst), expectedFirst, "First gauge weight incorrect");
-        assertEq(voter.totalWeights(gaugeTheSecond), expectedSecond, "Second gauge weight incorrect");
+        assertEq(
+            voter.totalWeights(gaugeTheSecond),
+            expectedSecond,
+            "Second gauge weight incorrect"
+        );
     }
 
     function _createGaugesActivateVoting() internal {
@@ -215,7 +219,17 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote {
         vm.startPrank(user);
         {
             token.approve(address(ve), DEPOSIT);
+
+            // warp to one second before the next epoch so that warmup math is easier
+            uint expectedStart = EpochDurationLib.epochNextDeposit(block.timestamp);
+            vm.warp(expectedStart - 1);
+
+            // create the lock
             tokenId = ve.createLock(DEPOSIT);
+
+            // increase by one more second
+            // this is equivalent to use starting at precisely the cooldown
+            vm.warp(block.timestamp + 1);
 
             // check the user owns the nft
             assertEq(tokenId, 1, "Token ID should be 1");
@@ -231,12 +245,23 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote {
         uint start = block.timestamp;
         // balance now is zero but Warm up
         assertEq(curve.votingPowerAt(tokenId, 0), 0, "Balance after deposit before warmup");
-        assertEq(curve.isWarm(tokenId), false, "Not Warm up");
+        assertEq(curve.isWarm(tokenId), false, "Should not be warm after 0 seconds");
+
+        UserPoint memory point = curve.userPointHistory(tokenId, 1);
+        console.log("Point: ", point.bias, point.ts);
 
         // wait for warmup
-        vm.warp(block.timestamp + curve.WARMUP_PERIOD());
+        vm.warp(block.timestamp + curve.warmupPeriod());
         assertEq(curve.votingPowerAt(tokenId, 0), 0, "Balance after deposit before warmup");
-        assertEq(curve.isWarm(tokenId), false, "Not Warm up");
+
+        /**
+         * TODO This is working CLOSE as intended, but we are one second off
+         * because the start "jumps" one second ahead. What basically happens is that
+         * we snap to the next epoch, but we also credit the user 1 second of warmup
+         * Thus we are 1 second off the results we got before. WE need to confirm if that
+         * is intended behavior or not.
+         */
+        assertEq(curve.isWarm(tokenId), false, "Should not be warm yet");
 
         // warmup complete
         vm.warp(block.timestamp + 1);
@@ -253,13 +278,21 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote {
         vm.warp(start + curve.period());
         // python:     1428.571428571428683776
         // solmate:    1428.570120419660799763
-        assertEq(curve.votingPowerAt(tokenId, block.timestamp), 1428570120419660799763, "Balance incorrect after p1");
+        assertEq(
+            curve.votingPowerAt(tokenId, block.timestamp),
+            1428570120419660799763,
+            "Balance incorrect after p1"
+        );
 
         // warp to the final period
         // TECHNICALLY, this should finish at exactly 5 periods but
         // 30 seconds off is okay
         vm.warp(start + curve.period() * 5 + 30);
-        assertEq(curve.votingPowerAt(tokenId, block.timestamp), 6 * DEPOSIT, "Balance incorrect after p6");
+        assertEq(
+            curve.votingPowerAt(tokenId, block.timestamp),
+            6 * DEPOSIT,
+            "Balance incorrect after p6"
+        );
     }
 
     function _deployOSX() internal {
@@ -275,7 +308,10 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote {
         members[0] = deployer;
 
         // encode a 1/1 multisig that can be adjusted later
-        bytes memory data = abi.encode(members, Multisig.MultisigSettings({onlyListed: true, minApprovals: 1}));
+        bytes memory data = abi.encode(
+            members,
+            Multisig.MultisigSettings({onlyListed: true, minApprovals: 1})
+        );
 
         dao = daoFactory.createDao(_mockDAOSettings(), _mockPluginSettings(data));
 
@@ -285,55 +321,47 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote {
         multisig = Multisig(computeAddress(address(multisigSetup), 2));
     }
 
-    function _setupVeContracts() public {
+    function _setupVoterContracts() public {
         token = new MockERC20();
 
         // deploy setup
-        veSetup = new VotingEscrowSetup();
-
-        // push to the PSP
-        psp.queueSetup(address(veSetup));
-
-        // prepare the installation
-        bytes memory data = abi.encode(address(token), COOLDOWN, "Voting Escrow NFT", "veNFT");
-        (address vePluginAddress, IPluginSetup.PreparedSetupData memory vePluginPreparedSetupData) = psp
-            .prepareInstallation(address(dao), _mockPrepareInstallationParams(data));
-
-        // fetch the contracts
-        ve = VotingEscrow(vePluginAddress);
-        address[] memory helpers = vePluginPreparedSetupData.helpers;
-        curve = QuadraticIncreasingEscrow(helpers[0]);
-        queue = ExitQueue(helpers[1]);
-
-        // set the permissions
-        for (uint i = 0; i < vePluginPreparedSetupData.permissions.length; i++) {
-            veSetupPermissions.push(vePluginPreparedSetupData.permissions[i]);
-        }
-    }
-
-    function _setupVoterContracts() public {
-        // deploy setup
-        voterSetup = new SimpleGaugeVoterSetup();
+        voterSetup = new SimpleGaugeVoterSetup(
+            address(new VotingEscrow()),
+            address(new QuadraticIncreasingEscrow())
+        );
 
         // push to the PSP
         psp.queueSetup(address(voterSetup));
 
         // prepare the installation
-        bytes memory data = abi.encode(address(ve), false);
-        (address voterPluginAddress, IPluginSetup.PreparedSetupData memory voterPluginPreparedSetupData) = psp
+        bytes memory data = abi.encode(
+            ISimpleGaugeVoterSetupParams({
+                autoReset: false,
+                token: address(token),
+                veTokenName: "VE Token",
+                veTokenSymbol: "VE",
+                warmup: 3 days,
+                cooldown: 3 days
+            })
+        );
+        (address pluginAddress, IPluginSetup.PreparedSetupData memory preparedSetupData) = psp
             .prepareInstallation(address(dao), _mockPrepareInstallationParams(data));
 
         // fetch the contracts
-        voter = SimpleGaugeVoter(voterPluginAddress);
+        voter = SimpleGaugeVoter(pluginAddress);
+        address[] memory helpers = preparedSetupData.helpers;
+        curve = QuadraticIncreasingEscrow(helpers[0]);
+        queue = ExitQueue(helpers[1]);
+        ve = VotingEscrow(helpers[2]);
 
         // set the permissions
-        for (uint i = 0; i < voterPluginPreparedSetupData.permissions.length; i++) {
-            veSetupPermissions.push(voterPluginPreparedSetupData.permissions[i]);
+        for (uint i = 0; i < preparedSetupData.permissions.length; i++) {
+            voterSetupPermissions.push(preparedSetupData.permissions[i]);
         }
     }
 
     function _actions() internal view returns (IDAO.Action[] memory) {
-        IDAO.Action[] memory actions = new IDAO.Action[](5);
+        IDAO.Action[] memory actions = new IDAO.Action[](4);
 
         // action 0: apply the ve installation
         actions[0] = IDAO.Action({
@@ -341,36 +369,26 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote {
             value: 0,
             data: abi.encodeCall(
                 psp.applyInstallation,
-                (address(dao), _mockApplyInstallationParams(address(ve), veSetupPermissions))
-            )
-        });
-
-        // action 1: apply the voter installation
-        actions[1] = IDAO.Action({
-            to: address(psp),
-            value: 0,
-            data: abi.encodeCall(
-                psp.applyInstallation,
-                (address(dao), _mockApplyInstallationParams(address(voter), voterSetupPermissions))
+                (address(dao), _mockApplyInstallationParams(address(ve), voterSetupPermissions))
             )
         });
 
         // action 2: activate the curve on the ve
-        actions[2] = IDAO.Action({
+        actions[1] = IDAO.Action({
             to: address(ve),
             value: 0,
             data: abi.encodeWithSelector(ve.setCurve.selector, address(curve))
         });
 
         // action 3: activate the queue on the ve
-        actions[3] = IDAO.Action({
+        actions[2] = IDAO.Action({
             to: address(ve),
             value: 0,
             data: abi.encodeWithSelector(ve.setQueue.selector, address(queue))
         });
 
         // action 4: set the voter
-        actions[4] = IDAO.Action({
+        actions[3] = IDAO.Action({
             to: address(ve),
             value: 0,
             data: abi.encodeWithSelector(ve.setVoter.selector, address(voter))
@@ -379,8 +397,7 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote {
         return wrapGrantRevokeRoot(DAO(payable(address(dao))), address(psp), actions);
     }
 
-    function _applyVeSetup() internal {
-        // todo - nothing for now
+    function _applySetup() internal {
         IDAO.Action[] memory actions = _actions();
 
         // execute the actions

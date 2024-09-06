@@ -56,7 +56,10 @@ interface IEscrowCurveUser is IEscrowCurveUserStorage {
     /// @notice Returns the UserPoint at the passed epoch
     /// @param _tokenId The NFT to return the UserPoint for
     /// @param _loc The epoch to return the UserPoint at
-    function userPointHistory(uint256 _tokenId, uint256 _loc) external view returns (UserPoint memory);
+    function userPointHistory(
+        uint256 _tokenId,
+        uint256 _loc
+    ) external view returns (UserPoint memory);
 }
 
 /*///////////////////////////////////////////////////////////////
@@ -103,7 +106,14 @@ interface IEscrowCurveMath {
                         WARMUP CURVE
 //////////////////////////////////////////////////////////////*/
 
-interface IWarmup {
+interface IWarmupEvents {
+    event WarmupSet(uint256 warmup);
+}
+
+interface IWarmup is IWarmupEvents {
+    /// @notice Set the warmup period for the curve
+    function setWarmupPeriod(uint256 _warmup) external;
+
     /// @notice the warmup period for the curve
     function warmupPeriod() external view returns (uint256);
 

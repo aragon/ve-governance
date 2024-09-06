@@ -33,9 +33,21 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
 
         for (uint i; i <= 6; i++) {
             uint period = 2 weeks * i;
-            console.log("Period: %d Voting Power      : %s", i, curve.getBiasUnbound(period, 100e18) / 1e18);
-            console.log("Period: %d Voting Power Bound: %s", i, curve.getBias(period, 100e18) / 1e18);
-            console.log("Period: %d Voting Power Raw: %s\n", i, curve.getBiasUnbound(period, 100e18));
+            console.log(
+                "Period: %d Voting Power      : %s",
+                i,
+                curve.getBiasUnbound(period, 100e18) / 1e18
+            );
+            console.log(
+                "Period: %d Voting Power Bound: %s",
+                i,
+                curve.getBias(period, 100e18) / 1e18
+            );
+            console.log(
+                "Period: %d Voting Power Raw: %s\n",
+                i,
+                curve.getBiasUnbound(period, 100e18)
+            );
         }
 
         // uncomment to see the full curve
@@ -67,8 +79,16 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
         // still no balance
         assertEq(curve.votingPowerAt(tokenIdFirst, 0), 0, "Balance before deposit");
 
-        escrow.checkpoint(tokenIdFirst, LockedBalance(0, 0), LockedBalance(depositFirst, 0));
-        escrow.checkpoint(tokenIdSecond, LockedBalance(0, 0), LockedBalance(depositSecond, 0));
+        escrow.checkpoint(
+            tokenIdFirst,
+            LockedBalance(0, 0),
+            LockedBalance(depositFirst, block.timestamp)
+        );
+        escrow.checkpoint(
+            tokenIdSecond,
+            LockedBalance(0, 0),
+            LockedBalance(depositSecond, block.timestamp)
+        );
 
         // check the user point is registered
         IEscrowCurve.UserPoint memory userPoint = curve.userPointHistory(tokenIdFirst, 1);
@@ -81,7 +101,7 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
         assertEq(curve.isWarm(tokenIdFirst), false, "Not warming up");
 
         // wait for warmup
-        vm.warp(block.timestamp + curve.WARMUP_PERIOD());
+        vm.warp(block.timestamp + curve.warmupPeriod());
         assertEq(curve.votingPowerAt(tokenIdFirst, 0), 0, "Balance after deposit before warmup");
         assertEq(curve.isWarm(tokenIdFirst), false, "Not warming up");
         assertEq(curve.isWarm(tokenIdSecond), false, "Not warming up II");
@@ -123,7 +143,11 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
         // TECHNICALLY, this should finish at exactly 5 periods but
         // 30 seconds off is okay
         vm.warp(start + curve.period() * 5 + 30);
-        assertEq(curve.votingPowerAt(tokenIdFirst, block.timestamp), 6 * depositFirst, "Balance incorrect after p6");
+        assertEq(
+            curve.votingPowerAt(tokenIdFirst, block.timestamp),
+            6 * depositFirst,
+            "Balance incorrect after p6"
+        );
         assertEq(
             curve.votingPowerAt(tokenIdSecond, block.timestamp),
             6 * depositSecond,

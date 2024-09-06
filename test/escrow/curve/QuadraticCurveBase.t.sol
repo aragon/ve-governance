@@ -3,8 +3,11 @@ pragma solidity ^0.8.17;
 import {Test} from "forge-std/Test.sol";
 import {console2 as console} from "forge-std/console2.sol";
 
+import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
+import {DAO, createTestDAO} from "@mocks/MockDAO.sol";
 import {QuadraticIncreasingEscrow, IVotingEscrow, IEscrowCurve} from "src/escrow/increasing/QuadraticIncreasingEscrow.sol";
 import {IVotingEscrowIncreasing, ILockedBalanceIncreasing} from "src/escrow/increasing/interfaces/IVotingEscrowIncreasing.sol";
+import {ProxyLib} from "@libs/ProxyLib.sol";
 
 contract MockEscrow {
     address public token;
@@ -24,12 +27,26 @@ contract MockEscrow {
 }
 
 contract QuadraticCurveBase is Test, ILockedBalanceIncreasing {
+    using ProxyLib for address;
     QuadraticIncreasingEscrow internal curve;
     MockEscrow internal escrow;
+    IDAO public dao;
 
     function setUp() public {
+        dao = createTestDAO(address(this));
+
         escrow = new MockEscrow();
-        curve = new QuadraticIncreasingEscrow(address(escrow));
+
+        address impl = address(new QuadraticIncreasingEscrow());
+
+        bytes memory initCalldata = abi.encodeCall(
+            QuadraticIncreasingEscrow.initialize,
+            (address(escrow), address(dao), 3 days)
+        );
+
+        curve = QuadraticIncreasingEscrow(impl.deployUUPSProxy(initCalldata));
+
+        // curve = new QuadraticIncreasingEscrow(address(escrow));
         escrow.setCurve(curve);
     }
 }

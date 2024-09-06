@@ -29,17 +29,29 @@ interface IVotingEscrowCoreErrors {
 }
 
 interface IVotingEscrowCoreEvents {
-    event Deposit(address indexed depositor, uint256 indexed tokenId, uint256 value, uint256 ts);
-    event Withdraw(address indexed depositor, uint256 indexed tokenId, uint256 value, uint256 ts);
-    event Supply(uint256 prevSupply, uint256 supply);
+    event Deposit(
+        address indexed depositor,
+        uint256 indexed tokenId,
+        uint256 indexed startTs,
+        uint256 value,
+        uint256 newTotalLocked
+    );
+    event Withdraw(
+        address indexed depositor,
+        uint256 indexed tokenId,
+        uint256 value,
+        uint256 ts,
+        uint256 newTotalLocked
+    );
 }
 
-interface IVotingEscrowCore is ILockedBalanceIncreasing, IVotingEscrowCoreErrors, IVotingEscrowCoreEvents {
+interface IVotingEscrowCore is
+    ILockedBalanceIncreasing,
+    IVotingEscrowCoreErrors,
+    IVotingEscrowCoreEvents
+{
     /// @notice Address of the underying ERC20 token.
     function token() external view returns (address);
-
-    /// @notice Autoincrementing ID of each new NFT minted
-    function tokenId() external view returns (uint256);
 
     /// @notice Total underlying tokens deposited in the contract
     function totalLocked() external view returns (uint256);
@@ -64,7 +76,7 @@ interface IVotingEscrowCore is ILockedBalanceIncreasing, IVotingEscrowCoreErrors
     ///      will no longer be claimable. Claim all rebases and rewards prior to calling this.
     function withdraw(uint256 _tokenId) external;
 
-    // TODO - this is nonstandard and used heavily - is there a better public function here that's more standardised
+    // TODO - how best to integrate the extended ERC721 interface?
     function isApprovedOrOwner(address spender, uint256 tokenId) external view returns (bool);
 }
 
@@ -135,6 +147,11 @@ interface IDynamicVoter is IDynamicVoterErrors {
     /// @return Voting power
     function votingPowerAt(uint256 _tokenId, uint256 _t) external view returns (uint256);
 
+    /// @notice Get the voting power for _account at the current timestamp
+    /// Aggregtes all voting power for all tokens owned by the account
+    /// @dev This cannot be used historically without token snapshots
+    function votingPowerForAccount(address _account) external view returns (uint256);
+
     /// @notice Calculate total voting power at current timestamp
     /// @return Total voting power at current timestamp
     function totalVotingPower() external view returns (uint256);
@@ -156,6 +173,23 @@ interface IDynamicVoter is IDynamicVoterErrors {
                         INCREASED ESCROW
 //////////////////////////////////////////////////////////////*/
 
-interface IVotingEscrowIncreasing is IVotingEscrowCore, IDynamicVoter, IWithdrawalQueue, IWhitelist {
+interface IVotingEscrowIncreasing is
+    IVotingEscrowCore,
+    IDynamicVoter,
+    IWithdrawalQueue,
+    IWhitelist
+{
+
+}
+
+/// @dev useful for testing
+interface IVotingEscrowEventsStorageErrors is
+    IVotingEscrowCoreErrors,
+    IVotingEscrowCoreEvents,
+    IWhitelistEvents,
+    IWithdrawalQueueErrors,
+    IWithdrawalQueueEvents,
+    ILockedBalanceIncreasing
+{
 
 }

@@ -65,10 +65,14 @@ contract SimpleGaugeVoter is ISimpleGaugeVoter, ReentrancyGuard, Plugin {
     modifier onlyNewEpoch(uint256 _tokenId) {
         // ensure new epoch since last vote
         // todo: check this is correct
-        if (EpochDurationLib.epochStart(block.timestamp) <= tokenVoteData[currentEpoch()][_tokenId].lastVoted) {
+        if (
+            EpochDurationLib.epochStart(block.timestamp) <=
+            tokenVoteData[currentEpoch()][_tokenId].lastVoted
+        ) {
             revert AlreadyVoted(_tokenId, currentEpoch());
         }
-        if (block.timestamp <= EpochDurationLib.epochVoteStart(block.timestamp)) revert VotingInactive();
+        if (block.timestamp <= EpochDurationLib.epochVoteStart(block.timestamp))
+            revert VotingInactive();
         _;
     }
 
@@ -76,12 +80,16 @@ contract SimpleGaugeVoter is ISimpleGaugeVoter, ReentrancyGuard, Plugin {
                                Voting 
     //////////////////////////////////////////////////////////////*/
 
-    function vote(uint256 _tokenId, GaugeVote[] calldata _votes) external onlyNewEpoch(_tokenId) nonReentrant {
+    function vote(
+        uint256 _tokenId,
+        GaugeVote[] calldata _votes
+    ) external onlyNewEpoch(_tokenId) nonReentrant {
         address _sender = _msgSender();
-        if (!IVotingEscrow(escrow).isApprovedOrOwner(_sender, _tokenId)) revert NotApprovedOrOwner();
-        // if (_votes.length > maxVotingNum) revert TooManyPools();
-        // if ((_timestamp > EpochDurationLib.epochVoteEnd(_timestamp))) revert("epochVoteEnd"); // TODO
-        if (!votingActive()) revert("VotingInactive()"); // TODO
+        if (!IVotingEscrow(escrow).isApprovedOrOwner(_sender, _tokenId))
+            revert NotApprovedOrOwner();
+        if (_votes.length > maxVotingNum) revert ExceedMaxVoteOptions();
+        // TODO this logic overlaps with the onlyNewEpoch modifier and can be streamlined
+        if (!votingActive()) revert VotingInactive();
         uint256 votingPower = IVotingEscrow(escrow).votingPower(_tokenId);
         _vote(_tokenId, votingPower, _votes);
     }
@@ -136,21 +144,19 @@ contract SimpleGaugeVoter is ISimpleGaugeVoter, ReentrancyGuard, Plugin {
             });
         }
 
-        // TODO - there's probably an easier way to track this, like lastVoted
-        // todo this will always say voted = true so we need to check
-        // if reset will work with zero votes
-        // if (_usedWeight > 0) IVotingEscrow(escrow).voting(_tokenId, true);
-
         // more voting power is now accumulated
         totalWeight += _totalWeight;
 
         // record the total weight used for this vote
         voteData.usedWeight = _usedWeight;
+
+        // TODO: we need to make a decision about relative vs. absolute time
         voteData.lastVoted = timestamp();
     }
 
     function reset(uint256 _tokenId) external onlyNewEpoch(_tokenId) nonReentrant {
-        if (!IVotingEscrow(escrow).isApprovedOrOwner(msg.sender, _tokenId)) revert NotApprovedOrOwner();
+        if (!IVotingEscrow(escrow).isApprovedOrOwner(msg.sender, _tokenId))
+            revert NotApprovedOrOwner();
         _reset(_tokenId);
     }
 
@@ -185,10 +191,6 @@ contract SimpleGaugeVoter is ISimpleGaugeVoter, ReentrancyGuard, Plugin {
                 });
             }
         }
-
-        // we could here reset the last voted, or even just store this locally
-        // for easy querying
-        // IVotingEscrow(escrow).voting(_tokenId, false);
 
         totalWeight -= _totalWeight;
         voteData.usedWeight = 0;
@@ -238,7 +240,10 @@ contract SimpleGaugeVoter is ISimpleGaugeVoter, ReentrancyGuard, Plugin {
         emit GaugeActivated(_gauge);
     }
 
-    function updateGaugeMetadata(address _gauge, string calldata _metadata) external auth(GAUGE_ADMIN_ROLE) {
+    function updateGaugeMetadata(
+        address _gauge,
+        string calldata _metadata
+    ) external auth(GAUGE_ADMIN_ROLE) {
         if (!gaugeExists(_gauge)) revert GaugeDoesNotExist(_gauge);
         gauges[_gauge].metadata = keccak256(abi.encode(_metadata)); // todo
         emit GaugeMetadataUpdated(_gauge, _metadata);
@@ -318,7 +323,11 @@ contract SimpleGaugeVoter is ISimpleGaugeVoter, ReentrancyGuard, Plugin {
     }
 
     // Public getter for votes with specific epoch
-    function votesAt(uint256 _epoch, uint256 _tokenId, address _gauge) external view returns (uint256) {
+    function votesAt(
+        uint256 _epoch,
+        uint256 _tokenId,
+        address _gauge
+    ) external view returns (uint256) {
         return tokenVoteData[_epoch][_tokenId].votes[_gauge];
     }
 
@@ -328,7 +337,10 @@ contract SimpleGaugeVoter is ISimpleGaugeVoter, ReentrancyGuard, Plugin {
     }
 
     // Public getter for poolVote with specific epoch
-    function gaugesVotedForAt(uint256 _epoch, uint256 _tokenId) external view returns (address[] memory) {
+    function gaugesVotedForAt(
+        uint256 _epoch,
+        uint256 _tokenId
+    ) external view returns (address[] memory) {
         return tokenVoteData[_epoch][_tokenId].gaugesVotedFor;
     }
 

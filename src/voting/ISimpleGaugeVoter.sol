@@ -84,6 +84,7 @@ interface IGaugeVoterErrors {
     error GaugeInactive(address _gauge);
     error NonZeroVotes();
     error NoVotes();
+    error ExceedMaxVoteOptions();
 }
 
 interface IGaugeVoter is IGaugeVoterEvents, IGaugeVoterErrors, IGaugeVote {

@@ -3,6 +3,7 @@ pragma solidity ^0.8.17;
 
 // interfaces
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {IVotingEscrowIncreasing as IVotingEscrow} from "@escrow-interfaces/IVotingEscrowIncreasing.sol";
 import {IEscrowCurveIncreasing as IEscrowCurve} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
 
@@ -11,14 +12,23 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {EpochDurationLib} from "@libs/EpochDurationLib.sol";
 import {SignedFixedPointMath} from "@libs/SignedFixedPointMathLib.sol";
+import {ModeCurveCoefficientLib} from "@libs/ModeCurveCoefficientLib.sol";
 
 // contracts
-import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {ReentrancyGuardUpgradeable as ReentrancyGuard} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
 
 import {console2 as console} from "forge-std/console2.sol";
 
 /// @title Quadratic Increasing Escrow
-contract QuadraticIncreasingEscrow is IEscrowCurve, ReentrancyGuard {
+contract QuadraticIncreasingEscrow is
+    IEscrowCurve,
+    ReentrancyGuard,
+    DaoAuthorizable,
+    UUPSUpgradeable
+{
     using SafeERC20 for IERC20;
     using SafeCast for int256;
     using SafeCast for uint256;
@@ -26,10 +36,17 @@ contract QuadraticIncreasingEscrow is IEscrowCurve, ReentrancyGuard {
 
     error OnlyEscrow();
 
+    /// @notice Administrator role for the contract
+    bytes32 public constant CURVE_ADMIN_ROLE = keccak256("CURVE_ADMIN_ROLE");
+
+    /// @notice The duration of each period
+    /// @dev used to calculate the value of t / PERIOD_LENGTH
+    uint256 public constant period = EpochDurationLib.EPOCH_DURATION;
+
     /// @notice The VotingEscrow contract address
     address public escrow;
 
-    /// @notice timestamp => UserPoint[]
+    /// @dev tokenId => userPointEpoch => UserPoint
     /// @dev The Array is fixed so we can write to it in the future
     /// This implementation means that very short intervals may be challenging
     mapping(uint256 => UserPoint[1_000_000_000]) internal _userPointHistory;
@@ -37,37 +54,71 @@ contract QuadraticIncreasingEscrow is IEscrowCurve, ReentrancyGuard {
     /// @notice tokenId => point epoch: incremented on a per-user basis
     mapping(uint256 => uint256) public userPointEpoch;
 
-    /// @notice The duration of each period
-    /// @dev used to calculate the value of t / PERIOD_LENGTH
-    uint256 public constant period = EpochDurationLib.EPOCH_DURATION;
+    /// @notice The warmup period for the curve
+    uint256 public warmupPeriod;
 
-    // todo: should this be in voting or balance?
-    uint256 public constant WARMUP_PERIOD = 3 days;
+    /// @dev tokenId => userPointEpoch => warmup
+    /// UX improvement: warmup should start from point of writing, even if
+    /// start date is in the future
+    mapping(uint256 => mapping(uint256 => uint256)) internal _userPointWarmup;
 
     /*//////////////////////////////////////////////////////////////
-                              MATH CONSTANTS
+                                MATH
     //////////////////////////////////////////////////////////////*/
 
+    /// TODO: These should be taken to a library and saved as constants
+    /// This means they can't be changed, a new curve would be needed.
+    /// however it also means we can store the values in bytecode and save gas
+    /// and potentially avoids needing to re-audit the contracts
+
     /// @dev FP constants for 1, 2, and 7
-    int256 private immutable SD1 = SignedFixedPointMath.toFP(1);
-    int256 private immutable SD2 = SignedFixedPointMath.toFP(2);
-    int256 private immutable SD7 = SignedFixedPointMath.toFP(7);
+    int256 private SD1;
+    // int256 private constant SD1 = ModeCurveCoefficientLib.__SD1;
+    int256 private SD2;
+    int256 private SD7;
 
     /// @dev t = timestamp / 2 weeks
-    int256 private PERIOD_LENGTH = SignedFixedPointMath.toFP(int256(period));
-    int256 private PERIOD_LENGTH_SQUARED = PERIOD_LENGTH.pow(SignedFixedPointMath.toFP(2));
+    int256 private PERIOD_LENGTH;
+    int256 private PERIOD_LENGTH_SQUARED;
 
     /// @dev precomputed coefficients of the quadratic curve
     /// votingPower = amount * ((1/7)t^2 + (2/7)t + 1)
     int256 private SHARED_QUADRATIC_COEFFICIENT;
     int256 private SHARED_LINEAR_COEFFICIENT;
 
-    /// @param _escrow VotingEscrow contract address
-    constructor(address _escrow) {
-        escrow = _escrow;
+    /// @dev gap for upgradeable contract
+    uint256[38] private __gap;
 
-        /// @dev precomputed coefficients of the quadratic curve
-        /// votingPower = amount * ((1/7)t^2 + (2/7)t + 1)
+    /*//////////////////////////////////////////////////////////////
+                              INITIALIZATION
+    //////////////////////////////////////////////////////////////*/
+
+    constructor() {
+        _disableInitializers();
+
+        console.log("SHARED_QUADRATIC_COEFFICIENT: %s", SHARED_QUADRATIC_COEFFICIENT);
+        console.log("SHARED_LINEAR_COEFFICIENT: %s", SHARED_LINEAR_COEFFICIENT);
+    }
+
+    /// @param _escrow VotingEscrow contract address
+    function initialize(address _escrow, address _dao, uint256 _warmupPeriod) external initializer {
+        escrow = _escrow;
+        warmupPeriod = _warmupPeriod;
+
+        __DaoAuthorizableUpgradeable_init(IDAO(_dao));
+        __ReentrancyGuard_init();
+
+        // other initializers are empty
+
+        // these need to be set in the initializer, or imported as constants
+        // order matters here
+        SD1 = SignedFixedPointMath.toFP(1);
+        SD2 = SignedFixedPointMath.toFP(2);
+        SD7 = SignedFixedPointMath.toFP(7);
+
+        PERIOD_LENGTH = SignedFixedPointMath.toFP(int256(period));
+        PERIOD_LENGTH_SQUARED = PERIOD_LENGTH.pow(SignedFixedPointMath.toFP(2));
+
         SHARED_QUADRATIC_COEFFICIENT = SD1.div(SD7.mul(PERIOD_LENGTH_SQUARED));
         SHARED_LINEAR_COEFFICIENT = SD2.div(SD7.mul(PERIOD_LENGTH));
     }
@@ -126,7 +177,10 @@ contract QuadraticIncreasingEscrow is IEscrowCurve, ReentrancyGuard {
         return _getBiasUnbound(timeElapsed, coefficients);
     }
 
-    function _getBiasUnbound(uint256 timeElapsed, int256[3] memory coefficients) public view returns (uint256) {
+    function _getBiasUnbound(
+        uint256 timeElapsed,
+        int256[3] memory coefficients
+    ) internal view returns (uint256) {
         int256 quadratic = coefficients[2];
         int256 linear = coefficients[1];
         int256 const = coefficients[0];
@@ -142,7 +196,11 @@ contract QuadraticIncreasingEscrow is IEscrowCurve, ReentrancyGuard {
 
     // The above assumes a boundary - this is applicable for most use cases and it is trivial to set
     // a sentinel value of max(uint256) if you want an unbounded increase
-    function getBias(uint256 timeElapsed, uint256 amount, uint256 boundary) public view returns (uint256) {
+    function getBias(
+        uint256 timeElapsed,
+        uint256 amount,
+        uint256 boundary
+    ) public view returns (uint256) {
         uint256 bias = getBiasUnbound(timeElapsed, amount);
         return bias > boundary ? boundary : bias;
     }
@@ -156,12 +214,13 @@ contract QuadraticIncreasingEscrow is IEscrowCurve, ReentrancyGuard {
                               Warmup
     //////////////////////////////////////////////////////////////*/
 
-    function warmupPeriod() external pure returns (uint256) {
-        return WARMUP_PERIOD;
+    function setWarmupPeriod(uint256 _warmupPeriod) external auth(CURVE_ADMIN_ROLE) {
+        warmupPeriod = _warmupPeriod;
+        emit WarmupSet(_warmupPeriod);
     }
 
-    function _isWarm(UserPoint memory point, uint256 t) public pure returns (bool) {
-        return t > point.ts + WARMUP_PERIOD;
+    function _isWarm(uint256 _tokenId, uint256 _userEpoch, uint256 t) public view returns (bool) {
+        return t > _userPointWarmup[_tokenId][_userEpoch];
     }
 
     /// @notice Returns whether the NFT is warm
@@ -169,7 +228,7 @@ contract QuadraticIncreasingEscrow is IEscrowCurve, ReentrancyGuard {
         uint256 _epoch = _getPastUserPointIndex(tokenId, block.timestamp);
         UserPoint memory point = _userPointHistory[tokenId][_epoch];
         if (point.bias == 0) return false;
-        else return _isWarm(point, block.timestamp);
+        else return _isWarm(tokenId, _epoch, block.timestamp);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -179,13 +238,19 @@ contract QuadraticIncreasingEscrow is IEscrowCurve, ReentrancyGuard {
     /// @notice Returns the UserPoint at the passed epoch
     /// @param _tokenId The NFT to return the UserPoint for
     /// @param _userEpoch The epoch to return the UserPoint at
-    function userPointHistory(uint256 _tokenId, uint256 _userEpoch) external view returns (UserPoint memory) {
+    function userPointHistory(
+        uint256 _tokenId,
+        uint256 _userEpoch
+    ) external view returns (UserPoint memory) {
         return _userPointHistory[_tokenId][_userEpoch];
     }
 
     /// @notice Binary search to get the user point index for a token id at or prior to a given timestamp
     /// @dev If a user point does not exist prior to the timestamp, this will return 0.
-    function _getPastUserPointIndex(uint256 _tokenId, uint256 _timestamp) internal view returns (uint256) {
+    function _getPastUserPointIndex(
+        uint256 _tokenId,
+        uint256 _timestamp
+    ) internal view returns (uint256) {
         uint256 _userEpoch = userPointEpoch[_tokenId];
         if (_userEpoch == 0) return 0;
         // First check most recent balance
@@ -211,14 +276,16 @@ contract QuadraticIncreasingEscrow is IEscrowCurve, ReentrancyGuard {
 
     function votingPowerAt(uint256 _tokenId, uint256 _t) external view returns (uint256) {
         uint256 _epoch = _getPastUserPointIndex(_tokenId, _t);
+
         // epoch 0 is an empty point
         if (_epoch == 0) return 0;
         UserPoint memory lastPoint = _userPointHistory[_tokenId][_epoch];
-        if (!_isWarm(lastPoint, _t)) return 0;
+
+        if (!_isWarm(_tokenId, _epoch, _t)) return 0;
         uint256 timeElapsed = _t - lastPoint.ts;
 
         // in the increasing case, we don't allow changes to locks, so the ts and blk are
-        // equivalent to the creation time of the lock
+        // equivalent to the start time of the lock
         return getBias(timeElapsed, lastPoint.bias);
     }
 
@@ -256,30 +323,55 @@ contract QuadraticIncreasingEscrow is IEscrowCurve, ReentrancyGuard {
         if (_tokenId != 0) {
             if (_newLocked.amount > 0) {
                 uint256 amount = _newLocked.amount;
+                // the coefficients are purely dependent on the amount
                 uNew.coefficients = getCoefficients(amount);
+                // the bias depends on the amount and the elapsed time
+                // for a new lock, it will be the initial value
                 uNew.bias = getBias(0, amount);
             }
-            // If timestamp of last user point is the same, overwrite the last user point
-            // Else record the new user point into history
-            // Exclude epoch 0
-            uNew.ts = block.timestamp;
-            uNew.blk = block.number;
-            // check to see if we have an existing epoch for this timestamp
-            uint256 userEpoch = userPointEpoch[_tokenId];
+            // write the new point - in the case of an increasing curve
+            // the new lock may start at a future time, so we use the start time
+            // over the current time
+            uNew.ts = _newLocked.start;
 
+            // TODO: we have to interpolate to get the block number
+            // We don't use it in this governance system so we may want to
+            // evaulate if its necessary as an interpolated point
+            uNew.blk = block.number;
+
+            // check to see if we have an existing epoch for this token
+            uint256 userEpoch = userPointEpoch[_tokenId];
             if (
                 // if we do have a point AND
                 // if we've already recorded a point for this timestamp
-                userEpoch != 0 && _userPointHistory[_tokenId][userEpoch].ts == block.timestamp
+                userEpoch != 0 && _userPointHistory[_tokenId][userEpoch].ts == uNew.ts
             ) {
                 // overwrite the last point
                 _userPointHistory[_tokenId][userEpoch] = uNew;
+
+                // the userpoint warmup records when the warmup would end
+                // irrespective of the start time of the lock
+                _userPointWarmup[_tokenId][userEpoch] = block.timestamp + warmupPeriod;
             } else {
                 // otherwise, create a new epoch by incrementing the userEpoch
                 // and record the new point
                 userPointEpoch[_tokenId] = ++userEpoch;
                 _userPointHistory[_tokenId][userEpoch] = uNew;
+                _userPointWarmup[_tokenId][userEpoch] = block.timestamp + warmupPeriod;
             }
         }
     }
+
+    /*///////////////////////////////////////////////////////////////
+                            UUPS Upgrade
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Returns the address of the implementation contract in the [proxy storage slot](https://eips.ethereum.org/EIPS/eip-1967) slot the [UUPS proxy](https://eips.ethereum.org/EIPS/eip-1822) is pointing to.
+    /// @return The address of the implementation contract.
+    function implementation() public view returns (address) {
+        return _getImplementation();
+    }
+
+    /// @notice Internal method authorizing the upgrade of the contract via the [upgradeability mechanism for UUPS proxies](https://docs.openzeppelin.com/contracts/4.x/api/proxy#UUPSUpgradeable) (see [ERC-1822](https://eips.ethereum.org/EIPS/eip-1822)).
+    function _authorizeUpgrade(address) internal virtual override auth(CURVE_ADMIN_ROLE) {}
 }

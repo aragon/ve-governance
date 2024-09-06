@@ -20,6 +20,7 @@ import {SafeCastUpgradeable as SafeCast} from "@openzeppelin/contracts-upgradeab
 import {EpochDurationLib} from "@libs/EpochDurationLib.sol";
 
 // parents
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {ReentrancyGuardUpgradeable as ReentrancyGuard} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {PausableUpgradeable as Pausable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
@@ -27,7 +28,14 @@ import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/pl
 // tools - delete
 import {console2 as console} from "forge-std/console2.sol";
 
-contract VotingEscrow is IVotingEscrow, ReentrancyGuard, Pausable, DaoAuthorizable, ERC721Enumerable {
+contract VotingEscrow is
+    IVotingEscrow,
+    ReentrancyGuard,
+    Pausable,
+    DaoAuthorizable,
+    ERC721Enumerable,
+    UUPSUpgradeable
+{
     using SafeERC20 for IERC20;
     using SafeCast for uint256;
 
@@ -43,12 +51,9 @@ contract VotingEscrow is IVotingEscrow, ReentrancyGuard, Pausable, DaoAuthorizab
                               NFT Data
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Decimals of the NFT contract
+    /// @notice Decimals of the voting power
+    /// TODO: validate tokens with nonstandard decimals
     uint8 public constant decimals = 18;
-
-    /// @notice Autoincrementing ID of each new NFT minted
-    /// @dev add to the mint function
-    uint256 public tokenId;
 
     /// @notice Total supply of underlying tokens deposited in the contract
     uint256 public totalLocked;
@@ -99,7 +104,9 @@ contract VotingEscrow is IVotingEscrow, ReentrancyGuard, Pausable, DaoAuthorizab
     //////////////////////////////////////////////////////////////*/
 
     // / @inheritdoc IVotingEscrow
-    function supportsInterface(bytes4 _interfaceId) public view override(ERC721Enumerable) returns (bool) {
+    function supportsInterface(
+        bytes4 _interfaceId
+    ) public view override(ERC721Enumerable) returns (bool) {
         return super.supportsInterface(_interfaceId);
     }
 
@@ -112,7 +119,12 @@ contract VotingEscrow is IVotingEscrow, ReentrancyGuard, Pausable, DaoAuthorizab
     }
 
     // todo add the initializer inheritance chain
-    function initialize(address _token, address _dao, string memory _name, string memory _symbol) public initializer {
+    function initialize(
+        address _token,
+        address _dao,
+        string memory _name,
+        string memory _symbol
+    ) external initializer {
         __DaoAuthorizableUpgradeable_init(IDAO(_dao));
         __ReentrancyGuard_init();
         __Pausable_init();
@@ -133,7 +145,10 @@ contract VotingEscrow is IVotingEscrow, ReentrancyGuard, Pausable, DaoAuthorizab
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Enables or disables a smart contract from holding the veNFT
-    function setWhitelisted(address _contract, bool _isWhitelisted) external auth(ESCROW_ADMIN_ROLE) {
+    function setWhitelisted(
+        address _contract,
+        bool _isWhitelisted
+    ) external auth(ESCROW_ADMIN_ROLE) {
         whitelisted[_contract] = _isWhitelisted;
         emit WhitelistSet(_contract, _isWhitelisted);
     }
@@ -153,12 +168,32 @@ contract VotingEscrow is IVotingEscrow, ReentrancyGuard, Pausable, DaoAuthorizab
         queue = _queue;
     }
 
+    function pause() external auth(PAUSER_ROLE) {
+        _pause();
+    }
+
+    function unpause() external auth(PAUSER_ROLE) {
+        _unpause();
+    }
+
     /*//////////////////////////////////////////////////////////////
                       Getters: ERC721 Functions
     //////////////////////////////////////////////////////////////*/
 
     function isApprovedOrOwner(address _spender, uint256 _tokenId) external view returns (bool) {
         return _isApprovedOrOwner(_spender, _tokenId);
+    }
+
+    /// @notice Fetch all NFTs owned by an address by leveraging the ERC721Enumerable interface
+    /// @param _owner Address to query
+    /// @return tokenIds Array of token IDs owned by the address
+    function ownedTokens(address _owner) public view returns (uint256[] memory tokenIds) {
+        uint256 balance = balanceOf(_owner);
+        uint256[] memory tokens = new uint256[](balance);
+        for (uint256 i = 0; i < balance; i++) {
+            tokens[i] = tokenOfOwnerByIndex(_owner, i);
+        }
+        return tokens;
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -193,6 +228,19 @@ contract VotingEscrow is IVotingEscrow, ReentrancyGuard, Pausable, DaoAuthorizab
         return _locked[_tokenId];
     }
 
+    /// @return accountVotingPower The voting power of an account at the current block
+    /// @dev We cannot do historic voting power at this time because we don't current track
+    /// histories of token transfers.
+    function votingPowerForAccount(
+        address _account
+    ) external view returns (uint256 accountVotingPower) {
+        uint256[] memory tokens = ownedTokens(_account);
+
+        for (uint256 i = 0; i < tokens.length; i++) {
+            accountVotingPower += votingPowerAt(tokens[i], block.timestamp);
+        }
+    }
+
     /*//////////////////////////////////////////////////////////////
                               ERC721 LOGIC
     //////////////////////////////////////////////////////////////*/
@@ -200,12 +248,10 @@ contract VotingEscrow is IVotingEscrow, ReentrancyGuard, Pausable, DaoAuthorizab
     // function _beforeTokenTransfer(address, address _to, uint256 _tokenId) internal {
     //     if (_isContract(_to) && !whitelisted[_to]) revert("Cant send to a contract"); // todo
 
-    //     // Update voting checkpoints
-    //     _checkpointDelegator(_tokenId, 0, _to);
-
     //     // should reset the votes if the token is transferred
 
-    //     // reset the start date of the lock
+    //     // reset the start date of the lock - we need to be careful how this interplays with mint
+    //     // we also need to restart voting power at the next epoch
     //     LockedBalance memory oldLocked = _locked[_tokenId];
     //     _checkpoint(_tokenId, oldLocked, LockedBalance(oldLocked.amount, block.timestamp));
     // }
@@ -241,79 +287,57 @@ contract VotingEscrow is IVotingEscrow, ReentrancyGuard, Pausable, DaoAuthorizab
                               ESCROW LOGIC
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Record global and per-user data to checkpoints. Used by VotingEscrow system.
-    /// @param _tokenId NFT token ID. No user checkpoint if 0
-    /// @param _oldLocked Pevious locked amount / end lock time for the user
-    /// @param _newLocked New locked amount / end lock time for the user
-    function _checkpoint(uint256 _tokenId, LockedBalance memory _oldLocked, LockedBalance memory _newLocked) internal {
-        IEscrowCurve(curve).checkpoint(_tokenId, _oldLocked, _newLocked);
-    }
-
-    /// @notice Deposit and lock tokens for a user
-    /// @param _tokenId NFT that holds lock
-    /// @param _value Amount to deposit
-    /// @param _oldLocked Previous locked amount / timestamp
-    function _depositFor(uint256 _tokenId, uint256 _value, LockedBalance memory _oldLocked) internal {
-        uint256 supplyBefore = totalLocked;
-        totalLocked = supplyBefore + _value;
-
-        // Set newLocked to _oldLocked without mangling memory
-        LockedBalance memory newLocked;
-        (newLocked.amount, newLocked.start) = (_oldLocked.amount, _oldLocked.start);
-
-        // Adding to existing lock, or if a lock is expired - creating a new one
-        // TODO new locked should probably start NOW
-        newLocked.amount += _value;
-        _locked[_tokenId] = newLocked;
-
-        // Possibilities:
-        // Both _oldLocked.end could be current or expired (>/< block.timestamp)
-        // or if the lock is a permanent lock, then _oldLocked.end == 0
-        // value == 0 (extend lock) or value > 0 (add to lock or extend lock)
-        // newLocked.end > block.timestamp (always)
-        _checkpoint(_tokenId, _oldLocked, newLocked);
-
-        address from = _msgSender();
-        if (_value != 0) {
-            IERC20(token).safeTransferFrom(from, address(this), _value);
-        }
-
-        // todo we migth want to snap to an epoch
-        emit Deposit(from, _tokenId, _value, block.timestamp);
-        emit Supply(supplyBefore, supplyBefore + _value);
-    }
-
-    // / @inheritdoc IVotingEscrow
-    /// TODO: quite frankly, not sure we need this
-    function checkpoint() external nonReentrant {
-        _checkpoint(0, LockedBalance(0, 0), LockedBalance(0, 0));
-    }
-
-    /// @dev Deposit `_value` tokens for `_to` and lock for `_lockDuration`
-    /// @param _value Amount to deposit
-    /// @param _to Address to deposit
-    function _createLockFor(uint256 _value, address _to) internal returns (uint256) {
-        // uint256 unlockTime = ((block.timestamp + _lockDuration) / EpochDurationLib.EPOCH_DURATION) *
-        //     EpochDurationLib.EPOCH_DURATION; // Locktime is rounded down to weeks
-        // TODO replace with starttime
-
-        if (_value == 0) revert ZeroAmount();
-
-        uint256 _tokenId = ++tokenId;
-        _mint(_to, _tokenId);
-
-        _depositFor(_tokenId, _value, _locked[_tokenId]);
-        return _tokenId;
-    }
-
-    // / @inheritdoc IVotingEscrow
-    function createLock(uint256 _value) external nonReentrant returns (uint256) {
+    function createLock(uint256 _value) external nonReentrant whenNotPaused returns (uint256) {
         return _createLockFor(_value, _msgSender());
     }
 
-    // / @inheritdoc IVotingEscrow
-    function createLockFor(uint256 _value, address _to) external nonReentrant returns (uint256) {
+    function createLockFor(
+        uint256 _value,
+        address _to
+    ) external nonReentrant whenNotPaused returns (uint256) {
         return _createLockFor(_value, _to);
+    }
+
+    /// @dev Deposit `_value` tokens for `_to` starting at next deposit interval
+    /// @param _value Amount to deposit
+    /// @param _to Address to deposit
+    function _createLockFor(uint256 _value, address _to) internal returns (uint256) {
+        if (_value == 0) revert ZeroAmount();
+
+        // query the duration lib to get the next time we can deposit
+        uint256 startTime = EpochDurationLib.epochNextDeposit(block.timestamp);
+
+        // increment the total locked supply and mint the token
+        totalLocked += _value;
+        uint256 newTokenId = totalSupply() + 1;
+        _mint(_to, newTokenId);
+
+        // write the lock and checkpoint the voting power
+        LockedBalance memory lock = LockedBalance(_value, startTime);
+        _locked[newTokenId] = lock;
+
+        // write the checkpoint with the old lock as 0
+        // TODO: maybe this could be added to mint?
+        _checkpoint(newTokenId, LockedBalance(0, 0), lock);
+
+        // transfer the tokens into the contract
+        IERC20(token).safeTransferFrom(_msgSender(), address(this), _value);
+
+        emit Deposit(_msgSender(), newTokenId, startTime, _value, totalLocked);
+
+        return newTokenId;
+    }
+
+    /// @notice Record per-user data to checkpoints. Used by VotingEscrow system.
+    /// @param _tokenId NFT token ID
+    /// @param _oldLocked Old locked amount / start lock time for the user
+    /// @param _newLocked New locked amount / start lock time for the user
+    function _checkpoint(
+        uint256 _tokenId,
+        LockedBalance memory _oldLocked,
+        LockedBalance memory _newLocked
+    ) internal {
+        IEscrowCurve(curve).checkpoint(_tokenId, _oldLocked, _newLocked);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -323,7 +347,7 @@ contract VotingEscrow is IVotingEscrow, ReentrancyGuard, Pausable, DaoAuthorizab
     /// @notice Enters a tokenId into the withdrawal queue by transferring to this contract and creating a ticket.
     /// @param _tokenId The tokenId to begin withdrawal for. Will be transferred to this contract before burning.
     /// @dev The user must not have active votes in the voter contract.
-    function beginWithdrawal(uint256 _tokenId) external nonReentrant {
+    function beginWithdrawal(uint256 _tokenId) external nonReentrant whenNotPaused {
         if (voted[_tokenId]) revert AlreadyVoted();
         address owner = _ownerOf(_tokenId);
         // todo: should we call queue first or second
@@ -332,9 +356,8 @@ contract VotingEscrow is IVotingEscrow, ReentrancyGuard, Pausable, DaoAuthorizab
         IExitQueue(queue).queueExit(_tokenId, owner);
     }
 
-    // / @inheritdoc IVotingEscrow
     // this assumes you've begun withdrawal and know the ticket ID
-    function withdraw(uint256 _tokenId) external nonReentrant {
+    function withdraw(uint256 _tokenId) external nonReentrant whenNotPaused {
         address sender = _msgSender();
 
         if (!(IExitQueue(queue).ticketHolder(_tokenId) == sender)) revert NotTicketHolder();
@@ -357,8 +380,7 @@ contract VotingEscrow is IVotingEscrow, ReentrancyGuard, Pausable, DaoAuthorizab
 
         IERC20(token).safeTransfer(sender, value);
 
-        emit Withdraw(sender, _tokenId, value, block.timestamp);
-        emit Supply(supplyBefore, supplyBefore - value);
+        emit Withdraw(sender, _tokenId, value, block.timestamp, totalLocked);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -388,11 +410,28 @@ contract VotingEscrow is IVotingEscrow, ReentrancyGuard, Pausable, DaoAuthorizab
         return votingPowerAt(_tokenId, _timestamp);
     }
 
-    function getPastVotes(address _account, uint256 _tokenId, uint256 _timestamp) external view returns (uint256) {
+    function getPastVotes(
+        address _account,
+        uint256 _tokenId,
+        uint256 _timestamp
+    ) external view returns (uint256) {
         revert NotImplemented();
     }
 
     function getPastTotalSupply(uint256 _timestamp) external view returns (uint256) {
         return totalVotingPowerAt(_timestamp);
     }
+
+    /*///////////////////////////////////////////////////////////////
+                            UUPS Upgrade
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Returns the address of the implementation contract in the [proxy storage slot](https://eips.ethereum.org/EIPS/eip-1967) slot the [UUPS proxy](https://eips.ethereum.org/EIPS/eip-1822) is pointing to.
+    /// @return The address of the implementation contract.
+    function implementation() public view returns (address) {
+        return _getImplementation();
+    }
+
+    /// @notice Internal method authorizing the upgrade of the contract via the [upgradeability mechanism for UUPS proxies](https://docs.openzeppelin.com/contracts/4.x/api/proxy#UUPSUpgradeable) (see [ERC-1822](https://eips.ethereum.org/EIPS/eip-1822)).
+    function _authorizeUpgrade(address) internal virtual override auth(ESCROW_ADMIN_ROLE) {}
 }
