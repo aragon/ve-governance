@@ -5,22 +5,29 @@ import {console2 as console} from "forge-std/console2.sol";
 
 // aragon contracts
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
-import {DAO} from "@aragon/osx/core/dao/DAO.sol";
+import {DAO, PermissionManager} from "@aragon/osx/core/dao/DAO.sol";
 import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
 
 import {MockPluginSetupProcessor} from "@mocks/osx/MockPSP.sol";
 import {MockDAOFactory} from "@mocks/osx/MockDAOFactory.sol";
 import {MockERC20} from "@mocks/MockERC20.sol";
+import {DaoUnauthorized} from "@aragon/osx/core/utils/auth.sol";
 
 import "@helpers/OSxHelpers.sol";
 
+import {ISimpleGaugeVoterStorageEventsErrors} from "src/voting/ISimpleGaugeVoter.sol";
 import {EpochDurationLib} from "@libs/EpochDurationLib.sol";
 import {IEscrowCurveUserStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
 import {IWithdrawalQueueErrors} from "src/escrow/increasing/interfaces/IVotingEscrowIncreasing.sol";
 import {IGaugeVote} from "src/voting/ISimpleGaugeVoter.sol";
 import {VotingEscrow, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams} from "src/voting/SimpleGaugeVoterSetup.sol";
 
-contract GaugeVotingBase is Test, IGaugeVote, IEscrowCurveUserStorage {
+contract GaugeVotingBase is
+    Test,
+    IGaugeVote,
+    IEscrowCurveUserStorage,
+    ISimpleGaugeVoterStorageEventsErrors
+{
     MultisigSetup multisigSetup;
     SimpleGaugeVoterSetup voterSetup;
 
@@ -43,7 +50,7 @@ contract GaugeVotingBase is Test, IGaugeVote, IEscrowCurveUserStorage {
 
     uint256 constant COOLDOWN = 3 days;
 
-    function setUp() public {
+    function setUp() public virtual {
         // clock reset
         vm.roll(0);
         vm.warp(0);
@@ -128,7 +135,7 @@ contract GaugeVotingBase is Test, IGaugeVote, IEscrowCurveUserStorage {
     }
 
     function _actions() internal view returns (IDAO.Action[] memory) {
-        IDAO.Action[] memory actions = new IDAO.Action[](4);
+        IDAO.Action[] memory actions = new IDAO.Action[](5);
 
         // action 0: apply the ve installation
         actions[0] = IDAO.Action({
@@ -161,6 +168,15 @@ contract GaugeVotingBase is Test, IGaugeVote, IEscrowCurveUserStorage {
             data: abi.encodeWithSelector(ve.setVoter.selector, address(voter))
         });
 
+        // for testing, give this contract the GAUGE_ADMIN_ROLE
+        actions[4] = IDAO.Action({
+            to: address(dao),
+            value: 0,
+            data: abi.encodeCall(
+                PermissionManager.grant,
+                (address(voter), address(this), voter.GAUGE_ADMIN_ROLE())
+            )
+        });
         return wrapGrantRevokeRoot(DAO(payable(address(dao))), address(psp), actions);
     }
 
@@ -181,5 +197,20 @@ contract GaugeVotingBase is Test, IGaugeVote, IEscrowCurveUserStorage {
             });
         }
         vm.stopPrank();
+    }
+
+    function _authErr(
+        address _caller,
+        address _contract,
+        bytes32 _perm
+    ) internal view returns (bytes memory) {
+        return
+            abi.encodeWithSelector(
+                DaoUnauthorized.selector,
+                address(dao),
+                _contract,
+                _caller,
+                _perm
+            );
     }
 }

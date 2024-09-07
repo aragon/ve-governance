@@ -108,35 +108,9 @@ interface ISimpleGaugeVoter is IGaugeVoter, IGaugeManager, IGauge {
 
 }
 
-interface IVoterCore {
-    error NotAPool();
-    error SameValue();
-    error SpecialVotingWindow();
-    error TooManyPools();
-    error ZeroAddress();
-
-    /// @notice The ve token that governs these contracts
-    function ve() external view returns (address);
-
-    /// @dev Total Voting Weights
-    function totalWeight() external view returns (uint256);
-
-    // mappings
-    /// @dev Pool => Gauge
-    function gauges(address pool) external view returns (address);
-
-    /// @dev Pool => Weights
-    function weights(address pool) external view returns (uint256);
-
-    /// @dev NFT => Pool => Votes
-    function votes(uint256 tokenId, address pool) external view returns (uint256);
-
-    /// @dev NFT => Total voting weight of NFT
-    function usedWeights(uint256 tokenId) external view returns (uint256);
-
-    /// @dev Nft => Timestamp of last vote (ensures single vote per epoch)
-    function lastVoted(uint256 tokenId) external view returns (uint256);
-
-    /// @dev Gauge => Liveness status
-    function isActive(address gauge) external view returns (bool);
-}
+interface ISimpleGaugeVoterStorageEventsErrors is
+    IGaugeManagerEvents,
+    IGaugeManagerErrors,
+    IGaugeVoterEvents,
+    IGaugeVoterErrors
+{}

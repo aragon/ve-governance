@@ -222,6 +222,8 @@ contract SimpleGaugeVoter is ISimpleGaugeVoter, ReentrancyGuard, Pausable, Plugi
     //////////////////////////////////////////////////////////////*/
 
     function gaugeExists(address _gauge) public view returns (bool) {
+        // this doesn't revert if you create multiple gauges at genesis
+        // but that's not a practical concern
         return gauges[_gauge].created > 0;
     }
 
