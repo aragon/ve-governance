@@ -68,10 +68,12 @@ NFT lifecycle:
   - Can't transfer to nonreceiver
   - can't transfer if not approved or owner
 - Ownership & approvals
+
   - Test we can grant approval (do as part of withdrawal)
   - Test we can grant ownership ("")
+
 - Easily query the total voting power of a user
-- Easily query the historic voting power of a user
+- Easily query the historic voting power of a user - can't be done
 
 Withdrawals
 

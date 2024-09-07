@@ -21,7 +21,7 @@ import {QuadraticIncreasingEscrow} from "@escrow/QuadraticIncreasingEscrow.sol";
 
 struct ISimpleGaugeVoterSetupParams {
     // voter
-    bool autoReset;
+    bool isPaused;
     // escrow
     string veTokenName;
     string veTokenSymbol;
@@ -45,28 +45,33 @@ contract SimpleGaugeVoterSetup is PluginSetup {
     /// @param length The array length of passed helpers.
     error WrongHelpersArrayLength(uint256 length);
 
-    /// @notice Thrown if the voting plugin does not support the `IToucanVoting` interface.
-    error InvalidInterface();
+    /// @dev implementation of the gaugevoting plugin
+    address voterBase;
 
-    /// @notice Thrown if the voting plugin is not in vote replacement mode.
-    error NotInVoteReplacementMode();
-
-    address escrowBase;
-
+    /// @dev implementation of the escrow voting curve
     address curveBase;
 
+    /// @dev implementation of the exit queue
+    address queueBase;
+
+    /// @dev implementation of the escrow locker
+    address escrowBase;
+
     /// @notice Deploys the setup by binding the implementation contracts required during installation.
-    constructor(address _escrowBase, address _curveBase) PluginSetup() {
-        escrowBase = _escrowBase;
+    constructor(
+        address _voterBase,
+        address _curveBase,
+        address _queueBase,
+        address _escrowBase
+    ) PluginSetup() {
+        voterBase = _voterBase;
         curveBase = _curveBase;
-        // voterBase = _voterBase;
-        // exitQueueBase = _exitQueueBase;
+        queueBase = _queueBase;
+        escrowBase = _escrowBase;
     }
 
-    /// @return The address of the `ToucanReceiver` implementation contract.
-    function implementation() external pure returns (address) {
-        // return escrowBase;
-        revert("Not a proxy");
+    function implementation() external view returns (address) {
+        return voterBase;
     }
 
     /// @inheritdoc IPluginSetup
@@ -91,8 +96,15 @@ contract SimpleGaugeVoterSetup is PluginSetup {
             )
         );
 
-        // deploy the plugin
-        SimpleGaugeVoter voter = new SimpleGaugeVoter(_dao, address(escrow), false);
+        // deploy the plugin in
+        SimpleGaugeVoter voter = SimpleGaugeVoter(
+            voterBase.deployUUPSProxy(
+                abi.encodeCall(
+                    SimpleGaugeVoter.initialize,
+                    (_dao, address(escrow), params.isPaused)
+                )
+            )
+        );
         plugin = address(voter);
 
         // deploy the curve
@@ -104,7 +116,9 @@ contract SimpleGaugeVoterSetup is PluginSetup {
         );
 
         // deploy the exit queue
-        address exitQueue = address(new ExitQueue(address(escrow), params.cooldown, _dao));
+        address exitQueue = queueBase.deployUUPSProxy(
+            abi.encodeCall(ExitQueue.initialize, (address(escrow), params.cooldown, _dao))
+        );
 
         // encode our setup data with permissions and helpers
         PermissionLib.MultiTargetPermission[] memory permissions = getPermissions(
@@ -163,7 +177,7 @@ contract SimpleGaugeVoterSetup is PluginSetup {
         PermissionLib.Operation _grantOrRevoke
     ) public view returns (PermissionLib.MultiTargetPermission[] memory) {
         PermissionLib.MultiTargetPermission[]
-            memory permissions = new PermissionLib.MultiTargetPermission[](4);
+            memory permissions = new PermissionLib.MultiTargetPermission[](5);
 
         permissions[0] = PermissionLib.MultiTargetPermission({
             permissionId: SimpleGaugeVoter(_plugin).GAUGE_ADMIN_ROLE(),
@@ -191,6 +205,14 @@ contract SimpleGaugeVoterSetup is PluginSetup {
 
         permissions[3] = PermissionLib.MultiTargetPermission({
             permissionId: QuadraticIncreasingEscrow(_curve).CURVE_ADMIN_ROLE(),
+            where: _curve,
+            who: _dao,
+            operation: _grantOrRevoke,
+            condition: PermissionLib.NO_CONDITION
+        });
+
+        permissions[4] = PermissionLib.MultiTargetPermission({
+            permissionId: SimpleGaugeVoter(_plugin).UPGRADE_PLUGIN_PERMISSION_ID(),
             where: _curve,
             who: _dao,
             operation: _grantOrRevoke,

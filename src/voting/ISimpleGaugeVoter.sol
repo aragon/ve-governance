@@ -77,7 +77,7 @@ interface IGaugeVoterEvents {
 }
 
 interface IGaugeVoterErrors {
-    error AlreadyVoted(uint256 tokenId, uint256 epoch);
+    error AlreadyVoted(uint256 tokenId);
     error VotingInactive();
     error NotApprovedOrOwner();
     error GaugeDoesNotExist(address _pool);

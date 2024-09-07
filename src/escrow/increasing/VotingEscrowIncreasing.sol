@@ -45,7 +45,10 @@ contract VotingEscrow is
     bytes32 public constant ESCROW_ADMIN_ROLE = keccak256("ESCROW_ADMIN");
 
     /// @notice Role required to pause the contract - can be given to emergency contracts
-    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER");
+
+    /// @notice creating locks on behalf of others is potentially dangerous
+    bytes32 public constant LOCK_CREATOR_ROLE = keccak256("LOCK_CREATOR");
 
     /*//////////////////////////////////////////////////////////////
                               NFT Data
@@ -83,10 +86,6 @@ contract VotingEscrow is
     /// @dev discourages wrapper contracts that would allow for trading voting power
     mapping(address => bool) public whitelisted;
 
-    /// @notice Stores which NFTs have currently voted
-    /// @dev We may replace this with a call to the voter.reset TODO
-    mapping(uint256 => bool) public voted;
-
     /// @dev tokenId => block number of ownership change
     /// Used to prevent flash NFT explots by restricting same block actions
     /// todo check this
@@ -96,8 +95,7 @@ contract VotingEscrow is
     mapping(uint256 => LockedBalance) internal _locked;
 
     /// @dev Reserved storage space to allow for layout changes in the future.
-    /// TODO: move to the end of the contract once version is finalised
-    uint256[40] private __gap;
+    uint256[42] private __gap;
 
     /*//////////////////////////////////////////////////////////////
                               ERC165
@@ -134,6 +132,7 @@ contract VotingEscrow is
 
         // allow sending tokens to this contract
         whitelisted[address(this)] = true;
+        emit WhitelistSet(address(this), true);
 
         // rm the zero id
         // emit Transfer(address(0), address(this), tokenId);
@@ -245,42 +244,48 @@ contract VotingEscrow is
                               ERC721 LOGIC
     //////////////////////////////////////////////////////////////*/
 
-    // function _beforeTokenTransfer(address, address _to, uint256 _tokenId) internal {
-    //     if (_isContract(_to) && !whitelisted[_to]) revert("Cant send to a contract"); // todo
+    error NotWhitelistedForTransfers();
 
-    //     // should reset the votes if the token is transferred
+    /// @dev This is an option and might be a sane default for a lock.
+    /// @dev We could allow transfers for whitelisted accounts. This would allow
+    /// for migrations, authorised wrapper contracts and the like
+    function _transfer(address _from, address _to, uint256 _tokenId) internal override {
+        // if (!whitelisted[_to]) revert NotWhitelistedForTransfers();
+        super._transfer(_from, _to, _tokenId);
+    }
 
-    //     // reset the start date of the lock - we need to be careful how this interplays with mint
-    //     // we also need to restart voting power at the next epoch
-    //     LockedBalance memory oldLocked = _locked[_tokenId];
-    //     _checkpoint(_tokenId, oldLocked, LockedBalance(oldLocked.amount, block.timestamp));
-    // }
+    function _beforeTokenTransfer(
+        address _from,
+        address _to,
+        uint256 _tokenId,
+        uint256 _batchSize
+    ) internal override {
+        super._beforeTokenTransfer(_from, _to, _tokenId, _batchSize);
 
-    function _isContract(address account) internal view returns (bool) {
+        // if (_isContract(_to) && !whitelisted[_to]) revert("Cant send to a contract"); // todo
+        // should reset the votes if the token is transferred
+        // reset the start date of the lock - we need to be careful how this interplays with mint
+        // we also need to restart voting power at the next epoch
+        // LockedBalance memory oldLocked = _locked[_tokenId];
+        // _checkpoint(_tokenId, oldLocked, LockedBalance(oldLocked.amount, block.timestamp));
+    }
+
+    function _isContract(address _account) internal view returns (bool) {
         // This method relies on extcodesize, which returns 0 for contracts in
         // construction, since the code is only stored at the end of the
         // constructor execution.
         uint256 size;
         assembly {
-            size := extcodesize(account)
+            size := extcodesize(_account)
         }
         return size > 0;
     }
 
-    /*//////////////////////////////////////////////////////////////
-                        INTERNAL MINT/BURN LOGIC
-    //////////////////////////////////////////////////////////////*/
-
-    /// @dev Function to mint tokens
-    function _mint(address _to, uint256 _tokenId) internal override {
-        // // TODO Update voting checkpoints
-        super._mint(_to, _tokenId);
-    }
-
-    /// @dev Must be called prior to updating `LockedBalance`
-    function _burn(uint256 _tokenId) internal override {
-        // // TODO Update voting checkpoints
-        super._burn(_tokenId);
+    /// @dev This checks to see if the transaction originated from the caller
+    /// TODO: placing restrictions using this method restricts use of the plugin to EOAs
+    /// which goes against utility of smart wallets etc. We need to think deeply about this.
+    function _isEOA() internal view returns (bool) {
+        return msg.sender == tx.origin;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -291,10 +296,12 @@ contract VotingEscrow is
         return _createLockFor(_value, _msgSender());
     }
 
+    /// @notice Creates a lock on behalf of someone else. This is restricted by default as
+    /// can lead to circumventions of restrictions surrounding smart contract wallets.
     function createLockFor(
         uint256 _value,
         address _to
-    ) external nonReentrant whenNotPaused returns (uint256) {
+    ) external nonReentrant whenNotPaused returns (/* auth(LOCK_CREATOR_ROLE) */ uint256) {
         return _createLockFor(_value, _to);
     }
 
@@ -322,8 +329,7 @@ contract VotingEscrow is
 
         // transfer the tokens into the contract
         IERC20(token).safeTransferFrom(_msgSender(), address(this), _value);
-
-        emit Deposit(_msgSender(), newTokenId, startTime, _value, totalLocked);
+        emit Deposit(_to, newTokenId, startTime, _value, totalLocked);
 
         return newTokenId;
     }
@@ -348,7 +354,9 @@ contract VotingEscrow is
     /// @param _tokenId The tokenId to begin withdrawal for. Will be transferred to this contract before burning.
     /// @dev The user must not have active votes in the voter contract.
     function beginWithdrawal(uint256 _tokenId) external nonReentrant whenNotPaused {
-        if (voted[_tokenId]) revert AlreadyVoted();
+        // can't exit if you have votes pending
+        // TODO: UX we could simplify by attempting to withdraw
+        if (isVoting(_tokenId)) revert CannotExit();
         address owner = _ownerOf(_tokenId);
         // todo: should we call queue first or second
         // todo - do we write a checkpoint here?
@@ -376,7 +384,7 @@ contract VotingEscrow is
         // oldLocked has only 0 end
         // Both can have >= 0 amount
         // TODO: we need to reset the locked balance here, not have it lingering
-        _checkpoint(_tokenId, oldLocked, LockedBalance(0, block.timestamp));
+        _checkpoint(_tokenId, oldLocked, LockedBalance(0, 0));
 
         IERC20(token).safeTransfer(sender, value);
 
@@ -387,7 +395,7 @@ contract VotingEscrow is
                         Voting Logic
     //////////////////////////////////////////////////////////////*/
 
-    function isVoting(uint256 _tokenId) external view returns (bool) {
+    function isVoting(uint256 _tokenId) public view returns (bool) {
         return ISimpleGaugeVoter(voter).isVoting(_tokenId);
     }
 

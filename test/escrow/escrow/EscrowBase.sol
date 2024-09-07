@@ -143,13 +143,13 @@ contract EscrowBase is Test, IVotingEscrowEventsStorageErrors {
         address _escrow,
         bool _reset
     ) public returns (SimpleGaugeVoter) {
-        return new SimpleGaugeVoter(_dao, _escrow, _reset);
+        SimpleGaugeVoter impl = new SimpleGaugeVoter();
 
-        // bytes memory initCalldata = abi.encodeCall(
-        //     SimpleGaugeVoter.initialize,
-        //     (address(dao), address(escrow), address(curve))
-        // );
-        // return SimpleGaugeVoter(address(impl).deployUUPSProxy(initCalldata));
+        bytes memory initCalldata = abi.encodeCall(
+            SimpleGaugeVoter.initialize,
+            (_dao, _escrow, _reset)
+        );
+        return SimpleGaugeVoter(address(impl).deployUUPSProxy(initCalldata));
     }
 
     function _deployExitQueue(
@@ -157,13 +157,13 @@ contract EscrowBase is Test, IVotingEscrowEventsStorageErrors {
         uint _cooldown,
         address _dao
     ) public returns (ExitQueue) {
-        return new ExitQueue(_escrow, _cooldown, _dao);
+        ExitQueue impl = new ExitQueue();
 
-        // bytes memory initCalldata = abi.encodeCall(
-        //     ExitQueue.initialize,
-        //     (address(escrow))
-        // );
-        // return ExitQueue(address(impl).deployUUPSProxy(initCalldata));
+        bytes memory initCalldata = abi.encodeCall(
+            ExitQueue.initialize,
+            (_escrow, _cooldown, _dao)
+        );
+        return ExitQueue(address(impl).deployUUPSProxy(initCalldata));
     }
 
     function _deployOSX() internal {

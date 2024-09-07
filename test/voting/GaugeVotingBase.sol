@@ -1,0 +1,185 @@
+pragma solidity ^0.8.17;
+
+import {Test} from "forge-std/Test.sol";
+import {console2 as console} from "forge-std/console2.sol";
+
+// aragon contracts
+import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
+import {DAO} from "@aragon/osx/core/dao/DAO.sol";
+import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
+
+import {MockPluginSetupProcessor} from "@mocks/osx/MockPSP.sol";
+import {MockDAOFactory} from "@mocks/osx/MockDAOFactory.sol";
+import {MockERC20} from "@mocks/MockERC20.sol";
+
+import "@helpers/OSxHelpers.sol";
+
+import {EpochDurationLib} from "@libs/EpochDurationLib.sol";
+import {IEscrowCurveUserStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
+import {IWithdrawalQueueErrors} from "src/escrow/increasing/interfaces/IVotingEscrowIncreasing.sol";
+import {IGaugeVote} from "src/voting/ISimpleGaugeVoter.sol";
+import {VotingEscrow, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams} from "src/voting/SimpleGaugeVoterSetup.sol";
+
+contract GaugeVotingBase is Test, IGaugeVote, IEscrowCurveUserStorage {
+    MultisigSetup multisigSetup;
+    SimpleGaugeVoterSetup voterSetup;
+
+    // permissions
+    PermissionLib.MultiTargetPermission[] voterSetupPermissions;
+
+    MockPluginSetupProcessor psp;
+    MockDAOFactory daoFactory;
+    MockERC20 token;
+
+    VotingEscrow ve;
+    QuadraticIncreasingEscrow curve;
+    SimpleGaugeVoter voter;
+    ExitQueue queue;
+
+    IDAO dao;
+    Multisig multisig;
+
+    address deployer = address(0x420);
+
+    uint256 constant COOLDOWN = 3 days;
+
+    function setUp() public {
+        // clock reset
+        vm.roll(0);
+        vm.warp(0);
+
+        // Deploy the OSx framework
+        _deployOSX();
+        // Deploy a DAO
+        _deployDAOAndMSig();
+
+        // new block for multisig
+        vm.roll(1);
+        // Define our pluginSetup contract to deploy the VE
+        _setupVoterContracts();
+        _applySetup();
+    }
+
+    function _deployOSX() internal {
+        // deploy the mock PSP with the multisig  plugin
+        multisigSetup = new MultisigSetup();
+        psp = new MockPluginSetupProcessor(address(multisigSetup));
+        daoFactory = new MockDAOFactory(psp);
+    }
+
+    function _deployDAOAndMSig() internal {
+        // use the OSx DAO factory with the Plugin
+        address[] memory members = new address[](1);
+        members[0] = deployer;
+
+        // encode a 1/1 multisig that can be adjusted later
+        bytes memory data = abi.encode(
+            members,
+            Multisig.MultisigSettings({onlyListed: true, minApprovals: 1})
+        );
+
+        dao = daoFactory.createDao(_mockDAOSettings(), _mockPluginSettings(data));
+
+        // nonce 0 is something?
+        // nonce 1 is implementation contract
+        // nonce 2 is the msig contract behind the proxy
+        multisig = Multisig(computeAddress(address(multisigSetup), 2));
+    }
+
+    function _setupVoterContracts() public {
+        token = new MockERC20();
+
+        // deploy setup
+        voterSetup = new SimpleGaugeVoterSetup(
+            address(new SimpleGaugeVoter()),
+            address(new QuadraticIncreasingEscrow()),
+            address(new ExitQueue()),
+            address(new VotingEscrow())
+        );
+
+        // push to the PSP
+        psp.queueSetup(address(voterSetup));
+
+        // prepare the installation
+        bytes memory data = abi.encode(
+            ISimpleGaugeVoterSetupParams({
+                isPaused: true,
+                token: address(token),
+                veTokenName: "VE Token",
+                veTokenSymbol: "VE",
+                warmup: 3 days,
+                cooldown: 3 days
+            })
+        );
+        (address pluginAddress, IPluginSetup.PreparedSetupData memory preparedSetupData) = psp
+            .prepareInstallation(address(dao), _mockPrepareInstallationParams(data));
+
+        // fetch the contracts
+        voter = SimpleGaugeVoter(pluginAddress);
+        address[] memory helpers = preparedSetupData.helpers;
+        curve = QuadraticIncreasingEscrow(helpers[0]);
+        queue = ExitQueue(helpers[1]);
+        ve = VotingEscrow(helpers[2]);
+
+        // set the permissions
+        for (uint i = 0; i < preparedSetupData.permissions.length; i++) {
+            voterSetupPermissions.push(preparedSetupData.permissions[i]);
+        }
+    }
+
+    function _actions() internal view returns (IDAO.Action[] memory) {
+        IDAO.Action[] memory actions = new IDAO.Action[](4);
+
+        // action 0: apply the ve installation
+        actions[0] = IDAO.Action({
+            to: address(psp),
+            value: 0,
+            data: abi.encodeCall(
+                psp.applyInstallation,
+                (address(dao), _mockApplyInstallationParams(address(ve), voterSetupPermissions))
+            )
+        });
+
+        // action 2: activate the curve on the ve
+        actions[1] = IDAO.Action({
+            to: address(ve),
+            value: 0,
+            data: abi.encodeWithSelector(ve.setCurve.selector, address(curve))
+        });
+
+        // action 3: activate the queue on the ve
+        actions[2] = IDAO.Action({
+            to: address(ve),
+            value: 0,
+            data: abi.encodeWithSelector(ve.setQueue.selector, address(queue))
+        });
+
+        // action 4: set the voter
+        actions[3] = IDAO.Action({
+            to: address(ve),
+            value: 0,
+            data: abi.encodeWithSelector(ve.setVoter.selector, address(voter))
+        });
+
+        return wrapGrantRevokeRoot(DAO(payable(address(dao))), address(psp), actions);
+    }
+
+    function _applySetup() internal {
+        IDAO.Action[] memory actions = _actions();
+
+        // execute the actions
+        vm.startPrank(deployer);
+        {
+            multisig.createProposal({
+                _metadata: "",
+                _actions: actions,
+                _allowFailureMap: 0,
+                _approveProposal: true,
+                _tryExecution: true,
+                _startDate: 0,
+                _endDate: uint64(block.timestamp + 1)
+            });
+        }
+        vm.stopPrank();
+    }
+}

@@ -1,33 +1,41 @@
 pragma solidity ^0.8.17;
 
-import {DaoAuthorizable} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizable.sol";
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {IExitQueue} from "./interfaces/IExitQueue.sol";
+
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
 
 /// @title ExitQueue
 /// @notice Token IDs associated with an NFT are given a ticket when they are queued for exit.
 /// After a cooldown period, the ticket holder can exit the NFT.
-contract ExitQueue is IExitQueue, DaoAuthorizable {
+contract ExitQueue is IExitQueue, DaoAuthorizable, UUPSUpgradeable {
     /// @notice role required to manage the exit queue
     bytes32 public constant QUEUE_ADMIN_ROLE = keccak256("QUEUE_ADMIN");
 
     /// @notice address of the escrow contract
-    address public immutable escrow;
-
-    /// @notice tokenId => Ticket
-    mapping(uint256 => Ticket) internal _queue;
+    address public escrow;
 
     /// @notice time in seconds between exit and withdrawal
     uint256 public cooldown;
 
+    /// @notice tokenId => Ticket
+    mapping(uint256 => Ticket) internal _queue;
+
+    uint256[47] private __gap;
+
     /*//////////////////////////////////////////////////////////////
                               Constructor
     //////////////////////////////////////////////////////////////*/
+    constructor() {
+        _disableInitializers();
+    }
 
     /// @param _escrow address of the escrow contract where tokens are stored
     /// @param _cooldown time in seconds between exit and withdrawal
     /// @param _dao address of the DAO that will be able to set the queue
-    constructor(address _escrow, uint256 _cooldown, address _dao) DaoAuthorizable(IDAO(_dao)) {
+    function initialize(address _escrow, uint256 _cooldown, address _dao) external initializer {
+        __DaoAuthorizableUpgradeable_init(IDAO(_dao));
         escrow = _escrow;
         _setCooldown(_cooldown);
     }
@@ -58,7 +66,7 @@ contract ExitQueue is IExitQueue, DaoAuthorizable {
     /// this is because the escrow contract is the only one that can queue an exit
     /// and we leave that logic to the escrow contract
     function queueExit(uint256 _tokenId, address _ticketHolder) external {
-        if (msg.sender != address(escrow)) revert OnlyEscrow();
+        if (msg.sender != escrow) revert OnlyEscrow();
         if (_ticketHolder == address(0)) revert ZeroAddress();
         if (_queue[_tokenId].holder != address(0)) revert AlreadyQueued();
 
@@ -69,7 +77,7 @@ contract ExitQueue is IExitQueue, DaoAuthorizable {
     /// @notice Exits the queue for that tokenID.
     /// @dev The holder is not checked. This is left up to the escrow contract to manage.
     function exit(uint256 _tokenId) external {
-        if (msg.sender != address(escrow)) revert OnlyEscrow();
+        if (msg.sender != escrow) revert OnlyEscrow();
         if (!canExit(_tokenId)) revert CannotExit();
 
         // reset the ticket for that tokenId
@@ -100,4 +108,17 @@ contract ExitQueue is IExitQueue, DaoAuthorizable {
     function queue(uint256 _tokenId) external view override returns (Ticket memory) {
         return _queue[_tokenId];
     }
+
+    /*///////////////////////////////////////////////////////////////
+                            UUPS Upgrade
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Returns the address of the implementation contract in the [proxy storage slot](https://eips.ethereum.org/EIPS/eip-1967) slot the [UUPS proxy](https://eips.ethereum.org/EIPS/eip-1822) is pointing to.
+    /// @return The address of the implementation contract.
+    function implementation() public view returns (address) {
+        return _getImplementation();
+    }
+
+    /// @notice Internal method authorizing the upgrade of the contract via the [upgradeability mechanism for UUPS proxies](https://docs.openzeppelin.com/contracts/4.x/api/proxy#UUPSUpgradeable) (see [ERC-1822](https://eips.ethereum.org/EIPS/eip-1822)).
+    function _authorizeUpgrade(address) internal virtual override auth(QUEUE_ADMIN_ROLE) {}
 }

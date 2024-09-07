@@ -1,10 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.17;
 
+import {console2 as console} from "forge-std/console2.sol";
+
 library EpochDurationLib {
     uint256 internal constant EPOCH_DURATION = 2 weeks;
     uint256 internal constant DEPOSIT_INTERVAL = 1 weeks;
     uint256 internal constant MAXTIME = 4 * 365 * 86400;
+
+    function currentEpoch(uint256 timestamp) internal pure returns (uint256) {
+        unchecked {
+            return timestamp / EPOCH_DURATION;
+        }
+    }
 
     function epochStart(uint256 timestamp) internal pure returns (uint256) {
         unchecked {
@@ -36,10 +44,13 @@ library EpochDurationLib {
             // Calculate the remaining time within the current interval
             uint256 elapsed = timestamp % DEPOSIT_INTERVAL;
 
+            // allow the user to deposit at the start of the interval
+            if (elapsed == 0) return timestamp;
+
             // Calculate time left until the next interval
             uint256 timeUntilNextInterval = DEPOSIT_INTERVAL - elapsed;
 
-            // Move to the start of the next interval
+            // else the user must wait until the start of the next interval
             return timestamp + timeUntilNextInterval;
         }
     }

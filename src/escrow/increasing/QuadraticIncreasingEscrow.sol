@@ -219,16 +219,16 @@ contract QuadraticIncreasingEscrow is
         emit WarmupSet(_warmupPeriod);
     }
 
-    function _isWarm(uint256 _tokenId, uint256 _userEpoch, uint256 t) public view returns (bool) {
-        return t > _userPointWarmup[_tokenId][_userEpoch];
-    }
-
     /// @notice Returns whether the NFT is warm
     function isWarm(uint256 tokenId) public view returns (bool) {
         uint256 _epoch = _getPastUserPointIndex(tokenId, block.timestamp);
         UserPoint memory point = _userPointHistory[tokenId][_epoch];
         if (point.bias == 0) return false;
         else return _isWarm(tokenId, _epoch, block.timestamp);
+    }
+
+    function _isWarm(uint256 _tokenId, uint256 _userEpoch, uint256 t) public view returns (bool) {
+        return t > _userPointWarmup[_tokenId][_userEpoch];
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -341,6 +341,8 @@ contract QuadraticIncreasingEscrow is
 
             // check to see if we have an existing epoch for this token
             uint256 userEpoch = userPointEpoch[_tokenId];
+
+            // TODO: this could be made a lot clearer
             if (
                 // if we do have a point AND
                 // if we've already recorded a point for this timestamp

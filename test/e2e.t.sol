@@ -61,6 +61,7 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
     uint256 constant DEPOSIT = 1000 ether;
 
     uint tokenId;
+    uint NUM_PERIODS = 5;
 
     address gaugeTheFirst = address(0x1337);
     address gaugeTheSecond = address(0x7331);
@@ -186,7 +187,7 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
         actions[2] = IDAO.Action({
             to: address(voter),
             value: 0,
-            data: abi.encodeWithSelector(voter.initializer.selector)
+            data: abi.encodeWithSelector(voter.unpause.selector)
         });
 
         // create a proposal
@@ -204,7 +205,6 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
         }
         vm.stopPrank();
 
-        assertEq(voter.currentEpoch(), 0, "Epoch should be 0");
         assertEq(voter.votingActive(), false, "Voting should not be active");
 
         vm.warp(block.timestamp + 1 hours + 1);
@@ -220,16 +220,12 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
         {
             token.approve(address(ve), DEPOSIT);
 
-            // warp to one second before the next epoch so that warmup math is easier
+            // warp to exactly the next epoch so that warmup math is easier
             uint expectedStart = EpochDurationLib.epochNextDeposit(block.timestamp);
-            vm.warp(expectedStart - 1);
+            vm.warp(expectedStart);
 
             // create the lock
             tokenId = ve.createLock(DEPOSIT);
-
-            // increase by one more second
-            // this is equivalent to use starting at precisely the cooldown
-            vm.warp(block.timestamp + 1);
 
             // check the user owns the nft
             assertEq(tokenId, 1, "Token ID should be 1");
@@ -247,20 +243,9 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
         assertEq(curve.votingPowerAt(tokenId, 0), 0, "Balance after deposit before warmup");
         assertEq(curve.isWarm(tokenId), false, "Should not be warm after 0 seconds");
 
-        UserPoint memory point = curve.userPointHistory(tokenId, 1);
-        console.log("Point: ", point.bias, point.ts);
-
         // wait for warmup
         vm.warp(block.timestamp + curve.warmupPeriod());
         assertEq(curve.votingPowerAt(tokenId, 0), 0, "Balance after deposit before warmup");
-
-        /**
-         * TODO This is working CLOSE as intended, but we are one second off
-         * because the start "jumps" one second ahead. What basically happens is that
-         * we snap to the next epoch, but we also credit the user 1 second of warmup
-         * Thus we are 1 second off the results we got before. WE need to confirm if that
-         * is intended behavior or not.
-         */
         assertEq(curve.isWarm(tokenId), false, "Should not be warm yet");
 
         // warmup complete
@@ -326,8 +311,10 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
 
         // deploy setup
         voterSetup = new SimpleGaugeVoterSetup(
-            address(new VotingEscrow()),
-            address(new QuadraticIncreasingEscrow())
+            address(new SimpleGaugeVoter()),
+            address(new QuadraticIncreasingEscrow()),
+            address(new ExitQueue()),
+            address(new VotingEscrow())
         );
 
         // push to the PSP
@@ -336,7 +323,7 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
         // prepare the installation
         bytes memory data = abi.encode(
             ISimpleGaugeVoterSetupParams({
-                autoReset: false,
+                isPaused: true,
                 token: address(token),
                 veTokenName: "VE Token",
                 veTokenSymbol: "VE",

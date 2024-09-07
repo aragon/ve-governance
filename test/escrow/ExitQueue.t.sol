@@ -4,6 +4,7 @@ import {Test} from "forge-std/Test.sol";
 
 import {console2 as console} from "forge-std/console2.sol";
 
+import {ProxyLib} from "@libs/ProxyLib.sol";
 import {DAO, createTestDAO} from "@mocks/MockDAO.sol";
 import {DaoUnauthorized} from "@aragon/osx/core/utils/auth.sol";
 import {IExitQueue, ExitQueue} from "@escrow/ExitQueue.sol";
@@ -12,10 +13,25 @@ import {IExitQueueEvents, IExitQueueErrors} from "@escrow-interfaces/IExitQueue.
 contract TestExitQueue is Test, IExitQueueEvents, IExitQueueErrors {
     ExitQueue queue;
     DAO dao;
+    using ProxyLib for address;
+
+    function _deployExitQueue(
+        address _escrow,
+        uint _cooldown,
+        address _dao
+    ) public returns (ExitQueue) {
+        ExitQueue impl = new ExitQueue();
+
+        bytes memory initCalldata = abi.encodeCall(
+            ExitQueue.initialize,
+            (_escrow, _cooldown, _dao)
+        );
+        return ExitQueue(address(impl).deployUUPSProxy(initCalldata));
+    }
 
     function setUp() public {
         dao = createTestDAO(address(this));
-        queue = new ExitQueue({_escrow: address(this), _cooldown: 0, _dao: address(dao)});
+        queue = _deployExitQueue(address(this), 0, address(dao));
         dao.grant({
             _who: address(this),
             _where: address(queue),
@@ -26,7 +42,7 @@ contract TestExitQueue is Test, IExitQueueEvents, IExitQueueErrors {
     // test inital state - escrow, queue, cooldown is set in constructor + dao
     function testFuzz_initialState(address _escrow, uint256 _cooldown) public {
         DAO dao_ = createTestDAO(address(this));
-        queue = new ExitQueue({_escrow: _escrow, _cooldown: _cooldown, _dao: address(dao_)});
+        queue = _deployExitQueue(address(_escrow), _cooldown, address(dao_));
         assertEq(queue.escrow(), _escrow);
         assertEq(queue.cooldown(), _cooldown);
         assertEq(address(queue.dao()), address(dao_));
