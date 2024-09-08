@@ -65,6 +65,9 @@ contract GaugeVotingBase is
         // Define our pluginSetup contract to deploy the VE
         _setupVoterContracts();
         _applySetup();
+
+        // unpause the contract
+        voter.unpause();
     }
 
     function _deployOSX() internal {

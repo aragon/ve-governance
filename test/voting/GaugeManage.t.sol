@@ -55,6 +55,12 @@ contract TestGaugeManage is GaugeVotingBase {
             // only gauge admins can update gauge metadata
             vm.expectRevert(err);
             voter.updateGaugeMetadata(address(0), "");
+
+            vm.expectRevert(err);
+            voter.pause();
+
+            vm.expectRevert(err);
+            voter.unpause();
         }
         vm.stopPrank();
     }
@@ -148,5 +154,24 @@ contract TestGaugeManage is GaugeVotingBase {
         vm.expectEmit(true, false, false, true);
         emit GaugeMetadataUpdated(_gauge, newMetadata);
         voter.updateGaugeMetadata(_gauge, newMetadata);
+    }
+
+    // can pause votes and resets
+    function testCanPauseVoteAndResets() public {
+        bytes memory err = "Pausable: paused";
+
+        voter.pause();
+
+        GaugeVote[] memory votes;
+        uint256[] memory tokenIds;
+
+        vm.expectRevert(err);
+        voter.vote(0, votes);
+
+        vm.expectRevert(err);
+        voter.voteMultiple(tokenIds, votes);
+
+        vm.expectRevert(err);
+        voter.reset(0);
     }
 }

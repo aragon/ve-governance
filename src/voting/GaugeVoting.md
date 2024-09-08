@@ -44,3 +44,12 @@ Gauge management:
 - votes can't exceed max voting power
 - Events are emit as expected f
 -
+
+Voting:
+
+- only vote when voting is active
+- only vote with tokens you own
+-
+
+- multiple votes resets voting power
+- multiple voters calcs correctly

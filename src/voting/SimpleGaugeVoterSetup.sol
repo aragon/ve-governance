@@ -19,6 +19,12 @@ import {VotingEscrow} from "@escrow/VotingEscrowIncreasing.sol";
 import {ExitQueue} from "@escrow/ExitQueue.sol";
 import {QuadraticIncreasingEscrow} from "@escrow/QuadraticIncreasingEscrow.sol";
 
+/// @param isPaused Whether the voter contract is deployed in a paused state
+/// @param veTokenName The name of the voting escrow token
+/// @param veTokenSymbol The symbol of the voting escrow token
+/// @param token The underlying token for the escrow
+/// @param cooldown The cooldown period for the exit queue
+/// @param warmup The warmup period for the escrow curve
 struct ISimpleGaugeVoterSetupParams {
     // voter
     bool isPaused;
@@ -80,7 +86,6 @@ contract SimpleGaugeVoterSetup is PluginSetup {
         address _dao,
         bytes calldata _data
     ) external returns (address plugin, PreparedSetupData memory preparedSetupData) {
-        // TODO a better way to do this would be to use the getter
         ISimpleGaugeVoterSetupParams memory params = abi.decode(
             _data,
             (ISimpleGaugeVoterSetupParams)
@@ -96,7 +101,7 @@ contract SimpleGaugeVoterSetup is PluginSetup {
             )
         );
 
-        // deploy the plugin in
+        // deploy the voting contract (plugin)
         SimpleGaugeVoter voter = SimpleGaugeVoter(
             voterBase.deployUUPSProxy(
                 abi.encodeCall(
@@ -168,6 +173,7 @@ contract SimpleGaugeVoterSetup is PluginSetup {
     /// @param _dao The DAO address on this chain.
     /// @param _plugin The plugin address.
     /// @param _grantOrRevoke The operation to perform.
+    /// TODO: Pauser roles
     function getPermissions(
         address _dao,
         address _plugin,
@@ -220,5 +226,32 @@ contract SimpleGaugeVoterSetup is PluginSetup {
         });
 
         return permissions;
+    }
+
+    function encodeSetupData(
+        ISimpleGaugeVoterSetupParams calldata _params
+    ) external pure returns (bytes memory) {
+        return abi.encode(_params);
+    }
+
+    /// @notice Simple utility for external applications create the encoded setup data.
+    function encodeSetupData(
+        string calldata veTokenName,
+        string calldata veTokenSymbol,
+        address token,
+        uint256 cooldown,
+        uint256 warmup
+    ) external pure returns (bytes memory) {
+        return
+            abi.encode(
+                ISimpleGaugeVoterSetupParams({
+                    isPaused: true,
+                    token: token,
+                    veTokenName: veTokenName,
+                    veTokenSymbol: veTokenSymbol,
+                    warmup: warmup,
+                    cooldown: cooldown
+                })
+            );
     }
 }

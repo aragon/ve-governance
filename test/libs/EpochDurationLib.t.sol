@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.17;
 
-import "forge-std/Test.sol"; // Assuming you're using Foundry for testing
+import "forge-std/Test.sol";
 import "@libs/EpochDurationLib.sol";
 
+// TODO: these tests should be beefed up a bit , potentially with parameters
 contract EpochDurationLibTest is Test {
     using EpochDurationLib for uint256;
 
@@ -27,7 +28,8 @@ contract EpochDurationLibTest is Test {
         uint256 nextEpoch = EpochDurationLib.epochNext(timestamp);
 
         // Next epoch should start at the current epoch start + 2 weeks
-        uint256 expectedNextEpoch = EpochDurationLib.epochStart(timestamp) + EpochDurationLib.EPOCH_DURATION;
+        uint256 expectedNextEpoch = EpochDurationLib.epochStart(timestamp) +
+            EpochDurationLib.EPOCH_DURATION;
         assertEq(nextEpoch, expectedNextEpoch);
     }
 

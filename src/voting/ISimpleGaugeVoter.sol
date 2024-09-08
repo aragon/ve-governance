@@ -5,13 +5,17 @@ interface IGauge {
     struct Gauge {
         bool active;
         uint256 created; // timestamp or epoch
-        bytes32 metadata; // TODO - check how OSx stores this, might just be IPFS
-        // address addr; // TODO do we need this
+        bytes32 metadata; // TODO => do we need this onchain or can just be event emitted?
         // more space for data as this is a struct in a mapping
     }
 }
 
 interface IGaugeVote {
+    /// @param votes gauge => votes cast at that time
+    /// @param gaugesVotedFor array of gauges we have active votes for
+    /// @param usedWeight total voting power used at the time of the vote
+    /// @dev this changes so we need an historic snapshot
+    /// @param lastVoted is the last time the user voted
     struct TokenVoteData {
         mapping(address => uint256) votes;
         address[] gaugesVotedFor;
@@ -19,6 +23,8 @@ interface IGaugeVote {
         uint256 lastVoted;
     }
 
+    /// @param weight proportion of voting power the token will allocate to the gauge. Will be normalised.
+    /// @param gauge address of the gauge to vote for
     struct GaugeVote {
         uint256 weight;
         address gauge;
@@ -61,7 +67,8 @@ interface IGaugeVoterEvents {
     event Voted(
         address indexed voter,
         address indexed gauge,
-        uint256 indexed tokenId,
+        uint256 indexed epoch,
+        uint256 tokenId,
         uint256 weight,
         uint256 totalWeight,
         uint256 timestamp
@@ -69,7 +76,8 @@ interface IGaugeVoterEvents {
     event Reset(
         address indexed voter,
         address indexed gauge,
-        uint256 indexed tokenId,
+        uint256 indexed epoch,
+        uint256 tokenId,
         uint256 weight,
         uint256 totalWeight,
         uint256 timestamp
@@ -82,9 +90,9 @@ interface IGaugeVoterErrors {
     error NotApprovedOrOwner();
     error GaugeDoesNotExist(address _pool);
     error GaugeInactive(address _gauge);
-    error NonZeroVotes();
+    error MustReset();
     error NoVotes();
-    error ExceedMaxVoteOptions();
+    error NoVotingPower();
 }
 
 interface IGaugeVoter is IGaugeVoterEvents, IGaugeVoterErrors, IGaugeVote {
@@ -97,6 +105,7 @@ interface IGaugeVoter is IGaugeVoterEvents, IGaugeVoterErrors, IGaugeVote {
     /// @param _tokenId Id of veNFT you are reseting.
     function reset(uint256 _tokenId) external;
 
+    /// @notice Can be called to check if a token is currently voting
     function isVoting(uint256 _tokenId) external view returns (bool);
 }
 

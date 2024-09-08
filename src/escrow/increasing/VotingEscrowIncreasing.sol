@@ -116,7 +116,6 @@ contract VotingEscrow is
         _disableInitializers();
     }
 
-    // todo add the initializer inheritance chain
     function initialize(
         address _token,
         address _dao,
@@ -133,10 +132,6 @@ contract VotingEscrow is
         // allow sending tokens to this contract
         whitelisted[address(this)] = true;
         emit WhitelistSet(address(this), true);
-
-        // rm the zero id
-        // emit Transfer(address(0), address(this), tokenId);
-        // emit Transfer(address(this), address(0), tokenId);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -196,7 +191,7 @@ contract VotingEscrow is
     }
 
     /*///////////////////////////////////////////////////////////////
-                          Getters: Voting Power
+                          Getters: Voting
     //////////////////////////////////////////////////////////////*/
 
     /// @return The voting power of the NFT at the current block
@@ -238,6 +233,11 @@ contract VotingEscrow is
         for (uint256 i = 0; i < tokens.length; i++) {
             accountVotingPower += votingPowerAt(tokens[i], block.timestamp);
         }
+    }
+
+    /// @notice Checks if the NFT is currently voting. We require the user to reset their votes if so.
+    function isVoting(uint256 _tokenId) public view returns (bool) {
+        return ISimpleGaugeVoter(voter).isVoting(_tokenId);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -350,12 +350,18 @@ contract VotingEscrow is
                         Exit and Withdraw Logic
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Resets the votes and begins the withdrawal process for a given tokenId
+    /// @dev Convenience function, the user must have authorized this contract to act on their behalf.
+    function resetVotesAndBeginWithdrawal(uint256 _tokenId) external whenNotPaused {
+        ISimpleGaugeVoter(voter).reset(_tokenId);
+        beginWithdrawal(_tokenId);
+    }
+
     /// @notice Enters a tokenId into the withdrawal queue by transferring to this contract and creating a ticket.
     /// @param _tokenId The tokenId to begin withdrawal for. Will be transferred to this contract before burning.
     /// @dev The user must not have active votes in the voter contract.
-    function beginWithdrawal(uint256 _tokenId) external nonReentrant whenNotPaused {
+    function beginWithdrawal(uint256 _tokenId) public nonReentrant whenNotPaused {
         // can't exit if you have votes pending
-        // TODO: UX we could simplify by attempting to withdraw
         if (isVoting(_tokenId)) revert CannotExit();
         address owner = _ownerOf(_tokenId);
         // todo: should we call queue first or second
@@ -375,14 +381,12 @@ contract VotingEscrow is
         uint256 value = oldLocked.amount;
 
         // Burn the NFT
-        _burn(_tokenId); // todo: at the moment this doesn't like that the contract owns the token
+        // TODO double check ownership here to make sure only correct burner
+        _burn(_tokenId);
         _locked[_tokenId] = LockedBalance(0, 0);
         uint256 supplyBefore = totalLocked;
         totalLocked = supplyBefore - value;
 
-        // oldLocked can have either expired <= timestamp or zero end
-        // oldLocked has only 0 end
-        // Both can have >= 0 amount
         // TODO: we need to reset the locked balance here, not have it lingering
         _checkpoint(_tokenId, oldLocked, LockedBalance(0, 0));
 
@@ -391,43 +395,21 @@ contract VotingEscrow is
         emit Withdraw(sender, _tokenId, value, block.timestamp, totalLocked);
     }
 
-    /*//////////////////////////////////////////////////////////////
-                        Voting Logic
-    //////////////////////////////////////////////////////////////*/
-
-    function isVoting(uint256 _tokenId) public view returns (bool) {
-        return ISimpleGaugeVoter(voter).isVoting(_tokenId);
-    }
-
     /*///////////////////////////////////////////////////////////////
-                            IVotes Ideas
+                               IVotes-ish
     //////////////////////////////////////////////////////////////*/
 
-    // TODO - let's check delegation in depth to see if this iface makes sense
+    // TODO - review if it makes sense to do this
+    // we need to be careful, as totalSupply in this contract
+    // refers to the total number of NFTs minted, not the total voting power
+    // so we don't want to mislead callers by exposing a similar function
 
     function getVotes(uint256 _tokenId) external view returns (uint256) {
         return votingPowerAt(_tokenId, block.timestamp);
     }
 
-    function getVotes(address _account, uint256 _tokenId) external view returns (uint256) {
-        if (_ownerOf(_tokenId) != _account) return 0;
-        return votingPowerAt(_tokenId, block.timestamp);
-    }
-
     function getPastVotes(uint256 _tokenId, uint256 _timestamp) external view returns (uint256) {
         return votingPowerAt(_tokenId, _timestamp);
-    }
-
-    function getPastVotes(
-        address _account,
-        uint256 _tokenId,
-        uint256 _timestamp
-    ) external view returns (uint256) {
-        revert NotImplemented();
-    }
-
-    function getPastTotalSupply(uint256 _timestamp) external view returns (uint256) {
-        return totalVotingPowerAt(_timestamp);
     }
 
     /*///////////////////////////////////////////////////////////////
