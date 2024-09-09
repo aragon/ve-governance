@@ -312,7 +312,7 @@ contract VotingEscrow is
         if (_value == 0) revert ZeroAmount();
 
         // query the duration lib to get the next time we can deposit
-        uint256 startTime = EpochDurationLib.epochNextDeposit(block.timestamp);
+        uint256 startTime = EpochDurationLib.epochNextDepositTs(block.timestamp);
 
         // increment the total locked supply and mint the token
         totalLocked += _value;

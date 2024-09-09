@@ -158,12 +158,8 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
         uint expectedFirst = (6 * DEPOSIT) / 4;
         uint expectedSecond = (6 * DEPOSIT) - expectedFirst;
 
-        assertEq(voter.totalWeights(gaugeTheFirst), expectedFirst, "First gauge weight incorrect");
-        assertEq(
-            voter.totalWeights(gaugeTheSecond),
-            expectedSecond,
-            "Second gauge weight incorrect"
-        );
+        assertEq(voter.gaugeVotes(gaugeTheFirst), expectedFirst, "First gauge weight incorrect");
+        assertEq(voter.gaugeVotes(gaugeTheSecond), expectedSecond, "Second gauge weight incorrect");
     }
 
     function _createGaugesActivateVoting() internal {
@@ -221,7 +217,7 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
             token.approve(address(ve), DEPOSIT);
 
             // warp to exactly the next epoch so that warmup math is easier
-            uint expectedStart = EpochDurationLib.epochNextDeposit(block.timestamp);
+            uint expectedStart = EpochDurationLib.epochNextDepositTs(block.timestamp);
             vm.warp(expectedStart);
 
             // create the lock
@@ -244,7 +240,7 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
         assertEq(curve.isWarm(tokenId), false, "Should not be warm after 0 seconds");
 
         // wait for warmup
-        vm.warp(block.timestamp + curve.warmupPeriod());
+        vm.warp(block.timestamp + curve.warmupPeriod() - 1);
         assertEq(curve.votingPowerAt(tokenId, 0), 0, "Balance after deposit before warmup");
         assertEq(curve.isWarm(tokenId), false, "Should not be warm yet");
 

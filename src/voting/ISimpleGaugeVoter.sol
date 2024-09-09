@@ -13,13 +13,13 @@ interface IGauge {
 interface IGaugeVote {
     /// @param votes gauge => votes cast at that time
     /// @param gaugesVotedFor array of gauges we have active votes for
-    /// @param usedWeight total voting power used at the time of the vote
+    /// @param usedVotingPower total voting power used at the time of the vote
     /// @dev this changes so we need an historic snapshot
     /// @param lastVoted is the last time the user voted
     struct TokenVoteData {
         mapping(address => uint256) votes;
         address[] gaugesVotedFor;
-        uint256 usedWeight;
+        uint256 usedVotingPower;
         uint256 lastVoted;
     }
 
@@ -69,8 +69,8 @@ interface IGaugeVoterEvents {
         address indexed gauge,
         uint256 indexed epoch,
         uint256 tokenId,
-        uint256 weight,
-        uint256 totalWeight,
+        uint256 votingPower,
+        uint256 totalVotingPower,
         uint256 timestamp
     );
     event Reset(
@@ -78,8 +78,8 @@ interface IGaugeVoterEvents {
         address indexed gauge,
         uint256 indexed epoch,
         uint256 tokenId,
-        uint256 weight,
-        uint256 totalWeight,
+        uint256 votingPower,
+        uint256 totalVotingPower,
         uint256 timestamp
     );
 }
@@ -90,9 +90,10 @@ interface IGaugeVoterErrors {
     error NotApprovedOrOwner();
     error GaugeDoesNotExist(address _pool);
     error GaugeInactive(address _gauge);
-    error MustReset();
+    error DoubleVote();
     error NoVotes();
     error NoVotingPower();
+    error NotCurrentlyVoting();
 }
 
 interface IGaugeVoter is IGaugeVoterEvents, IGaugeVoterErrors, IGaugeVote {

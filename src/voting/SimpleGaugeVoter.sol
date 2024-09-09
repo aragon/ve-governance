@@ -10,6 +10,8 @@ import {PausableUpgradeable as Pausable} from "@openzeppelin/contracts-upgradeab
 import {EpochDurationLib} from "@libs/EpochDurationLib.sol";
 import {PluginUUPSUpgradeable} from "@aragon/osx/core/plugin/PluginUUPSUpgradeable.sol";
 
+import {console2 as console} from "forge-std/console2.sol";
+
 contract SimpleGaugeVoter is ISimpleGaugeVoter, ReentrancyGuard, Pausable, PluginUUPSUpgradeable {
     /// @notice The Gauge admin can can create and manage voting gauges for token holders
     bytes32 public constant GAUGE_ADMIN_ROLE = keccak256("GAUGE_ADMIN");
@@ -18,7 +20,7 @@ contract SimpleGaugeVoter is ISimpleGaugeVoter, ReentrancyGuard, Pausable, Plugi
     address public escrow;
 
     /// @notice The total votes that have accumulated in this contract
-    uint256 public totalWeight;
+    uint256 public totalVotingPowerCast;
 
     /// @notice enumerable list of all gauges that can be voted on
     address[] public gaugeList;
@@ -26,8 +28,8 @@ contract SimpleGaugeVoter is ISimpleGaugeVoter, ReentrancyGuard, Pausable, Plugi
     /// @notice address => gauge data
     mapping(address => Gauge) public gauges;
 
-    /// @dev gauge => total votes (global)
-    mapping(address => uint256) public totalWeights;
+    /// @notice gauge => total votes (global)
+    mapping(address => uint256) public gaugeVotes;
 
     /// @dev tokenId => tokenVoteData
     mapping(uint256 => TokenVoteData) internal tokenVoteData;
@@ -63,6 +65,11 @@ contract SimpleGaugeVoter is ISimpleGaugeVoter, ReentrancyGuard, Pausable, Plugi
         _unpause();
     }
 
+    modifier whenVotingActive() {
+        if (!votingActive()) revert VotingInactive();
+        _;
+    }
+
     /*///////////////////////////////////////////////////////////////
                                Voting 
     //////////////////////////////////////////////////////////////*/
@@ -72,20 +79,20 @@ contract SimpleGaugeVoter is ISimpleGaugeVoter, ReentrancyGuard, Pausable, Plugi
     function voteMultiple(
         uint256[] calldata _tokenIds,
         GaugeVote[] calldata _votes
-    ) external nonReentrant whenNotPaused {
+    ) external nonReentrant whenNotPaused whenVotingActive {
         for (uint256 i = 0; i < _tokenIds.length; i++) {
             _vote(_tokenIds[i], _votes);
         }
     }
 
-    function vote(uint256 _tokenId, GaugeVote[] calldata _votes) public nonReentrant whenNotPaused {
+    function vote(
+        uint256 _tokenId,
+        GaugeVote[] calldata _votes
+    ) public nonReentrant whenNotPaused whenVotingActive {
         _vote(_tokenId, _votes);
     }
 
     function _vote(uint256 _tokenId, GaugeVote[] calldata _votes) internal {
-        // ensure voting is open
-        if (!votingActive()) revert VotingInactive();
-
         // ensure the user is allowed to vote on this
         if (!IVotingEscrow(escrow).isApprovedOrOwner(_msgSender(), _tokenId)) {
             revert NotApprovedOrOwner();
@@ -94,7 +101,11 @@ contract SimpleGaugeVoter is ISimpleGaugeVoter, ReentrancyGuard, Pausable, Plugi
         uint256 votingPower = IVotingEscrow(escrow).votingPower(_tokenId);
         if (votingPower == 0) revert NoVotingPower();
 
-        _reset(_tokenId);
+        uint256 numVotes = _votes.length;
+        if (numVotes == 0) revert NoVotes();
+
+        // clear any existing votes
+        if (isVoting(_tokenId)) _reset(_tokenId);
 
         // todo should this be at the start of the voting epoch
         // otherwise you can just reset and vote again
@@ -102,13 +113,15 @@ contract SimpleGaugeVoter is ISimpleGaugeVoter, ReentrancyGuard, Pausable, Plugi
         // although im not sure that's a problem
         // in this implementation - just a bit janky.
         TokenVoteData storage voteData = tokenVoteData[_tokenId];
-        uint256 numVotes = _votes.length;
         uint256 votingPowerUsed = 0;
         uint256 sumOfWeights = 0;
 
         for (uint256 i = 0; i < numVotes; i++) {
             sumOfWeights += _votes[i].weight;
         }
+
+        // todo this is technically redundant as checks below will revert div by zero
+        if (sumOfWeights == 0) revert NoVotes();
 
         // iterate over votes and distribute weight
         for (uint256 i = 0; i < numVotes; i++) {
@@ -119,8 +132,8 @@ contract SimpleGaugeVoter is ISimpleGaugeVoter, ReentrancyGuard, Pausable, Plugi
             if (!gaugeExists(gauge)) revert GaugeDoesNotExist(gauge);
             if (!isActive(gauge)) revert GaugeInactive(gauge);
 
-            // this shouldn't happen due to the reset
-            if (voteData.votes[gauge] != 0) revert MustReset();
+            // prevent double voting
+            if (voteData.votes[gauge] != 0) revert DoubleVote();
 
             // calculate the weight for this gauge
             uint256 votesForGauge = (_votes[i].weight * votingPower) / sumOfWeights;
@@ -131,7 +144,7 @@ contract SimpleGaugeVoter is ISimpleGaugeVoter, ReentrancyGuard, Pausable, Plugi
             voteData.votes[gauge] += votesForGauge;
 
             // update the total weights accruing to this gauge
-            totalWeights[gauge] += votesForGauge;
+            gaugeVotes[gauge] += votesForGauge;
 
             // track the running changes to the total
             // this might differ from the total voting power
@@ -143,23 +156,24 @@ contract SimpleGaugeVoter is ISimpleGaugeVoter, ReentrancyGuard, Pausable, Plugi
                 gauge: gauge,
                 epoch: epochId(),
                 tokenId: _tokenId,
-                weight: votesForGauge,
-                totalWeight: totalWeights[gauge],
+                votingPower: votesForGauge,
+                totalVotingPower: gaugeVotes[gauge],
                 timestamp: block.timestamp
             });
         }
 
         // record the total weight used for this vote
-        totalWeight += votingPowerUsed;
-        voteData.usedWeight = votingPowerUsed;
+        totalVotingPowerCast += votingPowerUsed;
+        voteData.usedVotingPower = votingPowerUsed;
 
         // setting the last voted also has the second-order effect of indicating the user has voted
         voteData.lastVoted = block.timestamp;
     }
 
-    function reset(uint256 _tokenId) external nonReentrant whenNotPaused {
+    function reset(uint256 _tokenId) external nonReentrant whenNotPaused whenVotingActive {
         if (!IVotingEscrow(escrow).isApprovedOrOwner(msg.sender, _tokenId))
             revert NotApprovedOrOwner();
+        if (!isVoting(_tokenId)) revert NotCurrentlyVoting();
         _reset(_tokenId);
     }
 
@@ -175,31 +189,28 @@ contract SimpleGaugeVoter is ISimpleGaugeVoter, ReentrancyGuard, Pausable, Plugi
 
             if (_votes != 0) {
                 // remove from the total weight and globals
-                totalWeights[gauge] -= _votes;
+                gaugeVotes[gauge] -= _votes;
                 votingPowerToRemove += _votes;
 
-                // remove the vote for the tokenId
                 delete voteData.votes[gauge];
-                delete voteData.gaugesVotedFor[i];
 
                 emit Reset({
                     voter: _msgSender(),
                     gauge: gauge,
                     epoch: epochId(),
                     tokenId: _tokenId,
-                    weight: _votes,
-                    totalWeight: totalWeights[gauge],
+                    votingPower: _votes,
+                    totalVotingPower: totalVotingPowerCast - _votes,
                     timestamp: block.timestamp
                 });
             }
         }
 
-        totalWeight -= votingPowerToRemove;
-        voteData.usedWeight = 0;
+        // scrub the global state for the token
+        voteData.gaugesVotedFor = new address[](0);
+        totalVotingPowerCast -= votingPowerToRemove;
+        voteData.usedVotingPower = 0;
         voteData.lastVoted = 0;
-
-        // TODO check this cleans the state properly
-        delete tokenVoteData[_tokenId];
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -261,24 +272,24 @@ contract SimpleGaugeVoter is ISimpleGaugeVoter, ReentrancyGuard, Pausable, Plugi
         return EpochDurationLib.currentEpoch(block.timestamp);
     }
 
+    /// @notice whether voting is active in the current epoch
     function votingActive() public view returns (bool) {
         return EpochDurationLib.votingActive(block.timestamp);
     }
 
-    function epochStart(uint256 _timestamp) external pure returns (uint256) {
-        return EpochDurationLib.epochStart(_timestamp);
+    /// @notice timestamp of the start of the next epoch
+    function epochStart() external view returns (uint256) {
+        return EpochDurationLib.epochStartTs(block.timestamp);
     }
 
-    function epochNext(uint256 _timestamp) external pure returns (uint256) {
-        return EpochDurationLib.epochNext(_timestamp);
+    /// @notice timestamp of the start of the next voting period
+    function epochVoteStart() external view returns (uint256) {
+        return EpochDurationLib.epochVoteStartTs(block.timestamp);
     }
 
-    function epochVoteStart(uint256 _timestamp) external pure returns (uint256) {
-        return EpochDurationLib.epochVoteStart(_timestamp);
-    }
-
-    function epochVoteEnd(uint256 _timestamp) external pure returns (uint256) {
-        return EpochDurationLib.epochVoteEnd(_timestamp);
+    /// @notice timestamp of the end of the current voting period
+    function epochVoteEnd() external view returns (uint256) {
+        return EpochDurationLib.epochVoteEndTs(block.timestamp);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -293,17 +304,15 @@ contract SimpleGaugeVoter is ISimpleGaugeVoter, ReentrancyGuard, Pausable, Plugi
         return tokenVoteData[_tokenId].lastVoted > 0;
     }
 
-    // Public getter for votes with current epoch
     function votes(uint256 _tokenId, address _gauge) external view returns (uint256) {
         return tokenVoteData[_tokenId].votes[_gauge];
     }
 
-    // Public getter for poolVote with current epoch
     function gaugesVotedFor(uint256 _tokenId) external view returns (address[] memory) {
         return tokenVoteData[_tokenId].gaugesVotedFor;
     }
 
-    function usedWeights(uint256 _tokenId) external view returns (uint256) {
-        return tokenVoteData[_tokenId].usedWeight;
+    function usedVotingPower(uint256 _tokenId) external view returns (uint256) {
+        return tokenVoteData[_tokenId].usedVotingPower;
     }
 }

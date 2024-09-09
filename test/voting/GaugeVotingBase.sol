@@ -38,7 +38,7 @@ contract GaugeVotingBase is
     MockDAOFactory daoFactory;
     MockERC20 token;
 
-    VotingEscrow ve;
+    VotingEscrow escrow;
     QuadraticIncreasingEscrow curve;
     SimpleGaugeVoter voter;
     ExitQueue queue;
@@ -129,7 +129,7 @@ contract GaugeVotingBase is
         address[] memory helpers = preparedSetupData.helpers;
         curve = QuadraticIncreasingEscrow(helpers[0]);
         queue = ExitQueue(helpers[1]);
-        ve = VotingEscrow(helpers[2]);
+        escrow = VotingEscrow(helpers[2]);
 
         // set the permissions
         for (uint i = 0; i < preparedSetupData.permissions.length; i++) {
@@ -138,7 +138,7 @@ contract GaugeVotingBase is
     }
 
     function _actions() internal view returns (IDAO.Action[] memory) {
-        IDAO.Action[] memory actions = new IDAO.Action[](5);
+        IDAO.Action[] memory actions = new IDAO.Action[](8);
 
         // action 0: apply the ve installation
         actions[0] = IDAO.Action({
@@ -146,32 +146,32 @@ contract GaugeVotingBase is
             value: 0,
             data: abi.encodeCall(
                 psp.applyInstallation,
-                (address(dao), _mockApplyInstallationParams(address(ve), voterSetupPermissions))
+                (address(dao), _mockApplyInstallationParams(address(escrow), voterSetupPermissions))
             )
         });
 
         // action 2: activate the curve on the ve
         actions[1] = IDAO.Action({
-            to: address(ve),
+            to: address(escrow),
             value: 0,
-            data: abi.encodeWithSelector(ve.setCurve.selector, address(curve))
+            data: abi.encodeWithSelector(escrow.setCurve.selector, address(curve))
         });
 
         // action 3: activate the queue on the ve
         actions[2] = IDAO.Action({
-            to: address(ve),
+            to: address(escrow),
             value: 0,
-            data: abi.encodeWithSelector(ve.setQueue.selector, address(queue))
+            data: abi.encodeWithSelector(escrow.setQueue.selector, address(queue))
         });
 
         // action 4: set the voter
         actions[3] = IDAO.Action({
-            to: address(ve),
+            to: address(escrow),
             value: 0,
-            data: abi.encodeWithSelector(ve.setVoter.selector, address(voter))
+            data: abi.encodeWithSelector(escrow.setVoter.selector, address(voter))
         });
 
-        // for testing, give this contract the GAUGE_ADMIN_ROLE
+        // for testing, give this contract the admin roles on all the periphery contracts
         actions[4] = IDAO.Action({
             to: address(dao),
             value: 0,
@@ -180,6 +180,34 @@ contract GaugeVotingBase is
                 (address(voter), address(this), voter.GAUGE_ADMIN_ROLE())
             )
         });
+
+        actions[5] = IDAO.Action({
+            to: address(dao),
+            value: 0,
+            data: abi.encodeCall(
+                PermissionManager.grant,
+                (address(escrow), address(this), escrow.ESCROW_ADMIN_ROLE())
+            )
+        });
+
+        actions[6] = IDAO.Action({
+            to: address(dao),
+            value: 0,
+            data: abi.encodeCall(
+                PermissionManager.grant,
+                (address(queue), address(this), queue.QUEUE_ADMIN_ROLE())
+            )
+        });
+
+        actions[7] = IDAO.Action({
+            to: address(dao),
+            value: 0,
+            data: abi.encodeCall(
+                PermissionManager.grant,
+                (address(curve), address(this), curve.CURVE_ADMIN_ROLE())
+            )
+        });
+
         return wrapGrantRevokeRoot(DAO(payable(address(dao))), address(psp), actions);
     }
 

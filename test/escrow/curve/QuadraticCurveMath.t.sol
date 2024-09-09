@@ -101,7 +101,7 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
         assertEq(curve.isWarm(tokenIdFirst), false, "Not warming up");
 
         // wait for warmup
-        vm.warp(block.timestamp + curve.warmupPeriod());
+        vm.warp(block.timestamp + curve.warmupPeriod() - 1);
         assertEq(curve.votingPowerAt(tokenIdFirst, 0), 0, "Balance after deposit before warmup");
         assertEq(curve.isWarm(tokenIdFirst), false, "Not warming up");
         assertEq(curve.isWarm(tokenIdSecond), false, "Not warming up II");

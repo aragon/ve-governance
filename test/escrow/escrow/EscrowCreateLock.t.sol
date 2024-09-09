@@ -45,7 +45,7 @@ contract TestCreateLock is EscrowBase, IEscrowCurveUserStorage {
     function testFuzz_createLock(uint128 _value, address _depositor, uint128 _time) public {
         vm.assume(_value > 0);
         // TODO: figure out why t == 0 and cooldown zero breaks things
-        vm.assume(_time > 0);
+        // vm.assume(_time > 0);
         vm.assume(_depositor != address(0));
 
         // set zero warmup for this test
