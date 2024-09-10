@@ -95,4 +95,31 @@ contract TestEscrowAdmin is EscrowBase {
         vm.expectRevert(PAUSEABLE_ERROR);
         escrow.withdraw(100);
     }
+
+    function testWhitelist() public {
+        address addr = address(1);
+        vm.expectEmit(true, false, false, true);
+        emit WhitelistSet(addr, true);
+        escrow.setWhitelisted(addr, true);
+        assertTrue(escrow.whitelisted(addr));
+
+        escrow.setWhitelisted(addr, false);
+        assertFalse(escrow.whitelisted(addr));
+
+        escrow.enableTransfers();
+        assertTrue(
+            escrow.whitelisted(address(uint160(uint256(keccak256("WHITELIST_ANY_ADDRESS")))))
+        );
+
+        bytes memory err = _authErr(attacker, address(escrow), escrow.ESCROW_ADMIN_ROLE());
+        vm.startPrank(attacker);
+        {
+            vm.expectRevert(err);
+            escrow.setWhitelisted(addr, true);
+
+            vm.expectRevert(err);
+            escrow.enableTransfers();
+        }
+        vm.stopPrank();
+    }
 }

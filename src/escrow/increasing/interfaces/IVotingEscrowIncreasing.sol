@@ -71,12 +71,9 @@ interface IVotingEscrowCore is
     function createLockFor(uint256 _value, address _to) external returns (uint256);
 
     /// @notice Withdraw all tokens for `_tokenId`
-    /// @dev Only possible if the lock is both expired and not permanent
-    ///      This will burn the veNFT. Any rebases or rewards that are unclaimed
-    ///      will no longer be claimable. Claim all rebases and rewards prior to calling this.
     function withdraw(uint256 _tokenId) external;
 
-    // TODO - how best to integrate the extended ERC721 interface?
+    /// @notice helper utility for NFT checks
     function isApprovedOrOwner(address spender, uint256 tokenId) external view returns (bool);
 }
 
@@ -87,9 +84,12 @@ interface IWhitelistEvents {
     event WhitelistSet(address indexed account, bool status);
 }
 
-interface IWhitelist is IWhitelistEvents {
+interface IWhitelistErrors {
+    error NotWhitelisted();
+}
+
+interface IWhitelist is IWhitelistEvents, IWhitelistErrors {
     /// @notice Set whitelist status for an address
-    /// Typically used to prevent unknown smart contracts from interacting with the system
     function setWhitelisted(address addr, bool isWhitelisted) external;
 
     /// @notice Check if an address is whitelisted
@@ -189,7 +189,8 @@ interface IVotingEscrowEventsStorageErrors is
     IWhitelistEvents,
     IWithdrawalQueueErrors,
     IWithdrawalQueueEvents,
-    ILockedBalanceIncreasing
+    ILockedBalanceIncreasing,
+    IWhitelistErrors
 {
 
 }

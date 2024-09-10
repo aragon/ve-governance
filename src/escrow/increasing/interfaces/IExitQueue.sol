@@ -37,7 +37,8 @@ interface IExitQueue is IExitQueueErrors, IExitQueueEvents, ITicket {
     function queueExit(uint256 _tokenId, address _ticketHolder) external;
 
     /// @notice exit the queue for a given tokenId. Requires the cooldown period to have passed
-    function exit(uint256 _tokenId) external;
+    /// @return exitAmount the amount of tokens that can be withdrawn
+    function exit(uint256 _tokenId) external returns (uint256 exitAmount);
 
     /// @return true if the tokenId corresponds to a valid ticket and the cooldown period has passed
     function canExit(uint256 _tokenId) external view returns (bool);
