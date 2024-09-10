@@ -3,6 +3,7 @@ pragma solidity ^0.8.17;
 
 // token interfaces
 import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import {IERC20MetadataUpgradeable as IERC20Metadata} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
 import {IERC721Upgradeable as IERC721, ERC721Upgradeable as ERC721} from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import {IERC721MetadataUpgradeable as IERC721Metadata} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/IERC721MetadataUpgradeable.sol";
 import {ERC721EnumerableUpgradeable as ERC721Enumerable} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
@@ -62,7 +63,6 @@ contract VotingEscrow is
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Decimals of the voting power
-    /// TODO: validate tokens with nonstandard decimals
     uint8 public constant decimals = 18;
 
     /// @notice Total supply of underlying tokens deposited in the contract
@@ -92,16 +92,8 @@ contract VotingEscrow is
     /// @notice Whitelisted contracts that are allowed to transfer
     mapping(address => bool) public whitelisted;
 
-    /// @dev tokenId => block number of ownership change
-    /// Used to prevent flash NFT explots by restricting same block actions
-    /// todo check this
-    mapping(uint256 => uint256) internal ownershipChange;
-
     /// @dev tracks the locked balance of each NFT
     mapping(uint256 => LockedBalance) internal _locked;
-
-    /// @dev Reserved storage space to allow for layout changes in the future.
-    uint256[42] private __gap;
 
     /*//////////////////////////////////////////////////////////////
                               ERC165
@@ -132,6 +124,7 @@ contract VotingEscrow is
         __Pausable_init();
         __ERC721_init(_name, _symbol);
 
+        if (IERC20Metadata(_token).decimals() != 18) revert MustBe18Decimals();
         token = _token;
 
         // allow sending tokens to this contract
@@ -144,7 +137,6 @@ contract VotingEscrow is
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Transfers disabled by default, only whitelisted addresses can receive transfers
-    /// TODO: should we separate to and from
     function setWhitelisted(
         address _account,
         bool _isWhitelisted
@@ -207,7 +199,6 @@ contract VotingEscrow is
 
     /// @return The voting power of the NFT at the current block
     function votingPower(uint256 _tokenId) public view returns (uint256) {
-        // if (ownershipChange[_tokenId] == block.number) return 0;
         return votingPowerAt(_tokenId, block.timestamp);
     }
 
@@ -257,8 +248,6 @@ contract VotingEscrow is
 
     /// @dev Override the transfer to check if the recipient is whitelisted
     /// This avoids needing to check for mint/burn but is less idomatic than beforeTokenTransfer
-    /// TODO: custom transfer logic would require more audits, might be better to have an
-    /// exposed hook for custom transfer logic
     function _transfer(address _from, address _to, uint256 _tokenId) internal override {
         if (whitelisted[WHITELIST_ANY_ADDRESS] || whitelisted[_to]) {
             super._transfer(_from, _to, _tokenId);
@@ -396,4 +385,7 @@ contract VotingEscrow is
 
     /// @notice Internal method authorizing the upgrade of the contract via the [upgradeability mechanism for UUPS proxies](https://docs.openzeppelin.com/contracts/4.x/api/proxy#UUPSUpgradeable) (see [ERC-1822](https://eips.ethereum.org/EIPS/eip-1822)).
     function _authorizeUpgrade(address) internal virtual override auth(ESCROW_ADMIN_ROLE) {}
+
+    /// @dev Reserved storage space to allow for layout changes in the future.
+    uint256[43] private __gap;
 }

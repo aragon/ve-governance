@@ -22,11 +22,6 @@ import {VotingEscrow, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, Si
 
 import {GaugeVotingBase} from "./GaugeVotingBase.sol";
 
-// TODO this would be a best practice so we can control our tests better
-contract MockEscrow {
-    function isApprovedOrOwner(address who, uint256 tokenId) public {}
-}
-
 contract TestGaugeVote is GaugeVotingBase {
     uint256[] ids;
     GaugeVote[] votes;

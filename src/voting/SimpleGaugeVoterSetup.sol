@@ -176,8 +176,7 @@ contract SimpleGaugeVoterSetup is PluginSetup {
     /// @notice Returns the permissions required for the plugin install and uninstall.
     /// @param _dao The DAO address on this chain.
     /// @param _plugin The plugin address.
-    /// @param _grantOrRevoke The operation to perform.
-    /// TODO: Pauser roles
+    /// @param _grantOrRevoke The operation to perform
     function getPermissions(
         address _dao,
         address _plugin,

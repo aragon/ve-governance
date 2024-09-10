@@ -34,9 +34,6 @@ contract SimpleGaugeVoter is ISimpleGaugeVoter, ReentrancyGuard, Pausable, Plugi
     /// @dev tokenId => tokenVoteData
     mapping(uint256 => TokenVoteData) internal tokenVoteData;
 
-    /// @dev TODO Move to bottom of code before audit
-    uint256[44] private __gap;
-
     /*///////////////////////////////////////////////////////////////
                             Initialization
     //////////////////////////////////////////////////////////////*/
@@ -107,11 +104,10 @@ contract SimpleGaugeVoter is ISimpleGaugeVoter, ReentrancyGuard, Pausable, Plugi
         // clear any existing votes
         if (isVoting(_tokenId)) _reset(_tokenId);
 
-        // todo should this be at the start of the voting epoch
-        // otherwise you can just reset and vote again
-        // later in the epoch to have more votes
-        // although im not sure that's a problem
-        // in this implementation - just a bit janky.
+        // voting power continues to increase over the voting epoch.
+        // this means you can revote later in the epoch to increase votes.
+        // while not a huge problem, it's worth noting that when rewards are fully
+        // on chain, this could be a vector for gaming.
         TokenVoteData storage voteData = tokenVoteData[_tokenId];
         uint256 votingPowerUsed = 0;
         uint256 sumOfWeights = 0;
@@ -120,7 +116,8 @@ contract SimpleGaugeVoter is ISimpleGaugeVoter, ReentrancyGuard, Pausable, Plugi
             sumOfWeights += _votes[i].weight;
         }
 
-        // todo this is technically redundant as checks below will revert div by zero
+        // this is technically redundant as checks below will revert div by zero
+        // but it's clearer to the caller if we revert here
         if (sumOfWeights == 0) revert NoVotes();
 
         // iterate over votes and distribute weight
@@ -259,7 +256,7 @@ contract SimpleGaugeVoter is ISimpleGaugeVoter, ReentrancyGuard, Pausable, Plugi
         string calldata _metadata
     ) external auth(GAUGE_ADMIN_ROLE) {
         if (!gaugeExists(_gauge)) revert GaugeDoesNotExist(_gauge);
-        gauges[_gauge].metadata = keccak256(abi.encode(_metadata)); // todo
+        gauges[_gauge].metadata = keccak256(abi.encode(_metadata));
         emit GaugeMetadataUpdated(_gauge, _metadata);
     }
 
@@ -315,4 +312,6 @@ contract SimpleGaugeVoter is ISimpleGaugeVoter, ReentrancyGuard, Pausable, Plugi
     function usedVotingPower(uint256 _tokenId) external view returns (uint256) {
         return tokenVoteData[_tokenId].usedVotingPower;
     }
+
+    uint256[44] private __gap;
 }

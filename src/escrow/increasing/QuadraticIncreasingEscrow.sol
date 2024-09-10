@@ -335,11 +335,6 @@ contract QuadraticIncreasingEscrow is
             // over the current time
             uNew.ts = _newLocked.start;
 
-            // TODO: we have to interpolate to get the block number
-            // We don't use it in this governance system so we may want to
-            // evaulate if its necessary as an interpolated point
-            // uNew.blk = block.number;
-
             // check to see if we have an existing epoch for this token
             uint256 userEpoch = userPointEpoch[_tokenId];
 

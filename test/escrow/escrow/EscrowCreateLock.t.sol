@@ -47,8 +47,6 @@ contract TestCreateLock is EscrowBase, IEscrowCurveUserStorage {
     /// @param _time is bound to 128 bits to avoid overflow - seems reasonable as is not a user input
     function testFuzz_createLock(uint128 _value, address _depositor, uint128 _time) public {
         vm.assume(_value > 0);
-        // TODO: figure out why t == 0 and cooldown zero breaks things
-        // vm.assume(_time > 0);
         vm.assume(_depositor != address(0));
 
         // set zero warmup for this test
@@ -282,33 +280,9 @@ contract TestCreateLock is EscrowBase, IEscrowCurveUserStorage {
         emit Deposit(_who, 1, 1 weeks, _value, _value);
         escrow.createLockFor(_value, _who);
     }
-
-    /// TODO constructor tests
-    function testCannotMintToContractIncompleteCheck() public {
-        address mock = address(new Mock());
-
-        assertFalse(mock.code.length == 0);
-
-        // TODO: think deeply about this:
-        // - restricting smart contract wallets is problematic
-        // - restricting EOA recipients is also problematic
-        // We could trade off UX by forcing a very restrictive view of EOAs but need
-        // to be sure that's what we want to do
-        // We also want to avoid people being able to "trade" voting power through the use
-        // of wrapper contracts
-
-        // of course, one option is simply to not allow transfers, only mints and burns.
-        // a user can mint voting power to a wrapper, and trade the wrapper, but they can't accumulate
-        // multiple locks into a single wrapper (or can they?
-    }
-
     //   Creating a lock:
-    // CreateLock time logic:
-    // - Test that the create lock snaps to the nearest voting period start date
-    // - TODO t == 0?
     // Creating a lock for someone:
     // - Test we can make a lock for someone else
-    // - Test that someone can't be a smart contract unless whitelisted
 }
 
 contract Mock {}

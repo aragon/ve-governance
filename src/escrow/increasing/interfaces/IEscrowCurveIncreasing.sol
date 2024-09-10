@@ -11,14 +11,12 @@ interface IEscrowCurveGlobalStorage {
     /// @notice Captures the shape of the aggregate voting curve at a specific point in time
     /// @param bias The y intercept of the aggregate voting curve at the given time
     /// @param ts The timestamp at which the we last updated the aggregate voting curve
-    /// @param blk The block at which the we last updated the aggregate voting curve
     /// @param coefficients The coefficients of the aggregated curve, supports up to cubic curves.
     /// @dev Coefficients are stored in the following order: [constant, linear, quadratic, cubic]
     /// and not all coefficients are used for all curves.
     struct GlobalPoint {
         uint128 bias;
         uint256 ts;
-        uint256 blk;
         int256[4] coefficients;
     }
 }
@@ -37,14 +35,12 @@ interface IEscrowCurveUserStorage {
     /// @notice Captures the shape of the user's voting curve at a specific point in time
     /// @param bias The y intercept of the user's voting curve at the given time
     /// @param ts The timestamp at which the user's voting curve was captured
-    /// @param blk The block at which the user's voting curve was captured
     /// @param coefficients The coefficients of the curve, supports up to cubic curves.
     /// @dev Coefficients are stored in the following order: [constant, linear, quadratic, cubic]
     /// and not all coefficients are used for all curves.
     struct UserPoint {
         uint256 bias;
         uint256 ts;
-        uint256 blk;
         int256[4] coefficients;
     }
 }

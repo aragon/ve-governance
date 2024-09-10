@@ -5,7 +5,7 @@ interface IGauge {
     struct Gauge {
         bool active;
         uint256 created; // timestamp or epoch
-        bytes32 metadata; // TODO => do we need this onchain or can just be event emitted?
+        bytes32 metadata;
         // more space for data as this is a struct in a mapping
     }
 }
