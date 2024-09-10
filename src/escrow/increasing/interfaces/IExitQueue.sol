@@ -5,22 +5,27 @@ interface IExitQueueErrors {
     error AlreadyQueued();
     error ZeroAddress();
     error CannotExit();
+    error FeeTooHigh();
+    error NoLockBalance();
 }
 
 interface IExitQueueEvents {
-    event ExitQueued(uint256 indexed tokenId, address indexed holder);
-    event Exit(uint256 indexed tokenId);
+    event ExitQueued(uint256 indexed tokenId, address indexed holder, uint256 exitDate);
+    event Exit(uint256 indexed tokenId, uint256 fee);
     event CooldownSet(uint256 cooldown);
+    event FeePercentSet(uint256 feePercent);
 }
 
 interface ITicket {
     struct Ticket {
         address holder;
-        uint256 timestamp;
+        uint256 exitDate;
     }
 }
 
 interface IExitQueue is IExitQueueErrors, IExitQueueEvents, ITicket {
+    function feePercent() external view returns (uint256);
+
     /// @notice tokenId => Ticket
     function queue(uint256 _tokenId) external view returns (Ticket memory);
 

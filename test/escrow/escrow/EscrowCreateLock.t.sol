@@ -34,7 +34,10 @@ contract TestCreateLock is EscrowBase, IEscrowCurveUserStorage {
 
     function testCantMintToZeroAddress() public {
         token.mint(address(this), 1);
+        token.approve(address(escrow), 1);
+
         vm.expectRevert("ERC721: mint to the zero address");
+
         escrow.createLockFor(1, address(0));
     }
 

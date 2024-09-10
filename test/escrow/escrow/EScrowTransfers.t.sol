@@ -26,6 +26,8 @@ contract TestEscrowTransfers is EscrowBase, IEscrowCurveUserStorage {
         token.mint(address(this), deposit);
         token.approve(address(escrow), deposit);
         tokenId = escrow.createLock(deposit);
+
+        assertEq(escrow.balanceOf(address(this)), 1);
     }
 
     function testCannotTransferByDefault() public {
@@ -39,10 +41,13 @@ contract TestEscrowTransfers is EscrowBase, IEscrowCurveUserStorage {
     function testCanTransferIfWhitelisted() public {
         escrow.setWhitelisted(address(123), true);
 
+        assertEq(escrow.balanceOf(address(123)), 0);
+        assertEq(escrow.balanceOf(address(this)), 1);
+
         escrow.transferFrom(address(this), address(123), tokenId);
 
-        assertEq(token.balanceOf(address(123)), deposit);
-        assertEq(token.balanceOf(address(this)), 0);
+        assertEq(escrow.balanceOf(address(123)), 1);
+        assertEq(escrow.balanceOf(address(this)), 0);
 
         // todo - reset the voting power
     }

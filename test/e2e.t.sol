@@ -324,7 +324,8 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
                 veTokenName: "VE Token",
                 veTokenSymbol: "VE",
                 warmup: 3 days,
-                cooldown: 3 days
+                cooldown: 3 days,
+                feePercent: 0
             })
         );
         (address pluginAddress, IPluginSetup.PreparedSetupData memory preparedSetupData) = psp

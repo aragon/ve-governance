@@ -50,6 +50,8 @@ contract GaugeVotingBase is
 
     uint256 constant COOLDOWN = 3 days;
 
+    address voterBase;
+
     function setUp() public virtual {
         // clock reset
         vm.roll(0);
@@ -99,9 +101,11 @@ contract GaugeVotingBase is
     function _setupVoterContracts() public {
         token = new MockERC20();
 
+        voterBase = address(new SimpleGaugeVoter());
+
         // deploy setup
         voterSetup = new SimpleGaugeVoterSetup(
-            address(new SimpleGaugeVoter()),
+            voterBase,
             address(new QuadraticIncreasingEscrow()),
             address(new ExitQueue()),
             address(new VotingEscrow())
@@ -118,7 +122,8 @@ contract GaugeVotingBase is
                 veTokenName: "VE Token",
                 veTokenSymbol: "VE",
                 warmup: 3 days,
-                cooldown: 3 days
+                cooldown: 3 days,
+                feePercent: 0
             })
         );
         (address pluginAddress, IPluginSetup.PreparedSetupData memory preparedSetupData) = psp

@@ -2,6 +2,10 @@ pragma solidity ^0.8.17;
 
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {IExitQueue} from "./interfaces/IExitQueue.sol";
+import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import {IVotingEscrowIncreasing as IVotingEscrow} from "@escrow-interfaces/IVotingEscrowIncreasing.sol";
+
+import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
@@ -10,8 +14,13 @@ import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/pl
 /// @notice Token IDs associated with an NFT are given a ticket when they are queued for exit.
 /// After a cooldown period, the ticket holder can exit the NFT.
 contract ExitQueue is IExitQueue, DaoAuthorizable, UUPSUpgradeable {
+    using SafeERC20 for IERC20;
+
     /// @notice role required to manage the exit queue
     bytes32 public constant QUEUE_ADMIN_ROLE = keccak256("QUEUE_ADMIN");
+
+    /// @notice role required to withdraw tokens from the escrow contract
+    bytes32 public constant WITHDRAW_ROLE = keccak256("WITHDRAW_ROLE");
 
     /// @notice address of the escrow contract
     address public escrow;
@@ -19,10 +28,14 @@ contract ExitQueue is IExitQueue, DaoAuthorizable, UUPSUpgradeable {
     /// @notice time in seconds between exit and withdrawal
     uint256 public cooldown;
 
+    /// @notice the fee percent charged on withdrawals
+    /// @dev 1e18 = 100%
+    uint256 public feePercent;
+
     /// @notice tokenId => Ticket
     mapping(uint256 => Ticket) internal _queue;
 
-    uint256[47] private __gap;
+    uint256[46] private __gap;
 
     /*//////////////////////////////////////////////////////////////
                               Constructor
@@ -34,9 +47,15 @@ contract ExitQueue is IExitQueue, DaoAuthorizable, UUPSUpgradeable {
     /// @param _escrow address of the escrow contract where tokens are stored
     /// @param _cooldown time in seconds between exit and withdrawal
     /// @param _dao address of the DAO that will be able to set the queue
-    function initialize(address _escrow, uint256 _cooldown, address _dao) external initializer {
+    function initialize(
+        address _escrow,
+        uint256 _cooldown,
+        address _dao,
+        uint256 _feePercent
+    ) external initializer {
         __DaoAuthorizableUpgradeable_init(IDAO(_dao));
         escrow = _escrow;
+        _setFeePercent(_feePercent);
         _setCooldown(_cooldown);
     }
 
@@ -55,6 +74,29 @@ contract ExitQueue is IExitQueue, DaoAuthorizable, UUPSUpgradeable {
         emit CooldownSet(_cooldown);
     }
 
+    /// @notice The exit queue manager can set the fee percent
+    /// @param _feePercent the fee percent charged on withdrawals
+    function setFeePercent(uint256 _feePercent) external auth(QUEUE_ADMIN_ROLE) {
+        _setFeePercent(_feePercent);
+    }
+
+    function _setFeePercent(uint256 _feePercent) internal {
+        if (_feePercent > 1e18) revert FeeTooHigh();
+        feePercent = _feePercent;
+        emit FeePercentSet(_feePercent);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                              WITHDRAWER
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice withdraw staked tokens sent as part of fee collection to the caller
+    /// @dev The caller must be authorized to withdraw by the DAO
+    function withdraw(uint256 _amount) external auth(WITHDRAW_ROLE) {
+        IERC20 underlying = IERC20(IVotingEscrow(escrow).token());
+        underlying.transfer(msg.sender, _amount);
+    }
+
     /*//////////////////////////////////////////////////////////////
                               Exit Logic
     //////////////////////////////////////////////////////////////*/
@@ -70,21 +112,32 @@ contract ExitQueue is IExitQueue, DaoAuthorizable, UUPSUpgradeable {
         if (_ticketHolder == address(0)) revert ZeroAddress();
         if (_queue[_tokenId].holder != address(0)) revert AlreadyQueued();
 
-        _queue[_tokenId] = Ticket(_ticketHolder, block.timestamp);
-        emit ExitQueued(_tokenId, _ticketHolder);
+        uint exitDate = block.timestamp + cooldown;
+
+        _queue[_tokenId] = Ticket(_ticketHolder, exitDate);
+        emit ExitQueued(_tokenId, _ticketHolder, exitDate);
     }
 
     /// @notice Exits the queue for that tokenID.
     /// @dev The holder is not checked. This is left up to the escrow contract to manage.
-    function exit(uint256 _tokenId) external returns (uint256 exitQty) {
+    function exit(uint256 _tokenId) external returns (uint256 fee) {
         if (msg.sender != escrow) revert OnlyEscrow();
         if (!canExit(_tokenId)) revert CannotExit();
 
         // reset the ticket for that tokenId
         _queue[_tokenId] = Ticket(address(0), 0);
-        emit Exit(_tokenId);
 
-        return 0;
+        // return the fee to the caller
+        fee = calculateFee(_tokenId);
+        emit Exit(_tokenId, fee);
+    }
+
+    /// @notice Calculate the exit fee for a given tokenId
+    function calculateFee(uint256 _tokenId) public view returns (uint256) {
+        if (feePercent == 0) return 0;
+        uint underlyingBalance = IVotingEscrow(escrow).locked(_tokenId).amount;
+        if (underlyingBalance == 0) revert NoLockBalance();
+        return (underlyingBalance * feePercent) / 1e18;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -96,10 +149,7 @@ contract ExitQueue is IExitQueue, DaoAuthorizable, UUPSUpgradeable {
     function canExit(uint256 _tokenId) public view returns (bool) {
         Ticket memory ticket = _queue[_tokenId];
         if (ticket.holder == address(0)) return false;
-
-        // TODO: we could hardcode the end date, this would prevent the admin from arbitrarily changing the cooldown
-        // whilst the exit is pending
-        return block.timestamp >= ticket.timestamp + cooldown;
+        return block.timestamp >= ticket.exitDate;
     }
 
     /// @return holder of a ticket for a given tokenId

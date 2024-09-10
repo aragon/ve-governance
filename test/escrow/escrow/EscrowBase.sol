@@ -17,13 +17,13 @@ import {createTestDAO} from "@mocks/MockDAO.sol";
 import "@helpers/OSxHelpers.sol";
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
-import {IVotingEscrowEventsStorageErrors} from "@escrow-interfaces/IVotingEscrowIncreasing.sol";
+import {IVotingEscrowEventsStorageErrorsEvents} from "@escrow-interfaces/IVotingEscrowIncreasing.sol";
 import {VotingEscrow} from "@escrow/VotingEscrowIncreasing.sol";
 import {QuadraticIncreasingEscrow} from "@escrow/QuadraticIncreasingEscrow.sol";
 import {ExitQueue} from "@escrow/ExitQueue.sol";
 import {SimpleGaugeVoter, SimpleGaugeVoterSetup} from "src/voting/SimpleGaugeVoterSetup.sol";
 
-contract EscrowBase is Test, IVotingEscrowEventsStorageErrors {
+contract EscrowBase is Test, IVotingEscrowEventsStorageErrorsEvents {
     using ProxyLib for address;
     string name = "Voting Escrow";
     string symbol = "VE";
@@ -53,7 +53,7 @@ contract EscrowBase is Test, IVotingEscrowEventsStorageErrors {
 
         // to be added as proxies
         voter = _deployVoter(address(dao), address(escrow), false);
-        queue = _deployExitQueue(address(escrow), 3 days, address(dao));
+        queue = _deployExitQueue(address(escrow), 3 days, address(dao), 0);
 
         // grant this contract admin privileges
         dao.grant({
@@ -86,6 +86,12 @@ contract EscrowBase is Test, IVotingEscrowEventsStorageErrors {
             _who: address(this),
             _where: address(curve),
             _permissionId: curve.CURVE_ADMIN_ROLE()
+        });
+
+        dao.grant({
+            _who: address(this),
+            _where: address(escrow),
+            _permissionId: escrow.LOCK_CREATOR_ROLE()
         });
 
         // link them
@@ -155,13 +161,14 @@ contract EscrowBase is Test, IVotingEscrowEventsStorageErrors {
     function _deployExitQueue(
         address _escrow,
         uint _cooldown,
-        address _dao
+        address _dao,
+        uint256 _feePercent
     ) public returns (ExitQueue) {
         ExitQueue impl = new ExitQueue();
 
         bytes memory initCalldata = abi.encodeCall(
             ExitQueue.initialize,
-            (_escrow, _cooldown, _dao)
+            (_escrow, _cooldown, _dao, _feePercent)
         );
         return ExitQueue(address(impl).deployUUPSProxy(initCalldata));
     }

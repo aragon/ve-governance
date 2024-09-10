@@ -42,7 +42,7 @@ contract TestGaugeVote is GaugeVotingBase {
         // reset clock
         vm.warp(0);
 
-        // m eans we have voting power
+        // means we have voting power
         curve.setWarmupPeriod(0);
 
         // mint underlying and stake
@@ -354,5 +354,62 @@ contract TestGaugeVote is GaugeVotingBase {
         // global state
         assertEq(voter.totalVotingPowerCast(), newVotingPower);
         assertEq(voter.gaugeVotes(gauge), newVotingPower);
+    }
+
+    function testCanVoteForMultiple() public {
+        uint secondDeposit = 500 ether;
+
+        // create a second gauge
+        address gauge2 = address(0x69);
+        voter.createGauge(gauge2, "metadata");
+
+        // create a second lock
+        token.mint(owner, secondDeposit);
+        uint tokenIdNew;
+        vm.startPrank(owner);
+
+        {
+            token.approve(address(escrow), secondDeposit);
+            tokenIdNew = escrow.createLock(secondDeposit);
+        }
+        vm.stopPrank();
+
+        // jump 2 weeks so that we have voting power
+        vm.warp(block.timestamp + 2 weeks);
+
+        assertGt(escrow.votingPower(tokenIdNew), 0);
+
+        // get all the token Ids for the user
+        uint256[] memory tokens = escrow.ownedTokens(owner);
+
+        vm.prank(owner);
+        escrow.setApprovalForAll(address(voter), true);
+
+        uint vp0 = escrow.votingPower(tokens[0]);
+        uint vp1 = escrow.votingPower(tokens[1]);
+
+        uint totalVotingPower = escrow.votingPowerForAccount(owner);
+        assertEq(totalVotingPower, vp0 + vp1);
+
+        // vote multiple
+        votes.push(GaugeVote(50, gauge));
+        votes.push(GaugeVote(100, gauge2));
+
+        vm.prank(owner);
+        voter.voteMultiple(tokens, votes);
+
+        // we expect the vote for the first token to be 50/150 of the total voting power
+        // and the second to be 100/150 of the total voting power
+
+        uint expectedVotesForGauge = (50 * vp0) / (50 + 100);
+        uint expectedVotesForGauge2 = (100 * vp1) / (50 + 100);
+
+        // check the vote
+        assertEq(voter.isVoting(tokenId), true);
+        assertEq(voter.gaugesVotedFor(tokenId).length, 2);
+        assertEq(voter.gaugesVotedFor(tokenId)[0], gauge);
+        assertEq(voter.gaugesVotedFor(tokenId)[1], gauge2);
+        assertEq(voter.votes(tokenId, gauge), expectedVotesForGauge);
+        assertEq(voter.votes(tokenIdNew, gauge2), expectedVotesForGauge2);
     }
 }

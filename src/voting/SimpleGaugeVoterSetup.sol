@@ -34,6 +34,7 @@ struct ISimpleGaugeVoterSetupParams {
     address token;
     // queue
     uint256 cooldown;
+    uint256 feePercent;
     // curve
     uint256 warmup;
 }
@@ -122,7 +123,10 @@ contract SimpleGaugeVoterSetup is PluginSetup {
 
         // deploy the exit queue
         address exitQueue = queueBase.deployUUPSProxy(
-            abi.encodeCall(ExitQueue.initialize, (address(escrow), params.cooldown, _dao))
+            abi.encodeCall(
+                ExitQueue.initialize,
+                (address(escrow), params.cooldown, _dao, params.feePercent)
+            )
         );
 
         // encode our setup data with permissions and helpers
@@ -241,7 +245,8 @@ contract SimpleGaugeVoterSetup is PluginSetup {
         string calldata veTokenSymbol,
         address token,
         uint256 cooldown,
-        uint256 warmup
+        uint256 warmup,
+        uint256 feePercent
     ) external pure returns (bytes memory) {
         return
             abi.encode(
@@ -251,7 +256,8 @@ contract SimpleGaugeVoterSetup is PluginSetup {
                     veTokenName: veTokenName,
                     veTokenSymbol: veTokenSymbol,
                     warmup: warmup,
-                    cooldown: cooldown
+                    cooldown: cooldown,
+                    feePercent: feePercent
                 })
             );
     }

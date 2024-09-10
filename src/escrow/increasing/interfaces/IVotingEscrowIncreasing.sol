@@ -183,7 +183,7 @@ interface IVotingEscrowIncreasing is
 }
 
 /// @dev useful for testing
-interface IVotingEscrowEventsStorageErrors is
+interface IVotingEscrowEventsStorageErrorsEvents is
     IVotingEscrowCoreErrors,
     IVotingEscrowCoreEvents,
     IWhitelistEvents,

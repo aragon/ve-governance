@@ -256,14 +256,13 @@ contract VotingEscrow is
     //////////////////////////////////////////////////////////////*/
 
     /// @dev Override the transfer to check if the recipient is whitelisted
+    /// This avoids needing to check for mint/burn but is less idomatic than beforeTokenTransfer
     /// TODO: custom transfer logic would require more audits, might be better to have an
     /// exposed hook for custom transfer logic
     function _transfer(address _from, address _to, uint256 _tokenId) internal override {
         if (whitelisted[WHITELIST_ANY_ADDRESS] || whitelisted[_to]) {
             super._transfer(_from, _to, _tokenId);
-        } else {
-            revert NotWhitelisted();
-        }
+        } else revert NotWhitelisted();
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -349,7 +348,7 @@ contract VotingEscrow is
         // we can remove the user's voting power as it's no longer locked
         _checkpointClear(_tokenId);
 
-        // queue the exit and transfer NFT to this contract
+        // queue the exit and transfer NFT to the queue
         IExitQueue(queue).queueExit(_tokenId, owner);
         _transfer(_msgSender(), address(this), _tokenId);
     }
@@ -367,26 +366,21 @@ contract VotingEscrow is
         LockedBalance memory oldLocked = _locked[_tokenId];
         uint256 value = oldLocked.amount;
 
-        // Burn the NFT and kill the ticket
-        uint256 exitQty = IExitQueue(queue).exit(_tokenId);
-
         // clear out the token data
         _locked[_tokenId] = LockedBalance(0, 0);
-
         totalLocked -= value;
 
+        // check for fees to be transferred
+        uint256 fee = IExitQueue(queue).exit(_tokenId);
+        if (fee > 0) {
+            IERC20(token).safeTransfer(address(queue), fee);
+        }
+
+        // Burn the NFT and transfer the tokens to the user
         _burn(_tokenId);
-        IERC20(token).safeTransfer(sender, value);
+        IERC20(token).safeTransfer(sender, value - fee);
 
-        emit Withdraw(sender, _tokenId, value, block.timestamp, totalLocked);
-    }
-
-    /// @notice Trusted bodies can withdraw any tokens from the contract that are left after exit.
-    function withdrawUnderlying(
-        uint256 _value
-    ) external nonReentrant whenNotPaused auth(WITHDRAWER_ROLE) {
-        totalLocked -= _value;
-        IERC20(token).safeTransfer(_msgSender(), _value);
+        emit Withdraw(sender, _tokenId, value - fee, block.timestamp, totalLocked);
     }
 
     /*///////////////////////////////////////////////////////////////

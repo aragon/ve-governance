@@ -243,6 +243,7 @@ contract QuadraticIncreasingEscrow is
     }
 
     /// @notice Binary search to get the user point index for a token id at or prior to a given timestamp
+    /// Once we have the point, we can apply the bias calculation to get the voting power.
     /// @dev If a user point does not exist prior to the timestamp, this will return 0.
     function _getPastUserPointIndex(
         uint256 _tokenId,
@@ -250,9 +251,12 @@ contract QuadraticIncreasingEscrow is
     ) internal view returns (uint256) {
         uint256 _userEpoch = userPointEpoch[_tokenId];
         if (_userEpoch == 0) return 0;
-        // First check most recent balance
+
+        // if the most recent point is before the timestamp, return it
         if (_userPointHistory[_tokenId][_userEpoch].ts <= _timestamp) return (_userEpoch);
-        // Next check implicit zero balance
+
+        // Check if the first balance is after the timestamp
+        // this means that the first epoch has yet to start
         if (_userPointHistory[_tokenId][1].ts > _timestamp) return 0;
 
         uint256 lower = 0;

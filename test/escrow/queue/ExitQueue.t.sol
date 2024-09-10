@@ -1,7 +1,5 @@
 pragma solidity ^0.8.17;
 
-import {Test} from "forge-std/Test.sol";
-
 import {console2 as console} from "forge-std/console2.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
@@ -9,43 +7,40 @@ import {DAO, createTestDAO} from "@mocks/MockDAO.sol";
 import {DaoUnauthorized} from "@aragon/osx/core/utils/auth.sol";
 import {IExitQueue, ExitQueue} from "@escrow/ExitQueue.sol";
 import {IExitQueueEvents, IExitQueueErrors} from "@escrow-interfaces/IExitQueue.sol";
+import {ExitQueueBase} from "./ExitQueueBase.sol";
 
-contract TestExitQueue is Test, IExitQueueEvents, IExitQueueErrors {
-    ExitQueue queue;
-    DAO dao;
-    using ProxyLib for address;
-
-    function _deployExitQueue(
-        address _escrow,
-        uint _cooldown,
-        address _dao
-    ) public returns (ExitQueue) {
-        ExitQueue impl = new ExitQueue();
-
-        bytes memory initCalldata = abi.encodeCall(
-            ExitQueue.initialize,
-            (_escrow, _cooldown, _dao)
-        );
-        return ExitQueue(address(impl).deployUUPSProxy(initCalldata));
-    }
-
-    function setUp() public {
-        dao = createTestDAO(address(this));
-        queue = _deployExitQueue(address(this), 0, address(dao));
-        dao.grant({
-            _who: address(this),
-            _where: address(queue),
-            _permissionId: queue.QUEUE_ADMIN_ROLE()
-        });
-    }
-
+contract TestExitQueue is ExitQueueBase {
     // test inital state - escrow, queue, cooldown is set in constructor + dao
-    function testFuzz_initialState(address _escrow, uint256 _cooldown) public {
+    function testFuzz_initialState(address _escrow, uint256 _cooldown, uint256 _fee) public {
+        vm.assume(_fee <= 1e18);
         DAO dao_ = createTestDAO(address(this));
-        queue = _deployExitQueue(address(_escrow), _cooldown, address(dao_));
+        queue = _deployExitQueue(address(_escrow), _cooldown, address(dao_), _fee);
         assertEq(queue.escrow(), _escrow);
         assertEq(queue.cooldown(), _cooldown);
         assertEq(address(queue.dao()), address(dao_));
+        assertEq(queue.feePercent(), _fee);
+    }
+
+    function testFuzz_canUpdateFee(uint256 _fee) public {
+        vm.assume(_fee <= 1e18);
+        vm.expectEmit(false, false, true, false);
+        emit FeePercentSet(_fee);
+        queue.setFeePercent(_fee);
+        assertEq(queue.feePercent(), _fee);
+    }
+
+    function testOnlyManagerCanUpdateFee(address _notThis) public {
+        vm.assume(_notThis != address(this));
+        bytes memory data = abi.encodeWithSelector(
+            DaoUnauthorized.selector,
+            address(dao),
+            address(queue),
+            _notThis,
+            queue.QUEUE_ADMIN_ROLE()
+        );
+        vm.expectRevert(data);
+        vm.prank(_notThis);
+        queue.setFeePercent(0);
     }
 
     // test the exit queue manager can udpdate the cooldown && emits event
@@ -114,11 +109,13 @@ contract TestExitQueue is Test, IExitQueueEvents, IExitQueueErrors {
         vm.assume(_ticketHolder != address(0));
         vm.warp(_warp);
 
+        uint expectedExitDate = block.timestamp + queue.cooldown();
+
         vm.expectEmit(true, true, false, true);
-        emit ExitQueued(_tokenId, _ticketHolder);
+        emit ExitQueued(_tokenId, _ticketHolder, expectedExitDate);
         queue.queueExit(_tokenId, _ticketHolder);
         assertEq(queue.ticketHolder(_tokenId), _ticketHolder);
-        assertEq(queue.queue(_tokenId).timestamp, block.timestamp);
+        assertEq(queue.queue(_tokenId).exitDate, block.timestamp);
     }
 
     // test can exit updates only after the cooldown period
@@ -141,7 +138,38 @@ contract TestExitQueue is Test, IExitQueueEvents, IExitQueueErrors {
         }
     }
 
-    // test that changing the cooldown doesn't affect the current ticket holders (TODO)
+    // test that changing the cooldown doesn't affect the current ticket holders
+    function testChangingCooldownDoesntAffectCurrentHolders() public {
+        // warp to genesis
+        vm.warp(0);
+
+        // set a cooldown to 3 days
+        queue.setCooldown(3 days);
+
+        // queue a ticket
+        queue.queueExit(1, address(this));
+
+        // change the cooldown to 1 day
+        queue.setCooldown(1 days);
+
+        // warp to 2 days
+        vm.warp(2 days);
+
+        // should still not be able to exit
+        assertFalse(queue.canExit(1));
+
+        // warp to 3 days
+        vm.warp(3 days);
+
+        // should be able to exit
+        assertTrue(queue.canExit(1));
+
+        // change the cooldown to 5 days
+        queue.setCooldown(5 days);
+
+        // should still be able to exit
+        assertTrue(queue.canExit(1));
+    }
 
     // test can exit and this resets the ticket
     function testFuzz_canExit(address _holder) public {
@@ -162,13 +190,24 @@ contract TestExitQueue is Test, IExitQueueEvents, IExitQueueErrors {
         vm.warp(100);
 
         vm.expectEmit(true, false, false, true);
-        emit Exit(_tokenId);
+        emit Exit(_tokenId, 0);
         queue.exit(_tokenId);
 
         assertEq(queue.ticketHolder(_tokenId), address(0));
-        assertEq(queue.queue(_tokenId).timestamp, 0);
+        assertEq(queue.queue(_tokenId).exitDate, 0);
 
         vm.expectRevert(CannotExit.selector);
         queue.exit(_tokenId);
+    }
+
+    function testUUPSUpgrade() public {
+        address newImpl = address(new ExitQueue());
+        queue.upgradeTo(newImpl);
+        assertEq(queue.implementation(), newImpl);
+
+        bytes memory err = _authErr(address(1), address(queue), queue.QUEUE_ADMIN_ROLE());
+        vm.prank(address(1));
+        vm.expectRevert(err);
+        queue.upgradeTo(newImpl);
     }
 }

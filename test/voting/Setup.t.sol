@@ -123,6 +123,7 @@ contract VoterSetupTest is GaugeVotingBase {
         address token = address(new MockERC20());
         uint256 warmup = 5 days;
         uint256 cooldown = 7 days;
+        uint256 feePercent = 0.05e18;
 
         ISimpleGaugeVoterSetupParams memory params = ISimpleGaugeVoterSetupParams({
             isPaused: isPaused,
@@ -130,7 +131,8 @@ contract VoterSetupTest is GaugeVotingBase {
             veTokenName: veTokenName,
             veTokenSymbol: veTokenSymbol,
             warmup: warmup,
-            cooldown: cooldown
+            cooldown: cooldown,
+            feePercent: feePercent
         });
 
         bytes memory encodedStruct = voterSetup.encodeSetupData(params);
@@ -142,10 +144,20 @@ contract VoterSetupTest is GaugeVotingBase {
             veTokenSymbol,
             token,
             cooldown,
-            warmup
+            warmup,
+            feePercent
         );
         bytes32 encodedArgsHash = keccak256(encodedArgs);
 
         assertEq(encodedHash, encodedArgsHash);
+    }
+
+    function testImplementation() public view {
+        assertEq(voterSetup.implementation(), address(voterBase));
+    }
+
+    // coverage autism
+    function testConstructor() public {
+        new SimpleGaugeVoterSetup(address(0), address(0), address(0), address(0));
     }
 }
