@@ -366,15 +366,16 @@ contract VotingEscrow is
         LockedBalance memory oldLocked = _locked[_tokenId];
         uint256 value = oldLocked.amount;
 
-        // clear out the token data
-        _locked[_tokenId] = LockedBalance(0, 0);
-        totalLocked -= value;
-
         // check for fees to be transferred
+        // do this before clearing the lock or it will be incorrect
         uint256 fee = IExitQueue(queue).exit(_tokenId);
         if (fee > 0) {
             IERC20(token).safeTransfer(address(queue), fee);
         }
+
+        // clear out the token data
+        _locked[_tokenId] = LockedBalance(0, 0);
+        totalLocked -= value;
 
         // Burn the NFT and transfer the tokens to the user
         _burn(_tokenId);

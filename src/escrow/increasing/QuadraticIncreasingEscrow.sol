@@ -343,25 +343,14 @@ contract QuadraticIncreasingEscrow is
             // check to see if we have an existing epoch for this token
             uint256 userEpoch = userPointEpoch[_tokenId];
 
-            // TODO: this could be made a lot clearer
-            if (
-                // if we do have a point AND
-                // if we've already recorded a point for this timestamp
-                userEpoch != 0 && _userPointHistory[_tokenId][userEpoch].ts == uNew.ts
-            ) {
-                // overwrite the last point
-                _userPointHistory[_tokenId][userEpoch] = uNew;
-
-                // the userpoint warmup records when the warmup would end
-                // irrespective of the start time of the lock
-                _userPointWarmup[_tokenId][userEpoch] = block.timestamp + warmupPeriod;
-            } else {
-                // otherwise, create a new epoch by incrementing the userEpoch
-                // and record the new point
+            // If this is a new timestamp, increment the epoch
+            if (userEpoch == 0 || _userPointHistory[_tokenId][userEpoch].ts != uNew.ts) {
                 userPointEpoch[_tokenId] = ++userEpoch;
-                _userPointHistory[_tokenId][userEpoch] = uNew;
-                _userPointWarmup[_tokenId][userEpoch] = block.timestamp + warmupPeriod;
             }
+
+            // Record the new point and warmup period
+            _userPointHistory[_tokenId][userEpoch] = uNew;
+            _userPointWarmup[_tokenId][userEpoch] = block.timestamp + warmupPeriod;
         }
     }
 

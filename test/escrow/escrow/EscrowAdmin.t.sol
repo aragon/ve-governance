@@ -122,4 +122,13 @@ contract TestEscrowAdmin is EscrowBase {
         }
         vm.stopPrank();
     }
+
+    // test unusued function revert
+    function testUnusedFunctionRevert() public {
+        vm.expectRevert();
+        escrow.totalVotingPowerAt(0);
+
+        vm.expectRevert();
+        escrow.totalVotingPower();
+    }
 }
