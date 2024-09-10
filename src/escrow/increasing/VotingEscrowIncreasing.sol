@@ -26,9 +26,6 @@ import {ReentrancyGuardUpgradeable as ReentrancyGuard} from "@openzeppelin/contr
 import {PausableUpgradeable as Pausable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
 
-// tools - delete
-import {console2 as console} from "forge-std/console2.sol";
-
 contract VotingEscrow is
     IVotingEscrow,
     ReentrancyGuard,

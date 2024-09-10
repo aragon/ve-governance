@@ -10,8 +10,6 @@ import {PausableUpgradeable as Pausable} from "@openzeppelin/contracts-upgradeab
 import {EpochDurationLib} from "@libs/EpochDurationLib.sol";
 import {PluginUUPSUpgradeable} from "@aragon/osx/core/plugin/PluginUUPSUpgradeable.sol";
 
-import {console2 as console} from "forge-std/console2.sol";
-
 contract SimpleGaugeVoter is ISimpleGaugeVoter, ReentrancyGuard, Pausable, PluginUUPSUpgradeable {
     /// @notice The Gauge admin can can create and manage voting gauges for token holders
     bytes32 public constant GAUGE_ADMIN_ROLE = keccak256("GAUGE_ADMIN");

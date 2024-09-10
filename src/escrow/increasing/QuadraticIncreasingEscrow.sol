@@ -20,8 +20,6 @@ import {ReentrancyGuardUpgradeable as ReentrancyGuard} from "@openzeppelin/contr
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
 
-import {console2 as console} from "forge-std/console2.sol";
-
 /// @title Quadratic Increasing Escrow
 contract QuadraticIncreasingEscrow is
     IEscrowCurve,
