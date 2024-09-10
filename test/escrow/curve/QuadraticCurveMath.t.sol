@@ -94,7 +94,7 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
         IEscrowCurve.UserPoint memory userPoint = curve.userPointHistory(tokenIdFirst, 1);
         assertEq(userPoint.bias, depositFirst, "Bias is incorrect");
         assertEq(userPoint.ts, block.timestamp, "Timestamp is incorrect");
-        assertEq(userPoint.blk, block.number, "Block is incorrect");
+        // assertEq(userPoint.blk, block.number, "Block is incorrect");
 
         // balance now is zero but Warm up
         assertEq(curve.votingPowerAt(tokenIdFirst, 0), 0, "Balance after deposit before warmup");
@@ -108,23 +108,21 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
 
         // warmup complete
         vm.warp(block.timestamp + 1);
-        // excel:      449.206279600000000000
-        // PRB:        449.206254284606635092
-        // solmate:    449.206254284606635132
-        // for context that's 1/10k of a token
+
+        // excel:      449.206158900000000000
+        // solmate:    449.206133622001394300
         assertEq(
             curve.votingPowerAt(tokenIdFirst, block.timestamp),
-            449206254284606635132,
+            449206133622001394300,
             "Balance incorrect after warmup"
         );
         assertEq(curve.isWarm(tokenIdFirst), true, "Still warming up");
 
-        // excel:     106.7784543000000000000000000
-        // PRB:       106.7784483312193384896522473
-        // solmate:   106.7784483312193384992025326
+        // excel:     1_067_784_257_000000000000000000
+        // solmate:   1_067_784_196_491481599990798396
         assertEq(
             curve.votingPowerAt(tokenIdSecond, block.timestamp),
-            1067784483312193384992025326,
+            1067784196491481599990798396,
             "Balance incorrect after warmup II"
         );
 

@@ -95,9 +95,6 @@ contract QuadraticIncreasingEscrow is
 
     constructor() {
         _disableInitializers();
-
-        console.log("SHARED_QUADRATIC_COEFFICIENT: %s", SHARED_QUADRATIC_COEFFICIENT);
-        console.log("SHARED_LINEAR_COEFFICIENT: %s", SHARED_LINEAR_COEFFICIENT);
     }
 
     /// @param _escrow VotingEscrow contract address
@@ -337,7 +334,7 @@ contract QuadraticIncreasingEscrow is
             // TODO: we have to interpolate to get the block number
             // We don't use it in this governance system so we may want to
             // evaulate if its necessary as an interpolated point
-            uNew.blk = block.number;
+            // uNew.blk = block.number;
 
             // check to see if we have an existing epoch for this token
             uint256 userEpoch = userPointEpoch[_tokenId];

@@ -246,11 +246,11 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
 
         // warmup complete
         vm.warp(block.timestamp + 1);
-        // python:     1067.784543380942094336
-        // solmate:    1067.784483312193384992
+        // python:    1067.784256559766831104
+        // solmate:   1067.784196491481599990
         assertEq(
             curve.votingPowerAt(tokenId, block.timestamp),
-            1067784483312193384992,
+            1067784196491481599990,
             "Balance incorrect after warmup"
         );
         assertEq(curve.isWarm(tokenId), true, "Still warming up");

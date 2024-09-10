@@ -35,7 +35,10 @@ time_points = [
     (f"WARMUP_PERIOD ({WARMUP_PERIOD//DAY} days)", WARMUP_PERIOD),
     (f"WARMUP_PERIOD + 1s", (WARMUP_PERIOD)  + 1),
     ("1 week", 60 * 60 * 24 * 7),
-    (f"PERIOD ({PERIOD_LENGTH // (WEEK)} weeks)", PERIOD_LENGTH),
+    (f"1 period ({PERIOD_LENGTH // (WEEK)} weeks)", PERIOD_LENGTH),
+    (f"2 periods (2 * PERIOD)", 2 * PERIOD_LENGTH),
+    (f"3 periods (3 * PERIOD)", 3 * PERIOD_LENGTH),
+    (f"4 periods (4 * PERIOD)", 4 * PERIOD_LENGTH),
     (f"PERIOD_END (5 * PERIOD)", MAX_PERIODS * PERIOD_LENGTH)
 ]
 

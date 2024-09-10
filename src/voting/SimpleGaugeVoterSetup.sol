@@ -236,6 +236,7 @@ contract SimpleGaugeVoterSetup is PluginSetup {
 
     /// @notice Simple utility for external applications create the encoded setup data.
     function encodeSetupData(
+        bool isPaused,
         string calldata veTokenName,
         string calldata veTokenSymbol,
         address token,
@@ -245,7 +246,7 @@ contract SimpleGaugeVoterSetup is PluginSetup {
         return
             abi.encode(
                 ISimpleGaugeVoterSetupParams({
-                    isPaused: true,
+                    isPaused: isPaused,
                     token: token,
                     veTokenName: veTokenName,
                     veTokenSymbol: veTokenSymbol,

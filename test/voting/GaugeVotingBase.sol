@@ -43,7 +43,7 @@ contract GaugeVotingBase is
     SimpleGaugeVoter voter;
     ExitQueue queue;
 
-    IDAO dao;
+    DAO dao;
     Multisig multisig;
 
     address deployer = address(0x420);

@@ -2,6 +2,7 @@ pragma solidity ^0.8.17;
 
 import {Test} from "forge-std/Test.sol";
 import {console2 as console} from "forge-std/console2.sol";
+import {DaoUnauthorized} from "@aragon/osx/core/utils/auth.sol";
 
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {DAO, createTestDAO} from "@mocks/MockDAO.sol";
@@ -46,7 +47,28 @@ contract QuadraticCurveBase is Test, ILockedBalanceIncreasing {
 
         curve = QuadraticIncreasingEscrow(impl.deployUUPSProxy(initCalldata));
 
-        // curve = new QuadraticIncreasingEscrow(address(escrow));
+        // grant this address admin privileges
+        DAO(payable(address(dao))).grant({
+            _who: address(this),
+            _where: address(curve),
+            _permissionId: curve.CURVE_ADMIN_ROLE()
+        });
+
         escrow.setCurve(curve);
+    }
+
+    function _authErr(
+        address _caller,
+        address _contract,
+        bytes32 _perm
+    ) internal view returns (bytes memory) {
+        return
+            abi.encodeWithSelector(
+                DaoUnauthorized.selector,
+                address(dao),
+                _contract,
+                _caller,
+                _perm
+            );
     }
 }

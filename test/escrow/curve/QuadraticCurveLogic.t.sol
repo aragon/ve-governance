@@ -7,6 +7,8 @@ import {IVotingEscrowIncreasing, ILockedBalanceIncreasing} from "src/escrow/incr
 import {QuadraticCurveBase, MockEscrow} from "./QuadraticCurveBase.t.sol";
 
 contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
+    address attacker = address(0x1);
+
     // check that our constants are initialized correctly
     // check the escrow is set
     function testEscrowInitializesCorrectly() public {
@@ -15,6 +17,19 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
         // curve_.initialize(address(escrow), address(dao));
         // assertEq(address(curve_.escrow()), address(escrow));
     }
+
+    function testUUPSUpgrade() public {
+        address newImpl = address(new QuadraticIncreasingEscrow());
+        curve.upgradeTo(newImpl);
+        assertEq(curve.implementation(), newImpl);
+
+        bytes memory err = _authErr(attacker, address(curve), curve.CURVE_ADMIN_ROLE());
+        vm.prank(attacker);
+        vm.expectRevert(err);
+        curve.upgradeTo(newImpl);
+    }
+
+    // validate multiple checkpoint situation
     // validate the bias bounding works
     // warmup: TODO - how do we ensure the warmup doesn't add to an epoch that snaps
     // in the future
