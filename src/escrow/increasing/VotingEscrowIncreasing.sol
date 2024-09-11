@@ -1,11 +1,10 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+/// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
 // token interfaces
 import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import {IERC20MetadataUpgradeable as IERC20Metadata} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
-import {IERC721Upgradeable as IERC721, ERC721Upgradeable as ERC721} from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
-import {IERC721MetadataUpgradeable as IERC721Metadata} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/IERC721MetadataUpgradeable.sol";
+import {ERC721Upgradeable as ERC721} from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import {ERC721EnumerableUpgradeable as ERC721Enumerable} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 
 // veGovernance
@@ -37,8 +36,6 @@ contract VotingEscrow is
     using SafeERC20 for IERC20;
     using SafeCast for uint256;
 
-    error NotImplemented();
-
     /// @notice Role required to manage the Escrow curve, this typically will be the DAO
     bytes32 public constant ESCROW_ADMIN_ROLE = keccak256("ESCROW_ADMIN");
 
@@ -46,10 +43,7 @@ contract VotingEscrow is
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER");
 
     /// @notice Role required to withdraw underlying tokens from the contract
-    bytes32 public constant WITHDRAWER_ROLE = keccak256("WITHDRAWER");
-
-    /// @notice creating locks on behalf of others is potentially dangerous
-    bytes32 public constant LOCK_CREATOR_ROLE = keccak256("LOCK_CREATOR");
+    bytes32 public constant SWEEPER_ROLE = keccak256("SWEEPER");
 
     /// @dev enables transfers without whitelisting
     address public constant WHITELIST_ANY_ADDRESS =
@@ -263,7 +257,7 @@ contract VotingEscrow is
     function createLockFor(
         uint256 _value,
         address _to
-    ) external nonReentrant whenNotPaused auth(LOCK_CREATOR_ROLE) returns (uint256) {
+    ) external nonReentrant whenNotPaused returns (uint256) {
         return _createLockFor(_value, _to);
     }
 
@@ -334,9 +328,9 @@ contract VotingEscrow is
         // we can remove the user's voting power as it's no longer locked
         _checkpointClear(_tokenId);
 
-        // queue the exit and transfer NFT to the queue
-        IExitQueue(queue).queueExit(_tokenId, owner);
+        // transfer NFT to the queue and queue the exit
         _transfer(_msgSender(), address(this), _tokenId);
+        IExitQueue(queue).queueExit(_tokenId, owner);
     }
 
     /// @notice Withdraws tokens from the contract
@@ -368,6 +362,22 @@ contract VotingEscrow is
         IERC20(token).safeTransfer(sender, value - fee);
 
         emit Withdraw(sender, _tokenId, value - fee, block.timestamp, totalLocked);
+    }
+
+    /// @notice withdraw excess tokens from the contract - possibly by accident
+    function sweep() external nonReentrant auth(SWEEPER_ROLE) {
+
+        // if there are extra tokens in the contract
+        // balance will be greater than the total locked
+        uint balance = IERC20(token).balanceOf(address(this));
+        uint excess = balance - totalLocked;
+
+        // if there isn't revert the tx 
+        if (excess == 0) revert NothingToSweep();
+
+        // if there is, send them to the caller
+        IERC20(token).safeTransfer(_msgSender(), excess);
+        emit Sweep(_msgSender(), excess);
     }
 
     /*///////////////////////////////////////////////////////////////

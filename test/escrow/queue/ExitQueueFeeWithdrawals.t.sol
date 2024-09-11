@@ -6,7 +6,6 @@ import {ProxyLib} from "@libs/ProxyLib.sol";
 import {DAO, createTestDAO} from "@mocks/MockDAO.sol";
 import {DaoUnauthorized} from "@aragon/osx/core/utils/auth.sol";
 import {IExitQueue, ExitQueue} from "@escrow/ExitQueue.sol";
-import {IExitQueueEvents, IExitQueueErrors} from "@escrow-interfaces/IExitQueue.sol";
 import {ExitQueueBase} from "./ExitQueueBase.sol";
 import {MockERC20} from "@mocks/MockERC20.sol";
 

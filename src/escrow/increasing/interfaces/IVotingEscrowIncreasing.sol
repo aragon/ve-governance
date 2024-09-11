@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+/// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 import {IERC165, IERC721, IERC721Metadata} from "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
@@ -119,6 +119,23 @@ interface IWithdrawalQueue is IWithdrawalQueueErrors, IWithdrawalQueueEvents {
 }
 
 /*///////////////////////////////////////////////////////////////
+                        SWEEPER
+//////////////////////////////////////////////////////////////*/
+
+interface ISweeperEvents {
+    event Sweep(address indexed to, uint256 amount);
+}
+
+interface ISweeperErrors {
+    error NothingToSweep();
+}
+
+interface ISweeper is ISweeperEvents, ISweeperErrors {
+    /// @notice sweeps excess tokens from the contract to a designated address
+    function sweep() external;
+}
+
+/*///////////////////////////////////////////////////////////////
                         DYNAMIC VOTER
 //////////////////////////////////////////////////////////////*/
 
@@ -178,7 +195,8 @@ interface IVotingEscrowIncreasing is
     IVotingEscrowCore,
     IDynamicVoter,
     IWithdrawalQueue,
-    IWhitelist
+    IWhitelist,
+    ISweeper
 {
 
 }
@@ -191,7 +209,9 @@ interface IVotingEscrowEventsStorageErrorsEvents is
     IWithdrawalQueueErrors,
     IWithdrawalQueueEvents,
     ILockedBalanceIncreasing,
-    IWhitelistErrors
+    IWhitelistErrors,
+    ISweeperEvents,
+    ISweeperErrors
 {
 
 }

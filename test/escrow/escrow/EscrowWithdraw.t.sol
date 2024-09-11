@@ -97,6 +97,16 @@ contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote {
         // remainder sent to user
         assertEq(token.balanceOf(_who), _dep - fee);
 
+        if (_fee == 0) {
+            assertEq(token.balanceOf(_who), _dep);
+            assertEq(token.balanceOf(address(queue)), 0);
+        } else {
+            console.log("fee", fee);
+            console.log("_fee", _fee);
+            console.log("_dep", _dep);
+            assertGt(token.balanceOf(address(queue)), 0);
+        }
+
         // nft is burned
         assertEq(escrow.balanceOf(_who), 0);
         assertEq(escrow.balanceOf(address(escrow)), 0);
@@ -141,6 +151,9 @@ contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote {
 
         // should be zero vp with the nft
         assertEq(escrow.votingPower(tokenId), 0);
+
+        // account voting power now zero
+        assertEq(escrow.votingPowerForAccount(_who), 0);
 
         // should have a ticket expiring in a few days
         assertEq(queue.canExit(tokenId), false);

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+/// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 /// Modified IVotes interface for tokenId based voting
@@ -7,12 +7,20 @@ interface IVotes {
     /**
      * @dev Emitted when an account changes their delegate.
      */
-    event DelegateChanged(address indexed delegator, uint256 indexed fromDelegate, uint256 indexed toDelegate);
+    event DelegateChanged(
+        address indexed delegator,
+        uint256 indexed fromDelegate,
+        uint256 indexed toDelegate
+    );
 
     /**
      * @dev Emitted when a token transfer or delegate change results in changes to a delegate's number of votes.
      */
-    event DelegateVotesChanged(address indexed delegate, uint256 previousBalance, uint256 newBalance);
+    event DelegateVotesChanged(
+        address indexed delegate,
+        uint256 previousBalance,
+        uint256 newBalance
+    );
 
     /**
      * @dev Returns the current amount of votes that `tokenId` has.
@@ -29,7 +37,11 @@ interface IVotes {
      * @dev Returns the amount of votes that `tokenId` had at a specific moment in the past.
      *      If the account passed in is not the owner, returns 0.
      */
-    function getPastVotes(address account, uint256 tokenId, uint256 timepoint) external view returns (uint256);
+    function getPastVotes(
+        address account,
+        uint256 tokenId,
+        uint256 timepoint
+    ) external view returns (uint256);
 
     /**
      * @dev Returns the amount of votes that `tokenId` had at a specific moment in the past, irrespective of the owner.

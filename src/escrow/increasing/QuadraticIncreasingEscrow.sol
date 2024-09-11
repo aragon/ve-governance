@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+/// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
 // interfaces
@@ -12,7 +12,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {EpochDurationLib} from "@libs/EpochDurationLib.sol";
 import {SignedFixedPointMath} from "@libs/SignedFixedPointMathLib.sol";
-import {CurveCoefficientLib} from "@libs/CurveCoefficientLib.sol";
+import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 
 // contracts
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
@@ -65,9 +65,12 @@ contract QuadraticIncreasingEscrow is
 
     /// @dev precomputed coefficients of the quadratic curve
     int256 private constant SHARED_QUADRATIC_COEFFICIENT =
-        CurveCoefficientLib.SHARED_QUADRATIC_COEFFICIENT;
-    int256 private constant SHARED_LINEAR_COEFFICIENT =
-        CurveCoefficientLib.SHARED_LINEAR_COEFFICIENT;
+        CurveConstantLib.SHARED_QUADRATIC_COEFFICIENT;
+
+    int256 private constant SHARED_LINEAR_COEFFICIENT = CurveConstantLib.SHARED_LINEAR_COEFFICIENT;
+
+    uint256 private constant MAX_TIME =
+        CurveConstantLib.MAX_EPOCHS * EpochDurationLib.EPOCH_DURATION;
 
     /*//////////////////////////////////////////////////////////////
                               INITIALIZATION
@@ -134,15 +137,13 @@ contract QuadraticIncreasingEscrow is
                               CURVE BIAS
     //////////////////////////////////////////////////////////////*/
 
-    /// @return The bias of the quadratic curve, for the given amount and time elapsed, irrespective of boundary
-    /// @param timeElapsed number of seconds over which to evaluate the bias
-    /// @param amount the amount of the curve to evaluate the bias for
-    function getBiasUnbound(uint timeElapsed, uint amount) public pure returns (uint256) {
+    /// @notice Returns the bias for the given time elapsed and amount, up to the maximum time
+    function getBias(uint256 timeElapsed, uint256 amount) public pure returns (uint256) {
         int256[3] memory coefficients = _getCoefficients(amount);
-        return _getBiasUnbound(timeElapsed, coefficients);
+        return _getBias(timeElapsed, coefficients);
     }
 
-    function _getBiasUnbound(
+    function _getBias(
         uint256 timeElapsed,
         int256[3] memory coefficients
     ) internal pure returns (uint256) {
@@ -150,29 +151,18 @@ contract QuadraticIncreasingEscrow is
         int256 linear = coefficients[1];
         int256 const = coefficients[0];
 
+        // bound the time elapsed to the maximum time
+        timeElapsed = timeElapsed > MAX_TIME ? MAX_TIME : timeElapsed;
+
+        // convert the time to fixed point
         int256 t = SignedFixedPointMath.toFP(timeElapsed.toInt256());
 
         // bias = a.t^2 + b.t + c
         int256 bias = quadratic.mul(t.pow(2e18)).add(linear.mul(t)).add(const);
+
         // never return negative values
         // in the increasing case, this should never happen
         return bias.lt((0)) ? uint256(0) : SignedFixedPointMath.fromFP((bias)).toUint256();
-    }
-
-    // The above assumes a boundary - this is applicable for most use cases and it is trivial to set
-    // a sentinel value of max(uint256) if you want an unbounded increase
-    function getBias(
-        uint256 timeElapsed,
-        uint256 amount,
-        uint256 boundary
-    ) public pure returns (uint256) {
-        uint256 bias = getBiasUnbound(timeElapsed, amount);
-        return bias > boundary ? boundary : bias;
-    }
-
-    function getBias(uint256 timeElapsed, uint256 amount) public pure returns (uint256) {
-        uint256 MAX_VOTING_AMOUNT = 6 * amount;
-        return getBias(timeElapsed, amount, MAX_VOTING_AMOUNT);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -284,7 +274,7 @@ contract QuadraticIncreasingEscrow is
     /// @param _newLocked New locked amount / end lock time for the user
     function _checkpoint(
         uint256 _tokenId,
-        IVotingEscrow.LockedBalance memory,
+        IVotingEscrow.LockedBalance memory _oldLocked,
         IVotingEscrow.LockedBalance memory _newLocked
     ) internal {
         UserPoint memory uNew;

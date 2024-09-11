@@ -88,12 +88,6 @@ contract EscrowBase is Test, IVotingEscrowEventsStorageErrorsEvents {
             _permissionId: curve.CURVE_ADMIN_ROLE()
         });
 
-        dao.grant({
-            _who: address(this),
-            _where: address(escrow),
-            _permissionId: escrow.LOCK_CREATOR_ROLE()
-        });
-
         // link them
         escrow.setCurve(address(curve));
         escrow.setVoter(address(voter));

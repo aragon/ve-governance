@@ -1,6 +1,5 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
-
-pragma solidity ^0.8.8;
+/// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.17;
 
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";

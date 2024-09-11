@@ -8,10 +8,10 @@ import {ProxyLib} from "@libs/ProxyLib.sol";
 import {DAO, createTestDAO} from "@mocks/MockDAO.sol";
 import {DaoUnauthorized} from "@aragon/osx/core/utils/auth.sol";
 import {IExitQueue, ExitQueue} from "@escrow/ExitQueue.sol";
-import {IExitQueueEvents, IExitQueueErrors} from "@escrow-interfaces/IExitQueue.sol";
+import {IExitQueueErrorsAndEvents} from "@escrow-interfaces/IExitQueue.sol";
 import {IVotingEscrowEventsStorageErrorsEvents} from "@escrow-interfaces/IVotingEscrowIncreasing.sol";
 
-contract ExitQueueBase is Test, IExitQueueEvents, IExitQueueErrors {
+contract ExitQueueBase is Test, IExitQueueErrorsAndEvents {
     ExitQueue queue;
     DAO dao;
     using ProxyLib for address;

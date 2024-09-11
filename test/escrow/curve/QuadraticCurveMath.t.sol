@@ -49,17 +49,17 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
         //         curve.getBiasUnbound(period, 100e18)
         //     );
         // }
-
+        //
         // uncomment to see the full curve
-        // for (uint i; i <= 14 * 6; i++) {
-        //     uint day = i * 1 days;
-        //     uint week = day / 7 days;
-        //     uint period = day / 2 weeks;
+        for (uint i; i <= 14 * 6; i++) {
+            uint day = i * 1 days;
+            uint week = day / 7 days;
+            uint period = day / 2 weeks;
 
-        //     console.log("[Day: %d | Week %d | Period %d]", i, week, period);
-        //     console.log("Voting Power        : %s", curve.getBiasUnbound(day, 100e18) / 1e18);
-        //     console.log("Voting Power (bound): %s\n", curve.getBias(day, 100e18, 600e18) / 1e18);
-        // }
+            console.log("[Day: %d | Week %d | Period %d]", i, week, period);
+            console.log("Voting Power        : %s", curve.getBias(day, 100e18) / 1e18);
+            console.log("Voting Power (raw): %s\n", curve.getBias(day, 100e18));
+        }
     }
 
     // write a new checkpoint
@@ -94,7 +94,6 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
         IEscrowCurve.UserPoint memory userPoint = curve.userPointHistory(tokenIdFirst, 1);
         assertEq(userPoint.bias, depositFirst, "Bias is incorrect");
         assertEq(userPoint.ts, block.timestamp, "Timestamp is incorrect");
-        // assertEq(userPoint.blk, block.number, "Block is incorrect");
 
         // balance now is zero but Warm up
         assertEq(curve.votingPowerAt(tokenIdFirst, 0), 0, "Balance after deposit before warmup");
