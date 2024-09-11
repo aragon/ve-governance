@@ -52,6 +52,9 @@ The main workflow in the Mode Governance build is as follows:
   - Voting Escrow Curves
   - Exit Queues
 - Rewards and emissions are assumed to be offchain
+- veNFT transfers are disabled by default in the current implementation, but can be enabled. Fully supporting transfers would require support for allowing for custom transfer logic (resetting voting power) which is as yet not implemented.
+- Delegation checkpointing is not yet implemented.
+- Total supply is not yet implemented due to complexities in scheduling slope changes for higher order polynomials. We have setup a user-point system where this can be added in the future: please see the linked research below for details.
 
 ## Curve design
 
