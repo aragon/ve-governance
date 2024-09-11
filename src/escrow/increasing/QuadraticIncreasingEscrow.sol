@@ -17,7 +17,6 @@ import {CurveCoefficientLib} from "@libs/CurveCoefficientLib.sol";
 // contracts
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {ReentrancyGuardUpgradeable as ReentrancyGuard} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
 
 /// @title Quadratic Increasing Escrow
@@ -94,13 +93,13 @@ contract QuadraticIncreasingEscrow is
     //////////////////////////////////////////////////////////////*/
 
     /// @return The coefficient for the quadratic term of the quadratic curve, for the given amount
-    function _getQuadraticCoeff(uint256 amount) internal view returns (int256) {
+    function _getQuadraticCoeff(uint256 amount) internal pure returns (int256) {
         // 1 / (7 * 2 weeks^2)
         return (SignedFixedPointMath.toFP(amount.toInt256()).mul(SHARED_QUADRATIC_COEFFICIENT));
     }
 
     /// @return The coefficient for the linear term of the quadratic curve, for the given amount
-    function _getLinearCoeff(uint256 amount) internal view returns (int256) {
+    function _getLinearCoeff(uint256 amount) internal pure returns (int256) {
         // 2 / 7 * 2 weeks
         return (SignedFixedPointMath.toFP(amount.toInt256())).mul(SHARED_LINEAR_COEFFICIENT);
     }
@@ -113,14 +112,14 @@ contract QuadraticIncreasingEscrow is
 
     /// @return The coefficients of the quadratic curve, for the given amount
     /// @dev The coefficients are returned in the order [constant, linear, quadratic]
-    function _getCoefficients(uint256 amount) public view returns (int256[3] memory) {
+    function _getCoefficients(uint256 amount) public pure returns (int256[3] memory) {
         return [_getConstantCoeff(amount), _getLinearCoeff(amount), _getQuadraticCoeff(amount)];
     }
 
     /// @return The coefficients of the quadratic curve, for the given amount
     /// @dev The coefficients are returned in the order [constant, linear, quadratic, cubic]
     /// and are converted to regular 256-bit signed integers instead of their fixed-point representation
-    function getCoefficients(uint256 amount) public view returns (int256[4] memory) {
+    function getCoefficients(uint256 amount) public pure returns (int256[4] memory) {
         int256[3] memory coefficients = _getCoefficients(amount);
 
         return [
@@ -138,7 +137,7 @@ contract QuadraticIncreasingEscrow is
     /// @return The bias of the quadratic curve, for the given amount and time elapsed, irrespective of boundary
     /// @param timeElapsed number of seconds over which to evaluate the bias
     /// @param amount the amount of the curve to evaluate the bias for
-    function getBiasUnbound(uint timeElapsed, uint amount) public view returns (uint256) {
+    function getBiasUnbound(uint timeElapsed, uint amount) public pure returns (uint256) {
         int256[3] memory coefficients = _getCoefficients(amount);
         return _getBiasUnbound(timeElapsed, coefficients);
     }
@@ -166,12 +165,12 @@ contract QuadraticIncreasingEscrow is
         uint256 timeElapsed,
         uint256 amount,
         uint256 boundary
-    ) public view returns (uint256) {
+    ) public pure returns (uint256) {
         uint256 bias = getBiasUnbound(timeElapsed, amount);
         return bias > boundary ? boundary : bias;
     }
 
-    function getBias(uint256 timeElapsed, uint256 amount) public view returns (uint256) {
+    function getBias(uint256 timeElapsed, uint256 amount) public pure returns (uint256) {
         uint256 MAX_VOTING_AMOUNT = 6 * amount;
         return getBias(timeElapsed, amount, MAX_VOTING_AMOUNT);
     }
