@@ -2,9 +2,16 @@
 pragma solidity ^0.8.17;
 
 library EpochDurationLib {
+    /// @dev Epoch encompasses a voting and non-voting period
     uint256 internal constant EPOCH_DURATION = 2 weeks;
-    uint256 internal constant DEPOSIT_INTERVAL = 1 weeks;
+
+    /// @dev Checkpoint interval is the time between each voting checkpoint
+    uint256 internal constant CHECKPOINT_INTERVAL = 1 weeks;
+
+    /// @dev Voting duration is the time during which votes can be cast
     uint256 internal constant VOTE_DURATION = 1 weeks;
+
+    /// @dev Opens and closes the voting window slightly early to avoid timing attacks
     uint256 internal constant VOTE_WINDOW_OFFSET = 1 hours;
 
     function currentEpoch(uint256 timestamp) internal pure returns (uint256) {
@@ -86,21 +93,21 @@ library EpochDurationLib {
         }
     }
 
-    /// @notice Number of seconds until the next deposit interval (relative)
-    function epochNextDepositIn(uint256 timestamp) internal pure returns (uint256) {
+    /// @notice Number of seconds until the next checkpoint interval (relative)
+    function epochNextCheckpointIn(uint256 timestamp) internal pure returns (uint256) {
         unchecked {
             uint256 elapsed = elapsedInEpoch(timestamp);
             // elapsed > deposit interval, then subtract the interval
-            if (elapsed > DEPOSIT_INTERVAL) elapsed -= DEPOSIT_INTERVAL;
+            if (elapsed > CHECKPOINT_INTERVAL) elapsed -= CHECKPOINT_INTERVAL;
             if (elapsed == 0) return 0;
-            else return DEPOSIT_INTERVAL - elapsed;
+            else return CHECKPOINT_INTERVAL - elapsed;
         }
     }
 
     /// @notice Timestamp of the next deposit interval (absolute)
-    function epochNextDepositTs(uint256 timestamp) internal pure returns (uint256) {
+    function epochNextCheckpointTs(uint256 timestamp) internal pure returns (uint256) {
         unchecked {
-            return timestamp + epochNextDepositIn(timestamp);
+            return timestamp + epochNextCheckpointIn(timestamp);
         }
     }
 }

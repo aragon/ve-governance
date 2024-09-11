@@ -29,7 +29,7 @@ contract TestGaugeTime is GaugeVotingBase {
     }
 
     function nextDeposit() public view returns (uint256) {
-        return EpochDurationLib.epochNextDepositTs(block.timestamp);
+        return EpochDurationLib.epochNextCheckpointTs(block.timestamp);
     }
 
     function testEpochTimess() public {

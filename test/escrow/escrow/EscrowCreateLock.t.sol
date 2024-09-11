@@ -217,7 +217,7 @@ contract TestCreateLock is EscrowBase, IEscrowCurveUserStorage {
         vm.warp(0);
 
         // now the next deposit is 1 week from now
-        uint expectedNextDeposit = EpochDurationLib.DEPOSIT_INTERVAL;
+        uint expectedNextDeposit = EpochDurationLib.CHECKPOINT_INTERVAL;
 
         // shane deposits just before the next deposit date
         vm.warp(expectedNextDeposit - 1);
@@ -262,7 +262,7 @@ contract TestCreateLock is EscrowBase, IEscrowCurveUserStorage {
         // phil should snap to the next deposit date (+1 week)
         assertEq(
             escrow.locked(3).start,
-            expectedNextDeposit + EpochDurationLib.DEPOSIT_INTERVAL,
+            expectedNextDeposit + EpochDurationLib.CHECKPOINT_INTERVAL,
             "phil's lock should snap to the next deposit date"
         );
     }

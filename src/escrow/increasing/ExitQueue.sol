@@ -1,3 +1,4 @@
+/// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
@@ -6,6 +7,7 @@ import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/t
 import {IVotingEscrowIncreasing as IVotingEscrow} from "@escrow-interfaces/IVotingEscrowIncreasing.sol";
 
 import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import {EpochDurationLib} from "@libs/EpochDurationLib.sol";
 
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
@@ -60,6 +62,15 @@ contract ExitQueue is IExitQueue, DaoAuthorizable, UUPSUpgradeable {
     }
 
     /*//////////////////////////////////////////////////////////////
+                              Modifiers
+    //////////////////////////////////////////////////////////////*/
+
+    modifier onlyEscrow() {
+        if (msg.sender != escrow) revert OnlyEscrow();
+        _;
+    }
+
+    /*//////////////////////////////////////////////////////////////
                               Admin Functions
     //////////////////////////////////////////////////////////////*/
 
@@ -107,21 +118,30 @@ contract ExitQueue is IExitQueue, DaoAuthorizable, UUPSUpgradeable {
     /// @dev we don't check that the ticket holder is the caller
     /// this is because the escrow contract is the only one that can queue an exit
     /// and we leave that logic to the escrow contract
-    function queueExit(uint256 _tokenId, address _ticketHolder) external {
-        if (msg.sender != escrow) revert OnlyEscrow();
+    function queueExit(uint256 _tokenId, address _ticketHolder) external onlyEscrow {
         if (_ticketHolder == address(0)) revert ZeroAddress();
         if (_queue[_tokenId].holder != address(0)) revert AlreadyQueued();
 
-        uint exitDate = block.timestamp + cooldown;
+        uint exitDate = nextExitDate();
 
         _queue[_tokenId] = Ticket(_ticketHolder, exitDate);
         emit ExitQueued(_tokenId, _ticketHolder, exitDate);
     }
 
+    /// @notice Returns the next exit date for a ticket
+    /// @dev The next exit date is the later of the cooldown expiry and the next checkpoint
+    function nextExitDate() public view returns (uint256) {
+        // snap to next checkpoint interval, we can't cooldown before this
+        uint nextCP = EpochDurationLib.epochNextCheckpointTs(block.timestamp);
+        uint cooldownExpiry = block.timestamp + cooldown;
+
+        // if the next cp is after the cooldown, return the next cp
+        return nextCP > cooldownExpiry ? nextCP : cooldownExpiry;
+    }
+
     /// @notice Exits the queue for that tokenID.
     /// @dev The holder is not checked. This is left up to the escrow contract to manage.
-    function exit(uint256 _tokenId) external returns (uint256 fee) {
-        if (msg.sender != escrow) revert OnlyEscrow();
+    function exit(uint256 _tokenId) external onlyEscrow returns (uint256 fee) {
         if (!canExit(_tokenId)) revert CannotExit();
 
         // reset the ticket for that tokenId

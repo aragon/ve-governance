@@ -268,7 +268,7 @@ contract VotingEscrow is
         if (_value == 0) revert ZeroAmount();
 
         // query the duration lib to get the next time we can deposit
-        uint256 startTime = EpochDurationLib.epochNextDepositTs(block.timestamp);
+        uint256 startTime = EpochDurationLib.epochNextCheckpointTs(block.timestamp);
 
         // increment the total locked supply and get the new tokenId
         totalLocked += _value;
@@ -299,11 +299,16 @@ contract VotingEscrow is
         IEscrowCurve(curve).checkpoint(_tokenId, LockedBalance(0, 0), _newLocked);
     }
 
-    /// @dev resets the voting power for a given tokenId
+    /// @dev resets the voting power for a given tokenId. Checkpoint is written to the end of the epoch.
     /// @param _tokenId The tokenId to reset the voting power for
     /// @dev We don't need to fetch the old locked balance as it's not used in this implementation
     function _checkpointClear(uint256 _tokenId) private {
-        IEscrowCurve(curve).checkpoint(_tokenId, LockedBalance(0, 0), LockedBalance(0, 0));
+        uint256 checkpointClearTime = EpochDurationLib.epochNextCheckpointTs(block.timestamp);
+        IEscrowCurve(curve).checkpoint(
+            _tokenId,
+            LockedBalance(0, 0),
+            LockedBalance(0, checkpointClearTime)
+        );
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -366,13 +371,12 @@ contract VotingEscrow is
 
     /// @notice withdraw excess tokens from the contract - possibly by accident
     function sweep() external nonReentrant auth(SWEEPER_ROLE) {
-
         // if there are extra tokens in the contract
         // balance will be greater than the total locked
         uint balance = IERC20(token).balanceOf(address(this));
         uint excess = balance - totalLocked;
 
-        // if there isn't revert the tx 
+        // if there isn't revert the tx
         if (excess == 0) revert NothingToSweep();
 
         // if there is, send them to the caller

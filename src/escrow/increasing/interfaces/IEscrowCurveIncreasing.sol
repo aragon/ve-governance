@@ -62,7 +62,11 @@ interface IEscrowCurveUser is IEscrowCurveUserStorage {
                         Core Functions
 //////////////////////////////////////////////////////////////*/
 
-interface IEscrowCurveCore {
+interface IEscrowCurveErrorsAndEvents {
+    error InvalidTokenId();
+}
+
+interface IEscrowCurveCore is IEscrowCurveErrorsAndEvents {
     /// @notice Get the current voting power for `_tokenId`
     /// @dev Adheres to the ERC20 `balanceOf` interface for Aragon compatibility
     ///      Fetches last user point prior to a certain timestamp, then walks forward to timestamp.

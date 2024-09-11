@@ -217,7 +217,7 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
             token.approve(address(ve), DEPOSIT);
 
             // warp to exactly the next epoch so that warmup math is easier
-            uint expectedStart = EpochDurationLib.epochNextDepositTs(block.timestamp);
+            uint expectedStart = EpochDurationLib.epochNextCheckpointTs(block.timestamp);
             vm.warp(expectedStart);
 
             // create the lock

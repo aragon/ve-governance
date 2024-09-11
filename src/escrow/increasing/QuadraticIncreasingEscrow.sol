@@ -274,36 +274,42 @@ contract QuadraticIncreasingEscrow is
     /// @param _newLocked New locked amount / end lock time for the user
     function _checkpoint(
         uint256 _tokenId,
-        IVotingEscrow.LockedBalance memory _oldLocked,
+        IVotingEscrow.LockedBalance memory, /* _oldLocked */
         IVotingEscrow.LockedBalance memory _newLocked
     ) internal {
+        // this implementation doesn't yet support manual checkpointing
+        if (_tokenId == 0) revert InvalidTokenId();
+
+        // instantiate a new, empty user point
         UserPoint memory uNew;
+        uint amount = _newLocked.amount;
+        bool isExiting = amount == 0;
 
-        if (_tokenId != 0) {
-            if (_newLocked.amount > 0) {
-                uint256 amount = _newLocked.amount;
-                // the coefficients are purely dependent on the amount
-                uNew.coefficients = getCoefficients(amount);
-                // the bias depends on the amount and the elapsed time
-                // for a new lock, it will be the initial value
-                uNew.bias = getBias(0, amount);
-            }
-            // write the new point - in the case of an increasing curve
-            // the new lock may start at a future time, so we use the start time
-            // over the current time
-            uNew.ts = _newLocked.start;
+        if (!isExiting) {
+            uNew.coefficients = getCoefficients(amount);
+            // for a new lock, write the base bias (elapsed == 0)
+            uNew.bias = getBias(0, amount);
+        }
+        // write the new timestamp - in the case of an increasing curve
+        // we align the checkpoint to the start of the upcoming deposit interval
+        // to ensure global slope changes can be scheduled
+        // NOTE: the above global functionality is not implemented in this version of the contracts 
+        uNew.ts = _newLocked.start;
 
-            // check to see if we have an existing epoch for this token
-            uint256 userEpoch = userPointEpoch[_tokenId];
+        // check to see if we have an existing epoch for this token
+        uint256 userEpoch = userPointEpoch[_tokenId];
 
-            // If this is a new timestamp, increment the epoch
-            if (userEpoch == 0 || _userPointHistory[_tokenId][userEpoch].ts != uNew.ts) {
-                userPointEpoch[_tokenId] = ++userEpoch;
-            }
+        // If this is a new timestamp, increment the epoch
+        if (userEpoch == 0 || _userPointHistory[_tokenId][userEpoch].ts != uNew.ts) {
+            userPointEpoch[_tokenId] = ++userEpoch;
+        }
 
-            // Record the new point and warmup period
-            _userPointHistory[_tokenId][userEpoch] = uNew;
-            _userPointWarmup[_tokenId][userEpoch] = block.timestamp + warmupPeriod;
+        // Record the new point and warmup period
+        _userPointHistory[_tokenId][userEpoch] = uNew;
+
+        // if the user is exiting, we don't need to set the warmup period
+        if (!isExiting) {
+          _userPointWarmup[_tokenId][userEpoch] = block.timestamp + warmupPeriod;
         }
     }
 
