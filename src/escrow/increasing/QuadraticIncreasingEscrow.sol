@@ -12,7 +12,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {EpochDurationLib} from "@libs/EpochDurationLib.sol";
 import {SignedFixedPointMath} from "@libs/SignedFixedPointMathLib.sol";
-import {ModeCurveCoefficientLib} from "@libs/ModeCurveCoefficientLib.sol";
+import {CurveCoefficientLib} from "@libs/CurveCoefficientLib.sol";
 
 // contracts
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
@@ -44,11 +44,6 @@ contract QuadraticIncreasingEscrow is
     /// @notice The VotingEscrow contract address
     address public escrow;
 
-    /// @dev tokenId => userPointEpoch => UserPoint
-    /// @dev The Array is fixed so we can write to it in the future
-    /// This implementation means that very short intervals may be challenging
-    mapping(uint256 => UserPoint[1_000_000_000]) internal _userPointHistory;
-
     /// @notice tokenId => point epoch: incremented on a per-user basis
     mapping(uint256 => uint256) public userPointEpoch;
 
@@ -60,32 +55,20 @@ contract QuadraticIncreasingEscrow is
     /// start date is in the future
     mapping(uint256 => mapping(uint256 => uint256)) internal _userPointWarmup;
 
+    /// @dev tokenId => userPointEpoch => UserPoint
+    /// @dev The Array is fixed so we can write to it in the future
+    /// This implementation means that very short intervals may be challenging
+    mapping(uint256 => UserPoint[1_000_000_000]) internal _userPointHistory;
+
     /*//////////////////////////////////////////////////////////////
                                 MATH
     //////////////////////////////////////////////////////////////*/
 
-    /// TODO: These should be taken to a library and saved as constants
-    /// This means they can't be changed, a new curve would be needed.
-    /// however it also means we can store the values in bytecode and save gas
-    /// and potentially avoids needing to re-audit the contracts
-
-    /// @dev FP constants for 1, 2, and 7
-    int256 private SD1;
-    // int256 private constant SD1 = ModeCurveCoefficientLib.__SD1;
-    int256 private SD2;
-    int256 private SD7;
-
-    /// @dev t = timestamp / 2 weeks
-    int256 private PERIOD_LENGTH;
-    int256 private PERIOD_LENGTH_SQUARED;
-
     /// @dev precomputed coefficients of the quadratic curve
-    /// votingPower = amount * ((1/7)t^2 + (2/7)t + 1)
-    int256 private SHARED_QUADRATIC_COEFFICIENT;
-    int256 private SHARED_LINEAR_COEFFICIENT;
-
-    /// @dev gap for upgradeable contract
-    uint256[38] private __gap;
+    int256 private constant SHARED_QUADRATIC_COEFFICIENT =
+        CurveCoefficientLib.SHARED_QUADRATIC_COEFFICIENT;
+    int256 private constant SHARED_LINEAR_COEFFICIENT =
+        CurveCoefficientLib.SHARED_LINEAR_COEFFICIENT;
 
     /*//////////////////////////////////////////////////////////////
                               INITIALIZATION
@@ -104,18 +87,6 @@ contract QuadraticIncreasingEscrow is
         __ReentrancyGuard_init();
 
         // other initializers are empty
-
-        // these need to be set in the initializer, or imported as constants
-        // order matters here
-        SD1 = SignedFixedPointMath.toFP(1);
-        SD2 = SignedFixedPointMath.toFP(2);
-        SD7 = SignedFixedPointMath.toFP(7);
-
-        PERIOD_LENGTH = SignedFixedPointMath.toFP(int256(period));
-        PERIOD_LENGTH_SQUARED = PERIOD_LENGTH.pow(SignedFixedPointMath.toFP(2));
-
-        SHARED_QUADRATIC_COEFFICIENT = SD1.div(SD7.mul(PERIOD_LENGTH_SQUARED));
-        SHARED_LINEAR_COEFFICIENT = SD2.div(SD7.mul(PERIOD_LENGTH));
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -175,7 +146,7 @@ contract QuadraticIncreasingEscrow is
     function _getBiasUnbound(
         uint256 timeElapsed,
         int256[3] memory coefficients
-    ) internal view returns (uint256) {
+    ) internal pure returns (uint256) {
         int256 quadratic = coefficients[2];
         int256 linear = coefficients[1];
         int256 const = coefficients[0];
@@ -183,7 +154,7 @@ contract QuadraticIncreasingEscrow is
         int256 t = SignedFixedPointMath.toFP(timeElapsed.toInt256());
 
         // bias = a.t^2 + b.t + c
-        int256 bias = quadratic.mul(t.pow(SD2)).add(linear.mul(t)).add(const);
+        int256 bias = quadratic.mul(t.pow(2e18)).add(linear.mul(t)).add(const);
         // never return negative values
         // in the increasing case, this should never happen
         return bias.lt((0)) ? uint256(0) : SignedFixedPointMath.fromFP((bias)).toUint256();
@@ -359,4 +330,7 @@ contract QuadraticIncreasingEscrow is
 
     /// @notice Internal method authorizing the upgrade of the contract via the [upgradeability mechanism for UUPS proxies](https://docs.openzeppelin.com/contracts/4.x/api/proxy#UUPSUpgradeable) (see [ERC-1822](https://eips.ethereum.org/EIPS/eip-1822)).
     function _authorizeUpgrade(address) internal virtual override auth(CURVE_ADMIN_ROLE) {}
+
+    /// @dev gap for upgradeable contract
+    uint256[45] private __gap;
 }

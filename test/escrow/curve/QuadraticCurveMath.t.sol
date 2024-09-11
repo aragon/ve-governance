@@ -31,24 +31,24 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
 
         console.log("Coefficients: %st^2 + %st + %s", quadratic, linear, const);
 
-        for (uint i; i <= 6; i++) {
-            uint period = 2 weeks * i;
-            console.log(
-                "Period: %d Voting Power      : %s",
-                i,
-                curve.getBiasUnbound(period, 100e18) / 1e18
-            );
-            console.log(
-                "Period: %d Voting Power Bound: %s",
-                i,
-                curve.getBias(period, 100e18) / 1e18
-            );
-            console.log(
-                "Period: %d Voting Power Raw: %s\n",
-                i,
-                curve.getBiasUnbound(period, 100e18)
-            );
-        }
+        // for (uint i; i <= 6; i++) {
+        //     uint period = 2 weeks * i;
+        //     console.log(
+        //         "Period: %d Voting Power      : %s",
+        //         i,
+        //         curve.getBiasUnbound(period, 100e18) / 1e18
+        //     );
+        //     console.log(
+        //         "Period: %d Voting Power Bound: %s",
+        //         i,
+        //         curve.getBias(period, 100e18) / 1e18
+        //     );
+        //     console.log(
+        //         "Period: %d Voting Power Raw: %s\n",
+        //         i,
+        //         curve.getBiasUnbound(period, 100e18)
+        //     );
+        // }
 
         // uncomment to see the full curve
         // for (uint i; i <= 14 * 6; i++) {
