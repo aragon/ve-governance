@@ -234,7 +234,7 @@ contract QuadraticIncreasingEscrow is
         uint256 lower = 0;
         uint256 upper = _userEpoch;
         while (upper > lower) {
-            uint256 center = upper - (upper - lower) / 2; // ceil, avoiding overflow
+            uint256 center = upper - (upper - lower) / 2; // floor, avoiding overflow
             UserPoint storage userPoint = _userPointHistory[_tokenId][center];
             if (userPoint.ts == _timestamp) {
                 return center;
@@ -275,22 +275,18 @@ contract QuadraticIncreasingEscrow is
     /// @notice A checkpoint can be called by the VotingEscrow contract to snapshot the user's voting power
     function checkpoint(
         uint256 _tokenId,
-        IVotingEscrow.LockedBalance memory _oldLocked,
+        IVotingEscrow.LockedBalance memory /* _oldLocked */,
         IVotingEscrow.LockedBalance memory _newLocked
     ) external nonReentrant {
         if (msg.sender != escrow) revert OnlyEscrow();
-        _checkpoint(_tokenId, _oldLocked, _newLocked);
+        _checkpoint(_tokenId, _newLocked);
     }
 
     /// @notice Record gper-user data to checkpoints. Used by VotingEscrow system.
     /// @dev Curve finance style but just for users at this stage
     /// @param _tokenId NFT token ID. No user checkpoint if 0
     /// @param _newLocked New locked amount / end lock time for the user
-    function _checkpoint(
-        uint256 _tokenId,
-        IVotingEscrow.LockedBalance memory /* _oldLocked */,
-        IVotingEscrow.LockedBalance memory _newLocked
-    ) internal {
+    function _checkpoint(uint256 _tokenId, IVotingEscrow.LockedBalance memory _newLocked) internal {
         // this implementation doesn't yet support manual checkpointing
         if (_tokenId == 0) revert InvalidTokenId();
 
