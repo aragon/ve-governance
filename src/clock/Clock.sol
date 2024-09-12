@@ -115,8 +115,10 @@ contract Clock is IClock, DaoAuthorizable, UUPSUpgradeable {
 
     function resolveVotingActive(uint256 timestamp) public pure returns (bool) {
         bool afterVoteStart = timestamp >= resolveEpochVoteStartTs(timestamp);
-        bool beforeVoteEnd = timestamp < resolveEpochVoteEndTs(timestamp);
-        return afterVoteStart && beforeVoteEnd;
+        if (!afterVoteStart) return false;
+
+        // beforeVoteEnd
+        return timestamp < resolveEpochVoteEndTs(timestamp);
     }
 
     function epochVoteStartsIn() external view returns (uint256) {
