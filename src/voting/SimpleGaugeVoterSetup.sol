@@ -17,6 +17,7 @@ import {SimpleGaugeVoter} from "@voting/SimpleGaugeVoter.sol";
 import {VotingEscrow} from "@escrow/VotingEscrowIncreasing.sol";
 import {ExitQueue} from "@escrow/ExitQueue.sol";
 import {QuadraticIncreasingEscrow} from "@escrow/QuadraticIncreasingEscrow.sol";
+import {Clock} from "@clock/Clock.sol";
 
 /// @param isPaused Whether the voter contract is deployed in a paused state
 /// @param veTokenName The name of the voting escrow token
@@ -63,17 +64,22 @@ contract SimpleGaugeVoterSetup is PluginSetup {
     /// @dev implementation of the escrow locker
     address escrowBase;
 
+    /// @dev implementation of the clock
+    address clockBase;
+
     /// @notice Deploys the setup by binding the implementation contracts required during installation.
     constructor(
         address _voterBase,
         address _curveBase,
         address _queueBase,
-        address _escrowBase
+        address _escrowBase,
+        address _clockBase
     ) PluginSetup() {
         voterBase = _voterBase;
         curveBase = _curveBase;
         queueBase = _queueBase;
         escrowBase = _escrowBase;
+        clockBase = _clockBase;
     }
 
     function implementation() external view returns (address) {
@@ -91,12 +97,19 @@ contract SimpleGaugeVoterSetup is PluginSetup {
             (ISimpleGaugeVoterSetupParams)
         );
 
+        // deploy the clock
+        address clock = address(
+            Clock(
+                clockBase.deployUUPSProxy(abi.encodeWithSelector(Clock.initialize.selector, _dao))
+            )
+        );
+
         // deploy the escrow locker
         VotingEscrow escrow = VotingEscrow(
             escrowBase.deployUUPSProxy(
                 abi.encodeCall(
                     VotingEscrow.initialize,
-                    (params.token, _dao, params.veTokenName, params.veTokenSymbol)
+                    (params.token, _dao, params.veTokenName, params.veTokenSymbol, clock)
                 )
             )
         );
@@ -106,7 +119,7 @@ contract SimpleGaugeVoterSetup is PluginSetup {
             voterBase.deployUUPSProxy(
                 abi.encodeCall(
                     SimpleGaugeVoter.initialize,
-                    (_dao, address(escrow), params.isPaused)
+                    (_dao, address(escrow), params.isPaused, clock)
                 )
             )
         );
@@ -116,7 +129,7 @@ contract SimpleGaugeVoterSetup is PluginSetup {
         address curve = curveBase.deployUUPSProxy(
             abi.encodeCall(
                 QuadraticIncreasingEscrow.initialize,
-                (address(escrow), _dao, params.warmup)
+                (address(escrow), _dao, params.warmup, clock)
             )
         );
 
@@ -124,7 +137,7 @@ contract SimpleGaugeVoterSetup is PluginSetup {
         address exitQueue = queueBase.deployUUPSProxy(
             abi.encodeCall(
                 ExitQueue.initialize,
-                (address(escrow), params.cooldown, _dao, params.feePercent)
+                (address(escrow), params.cooldown, _dao, params.feePercent, clock)
             )
         );
 
@@ -135,14 +148,16 @@ contract SimpleGaugeVoterSetup is PluginSetup {
             curve,
             exitQueue,
             address(escrow),
+            clock,
             PermissionLib.Operation.Grant
         );
 
-        address[] memory helpers = new address[](3);
+        address[] memory helpers = new address[](4);
 
         helpers[0] = curve;
         helpers[1] = exitQueue;
         helpers[2] = address(escrow);
+        helpers[3] = clock;
 
         preparedSetupData.helpers = helpers;
         preparedSetupData.permissions = permissions;
@@ -154,13 +169,14 @@ contract SimpleGaugeVoterSetup is PluginSetup {
         SetupPayload calldata _payload
     ) external view returns (PermissionLib.MultiTargetPermission[] memory permissions) {
         // check the helpers length
-        if (_payload.currentHelpers.length != 3) {
+        if (_payload.currentHelpers.length != 4) {
             revert WrongHelpersArrayLength(_payload.currentHelpers.length);
         }
 
         address curve = _payload.currentHelpers[0];
         address queue = _payload.currentHelpers[1];
         address escrow = _payload.currentHelpers[2];
+        address clock = _payload.currentHelpers[3];
 
         permissions = getPermissions(
             _dao,
@@ -168,6 +184,7 @@ contract SimpleGaugeVoterSetup is PluginSetup {
             curve,
             queue,
             escrow,
+            clock,
             PermissionLib.Operation.Revoke
         );
     }
@@ -182,10 +199,11 @@ contract SimpleGaugeVoterSetup is PluginSetup {
         address _curve,
         address _queue,
         address _escrow,
+        address _clock,
         PermissionLib.Operation _grantOrRevoke
     ) public view returns (PermissionLib.MultiTargetPermission[] memory) {
         PermissionLib.MultiTargetPermission[]
-            memory permissions = new PermissionLib.MultiTargetPermission[](5);
+            memory permissions = new PermissionLib.MultiTargetPermission[](6);
 
         permissions[0] = PermissionLib.MultiTargetPermission({
             permissionId: SimpleGaugeVoter(_plugin).GAUGE_ADMIN_ROLE(),
@@ -222,6 +240,14 @@ contract SimpleGaugeVoterSetup is PluginSetup {
         permissions[4] = PermissionLib.MultiTargetPermission({
             permissionId: SimpleGaugeVoter(_plugin).UPGRADE_PLUGIN_PERMISSION_ID(),
             where: _curve,
+            who: _dao,
+            operation: _grantOrRevoke,
+            condition: PermissionLib.NO_CONDITION
+        });
+
+        permissions[5] = PermissionLib.MultiTargetPermission({
+            permissionId: Clock(_clock).CLOCK_ADMIN_ROLE(),
+            where: _clock,
             who: _dao,
             operation: _grantOrRevoke,
             condition: PermissionLib.NO_CONDITION

@@ -8,7 +8,6 @@ import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
-import {EpochDurationLib} from "@libs/EpochDurationLib.sol";
 
 import {IEscrowCurveUserStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
 import {VotingEscrow} from "@escrow/VotingEscrowIncreasing.sol";
@@ -217,7 +216,7 @@ contract TestCreateLock is EscrowBase, IEscrowCurveUserStorage {
         vm.warp(0);
 
         // now the next deposit is 1 week from now
-        uint expectedNextDeposit = EpochDurationLib.CHECKPOINT_INTERVAL;
+        uint expectedNextDeposit = clock.checkpointInterval();
 
         // shane deposits just before the next deposit date
         vm.warp(expectedNextDeposit - 1);
@@ -262,7 +261,7 @@ contract TestCreateLock is EscrowBase, IEscrowCurveUserStorage {
         // phil should snap to the next deposit date (+1 week)
         assertEq(
             escrow.locked(3).start,
-            expectedNextDeposit + EpochDurationLib.CHECKPOINT_INTERVAL,
+            expectedNextDeposit + clock.checkpointInterval(),
             "phil's lock should snap to the next deposit date"
         );
     }

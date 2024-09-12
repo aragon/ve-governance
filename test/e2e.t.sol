@@ -14,7 +14,7 @@ import {MockERC20} from "@mocks/MockERC20.sol";
 
 import "./helpers/OSxHelpers.sol";
 
-import {EpochDurationLib} from "@libs/EpochDurationLib.sol";
+import {Clock} from "@clock/Clock.sol";
 import {IEscrowCurveUserStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
 import {IWithdrawalQueueErrors} from "src/escrow/increasing/interfaces/IVotingEscrowIncreasing.sol";
 import {IGaugeVote} from "src/voting/ISimpleGaugeVoter.sol";
@@ -50,6 +50,7 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
     QuadraticIncreasingEscrow curve;
     SimpleGaugeVoter voter;
     ExitQueue queue;
+    Clock clock;
 
     IDAO dao;
     Multisig multisig;
@@ -229,7 +230,7 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
             token.approve(address(ve), DEPOSIT);
 
             // warp to exactly the next epoch so that warmup math is easier
-            uint expectedStart = EpochDurationLib.epochNextCheckpointTs(block.timestamp);
+            uint expectedStart = clock.epochNextCheckpointTs();
             vm.warp(expectedStart);
 
             // create the lock
@@ -268,7 +269,7 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
         assertEq(curve.isWarm(tokenId), true, "Still warming up");
 
         // warp to the start of period 2
-        vm.warp(start + curve.period());
+        vm.warp(start + clock.epochDuration());
         // python:     1428.571428571428683776
         // solmate:    1428.570120419660799763
         assertEq(
@@ -280,7 +281,7 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
         // warp to the final period
         // TECHNICALLY, this should finish at exactly 5 periods but
         // 30 seconds off is okay
-        vm.warp(start + curve.period() * 5 + 30);
+        vm.warp(start + clock.epochDuration() * 5 + 30);
         assertEq(
             curve.votingPowerAt(tokenId, block.timestamp),
             5999967296216703996928,
@@ -322,7 +323,8 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
             address(new SimpleGaugeVoter()),
             address(new QuadraticIncreasingEscrow()),
             address(new ExitQueue()),
-            address(new VotingEscrow())
+            address(new VotingEscrow()),
+            address(new Clock())
         );
 
         // push to the PSP
@@ -349,6 +351,7 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
         curve = QuadraticIncreasingEscrow(helpers[0]);
         queue = ExitQueue(helpers[1]);
         ve = VotingEscrow(helpers[2]);
+        clock = Clock(helpers[3]);
 
         // set the permissions
         for (uint i = 0; i < preparedSetupData.permissions.length; i++) {

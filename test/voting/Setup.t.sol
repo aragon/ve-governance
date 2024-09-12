@@ -14,7 +14,6 @@ import {MockERC20} from "@mocks/MockERC20.sol";
 
 import "@helpers/OSxHelpers.sol";
 
-import {EpochDurationLib} from "@libs/EpochDurationLib.sol";
 import {IEscrowCurveUserStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
 import {IWithdrawalQueueErrors} from "src/escrow/increasing/interfaces/IVotingEscrowIncreasing.sol";
 import {IGaugeVote} from "src/voting/ISimpleGaugeVoter.sol";
@@ -28,10 +27,11 @@ contract VoterSetupTest is GaugeVotingBase {
     error WrongHelpersArrayLength(uint256 length);
 
     function testUninstall() public {
-        address[] memory currentHelpers = new address[](3);
+        address[] memory currentHelpers = new address[](4);
         currentHelpers[0] = address(curve);
         currentHelpers[1] = address(queue);
         currentHelpers[2] = address(escrow);
+        currentHelpers[3] = address(clock);
 
         IPluginSetup.SetupPayload memory payload = IPluginSetup.SetupPayload({
             plugin: address(voter),
@@ -158,6 +158,6 @@ contract VoterSetupTest is GaugeVotingBase {
 
     // coverage autism
     function testConstructor() public {
-        new SimpleGaugeVoterSetup(address(0), address(0), address(0), address(0));
+        new SimpleGaugeVoterSetup(address(0), address(0), address(0), address(0), address(0));
     }
 }

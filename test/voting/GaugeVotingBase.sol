@@ -12,11 +12,12 @@ import {MockPluginSetupProcessor} from "@mocks/osx/MockPSP.sol";
 import {MockDAOFactory} from "@mocks/osx/MockDAOFactory.sol";
 import {MockERC20} from "@mocks/MockERC20.sol";
 import {DaoUnauthorized} from "@aragon/osx/core/utils/auth.sol";
+import {ProxyLib} from "@libs/ProxyLib.sol";
 
 import "@helpers/OSxHelpers.sol";
 
+import {Clock} from "@clock/Clock.sol";
 import {ISimpleGaugeVoterStorageEventsErrors} from "src/voting/ISimpleGaugeVoter.sol";
-import {EpochDurationLib} from "@libs/EpochDurationLib.sol";
 import {IEscrowCurveUserStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
 import {IWithdrawalQueueErrors} from "src/escrow/increasing/interfaces/IVotingEscrowIncreasing.sol";
 import {IGaugeVote} from "src/voting/ISimpleGaugeVoter.sol";
@@ -28,6 +29,8 @@ contract GaugeVotingBase is
     IEscrowCurveUserStorage,
     ISimpleGaugeVoterStorageEventsErrors
 {
+    using ProxyLib for address;
+
     MultisigSetup multisigSetup;
     SimpleGaugeVoterSetup voterSetup;
 
@@ -44,6 +47,7 @@ contract GaugeVotingBase is
     ExitQueue queue;
 
     DAO dao;
+    Clock clock;
     Multisig multisig;
 
     address deployer = address(0x420);
@@ -108,7 +112,8 @@ contract GaugeVotingBase is
             voterBase,
             address(new QuadraticIncreasingEscrow()),
             address(new ExitQueue()),
-            address(new VotingEscrow())
+            address(new VotingEscrow()),
+            address(new Clock())
         );
 
         // push to the PSP
@@ -135,6 +140,7 @@ contract GaugeVotingBase is
         curve = QuadraticIncreasingEscrow(helpers[0]);
         queue = ExitQueue(helpers[1]);
         escrow = VotingEscrow(helpers[2]);
+        clock = Clock(helpers[3]);
 
         // set the permissions
         for (uint i = 0; i < preparedSetupData.permissions.length; i++) {

@@ -10,10 +10,10 @@ import {ExitQueueBase} from "./ExitQueueBase.sol";
 
 contract TestExitQueue is ExitQueueBase {
     // test inital state - escrow, queue, cooldown is set in constructor + dao
-    function testFuzz_initialState(address _escrow, uint256 _cooldown, uint256 _fee) public {
+    function testFuzz_initialState(address _escrow, uint256 _cooldown, uint256 _fee, address _clock) public {
         vm.assume(_fee <= 1e18);
         DAO dao_ = createTestDAO(address(this));
-        queue = _deployExitQueue(address(_escrow), _cooldown, address(dao_), _fee);
+        queue = _deployExitQueue(address(_escrow), _cooldown, address(dao_), _fee, _clock);
         assertEq(queue.escrow(), _escrow);
         assertEq(queue.cooldown(), _cooldown);
         assertEq(address(queue.dao()), address(dao_));

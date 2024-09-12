@@ -1,12 +1,13 @@
 pragma solidity ^0.8.17;
 
-import {Test} from "forge-std/Test.sol";
+import {TestHelpers} from "@helpers/TestHelpers.sol";
 import {console2 as console} from "forge-std/console2.sol";
 import {DaoUnauthorized} from "@aragon/osx/core/utils/auth.sol";
 
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {DAO, createTestDAO} from "@mocks/MockDAO.sol";
 import {QuadraticIncreasingEscrow, IVotingEscrow, IEscrowCurve} from "src/escrow/increasing/QuadraticIncreasingEscrow.sol";
+import {Clock} from "@clock/Clock.sol";
 import {IVotingEscrowIncreasing, ILockedBalanceIncreasing} from "src/escrow/increasing/interfaces/IVotingEscrowIncreasing.sol";
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
@@ -27,22 +28,20 @@ contract MockEscrow {
     }
 }
 
-contract QuadraticCurveBase is Test, ILockedBalanceIncreasing {
+contract QuadraticCurveBase is TestHelpers, ILockedBalanceIncreasing {
     using ProxyLib for address;
     QuadraticIncreasingEscrow internal curve;
     MockEscrow internal escrow;
-    IDAO public dao;
 
-    function setUp() public {
-        dao = createTestDAO(address(this));
-
+    function setUp() public virtual override {
+        super.setUp();
         escrow = new MockEscrow();
 
         address impl = address(new QuadraticIncreasingEscrow());
 
         bytes memory initCalldata = abi.encodeCall(
             QuadraticIncreasingEscrow.initialize,
-            (address(escrow), address(dao), 3 days)
+            (address(escrow), address(dao), 3 days, address(clock))
         );
 
         curve = QuadraticIncreasingEscrow(impl.deployUUPSProxy(initCalldata));
@@ -55,20 +54,5 @@ contract QuadraticCurveBase is Test, ILockedBalanceIncreasing {
         });
 
         escrow.setCurve(curve);
-    }
-
-    function _authErr(
-        address _caller,
-        address _contract,
-        bytes32 _perm
-    ) internal view returns (bytes memory) {
-        return
-            abi.encodeWithSelector(
-                DaoUnauthorized.selector,
-                address(dao),
-                _contract,
-                _caller,
-                _perm
-            );
     }
 }

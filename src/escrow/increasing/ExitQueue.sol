@@ -5,9 +5,9 @@ import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {IExitQueue} from "./interfaces/IExitQueue.sol";
 import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import {IVotingEscrowIncreasing as IVotingEscrow} from "@escrow-interfaces/IVotingEscrowIncreasing.sol";
+import {IClockUser, IClock} from "@clock/IClock.sol";
 
 import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
-import {EpochDurationLib} from "@libs/EpochDurationLib.sol";
 
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
@@ -15,7 +15,7 @@ import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/pl
 /// @title ExitQueue
 /// @notice Token IDs associated with an NFT are given a ticket when they are queued for exit.
 /// After a cooldown period, the ticket holder can exit the NFT.
-contract ExitQueue is IExitQueue, DaoAuthorizable, UUPSUpgradeable {
+contract ExitQueue is IExitQueue, IClockUser, DaoAuthorizable, UUPSUpgradeable {
     using SafeERC20 for IERC20;
 
     /// @notice role required to manage the exit queue
@@ -27,6 +27,9 @@ contract ExitQueue is IExitQueue, DaoAuthorizable, UUPSUpgradeable {
     /// @notice address of the escrow contract
     address public escrow;
 
+    /// @notice clock contract for epoch duration
+    address public clock;
+
     /// @notice time in seconds between exit and withdrawal
     uint256 public cooldown;
 
@@ -36,8 +39,6 @@ contract ExitQueue is IExitQueue, DaoAuthorizable, UUPSUpgradeable {
 
     /// @notice tokenId => Ticket
     mapping(uint256 => Ticket) internal _queue;
-
-    uint256[46] private __gap;
 
     /*//////////////////////////////////////////////////////////////
                               Constructor
@@ -53,10 +54,12 @@ contract ExitQueue is IExitQueue, DaoAuthorizable, UUPSUpgradeable {
         address _escrow,
         uint256 _cooldown,
         address _dao,
-        uint256 _feePercent
+        uint256 _feePercent,
+        address _clock
     ) external initializer {
         __DaoAuthorizableUpgradeable_init(IDAO(_dao));
         escrow = _escrow;
+        clock = _clock;
         _setFeePercent(_feePercent);
         _setCooldown(_cooldown);
     }
@@ -132,7 +135,7 @@ contract ExitQueue is IExitQueue, DaoAuthorizable, UUPSUpgradeable {
     /// @dev The next exit date is the later of the cooldown expiry and the next checkpoint
     function nextExitDate() public view returns (uint256) {
         // snap to next checkpoint interval, we can't cooldown before this
-        uint nextCP = EpochDurationLib.epochNextCheckpointTs(block.timestamp);
+        uint nextCP = IClock(clock).epochNextCheckpointTs();
         uint cooldownExpiry = block.timestamp + cooldown;
 
         // if the next cp is after the cooldown, return the next cp
@@ -193,4 +196,6 @@ contract ExitQueue is IExitQueue, DaoAuthorizable, UUPSUpgradeable {
 
     /// @notice Internal method authorizing the upgrade of the contract via the [upgradeability mechanism for UUPS proxies](https://docs.openzeppelin.com/contracts/4.x/api/proxy#UUPSUpgradeable) (see [ERC-1822](https://eips.ethereum.org/EIPS/eip-1822)).
     function _authorizeUpgrade(address) internal virtual override auth(QUEUE_ADMIN_ROLE) {}
+
+    uint256[45] private __gap;
 }

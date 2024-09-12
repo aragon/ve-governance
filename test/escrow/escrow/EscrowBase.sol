@@ -22,6 +22,7 @@ import {VotingEscrow} from "@escrow/VotingEscrowIncreasing.sol";
 import {QuadraticIncreasingEscrow} from "@escrow/QuadraticIncreasingEscrow.sol";
 import {ExitQueue} from "@escrow/ExitQueue.sol";
 import {SimpleGaugeVoter, SimpleGaugeVoterSetup} from "src/voting/SimpleGaugeVoterSetup.sol";
+import {Clock} from "@clock/Clock.sol";
 
 contract EscrowBase is Test, IVotingEscrowEventsStorageErrorsEvents {
     using ProxyLib for address;
@@ -36,6 +37,7 @@ contract EscrowBase is Test, IVotingEscrowEventsStorageErrorsEvents {
     QuadraticIncreasingEscrow curve;
     SimpleGaugeVoter voter;
     ExitQueue queue;
+    Clock clock;
 
     DAO dao;
     Multisig multisig;
@@ -48,12 +50,14 @@ contract EscrowBase is Test, IVotingEscrowEventsStorageErrorsEvents {
 
         // deploy our contracts
         token = new MockERC20();
-        escrow = _deployEscrow(address(token), address(dao), name, symbol);
-        curve = _deployCurve(address(escrow), address(dao), 3 days);
+        clock = _deployClock(address(dao));
+
+        escrow = _deployEscrow(address(token), address(dao), name, symbol, address(clock));
+        curve = _deployCurve(address(escrow), address(dao), 3 days, address(clock));
 
         // to be added as proxies
-        voter = _deployVoter(address(dao), address(escrow), false);
-        queue = _deployExitQueue(address(escrow), 3 days, address(dao), 0);
+        voter = _deployVoter(address(dao), address(escrow), false, address(clock));
+        queue = _deployExitQueue(address(escrow), 3 days, address(dao), 0, address(clock));
 
         // grant this contract admin privileges
         dao.grant({
@@ -113,13 +117,14 @@ contract EscrowBase is Test, IVotingEscrowEventsStorageErrorsEvents {
         address _token,
         address _dao,
         string memory _name,
-        string memory _symbol
+        string memory _symbol,
+        address _clock
     ) public returns (VotingEscrow) {
         VotingEscrow impl = new VotingEscrow();
 
         bytes memory initCalldata = abi.encodeCall(
             VotingEscrow.initialize,
-            (_token, _dao, _name, _symbol)
+            (_token, _dao, _name, _symbol, _clock)
         );
         return VotingEscrow(address(impl).deployUUPSProxy(initCalldata));
     }
@@ -127,13 +132,14 @@ contract EscrowBase is Test, IVotingEscrowEventsStorageErrorsEvents {
     function _deployCurve(
         address _escrow,
         address _dao,
-        uint256 _warmup
+        uint256 _warmup,
+        address _clock
     ) public returns (QuadraticIncreasingEscrow) {
         QuadraticIncreasingEscrow impl = new QuadraticIncreasingEscrow();
 
         bytes memory initCalldata = abi.encodeCall(
             QuadraticIncreasingEscrow.initialize,
-            (_escrow, _dao, _warmup)
+            (_escrow, _dao, _warmup, _clock)
         );
         return QuadraticIncreasingEscrow(address(impl).deployUUPSProxy(initCalldata));
     }
@@ -141,13 +147,14 @@ contract EscrowBase is Test, IVotingEscrowEventsStorageErrorsEvents {
     function _deployVoter(
         address _dao,
         address _escrow,
-        bool _reset
+        bool _reset,
+        address _clock
     ) public returns (SimpleGaugeVoter) {
         SimpleGaugeVoter impl = new SimpleGaugeVoter();
 
         bytes memory initCalldata = abi.encodeCall(
             SimpleGaugeVoter.initialize,
-            (_dao, _escrow, _reset)
+            (_dao, _escrow, _reset, _clock)
         );
         return SimpleGaugeVoter(address(impl).deployUUPSProxy(initCalldata));
     }
@@ -156,15 +163,22 @@ contract EscrowBase is Test, IVotingEscrowEventsStorageErrorsEvents {
         address _escrow,
         uint _cooldown,
         address _dao,
-        uint256 _feePercent
+        uint256 _feePercent,
+        address _clock
     ) public returns (ExitQueue) {
         ExitQueue impl = new ExitQueue();
 
         bytes memory initCalldata = abi.encodeCall(
             ExitQueue.initialize,
-            (_escrow, _cooldown, _dao, _feePercent)
+            (_escrow, _cooldown, _dao, _feePercent, _clock)
         );
         return ExitQueue(address(impl).deployUUPSProxy(initCalldata));
+    }
+
+    function _deployClock(address _dao) internal returns (Clock) {
+        address impl = address(new Clock());
+        bytes memory initCalldata = abi.encodeWithSelector(Clock.initialize.selector, _dao);
+        return Clock(impl.deployUUPSProxy(initCalldata));
     }
 
     function _deployOSX() internal {

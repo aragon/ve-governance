@@ -38,8 +38,9 @@ The main workflow in the Mode Governance build is as follows:
   - Custom exit queue logic via custom exit queue managers
   - Custom escrow curves
   - Custom voting contracts other than SimpleGaugeVoter
+  - Custom epoch clock logic via the `Clock.sol` contract
 
-- Additionally, we use libraries like `EpochDurationLib`, `CurveCoefficientLib` and `SignedFixedPointMathLib` that allow users to make minimal, consistent and gas-efficient customisations to things like epoch length and curve shapes.
+- Additionally, we use libraries like `CurveCoefficientLib` and `SignedFixedPointMathLib` that allow users to make minimal, consistent and gas-efficient customisations to things like epoch length and curve shapes.
 
 ## Rewards
 

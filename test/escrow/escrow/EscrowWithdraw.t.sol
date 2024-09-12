@@ -8,7 +8,6 @@ import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
-import {EpochDurationLib} from "@libs/EpochDurationLib.sol";
 
 import {IEscrowCurveUserStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
 import {VotingEscrow} from "@escrow/VotingEscrowIncreasing.sol";
@@ -33,7 +32,7 @@ contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote {
 
     // setup a fee withdrawal
     function testFuzz_feeWithdrawal(uint64 _fee, uint128 _dep, address _who) public {
-        vm.assume(_who != address(0));
+        vm.assume(_who != address(0) && _who != address(queue) && _who != address(escrow));
         vm.assume(_dep > 0);
 
         if (_fee > 1e18) _fee = 1e18;

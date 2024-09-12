@@ -15,6 +15,7 @@ utils/=test/utils/
 @execution-chain/=src/execution-chain/
 @utils/=src/utils/
 @helpers/=test/helpers/
+@clock/=src/clock/
   
 @ensdomains/ens-contracts/=lib/ens-contracts/
 ens-contracts/=lib/ens-contracts/contracts/

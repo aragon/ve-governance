@@ -8,16 +8,16 @@ import {ERC721Upgradeable as ERC721} from "@openzeppelin/contracts-upgradeable/t
 import {ERC721EnumerableUpgradeable as ERC721Enumerable} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 
 // veGovernance
+import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
+import {ISimpleGaugeVoter} from "@voting/ISimpleGaugeVoter.sol";
+import {IClockUser, IClock} from "@clock/IClock.sol";
 import {IEscrowCurveIncreasing as IEscrowCurve} from "./interfaces/IEscrowCurveIncreasing.sol";
 import {IExitQueue} from "./interfaces/IExitQueue.sol";
 import {IVotingEscrowIncreasing as IVotingEscrow, ILockedBalanceIncreasing, IVotingEscrowCore, IDynamicVoter} from "./interfaces/IVotingEscrowIncreasing.sol";
-import {ISimpleGaugeVoter} from "../../voting/ISimpleGaugeVoter.sol";
-import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 
 // libraries
 import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import {SafeCastUpgradeable as SafeCast} from "@openzeppelin/contracts-upgradeable/utils/math/SafeCastUpgradeable.sol";
-import {EpochDurationLib} from "@libs/EpochDurationLib.sol";
 
 // parents
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
@@ -27,6 +27,7 @@ import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/pl
 
 contract VotingEscrow is
     IVotingEscrow,
+    IClockUser,
     ReentrancyGuard,
     Pausable,
     DaoAuthorizable,
@@ -76,6 +77,9 @@ contract VotingEscrow is
     /// @notice Address of the contract that manages exit queue logic for withdrawals
     address public queue;
 
+    /// @notice Address of the clock contract that manages epoch and voting periods
+    address public clock;
+
     /*//////////////////////////////////////////////////////////////
                               Mappings
     //////////////////////////////////////////////////////////////*/
@@ -108,7 +112,8 @@ contract VotingEscrow is
         address _token,
         address _dao,
         string memory _name,
-        string memory _symbol
+        string memory _symbol,
+        address _clock
     ) external initializer {
         __DaoAuthorizableUpgradeable_init(IDAO(_dao));
         __ReentrancyGuard_init();
@@ -117,6 +122,7 @@ contract VotingEscrow is
 
         if (IERC20Metadata(_token).decimals() != 18) revert MustBe18Decimals();
         token = _token;
+        clock = _clock;
 
         // allow sending tokens to this contract
         whitelisted[address(this)] = true;
@@ -154,6 +160,11 @@ contract VotingEscrow is
     /// @notice Sets the exit queue contract that manages withdrawal eligibility
     function setQueue(address _queue) external auth(ESCROW_ADMIN_ROLE) {
         queue = _queue;
+    }
+
+    /// @notice Sets the clock contract that manages epoch and voting periods
+    function setClock(address _clock) external auth(ESCROW_ADMIN_ROLE) {
+        clock = _clock;
     }
 
     function pause() external auth(PAUSER_ROLE) {
@@ -268,7 +279,7 @@ contract VotingEscrow is
         if (_value == 0) revert ZeroAmount();
 
         // query the duration lib to get the next time we can deposit
-        uint256 startTime = EpochDurationLib.epochNextCheckpointTs(block.timestamp);
+        uint256 startTime = IClock(clock).epochNextCheckpointTs();
 
         // increment the total locked supply and get the new tokenId
         totalLocked += _value;
@@ -303,7 +314,7 @@ contract VotingEscrow is
     /// @param _tokenId The tokenId to reset the voting power for
     /// @dev We don't need to fetch the old locked balance as it's not used in this implementation
     function _checkpointClear(uint256 _tokenId) private {
-        uint256 checkpointClearTime = EpochDurationLib.epochNextCheckpointTs(block.timestamp);
+        uint256 checkpointClearTime = IClock(clock).epochNextCheckpointTs();
         IEscrowCurve(curve).checkpoint(
             _tokenId,
             LockedBalance(0, 0),
@@ -398,5 +409,5 @@ contract VotingEscrow is
     function _authorizeUpgrade(address) internal virtual override auth(ESCROW_ADMIN_ROLE) {}
 
     /// @dev Reserved storage space to allow for layout changes in the future.
-    uint256[43] private __gap;
+    uint256[42] private __gap;
 }

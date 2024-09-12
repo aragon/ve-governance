@@ -6,11 +6,11 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {IVotingEscrowIncreasing as IVotingEscrow} from "@escrow-interfaces/IVotingEscrowIncreasing.sol";
 import {IEscrowCurveIncreasing as IEscrowCurve} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
+import {IClockUser, IClock} from "@clock/IClock.sol";
 
 // libraries
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import {EpochDurationLib} from "@libs/EpochDurationLib.sol";
 import {SignedFixedPointMath} from "@libs/SignedFixedPointMathLib.sol";
 import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 
@@ -22,6 +22,7 @@ import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/pl
 /// @title Quadratic Increasing Escrow
 contract QuadraticIncreasingEscrow is
     IEscrowCurve,
+    IClockUser,
     ReentrancyGuard,
     DaoAuthorizable,
     UUPSUpgradeable
@@ -36,12 +37,11 @@ contract QuadraticIncreasingEscrow is
     /// @notice Administrator role for the contract
     bytes32 public constant CURVE_ADMIN_ROLE = keccak256("CURVE_ADMIN_ROLE");
 
-    /// @notice The duration of each period
-    /// @dev used to calculate the value of t / PERIOD_LENGTH
-    uint256 public constant period = EpochDurationLib.EPOCH_DURATION;
-
     /// @notice The VotingEscrow contract address
     address public escrow;
+
+    /// @notice The Clock contract address
+    address public clock;
 
     /// @notice tokenId => point epoch: incremented on a per-user basis
     mapping(uint256 => uint256) public userPointEpoch;
@@ -69,8 +69,7 @@ contract QuadraticIncreasingEscrow is
 
     int256 private constant SHARED_LINEAR_COEFFICIENT = CurveConstantLib.SHARED_LINEAR_COEFFICIENT;
 
-    uint256 private constant MAX_TIME =
-        CurveConstantLib.MAX_EPOCHS * EpochDurationLib.EPOCH_DURATION;
+    uint256 private constant MAX_EPOCHS = CurveConstantLib.MAX_EPOCHS;
 
     /*//////////////////////////////////////////////////////////////
                               INITIALIZATION
@@ -81,9 +80,15 @@ contract QuadraticIncreasingEscrow is
     }
 
     /// @param _escrow VotingEscrow contract address
-    function initialize(address _escrow, address _dao, uint256 _warmupPeriod) external initializer {
+    function initialize(
+        address _escrow,
+        address _dao,
+        uint256 _warmupPeriod,
+        address _clock
+    ) external initializer {
         escrow = _escrow;
         warmupPeriod = _warmupPeriod;
+        clock = _clock;
 
         __DaoAuthorizableUpgradeable_init(IDAO(_dao));
         __ReentrancyGuard_init();
@@ -138,7 +143,7 @@ contract QuadraticIncreasingEscrow is
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Returns the bias for the given time elapsed and amount, up to the maximum time
-    function getBias(uint256 timeElapsed, uint256 amount) public pure returns (uint256) {
+    function getBias(uint256 timeElapsed, uint256 amount) public view returns (uint256) {
         int256[3] memory coefficients = _getCoefficients(amount);
         return _getBias(timeElapsed, coefficients);
     }
@@ -146,12 +151,13 @@ contract QuadraticIncreasingEscrow is
     function _getBias(
         uint256 timeElapsed,
         int256[3] memory coefficients
-    ) internal pure returns (uint256) {
+    ) internal view returns (uint256) {
         int256 quadratic = coefficients[2];
         int256 linear = coefficients[1];
         int256 const = coefficients[0];
 
         // bound the time elapsed to the maximum time
+        uint256 MAX_TIME = _maxTime();
         timeElapsed = timeElapsed > MAX_TIME ? MAX_TIME : timeElapsed;
 
         // convert the time to fixed point
@@ -165,8 +171,12 @@ contract QuadraticIncreasingEscrow is
         return bias.lt((0)) ? uint256(0) : SignedFixedPointMath.fromFP((bias)).toUint256();
     }
 
-    function previewMaxBias(uint256 amount) external pure returns (uint256) {
-        return getBias(MAX_TIME, amount);
+    function _maxTime() internal view returns (uint256) {
+        return IClock(clock).epochDuration() * MAX_EPOCHS;
+    }
+
+    function previewMaxBias(uint256 amount) external view returns (uint256) {
+        return getBias(_maxTime(), amount);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -331,5 +341,5 @@ contract QuadraticIncreasingEscrow is
     function _authorizeUpgrade(address) internal virtual override auth(CURVE_ADMIN_ROLE) {}
 
     /// @dev gap for upgradeable contract
-    uint256[45] private __gap;
+    uint256[44] private __gap;
 }

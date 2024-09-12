@@ -36,7 +36,7 @@ contract TestExitQueueWithdrawals is ExitQueueBase {
         token = new MockERC20();
         MockEscrow escrow = new MockEscrow(address(token));
 
-        queue = _deployExitQueue(address(escrow), 0, address(dao), 0);
+        queue = _deployExitQueue(address(escrow), 0, address(dao), 0, address(clock));
 
         dao.grant({
             _who: address(this),
