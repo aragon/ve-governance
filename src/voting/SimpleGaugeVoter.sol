@@ -81,7 +81,7 @@ contract SimpleGaugeVoter is
     }
 
     /*///////////////////////////////////////////////////////////////
-                               Voting 
+                               Voting
     //////////////////////////////////////////////////////////////*/
 
     /// @notice extrememly simple for loop. We don't need reentrancy checks in this implementation
@@ -114,9 +114,6 @@ contract SimpleGaugeVoter is
         uint256 numVotes = _votes.length;
         if (numVotes == 0) revert NoVotes();
 
-        // clear any existing votes
-        if (isVoting(_tokenId)) _reset(_tokenId);
-
         // voting power continues to increase over the voting epoch.
         // this means you can revote later in the epoch to increase votes.
         // while not a huge problem, it's worth noting that when rewards are fully
@@ -133,6 +130,9 @@ contract SimpleGaugeVoter is
         // but it's clearer to the caller if we revert here
         if (sumOfWeights == 0) revert NoVotes();
 
+        // clear any existing votes
+        if (isVoting(_tokenId)) _reset(_tokenId);
+
         // iterate over votes and distribute weight
         for (uint256 i = 0; i < numVotes; i++) {
             // the gauge must exist and be active,
@@ -140,10 +140,9 @@ contract SimpleGaugeVoter is
             address gauge = _votes[i].gauge;
 
             if (!gaugeExists(gauge)) revert GaugeDoesNotExist(gauge);
-            if (!isActive(gauge)) revert GaugeInactive(gauge);
-
+            else if (!isActive(gauge)) revert GaugeInactive(gauge);
             // prevent double voting
-            if (voteData.votes[gauge] != 0) revert DoubleVote();
+            else if (voteData.votes[gauge] != 0) revert DoubleVote();
 
             // calculate the weight for this gauge
             uint256 votesForGauge = (_votes[i].weight * votingPower) / sumOfWeights;
@@ -183,7 +182,8 @@ contract SimpleGaugeVoter is
     function reset(uint256 _tokenId) external nonReentrant whenNotPaused whenVotingActive {
         if (!IVotingEscrow(escrow).isApprovedOrOwner(msg.sender, _tokenId))
             revert NotApprovedOrOwner();
-        if (!isVoting(_tokenId)) revert NotCurrentlyVoting();
+        else if (!isVoting(_tokenId)) revert NotCurrentlyVoting();
+
         _reset(_tokenId);
     }
 
@@ -242,7 +242,7 @@ contract SimpleGaugeVoter is
         string calldata _metadata
     ) external auth(GAUGE_ADMIN_ROLE) nonReentrant returns (address gauge) {
         if (_gauge == address(0)) revert ZeroGauge();
-        if (gaugeExists(_gauge)) revert GaugeExists();
+        else if (gaugeExists(_gauge)) revert GaugeExists();
 
         gauges[_gauge] = Gauge(true, block.timestamp, bytes32(abi.encode(_metadata)));
         gaugeList.push(_gauge);
@@ -253,14 +253,16 @@ contract SimpleGaugeVoter is
 
     function deactivateGauge(address _gauge) external auth(GAUGE_ADMIN_ROLE) {
         if (!gaugeExists(_gauge)) revert GaugeDoesNotExist(_gauge);
-        if (!isActive(_gauge)) revert GaugeActivationUnchanged();
+        else if (!isActive(_gauge)) revert GaugeActivationUnchanged();
+
         gauges[_gauge].active = false;
         emit GaugeDeactivated(_gauge);
     }
 
     function activateGauge(address _gauge) external auth(GAUGE_ADMIN_ROLE) {
         if (!gaugeExists(_gauge)) revert GaugeDoesNotExist(_gauge);
-        if (isActive(_gauge)) revert GaugeActivationUnchanged();
+        else if (isActive(_gauge)) revert GaugeActivationUnchanged();
+
         gauges[_gauge].active = true;
         emit GaugeActivated(_gauge);
     }
@@ -270,6 +272,7 @@ contract SimpleGaugeVoter is
         string calldata _metadata
     ) external auth(GAUGE_ADMIN_ROLE) {
         if (!gaugeExists(_gauge)) revert GaugeDoesNotExist(_gauge);
+
         gauges[_gauge].metadata = keccak256(abi.encode(_metadata));
         emit GaugeMetadataUpdated(_gauge, _metadata);
     }
