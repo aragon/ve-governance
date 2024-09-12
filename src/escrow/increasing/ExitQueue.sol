@@ -136,7 +136,7 @@ contract ExitQueue is IExitQueue, DaoAuthorizable, UUPSUpgradeable {
         uint cooldownExpiry = block.timestamp + cooldown;
 
         // if the next cp is after the cooldown, return the next cp
-        return nextCP > cooldownExpiry ? nextCP : cooldownExpiry;
+        return nextCP >= cooldownExpiry ? nextCP : cooldownExpiry;
     }
 
     /// @notice Exits the queue for that tokenID.

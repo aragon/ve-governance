@@ -31,6 +31,7 @@ contract TestGaugeManage is GaugeVotingBase {
     // only gauge admins
     function testOnlyGaugeAdmins(address _notThis) public {
         vm.assume(_notThis != address(this));
+        vm.assume(_notThis != address(dao));
 
         bytes memory err = _authErr({
             _caller: _notThis,
@@ -67,6 +68,7 @@ contract TestGaugeManage is GaugeVotingBase {
 
     // emits the event and pushes the new gauge
     function testFuzz_CreateGauge(address _gauge, string calldata metadata) public {
+        vm.assume(_gauge != address(0));
         vm.expectEmit(true, true, false, true);
         emit GaugeCreated(_gauge, address(this), metadata);
         voter.createGauge(_gauge, metadata);
@@ -77,6 +79,7 @@ contract TestGaugeManage is GaugeVotingBase {
 
     // can't create if exists alread
     function testFuzz_CreateGauge_Exists(address _gauge, string calldata metadata) public {
+        vm.assume(_gauge != address(0));
         voter.createGauge(_gauge, metadata);
         vm.expectRevert(GaugeExists.selector);
         voter.createGauge(_gauge, metadata);
@@ -90,6 +93,7 @@ contract TestGaugeManage is GaugeVotingBase {
 
     // can deactivate an existing gauge
     function testFuzz_DeactivateGaugeExists(address _gauge, string calldata metadata) public {
+        vm.assume(_gauge != address(0));
         voter.createGauge(_gauge, metadata);
         vm.expectEmit(true, false, false, true);
         emit GaugeDeactivated(_gauge);
@@ -104,6 +108,7 @@ contract TestGaugeManage is GaugeVotingBase {
         address _gauge,
         string calldata metadata
     ) public {
+        vm.assume(_gauge != address(0));
         voter.createGauge(_gauge, metadata);
         voter.deactivateGauge(_gauge);
         vm.expectRevert(GaugeActivationUnchanged.selector);
@@ -118,6 +123,7 @@ contract TestGaugeManage is GaugeVotingBase {
 
     // can reactivate an existing gauge
     function testFuzz_ActivateGaugeExists(address _gauge, string calldata metadata) public {
+        vm.assume(_gauge != address(0));
         voter.createGauge(_gauge, metadata);
         voter.deactivateGauge(_gauge);
         vm.expectEmit(true, false, false, true);
@@ -133,6 +139,7 @@ contract TestGaugeManage is GaugeVotingBase {
         address _gauge,
         string calldata metadata
     ) public {
+        vm.assume(_gauge != address(0));
         voter.createGauge(_gauge, metadata);
         vm.expectRevert(GaugeActivationUnchanged.selector);
         voter.activateGauge(_gauge);
@@ -144,12 +151,18 @@ contract TestGaugeManage is GaugeVotingBase {
         voter.updateGaugeMetadata(_gauge, metadata);
     }
 
+    function testCannotCreateZeroGauge() public {
+        vm.expectRevert(ZeroGauge.selector);
+        voter.createGauge(address(0), "");
+    }
+
     // can update metadata on an existing gauge
     function testFuzz_UpdateGaugeMetadataExists(
         address _gauge,
         string calldata metadata,
         string calldata newMetadata
     ) public {
+        vm.assume(_gauge != address(0));
         voter.createGauge(_gauge, metadata);
         vm.expectEmit(true, false, false, true);
         emit GaugeMetadataUpdated(_gauge, newMetadata);

@@ -106,19 +106,31 @@ contract TestExitQueue is ExitQueueBase {
     // test emits a queued event and writes to state
     function testFuzz_canQueue(uint256 _tokenId, address _ticketHolder, uint32 _warp) public {
         vm.assume(_ticketHolder != address(0));
+        vm.assume(_warp > 0); // any time other than genesis
         vm.warp(_warp);
 
-        uint expectedExitDate = block.timestamp + queue.cooldown();
+        // if there are less than cooldown seconds left, exit date is end of the
+        // week, else it's now + cooldown
+
+        uint expectedExitDate;
+        uint remainingSecondsBeforeNextCP = 1 weeks - (block.timestamp % 1 weeks);
+        if (queue.cooldown() < remainingSecondsBeforeNextCP) {
+            expectedExitDate = block.timestamp + remainingSecondsBeforeNextCP;
+        } else {
+            expectedExitDate = block.timestamp + queue.cooldown();
+        }
 
         vm.expectEmit(true, true, false, true);
         emit ExitQueued(_tokenId, _ticketHolder, expectedExitDate);
         queue.queueExit(_tokenId, _ticketHolder);
         assertEq(queue.ticketHolder(_tokenId), _ticketHolder);
-        assertEq(queue.queue(_tokenId).exitDate, block.timestamp);
+        assertEq(queue.queue(_tokenId).exitDate, expectedExitDate);
     }
 
     // test can exit updates only after the cooldown period
     function testFuzz_canExit(uint216 _cooldown) public {
+        vm.warp(0);
+
         queue.setCooldown(_cooldown);
 
         uint256 tokenId = 420;
@@ -129,10 +141,11 @@ contract TestExitQueue is ExitQueueBase {
             assert(queue.canExit(tokenId));
         } else {
             assertFalse(queue.canExit(tokenId));
-            vm.warp(time + _cooldown - 1);
+
+            vm.warp(time + queue.nextExitDate() - 1);
             assertFalse(queue.canExit(tokenId));
 
-            vm.warp(time + _cooldown);
+            vm.warp(time + queue.nextExitDate());
             assertTrue(queue.canExit(tokenId));
         }
     }

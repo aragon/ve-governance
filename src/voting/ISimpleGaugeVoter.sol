@@ -43,6 +43,7 @@ interface IGaugeManagerEvents {
 }
 
 interface IGaugeManagerErrors {
+    error ZeroGauge();
     error GaugeActivationUnchanged();
     error GaugeExists();
 }

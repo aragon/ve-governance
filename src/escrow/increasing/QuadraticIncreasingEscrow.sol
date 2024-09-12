@@ -165,6 +165,10 @@ contract QuadraticIncreasingEscrow is
         return bias.lt((0)) ? uint256(0) : SignedFixedPointMath.fromFP((bias)).toUint256();
     }
 
+    function previewMaxBias(uint256 amount) external pure returns (uint256) {
+        return getBias(MAX_TIME, amount);
+    }
+
     /*//////////////////////////////////////////////////////////////
                               Warmup
     //////////////////////////////////////////////////////////////*/
@@ -274,7 +278,7 @@ contract QuadraticIncreasingEscrow is
     /// @param _newLocked New locked amount / end lock time for the user
     function _checkpoint(
         uint256 _tokenId,
-        IVotingEscrow.LockedBalance memory, /* _oldLocked */
+        IVotingEscrow.LockedBalance memory /* _oldLocked */,
         IVotingEscrow.LockedBalance memory _newLocked
     ) internal {
         // this implementation doesn't yet support manual checkpointing
@@ -293,7 +297,7 @@ contract QuadraticIncreasingEscrow is
         // write the new timestamp - in the case of an increasing curve
         // we align the checkpoint to the start of the upcoming deposit interval
         // to ensure global slope changes can be scheduled
-        // NOTE: the above global functionality is not implemented in this version of the contracts 
+        // NOTE: the above global functionality is not implemented in this version of the contracts
         uNew.ts = _newLocked.start;
 
         // check to see if we have an existing epoch for this token
@@ -309,7 +313,7 @@ contract QuadraticIncreasingEscrow is
 
         // if the user is exiting, we don't need to set the warmup period
         if (!isExiting) {
-          _userPointWarmup[_tokenId][userEpoch] = block.timestamp + warmupPeriod;
+            _userPointWarmup[_tokenId][userEpoch] = block.timestamp + warmupPeriod;
         }
     }
 

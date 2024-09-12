@@ -105,7 +105,9 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
     function _withdraw() internal {
         vm.startPrank(user);
         {
-            vm.expectRevert(abi.encodeWithSelector(NotTicketHolder.selector));
+            uint atm = block.timestamp;
+
+            vm.expectRevert(NotTicketHolder.selector);
             ve.withdraw(tokenId);
 
             // reset votes to clear
@@ -117,15 +119,23 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
             assertEq(ve.balanceOf(address(ve)), 1, "VE should have the NFT");
 
             // wait for 1 day
-            vm.warp(block.timestamp + 1 days);
+            vm.warp(atm + 1 days);
 
-            vm.expectRevert(abi.encodeWithSelector(CannotExit.selector));
+            vm.expectRevert(CannotExit.selector);
             ve.withdraw(tokenId);
+
+            // the cooldown is not enough: we snap to the end of the voting period
 
             // wait for the cooldown
-            vm.warp(block.timestamp + COOLDOWN - 1 days);
+            vm.warp(atm + COOLDOWN);
 
+            vm.expectRevert(CannotExit.selector);
             ve.withdraw(tokenId);
+
+            // warp to the end of the voting period
+            vm.warp(atm + 1 weeks);
+            ve.withdraw(tokenId);
+
             assertEq(ve.balanceOf(user), 0, "User not should have the token");
             assertEq(ve.balanceOf(address(ve)), 0, "VE should not have the NFT");
             assertEq(token.balanceOf(user), DEPOSIT, "User should have the tokens");
@@ -153,10 +163,12 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
         }
         vm.stopPrank();
 
+        uint maxDeposit = curve.previewMaxBias(DEPOSIT);
+
         // check, should be 25% of 6*DEPOSIT in the first gauge
         // and 75% of 6*DEPOSIT in the second gauge
-        uint expectedFirst = (6 * DEPOSIT) / 4;
-        uint expectedSecond = (6 * DEPOSIT) - expectedFirst;
+        uint expectedFirst = maxDeposit / 4;
+        uint expectedSecond = maxDeposit - expectedFirst;
 
         assertEq(voter.gaugeVotes(gaugeTheFirst), expectedFirst, "First gauge weight incorrect");
         assertEq(voter.gaugeVotes(gaugeTheSecond), expectedSecond, "Second gauge weight incorrect");
@@ -271,7 +283,7 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
         vm.warp(start + curve.period() * 5 + 30);
         assertEq(
             curve.votingPowerAt(tokenId, block.timestamp),
-            6 * DEPOSIT,
+            5999967296216703996928,
             "Balance incorrect after p6"
         );
     }

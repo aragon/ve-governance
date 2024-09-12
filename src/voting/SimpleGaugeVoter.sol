@@ -226,6 +226,7 @@ contract SimpleGaugeVoter is ISimpleGaugeVoter, ReentrancyGuard, Pausable, Plugi
         address _gauge,
         string calldata _metadata
     ) external auth(GAUGE_ADMIN_ROLE) nonReentrant returns (address gauge) {
+        if (_gauge == address(0)) revert ZeroGauge();
         if (gaugeExists(_gauge)) revert GaugeExists();
 
         gauges[_gauge] = Gauge(true, block.timestamp, bytes32(abi.encode(_metadata)));
