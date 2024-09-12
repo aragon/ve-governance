@@ -164,7 +164,7 @@ contract QuadraticIncreasingEscrow is
         int256 t = SignedFixedPointMath.toFP(timeElapsed.toInt256());
 
         // bias = a.t^2 + b.t + c
-        int256 bias = quadratic.mul(t.pow(2e18)).add(linear.mul(t)).add(const);
+        int256 bias = quadratic.mul(t.mul(t)).add(linear.mul(t)).add(const);
 
         // never return negative values
         // in the increasing case, this should never happen

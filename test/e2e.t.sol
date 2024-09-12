@@ -263,7 +263,7 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
         // solmate:   1067.784196491481599990
         assertEq(
             curve.votingPowerAt(tokenId, block.timestamp),
-            1067784196491481599990,
+            1067784196491481600000,
             "Balance incorrect after warmup"
         );
         assertEq(curve.isWarm(tokenId), true, "Still warming up");
@@ -274,7 +274,7 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
         // solmate:    1428.570120419660799763
         assertEq(
             curve.votingPowerAt(tokenId, block.timestamp),
-            1428570120419660799763,
+            1428570120419660800000,
             "Balance incorrect after p1"
         );
 
@@ -284,7 +284,7 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
         vm.warp(start + clock.epochDuration() * 5 + 30);
         assertEq(
             curve.votingPowerAt(tokenId, block.timestamp),
-            5999967296216703996928,
+            5999967296216704000000,
             "Balance incorrect after p6"
         );
     }
