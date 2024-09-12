@@ -114,7 +114,7 @@ contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote {
     }
 
     function testFuzz_enterWithdrawal(uint128 _dep, address _who) public {
-        vm.assume(_who != address(0));
+        vm.assume(_who != address(0) && _who != address(queue) && _who != address(escrow));
         vm.assume(_dep > 0);
 
         // make a deposit
