@@ -19,6 +19,7 @@ The main workflow in the Mode Governance build is as follows:
 - The user's voting power increases over time, starting from a baseline of the locked amount, up to a maximum voting power
 - The user is unable to vote during an initial "warmup period".
 - The user can exit their position at any time. In this case, they are entered into an "Exit Queue", whereupon their NFT is held in the queue for a "cooldown" period of X Days. After the period ends, they can burn the NFT to receieve their underlying balance back.
+- It's possible to add a `minLock` period whereby a user is prevented from entering the exit queue before a certain time. This means they have their NFT available to vote but can't enter the exit process.
   - Voting power is removed from the NFT at this time
 - The exit queue can optionally set an exit fee that will be charged on exit.
 
