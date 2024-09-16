@@ -60,18 +60,43 @@ interface IExitQueueCooldown is IExitQueueCooldownErrorsAndEvents {
 }
 
 /*///////////////////////////////////////////////////////////////
+                        Min Lock
+//////////////////////////////////////////////////////////////*/
+
+interface IExitMinLockCooldownErrorsAndEvents {
+    event MinLockSet(uint256 minLock);
+
+    error MinLockNotReached(uint256 tokenId, uint256 minLock, uint256 earliestExitDate);
+}
+
+interface IExitQueueMinLock is IExitMinLockCooldownErrorsAndEvents {
+    /// @notice minimum time from the original lock date before one can enter the queue
+    function minLock() external view returns (uint256);
+
+    /// @notice The exit queue manager can set the minimum lock time
+    function setMinLock(uint256 _cooldown) external;
+}
+
+/*///////////////////////////////////////////////////////////////
                         Exit Queue
 //////////////////////////////////////////////////////////////*/
 
 interface IExitQueueErrorsAndEvents is
     IExitQueueCoreErrorsAndEvents,
     IExitQueueFeeErrorsAndEvents,
-    IExitQueueCooldownErrorsAndEvents
+    IExitQueueCooldownErrorsAndEvents,
+    IExitMinLockCooldownErrorsAndEvents
 {
 
 }
 
-interface IExitQueue is IExitQueueErrorsAndEvents, ITicket, IExitQueueFee, IExitQueueCooldown {
+interface IExitQueue is
+    IExitQueueErrorsAndEvents,
+    ITicket,
+    IExitQueueFee,
+    IExitQueueCooldown,
+    IExitQueueMinLock
+{
     /// @notice tokenId => Ticket
     function queue(uint256 _tokenId) external view returns (Ticket memory);
 

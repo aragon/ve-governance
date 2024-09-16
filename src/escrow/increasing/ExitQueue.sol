@@ -37,6 +37,9 @@ contract ExitQueue is IExitQueue, IClockUser, DaoAuthorizable, UUPSUpgradeable {
     /// @dev 1e18 = 100%
     uint256 public feePercent;
 
+    /// @notice minimum time from the original lock date before one can enter the queue
+    uint256 public minLock;
+
     /// @notice tokenId => Ticket
     mapping(uint256 => Ticket) internal _queue;
 
@@ -55,11 +58,13 @@ contract ExitQueue is IExitQueue, IClockUser, DaoAuthorizable, UUPSUpgradeable {
         uint256 _cooldown,
         address _dao,
         uint256 _feePercent,
-        address _clock
+        address _clock,
+        uint256 _minLock
     ) external initializer {
         __DaoAuthorizableUpgradeable_init(IDAO(_dao));
         escrow = _escrow;
         clock = _clock;
+        _setMinLock(_minLock);
         _setFeePercent(_feePercent);
         _setCooldown(_cooldown);
     }
@@ -100,6 +105,17 @@ contract ExitQueue is IExitQueue, IClockUser, DaoAuthorizable, UUPSUpgradeable {
         emit FeePercentSet(_feePercent);
     }
 
+    /// @notice The exit queue manager can set the minimum lock time
+    /// @param _minLock the minimum time from the original lock date before one can enter the queue
+    function setMinLock(uint256 _minLock) external auth(QUEUE_ADMIN_ROLE) {
+        _setMinLock(_minLock);
+    }
+
+    function _setMinLock(uint256 _minLock) internal {
+        minLock = _minLock;
+        emit MinLockSet(_minLock);
+    }
+
     /*//////////////////////////////////////////////////////////////
                               WITHDRAWER
     //////////////////////////////////////////////////////////////*/
@@ -124,6 +140,10 @@ contract ExitQueue is IExitQueue, IClockUser, DaoAuthorizable, UUPSUpgradeable {
     function queueExit(uint256 _tokenId, address _ticketHolder) external onlyEscrow {
         if (_ticketHolder == address(0)) revert ZeroAddress();
         if (_queue[_tokenId].holder != address(0)) revert AlreadyQueued();
+
+        // get time to min lock and revert if it hasn't been reached
+        uint minLockTime = timeToMinLock(_tokenId);
+        if (minLockTime > block.timestamp) revert MinLockNotReached(_tokenId, minLock, minLockTime);
 
         uint exitDate = nextExitDate();
 
@@ -184,6 +204,11 @@ contract ExitQueue is IExitQueue, IClockUser, DaoAuthorizable, UUPSUpgradeable {
         return _queue[_tokenId];
     }
 
+    function timeToMinLock(uint256 _tokenId) public view returns (uint256) {
+        uint256 lockStart = IVotingEscrow(escrow).locked(_tokenId).start;
+        return lockStart + minLock;
+    }
+
     /*///////////////////////////////////////////////////////////////
                             UUPS Upgrade
     //////////////////////////////////////////////////////////////*/
@@ -197,5 +222,5 @@ contract ExitQueue is IExitQueue, IClockUser, DaoAuthorizable, UUPSUpgradeable {
     /// @notice Internal method authorizing the upgrade of the contract via the [upgradeability mechanism for UUPS proxies](https://docs.openzeppelin.com/contracts/4.x/api/proxy#UUPSUpgradeable) (see [ERC-1822](https://eips.ethereum.org/EIPS/eip-1822)).
     function _authorizeUpgrade(address) internal virtual override auth(QUEUE_ADMIN_ROLE) {}
 
-    uint256[45] private __gap;
+    uint256[44] private __gap;
 }

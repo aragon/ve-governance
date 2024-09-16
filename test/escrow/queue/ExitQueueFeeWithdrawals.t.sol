@@ -7,36 +7,10 @@ import {DAO, createTestDAO} from "@mocks/MockDAO.sol";
 import {DaoUnauthorized} from "@aragon/osx/core/utils/auth.sol";
 import {IExitQueue, ExitQueue} from "@escrow/ExitQueue.sol";
 import {ExitQueueBase} from "./ExitQueueBase.sol";
-import {MockERC20} from "@mocks/MockERC20.sol";
-
-contract MockEscrow {
-    struct LockedBalance {
-        uint256 amount;
-        uint256 start;
-    }
-
-    address public token;
-
-    constructor(address _token) {
-        token = _token;
-    }
-
-    function locked(uint tokenid) external pure returns (LockedBalance memory) {
-        if (tokenid == 1) return LockedBalance(100e18, 0);
-        else return LockedBalance(0, 0);
-    }
-}
 
 contract TestExitQueueWithdrawals is ExitQueueBase {
-    MockERC20 token;
-
     function setUp() public override {
         super.setUp();
-
-        token = new MockERC20();
-        MockEscrow escrow = new MockEscrow(address(token));
-
-        queue = _deployExitQueue(address(escrow), 0, address(dao), 0, address(clock));
 
         dao.grant({
             _who: address(this),
@@ -99,5 +73,42 @@ contract TestExitQueueWithdrawals is ExitQueueBase {
 
         assertEq(token.balanceOf(address(queue)), 10e18);
         assertEq(token.balanceOf(address(this)), 90e18);
+    }
+
+    /// @dev using 128 bit integers to avoid overflow
+    function testFuzz_CannotQueueWithIfBeforeMinLock(uint128 _minLock, uint128 _lockStart) public {
+        // create a lock at a random time
+        vm.warp(_lockStart);
+        escrow.setMockLockedBalance(100e18, _lockStart);
+
+        // set the min lock to another random time
+        queue.setMinLock(_minLock);
+
+        uint256 minLockThreshold = uint256(_minLock) + uint256(_lockStart);
+
+        assertEq(queue.timeToMinLock(1), minLockThreshold);
+
+        vm.startPrank(address(escrow));
+        {
+            if (minLockThreshold > 0) {
+                // warp to one second before the min lock + start
+                vm.warp(minLockThreshold - 1);
+
+                bytes memory err = abi.encodeWithSelector(
+                    MinLockNotReached.selector,
+                    1,
+                    _minLock,
+                    minLockThreshold
+                );
+                // expect revert
+                vm.expectRevert(err);
+                queue.queueExit(1, address(this));
+            }
+
+            // warp to the min lock + start - expect success
+            vm.warp(minLockThreshold);
+            queue.queueExit(1, address(this));
+        }
+        vm.stopPrank();
     }
 }

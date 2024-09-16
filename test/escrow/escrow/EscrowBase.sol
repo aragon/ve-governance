@@ -57,7 +57,7 @@ contract EscrowBase is Test, IVotingEscrowEventsStorageErrorsEvents {
 
         // to be added as proxies
         voter = _deployVoter(address(dao), address(escrow), false, address(clock));
-        queue = _deployExitQueue(address(escrow), 3 days, address(dao), 0, address(clock));
+        queue = _deployExitQueue(address(escrow), 3 days, address(dao), 0, address(clock), 0);
 
         // grant this contract admin privileges
         dao.grant({
@@ -164,13 +164,14 @@ contract EscrowBase is Test, IVotingEscrowEventsStorageErrorsEvents {
         uint _cooldown,
         address _dao,
         uint256 _feePercent,
-        address _clock
+        address _clock,
+        uint256 _minLock
     ) public returns (ExitQueue) {
         ExitQueue impl = new ExitQueue();
 
         bytes memory initCalldata = abi.encodeCall(
             ExitQueue.initialize,
-            (_escrow, _cooldown, _dao, _feePercent, _clock)
+            (_escrow, _cooldown, _dao, _feePercent, _clock, _minLock)
         );
         return ExitQueue(address(impl).deployUUPSProxy(initCalldata));
     }

@@ -10,14 +10,49 @@ import {ExitQueueBase} from "./ExitQueueBase.sol";
 
 contract TestExitQueue is ExitQueueBase {
     // test inital state - escrow, queue, cooldown is set in constructor + dao
-    function testFuzz_initialState(address _escrow, uint256 _cooldown, uint256 _fee, address _clock) public {
+    function testFuzz_initialState(
+        address _escrow,
+        uint256 _cooldown,
+        uint256 _fee,
+        address _clock,
+        uint256 _minLock
+    ) public {
         vm.assume(_fee <= 1e18);
         DAO dao_ = createTestDAO(address(this));
-        queue = _deployExitQueue(address(_escrow), _cooldown, address(dao_), _fee, _clock);
+        queue = _deployExitQueue(
+            address(_escrow),
+            _cooldown,
+            address(dao_),
+            _fee,
+            _clock,
+            _minLock
+        );
         assertEq(queue.escrow(), _escrow);
         assertEq(queue.cooldown(), _cooldown);
+        assertEq(queue.minLock(), _minLock);
         assertEq(address(queue.dao()), address(dao_));
         assertEq(queue.feePercent(), _fee);
+    }
+
+    function testFuzz_canUpdateMinLock(uint256 _minLock) public {
+        vm.expectEmit(false, false, false, true);
+        emit MinLockSet(_minLock);
+        queue.setMinLock(_minLock);
+        assertEq(queue.minLock(), _minLock);
+    }
+
+    function testOnlyManagerCanUpdateMinLock(address _notThis) public {
+        vm.assume(_notThis != address(this));
+        bytes memory data = abi.encodeWithSelector(
+            DaoUnauthorized.selector,
+            address(dao),
+            address(queue),
+            _notThis,
+            queue.QUEUE_ADMIN_ROLE()
+        );
+        vm.expectRevert(data);
+        vm.prank(_notThis);
+        queue.setMinLock(0);
     }
 
     function testFuzz_canUpdateFee(uint256 _fee) public {
@@ -85,6 +120,7 @@ contract TestExitQueue is ExitQueueBase {
     function testQueueRevertZeroAddress() public {
         bytes memory err = abi.encodeWithSelector(ZeroAddress.selector);
         vm.expectRevert(err);
+        vm.prank(address(escrow));
         queue.queueExit(0, address(0));
     }
 
@@ -93,14 +129,18 @@ contract TestExitQueue is ExitQueueBase {
         vm.assume(_holder != address(0));
         vm.assume(_otherHolder != address(0));
 
-        queue.queueExit(0, _holder);
-        bytes memory err = abi.encodeWithSelector(AlreadyQueued.selector);
-        vm.expectRevert(err);
-        queue.queueExit(0, _holder);
+        vm.startPrank(address(escrow));
+        {
+            queue.queueExit(0, _holder);
+            bytes memory err = abi.encodeWithSelector(AlreadyQueued.selector);
+            vm.expectRevert(err);
+            queue.queueExit(0, _holder);
 
-        // other holder same issue
-        vm.expectRevert(err);
-        queue.queueExit(0, _otherHolder);
+            // other holder same issue
+            vm.expectRevert(err);
+            queue.queueExit(0, _otherHolder);
+        }
+        vm.stopPrank();
     }
 
     // test emits a queued event and writes to state
@@ -122,6 +162,7 @@ contract TestExitQueue is ExitQueueBase {
 
         vm.expectEmit(true, true, false, true);
         emit ExitQueued(_tokenId, _ticketHolder, expectedExitDate);
+        vm.prank(address(escrow));
         queue.queueExit(_tokenId, _ticketHolder);
         assertEq(queue.ticketHolder(_tokenId), _ticketHolder);
         assertEq(queue.queue(_tokenId).exitDate, expectedExitDate);
@@ -136,7 +177,9 @@ contract TestExitQueue is ExitQueueBase {
         uint256 tokenId = 420;
         uint time = block.timestamp;
 
+        vm.prank(address(escrow));
         queue.queueExit(tokenId, address(this));
+
         if (_cooldown == 0) {
             assert(queue.canExit(tokenId));
         } else {
@@ -159,6 +202,7 @@ contract TestExitQueue is ExitQueueBase {
         queue.setCooldown(3 days);
 
         // queue a ticket
+        vm.prank(address(escrow));
         queue.queueExit(1, address(this));
 
         // change the cooldown to 1 day
@@ -192,23 +236,27 @@ contract TestExitQueue is ExitQueueBase {
 
         uint256 _tokenId = 420;
 
+        vm.prank(address(escrow));
         queue.queueExit(_tokenId, _holder);
 
         vm.warp(99);
 
         vm.expectRevert(CannotExit.selector);
+        vm.prank(address(escrow));
         queue.exit(_tokenId);
 
         vm.warp(100);
 
         vm.expectEmit(true, false, false, true);
         emit Exit(_tokenId, 0);
+        vm.prank(address(escrow));
         queue.exit(_tokenId);
 
         assertEq(queue.ticketHolder(_tokenId), address(0));
         assertEq(queue.queue(_tokenId).exitDate, 0);
 
         vm.expectRevert(CannotExit.selector);
+        vm.prank(address(escrow));
         queue.exit(_tokenId);
     }
 

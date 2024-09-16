@@ -67,6 +67,10 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
     address gaugeTheFirst = address(0x1337);
     address gaugeTheSecond = address(0x7331);
 
+    uint depositTime;
+
+    error MinLockNotReached(uint256 minLock, uint256 expected, uint256 actual);
+
     function testE2E() public {
         // clock reset
         vm.roll(0);
@@ -88,7 +92,6 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
         _addLabels();
 
         // main test
-
         _makeDeposit();
         _checkBalanceOverTime();
 
@@ -114,10 +117,31 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
             // reset votes to clear
             voter.reset(tokenId);
 
-            // enter the queue
+            // can't queue because the min lock is not reached
+            uint256 minLock = queue.timeToMinLock(tokenId);
+            uint256 expectedTime = 20 weeks - depositTime;
+            assertEq(minLock, expectedTime, "Min lock time incorrect");
+
+            bytes memory err = abi.encodeWithSelector(
+                MinLockNotReached.selector,
+                1,
+                queue.minLock(),
+                expectedTime
+            );
+            // expect revert
+            vm.expectRevert(err);
             ve.beginWithdrawal(tokenId);
+
+            // warp to the min lock + start - expect success
+            vm.warp(atm + expectedTime);
+            ve.beginWithdrawal(tokenId);
+
+            // enter the queue
             assertEq(ve.balanceOf(user), 0, "User should have no tokens");
             assertEq(ve.balanceOf(address(ve)), 1, "VE should have the NFT");
+
+            // readjust the cached time
+            atm = block.timestamp;
 
             // wait for 1 day
             vm.warp(atm + 1 days);
@@ -236,6 +260,10 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
             // create the lock
             tokenId = ve.createLock(DEPOSIT);
 
+            // fetch the starttime of the lock
+            depositTime = ve.locked(tokenId).start;
+            assertEq(depositTime, expectedStart, "Deposit time incorrect");
+
             // check the user owns the nft
             assertEq(tokenId, 1, "Token ID should be 1");
             assertEq(ve.balanceOf(user), 1, "User should have 1 token");
@@ -339,7 +367,8 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
                 veTokenSymbol: "VE",
                 warmup: 3 days,
                 cooldown: 3 days,
-                feePercent: 0
+                feePercent: 0,
+                minLock: 20 weeks
             })
         );
         (address pluginAddress, IPluginSetup.PreparedSetupData memory preparedSetupData) = psp

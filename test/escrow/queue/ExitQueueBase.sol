@@ -10,30 +10,61 @@ import {DaoUnauthorized} from "@aragon/osx/core/utils/auth.sol";
 import {IExitQueue, ExitQueue} from "@escrow/ExitQueue.sol";
 import {IExitQueueErrorsAndEvents} from "@escrow-interfaces/IExitQueue.sol";
 import {IVotingEscrowEventsStorageErrorsEvents} from "@escrow-interfaces/IVotingEscrowIncreasing.sol";
+import {MockERC20} from "@mocks/MockERC20.sol";
+
+contract MockEscrow {
+    struct LockedBalance {
+        uint256 amount;
+        uint256 start;
+    }
+
+    address public token;
+
+    LockedBalance public lockedBalance = LockedBalance(100e18, 0);
+
+    function setMockLockedBalance(uint256 _amount, uint256 _start) public {
+        lockedBalance = LockedBalance(_amount, _start);
+    }
+
+    constructor(address _token) {
+        token = _token;
+    }
+
+    function locked(uint tokenid) external view returns (LockedBalance memory) {
+        if (tokenid == 1) return lockedBalance;
+        else return LockedBalance(0, 0);
+    }
+}
 
 contract ExitQueueBase is TestHelpers, IExitQueueErrorsAndEvents {
-    ExitQueue queue;
     using ProxyLib for address;
+
+    ExitQueue queue;
+    MockERC20 token;
+    MockEscrow escrow;
 
     function _deployExitQueue(
         address _escrow,
         uint _cooldown,
         address _dao,
         uint256 _feePercent,
-        address _clock
+        address _clock,
+        uint256 _minLock
     ) public returns (ExitQueue) {
         ExitQueue impl = new ExitQueue();
 
         bytes memory initCalldata = abi.encodeCall(
             ExitQueue.initialize,
-            (_escrow, _cooldown, _dao, _feePercent, _clock)
+            (_escrow, _cooldown, _dao, _feePercent, _clock, _minLock)
         );
         return ExitQueue(address(impl).deployUUPSProxy(initCalldata));
     }
 
     function setUp() public virtual override {
         super.setUp();
-        queue = _deployExitQueue(address(this), 0, address(dao), 0, address(clock));
+        token = new MockERC20();
+        escrow = new MockEscrow(address(token));
+        queue = _deployExitQueue(address(escrow), 0, address(dao), 0, address(clock), 0);
         dao.grant({
             _who: address(this),
             _where: address(queue),

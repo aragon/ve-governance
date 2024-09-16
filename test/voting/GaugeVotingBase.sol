@@ -128,7 +128,8 @@ contract GaugeVotingBase is
                 veTokenSymbol: "VE",
                 warmup: 3 days,
                 cooldown: 3 days,
-                feePercent: 0
+                feePercent: 0,
+                minLock: 0
             })
         );
         (address pluginAddress, IPluginSetup.PreparedSetupData memory preparedSetupData) = psp
