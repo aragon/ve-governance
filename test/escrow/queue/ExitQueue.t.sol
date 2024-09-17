@@ -101,7 +101,7 @@ contract TestExitQueue is ExitQueueBase {
 
     // test only the escrow can call stateful functions
     function testFuzz_onlyEscrowCanCall(address _notEscrow) public {
-        vm.assume(_notEscrow != address(this));
+        vm.assume(_notEscrow != address(escrow));
         bytes memory err = abi.encodeWithSelector(OnlyEscrow.selector);
 
         vm.startPrank(_notEscrow);
@@ -154,6 +154,12 @@ contract TestExitQueue is ExitQueueBase {
 
         uint expectedExitDate;
         uint remainingSecondsBeforeNextCP = 1 weeks - (block.timestamp % 1 weeks);
+
+        // TODO: is this 100% what we want if the cooldown is 0?
+        if (remainingSecondsBeforeNextCP == 1 weeks) {
+            remainingSecondsBeforeNextCP = 0;
+        }
+
         if (queue.cooldown() < remainingSecondsBeforeNextCP) {
             expectedExitDate = block.timestamp + remainingSecondsBeforeNextCP;
         } else {

@@ -10,7 +10,7 @@ import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
 import {IEscrowCurveUserStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
-import {VotingEscrow721 as VotingEscrow} from "@escrow/VotingEscrowIncreasing.sol";
+import {VotingEscrow} from "@escrow/VotingEscrow.sol";
 
 import {SimpleGaugeVoter, SimpleGaugeVoterSetup} from "src/voting/SimpleGaugeVoterSetup.sol";
 
@@ -48,7 +48,5 @@ contract TestEscrowTransfers is EscrowBase, IEscrowCurveUserStorage {
 
         assertEq(nftLock.balanceOf(address(123)), 1);
         assertEq(nftLock.balanceOf(address(this)), 0);
-
-        // todo - reset the voting power
     }
 }

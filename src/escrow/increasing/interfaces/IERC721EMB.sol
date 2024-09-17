@@ -7,4 +7,6 @@ interface IERC721EnumerableMintableBurnable is IERC721Enumerable {
     function mint(address to, uint256 tokenId) external;
 
     function burn(uint256 tokenId) external;
+
+    function isApprovedOrOwner(address spender, uint256 tokenId) external view returns (bool);
 }

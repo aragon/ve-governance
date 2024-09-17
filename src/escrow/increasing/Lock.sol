@@ -4,12 +4,17 @@ pragma solidity ^0.8.17;
 import {IWhitelist} from "@escrow-interfaces/ILock.sol";
 import {ERC721EnumerableUpgradeable as ERC721Enumerable} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
+import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 
 /// @title NFT representation of an escrow locking mechanism
-contract Lock is IWhitelist, ERC721Enumerable, UUPSUpgradeable {
+contract Lock is IWhitelist, ERC721Enumerable, UUPSUpgradeable, DaoAuthorizable {
     /// @dev enables transfers without whitelisting
     address public constant WHITELIST_ANY_ADDRESS =
         address(uint160(uint256(keccak256("WHITELIST_ANY_ADDRESS"))));
+
+    /// @notice role to upgrade this contract
+    bytes32 public constant LOCK_ADMIN_ROLE = keccak256("LOCK_ADMIN");
 
     /// @notice Address of the escrow contract that holds underyling assets
     address public escrow;
@@ -49,9 +54,11 @@ contract Lock is IWhitelist, ERC721Enumerable, UUPSUpgradeable {
     function initialize(
         address _escrow,
         string memory _name,
-        string memory _symbol
+        string memory _symbol,
+        address _dao
     ) external initializer {
         __ERC721_init(_name, _symbol);
+        __DaoAuthorizableUpgradeable_init(IDAO(_dao));
         escrow = _escrow;
 
         // allow sending nfts to the escrow
@@ -111,5 +118,5 @@ contract Lock is IWhitelist, ERC721Enumerable, UUPSUpgradeable {
     }
 
     /// @notice Internal method authorizing the upgrade of the contract via the [upgradeability mechanism for UUPS proxies](https://docs.openzeppelin.com/contracts/4.x/api/proxy#UUPSUpgradeable) (see [ERC-1822](https://eips.ethereum.org/EIPS/eip-1822)).
-    function _authorizeUpgrade(address) internal virtual override onlyEscrow {}
+    function _authorizeUpgrade(address) internal virtual override auth(LOCK_ADMIN_ROLE) {}
 }

@@ -137,8 +137,7 @@ contract VotingEscrow is
     //////////////////////////////////////////////////////////////*/
 
     function isApprovedOrOwner(address _spender, uint256 _tokenId) external view returns (bool) {
-        if (IERC721EMB(lockNFT).ownerOf(_tokenId) == _spender) return true;
-        else return (IERC721EMB(lockNFT).getApproved(_tokenId) == _spender);
+        return IERC721EMB(lockNFT).isApprovedOrOwner(_spender, _tokenId);
     }
 
     /// @notice Fetch all NFTs owned by an address by leveraging the ERC721Enumerable interface

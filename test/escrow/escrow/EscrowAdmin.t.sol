@@ -8,6 +8,7 @@ import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
+import {Lock} from "@escrow/Lock.sol";
 import {VotingEscrow} from "@escrow/VotingEscrow.sol";
 import {QuadraticIncreasingEscrow} from "@escrow/QuadraticIncreasingEscrow.sol";
 import {ExitQueue} from "@escrow/ExitQueue.sol";
@@ -15,8 +16,6 @@ import {SimpleGaugeVoter, SimpleGaugeVoterSetup} from "src/voting/SimpleGaugeVot
 
 contract TestEscrowAdmin is EscrowBase {
     address attacker = address(1);
-
-    error OnlyEscrow();
 
     function testSetCurve(address _newCurve) public {
         escrow.setCurve(_newCurve);
@@ -136,5 +135,17 @@ contract TestEscrowAdmin is EscrowBase {
 
         vm.expectRevert();
         escrow.totalVotingPower();
+    }
+
+    // test upgrading the lock
+    function testUpgradeLock() public {
+        address newImpl = address(new Lock());
+        nftLock.upgradeTo(newImpl);
+        assertEq(nftLock.implementation(), newImpl);
+
+        bytes memory err = _authErr(attacker, address(nftLock), nftLock.LOCK_ADMIN_ROLE());
+        vm.prank(attacker);
+        vm.expectRevert(err);
+        nftLock.upgradeTo(newImpl);
     }
 }

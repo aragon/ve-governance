@@ -36,52 +36,63 @@ contract TestGaugeTime is GaugeVotingBase {
             uint start = block.timestamp;
 
             // start
+            assertEq(clock.elapsedInEpoch(), 0);
             assertEq(voter.epochId(), i);
             assertEq(voter.epochStart(), block.timestamp);
             assertEq(voter.epochVoteStart(), block.timestamp + 1 hours);
             assertEq(voter.epochVoteEnd(), block.timestamp + 1 weeks - 1 hours);
             assertEq(voter.votingActive(), false);
             assertEq(nextDeposit(), block.timestamp);
+            assertEq(clock.epochStartsIn(), 0);
 
             // +1hr: voting starts
             vm.warp(start + 1 hours);
 
+            assertEq(clock.elapsedInEpoch(), 1 hours);
             assertEq(voter.epochId(), i);
             assertEq(voter.epochStart(), block.timestamp + 2 weeks - 1 hours);
             assertEq(voter.epochVoteStart(), block.timestamp);
             assertEq(voter.epochVoteEnd(), block.timestamp + 1 weeks - 2 hours);
             assertEq(voter.votingActive(), true);
             assertEq(nextDeposit(), block.timestamp + 1 weeks - 1 hours);
+            assertEq(clock.epochStartsIn(), 2 weeks - 1 hours);
 
             // +1 week - 1 hours: voting ends
             vm.warp(start + 1 weeks - 1 hours);
 
+            assertEq(clock.elapsedInEpoch(), 1 weeks - 1 hours);
             assertEq(voter.epochId(), i);
             assertEq(voter.epochStart(), block.timestamp + 1 weeks + 1 hours);
             assertEq(voter.epochVoteStart(), block.timestamp + 1 weeks + 2 hours);
             assertEq(voter.epochVoteEnd(), block.timestamp);
             assertEq(voter.votingActive(), false);
             assertEq(nextDeposit(), block.timestamp + 1 hours);
+            assertEq(clock.epochStartsIn(), 1 weeks + 1 hours);
 
             // +1 week: next deposit opens
             vm.warp(start + 1 weeks);
+
+            assertEq(clock.elapsedInEpoch(), 1 weeks);
             assertEq(voter.epochId(), i);
             assertEq(voter.epochStart(), block.timestamp + 1 weeks);
             assertEq(voter.epochVoteStart(), block.timestamp + 1 weeks + 1 hours);
             assertEq(voter.epochVoteEnd(), block.timestamp);
             assertEq(voter.votingActive(), false);
             assertEq(nextDeposit(), block.timestamp);
+            assertEq(clock.epochStartsIn(), 1 weeks);
 
             // whole of next week calculates correctly
 
             vm.warp(start + 1 weeks + 3 days);
 
+            assertEq(clock.elapsedInEpoch(), 1 weeks + 3 days);
             assertEq(voter.epochId(), i);
             assertEq(voter.epochStart(), block.timestamp + 4 days);
             assertEq(voter.epochVoteStart(), block.timestamp + 4 days + 1 hours);
             assertEq(voter.epochVoteEnd(), block.timestamp);
             assertEq(voter.votingActive(), false);
             assertEq(nextDeposit(), block.timestamp + 4 days);
+            assertEq(clock.epochStartsIn(), 4 days);
 
             // +1 week + 2 hours: next epoch starts
             vm.warp(start + 2 weeks);

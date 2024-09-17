@@ -151,7 +151,7 @@ contract SimpleGaugeVoterSetup is PluginSetup {
         address nftLock = nftBase.deployUUPSProxy(
             abi.encodeCall(
                 Lock.initialize,
-                (address(escrow), params.veTokenName, params.veTokenSymbol)
+                (address(escrow), params.veTokenName, params.veTokenSymbol, _dao)
             )
         );
 
@@ -218,11 +218,11 @@ contract SimpleGaugeVoterSetup is PluginSetup {
         address _queue,
         address _escrow,
         address _clock,
-        address,
+        address _nft,
         PermissionLib.Operation _grantOrRevoke
     ) public view returns (PermissionLib.MultiTargetPermission[] memory) {
         PermissionLib.MultiTargetPermission[]
-            memory permissions = new PermissionLib.MultiTargetPermission[](6);
+            memory permissions = new PermissionLib.MultiTargetPermission[](7);
 
         permissions[0] = PermissionLib.MultiTargetPermission({
             permissionId: SimpleGaugeVoter(_plugin).GAUGE_ADMIN_ROLE(),
@@ -267,6 +267,14 @@ contract SimpleGaugeVoterSetup is PluginSetup {
         permissions[5] = PermissionLib.MultiTargetPermission({
             permissionId: Clock(_clock).CLOCK_ADMIN_ROLE(),
             where: _clock,
+            who: _dao,
+            operation: _grantOrRevoke,
+            condition: PermissionLib.NO_CONDITION
+        });
+
+        permissions[6] = PermissionLib.MultiTargetPermission({
+            permissionId: Lock(_nft).LOCK_ADMIN_ROLE(),
+            where: _nft,
             who: _dao,
             operation: _grantOrRevoke,
             condition: PermissionLib.NO_CONDITION

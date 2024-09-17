@@ -94,6 +94,15 @@ contract VoterSetupTest is GaugeVotingBase {
                 _data: ""
             })
         );
+
+        assertFalse(
+            dao.hasPermission({
+                _who: address(nftLock),
+                _where: address(dao),
+                _permissionId: nftLock.LOCK_ADMIN_ROLE(),
+                _data: ""
+            })
+        );
     }
 
     function testCantPassIncorrectHelpers() public {
