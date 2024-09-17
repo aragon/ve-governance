@@ -65,26 +65,19 @@ contract Lock is ILock, ERC721Enumerable, UUPSUpgradeable, DaoAuthorizable {
     }
 
     /*//////////////////////////////////////////////////////////////
-                              WhiteList
+                              Transfers
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Transfers disabled by default, only whitelisted addresses can receive transfers
-    function setWhitelisted(address _account, bool _isWhitelisted) external onlyEscrow {
+    function setWhitelisted(address _account, bool _isWhitelisted) external auth(LOCK_ADMIN_ROLE) {
         whitelisted[_account] = _isWhitelisted;
         emit WhitelistSet(_account, _isWhitelisted);
     }
 
-    function enableTransfers() external onlyEscrow {
+    /// @notice Enable transfers to any address without whitelisting
+    function enableTransfers() external auth(LOCK_ADMIN_ROLE) {
         whitelisted[WHITELIST_ANY_ADDRESS] = true;
         emit WhitelistSet(WHITELIST_ANY_ADDRESS, true);
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                              NFT Functions
-    //////////////////////////////////////////////////////////////*/
-
-    function isApprovedOrOwner(address _spender, uint256 _tokenId) external view returns (bool) {
-        return _isApprovedOrOwner(_spender, _tokenId);
     }
 
     /// @dev Override the transfer to check if the recipient is whitelisted
@@ -93,6 +86,14 @@ contract Lock is ILock, ERC721Enumerable, UUPSUpgradeable, DaoAuthorizable {
         if (whitelisted[WHITELIST_ANY_ADDRESS] || whitelisted[_to]) {
             super._transfer(_from, _to, _tokenId);
         } else revert NotWhitelisted();
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                              NFT Functions
+    //////////////////////////////////////////////////////////////*/
+
+    function isApprovedOrOwner(address _spender, uint256 _tokenId) external view returns (bool) {
+        return _isApprovedOrOwner(_spender, _tokenId);
     }
 
     /// @notice Minting and burning functions that can only be called by the escrow contract

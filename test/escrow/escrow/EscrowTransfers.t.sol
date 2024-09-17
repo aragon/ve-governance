@@ -38,7 +38,6 @@ contract TestEscrowTransfers is EscrowBase, IEscrowCurveUserStorage {
     }
 
     function testCanTransferIfWhitelisted() public {
-        vm.prank(address(escrow));
         nftLock.setWhitelisted(address(123), true);
 
         assertEq(nftLock.balanceOf(address(123)), 0);

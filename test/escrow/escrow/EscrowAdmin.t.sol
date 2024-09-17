@@ -102,27 +102,25 @@ contract TestEscrowAdmin is EscrowBase {
         vm.expectEmit(true, false, false, true);
         emit WhitelistSet(addr, true);
 
-        vm.startPrank(address(escrow));
-        {
-            nftLock.setWhitelisted(addr, true);
-            assertTrue(nftLock.whitelisted(addr));
+        nftLock.setWhitelisted(addr, true);
+        assertTrue(nftLock.whitelisted(addr));
 
-            nftLock.setWhitelisted(addr, false);
-            assertFalse(nftLock.whitelisted(addr));
+        nftLock.setWhitelisted(addr, false);
+        assertFalse(nftLock.whitelisted(addr));
 
-            nftLock.enableTransfers();
-            assertTrue(
-                nftLock.whitelisted(address(uint160(uint256(keccak256("WHITELIST_ANY_ADDRESS")))))
-            );
-        }
-        vm.stopPrank();
+        nftLock.enableTransfers();
+        assertTrue(
+            nftLock.whitelisted(address(uint160(uint256(keccak256("WHITELIST_ANY_ADDRESS")))))
+        );
+
+        bytes memory err = _authErr(attacker, address(nftLock), nftLock.LOCK_ADMIN_ROLE());
 
         vm.startPrank(attacker);
         {
-            vm.expectRevert(OnlyEscrow.selector);
+            vm.expectRevert(err);
             nftLock.setWhitelisted(addr, true);
 
-            vm.expectRevert(OnlyEscrow.selector);
+            vm.expectRevert(err);
             nftLock.enableTransfers();
         }
         vm.stopPrank();

@@ -271,9 +271,6 @@ contract TestCreateLock is EscrowBase, IEscrowCurveUserStorage {
         vm.assume(_value > 0);
         vm.warp(1);
 
-        vm.prank(address(escrow));
-        nftLock.setWhitelisted(_who, true);
-
         token.mint(address(this), _value);
         token.approve(address(escrow), _value);
 
@@ -281,9 +278,6 @@ contract TestCreateLock is EscrowBase, IEscrowCurveUserStorage {
         emit Deposit(_who, 1, 1 weeks, _value, _value);
         escrow.createLockFor(_value, _who);
     }
-    //   Creating a lock:
-    // Creating a lock for someone:
-    // - Test we can make a lock for someone else
 }
 
 contract Mock {}
