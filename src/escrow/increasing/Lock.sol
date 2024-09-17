@@ -1,14 +1,14 @@
 /// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
-import {IWhitelist} from "@escrow-interfaces/ILock.sol";
+import {ILock} from "@escrow-interfaces/ILock.sol";
 import {ERC721EnumerableUpgradeable as ERC721Enumerable} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 
 /// @title NFT representation of an escrow locking mechanism
-contract Lock is IWhitelist, ERC721Enumerable, UUPSUpgradeable, DaoAuthorizable {
+contract Lock is ILock, ERC721Enumerable, UUPSUpgradeable, DaoAuthorizable {
     /// @dev enables transfers without whitelisting
     address public constant WHITELIST_ANY_ADDRESS =
         address(uint160(uint256(keccak256("WHITELIST_ANY_ADDRESS"))));
@@ -21,8 +21,6 @@ contract Lock is IWhitelist, ERC721Enumerable, UUPSUpgradeable, DaoAuthorizable 
 
     /// @notice Whitelisted contracts that are allowed to transfer
     mapping(address => bool) public whitelisted;
-
-    error OnlyEscrow();
 
     /*//////////////////////////////////////////////////////////////
                               Modifiers

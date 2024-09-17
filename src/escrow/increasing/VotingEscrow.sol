@@ -12,7 +12,7 @@ import {ISimpleGaugeVoter} from "@voting/ISimpleGaugeVoter.sol";
 import {IClock} from "@clock/IClock.sol";
 import {IEscrowCurveIncreasing as IEscrowCurve} from "./interfaces/IEscrowCurveIncreasing.sol";
 import {IExitQueue} from "./interfaces/IExitQueue.sol";
-import {IVotingEscrowIncreasing as IVotingEscrow, ILockedBalanceIncreasing, IVotingEscrowCore, IDynamicVoter, IVotingEscrowEventsStorageErrorsEvents} from "./interfaces/IVotingEscrowIncreasing.sol";
+import {IVotingEscrow} from "./interfaces/IVotingEscrow.sol";
 
 // libraries
 import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
@@ -25,7 +25,7 @@ import {PausableUpgradeable as Pausable} from "@openzeppelin/contracts-upgradeab
 import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
 
 contract VotingEscrow is
-    IVotingEscrowEventsStorageErrorsEvents,
+    IVotingEscrow,
     ReentrancyGuard,
     Pausable,
     DaoAuthorizable,

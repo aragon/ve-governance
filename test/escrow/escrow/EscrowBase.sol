@@ -17,7 +17,8 @@ import {createTestDAO} from "@mocks/MockDAO.sol";
 import "@helpers/OSxHelpers.sol";
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
-import {IVotingEscrowEventsStorageErrorsEvents} from "@escrow-interfaces/IVotingEscrowIncreasing.sol";
+import {IVotingEscrowEventsStorageErrorsEvents} from "@escrow-interfaces/IVotingEscrow.sol";
+import {IWhitelistErrors, IWhitelistEvents} from "@escrow-interfaces/ILock.sol";
 import {Lock} from "@escrow/Lock.sol";
 import {VotingEscrow} from "@escrow/VotingEscrow.sol";
 import {QuadraticIncreasingEscrow} from "@escrow/QuadraticIncreasingEscrow.sol";
@@ -25,7 +26,12 @@ import {ExitQueue} from "@escrow/ExitQueue.sol";
 import {SimpleGaugeVoter, SimpleGaugeVoterSetup} from "src/voting/SimpleGaugeVoterSetup.sol";
 import {Clock} from "@clock/Clock.sol";
 
-contract EscrowBase is Test, IVotingEscrowEventsStorageErrorsEvents {
+contract EscrowBase is
+    Test,
+    IVotingEscrowEventsStorageErrorsEvents,
+    IWhitelistErrors,
+    IWhitelistEvents
+{
     using ProxyLib for address;
     string name = "Voting Escrow";
     string symbol = "VE";
