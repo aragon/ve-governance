@@ -1,26 +1,36 @@
 /// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
+import {IWhitelist} from "@escrow-interfaces/ILock.sol";
 import {ERC721EnumerableUpgradeable as ERC721Enumerable} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
-contract Lock is ERC721Enumerable, UUPSUpgradeable {
+/// @title NFT representation of an escrow locking mechanism
+contract Lock is IWhitelist, ERC721Enumerable, UUPSUpgradeable {
     /// @dev enables transfers without whitelisting
     address public constant WHITELIST_ANY_ADDRESS =
         address(uint160(uint256(keccak256("WHITELIST_ANY_ADDRESS"))));
 
-    /// @notice Decimals of the voting power
-    // uint8 public constant decimals = 18;
-
+    /// @notice Address of the escrow contract that holds underyling assets
     address public escrow;
+
+    /// @notice Whitelisted contracts that are allowed to transfer
     mapping(address => bool) public whitelisted;
 
-    modifier auth() {
-        require(msg.sender == escrow, "Lock: not authorized");
+    error OnlyEscrow();
+
+    /*//////////////////////////////////////////////////////////////
+                              Modifiers
+    //////////////////////////////////////////////////////////////*/
+
+    modifier onlyEscrow() {
+        if (msg.sender != escrow) revert OnlyEscrow();
         _;
     }
 
-    /// @notice Whitelisted contracts that are allowed to transfer
+    /*//////////////////////////////////////////////////////////////
+                                ERC165
+    //////////////////////////////////////////////////////////////*/
 
     function supportsInterface(
         bytes4 _interfaceId
@@ -28,9 +38,13 @@ contract Lock is ERC721Enumerable, UUPSUpgradeable {
         return super.supportsInterface(_interfaceId);
     }
 
-    // constructor() {
-    //     _disableInitializers();
-    // }
+    /*//////////////////////////////////////////////////////////////
+                              Initializer
+    //////////////////////////////////////////////////////////////*/
+
+    constructor() {
+        _disableInitializers();
+    }
 
     function initialize(
         address _escrow,
@@ -45,20 +59,28 @@ contract Lock is ERC721Enumerable, UUPSUpgradeable {
         emit WhitelistSet(address(this), true);
     }
 
+    /*//////////////////////////////////////////////////////////////
+                              WhiteList
+    //////////////////////////////////////////////////////////////*/
+
     /// @notice Transfers disabled by default, only whitelisted addresses can receive transfers
-    function setWhitelisted(address _account, bool _isWhitelisted) external auth {
+    function setWhitelisted(address _account, bool _isWhitelisted) external onlyEscrow {
         whitelisted[_account] = _isWhitelisted;
         emit WhitelistSet(_account, _isWhitelisted);
     }
 
-    // function enableTransfers() external auth {
-    //     whitelisted[WHITELIST_ANY_ADDRESS] = true;
-    //     emit WhitelistSet(WHITELIST_ANY_ADDRESS, true);
-    // }
+    function enableTransfers() external onlyEscrow {
+        whitelisted[WHITELIST_ANY_ADDRESS] = true;
+        emit WhitelistSet(WHITELIST_ANY_ADDRESS, true);
+    }
 
-    // function isApprovedOrOwner(address _spender, uint256 _tokenId) external view returns (bool) {
-    //     return _isApprovedOrOwner(_spender, _tokenId);
-    // }
+    /*//////////////////////////////////////////////////////////////
+                              NFT Functions
+    //////////////////////////////////////////////////////////////*/
+
+    function isApprovedOrOwner(address _spender, uint256 _tokenId) external view returns (bool) {
+        return _isApprovedOrOwner(_spender, _tokenId);
+    }
 
     /// @dev Override the transfer to check if the recipient is whitelisted
     /// This avoids needing to check for mint/burn but is less idomatic than beforeTokenTransfer
@@ -68,16 +90,19 @@ contract Lock is ERC721Enumerable, UUPSUpgradeable {
         } else revert NotWhitelisted();
     }
 
-    function mint(address _to, uint256 _tokenId) external auth {
+    /// @notice Minting and burning functions that can only be called by the escrow contract
+    function mint(address _to, uint256 _tokenId) external onlyEscrow {
         _mint(_to, _tokenId);
     }
 
-    function burn(uint256 _tokenId) external auth {
+    /// @notice Minting and burning functions that can only be called by the escrow contract
+    function burn(uint256 _tokenId) external onlyEscrow {
         _burn(_tokenId);
     }
 
-    event WhitelistSet(address indexed account, bool status);
-    error NotWhitelisted();
+    /*//////////////////////////////////////////////////////////////
+                              UUPS Upgrade
+    //////////////////////////////////////////////////////////////*/
 
     /// @notice Returns the address of the implementation contract in the [proxy storage slot](https://eips.ethereum.org/EIPS/eip-1967) slot the [UUPS proxy](https://eips.ethereum.org/EIPS/eip-1822) is pointing to.
     /// @return The address of the implementation contract.
@@ -86,5 +111,5 @@ contract Lock is ERC721Enumerable, UUPSUpgradeable {
     }
 
     /// @notice Internal method authorizing the upgrade of the contract via the [upgradeability mechanism for UUPS proxies](https://docs.openzeppelin.com/contracts/4.x/api/proxy#UUPSUpgradeable) (see [ERC-1822](https://eips.ethereum.org/EIPS/eip-1822)).
-    function _authorizeUpgrade(address) internal virtual override auth {}
+    function _authorizeUpgrade(address) internal virtual override onlyEscrow {}
 }

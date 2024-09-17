@@ -4,13 +4,12 @@ pragma solidity ^0.8.17;
 // token interfaces
 import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import {IERC20MetadataUpgradeable as IERC20Metadata} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
-import {IERC721Upgradeable as IERC721} from "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
-import {IERC721EnumerableUpgradeable as IERC721Enumerable} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/IERC721EnumerableUpgradeable.sol";
+import {IERC721EnumerableMintableBurnable as IERC721EMB} from "./interfaces/IERC721EMB.sol";
 
 // veGovernance
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {ISimpleGaugeVoter} from "@voting/ISimpleGaugeVoter.sol";
-import {IClockUser, IClock} from "@clock/IClock.sol";
+import {IClock} from "@clock/IClock.sol";
 import {IEscrowCurveIncreasing as IEscrowCurve} from "./interfaces/IEscrowCurveIncreasing.sol";
 import {IExitQueue} from "./interfaces/IExitQueue.sol";
 import {IVotingEscrowIncreasing as IVotingEscrow, ILockedBalanceIncreasing, IVotingEscrowCore, IDynamicVoter, IVotingEscrowEventsStorageErrorsEvents} from "./interfaces/IVotingEscrowIncreasing.sol";
@@ -25,17 +24,8 @@ import {ReentrancyGuardUpgradeable as ReentrancyGuard} from "@openzeppelin/contr
 import {PausableUpgradeable as Pausable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
 
-interface IMintBurnNFT {
-    function mint(address to, uint256 tokenId) external;
-
-    function burn(uint256 tokenId) external;
-
-    function ownerOf(uint256 tokenId) external view returns (address);
-}
-
-contract VotingEscrowNoNFT is
+contract Escrow is
     IVotingEscrowEventsStorageErrorsEvents,
-    IClockUser,
     ReentrancyGuard,
     Pausable,
     DaoAuthorizable,
@@ -62,6 +52,9 @@ contract VotingEscrowNoNFT is
     /// @notice Total supply of underlying tokens deposited in the contract
     uint256 public totalLocked;
 
+    /// @notice tracks the locked balance of each NFT
+    mapping(uint256 => LockedBalance) public locked;
+
     /*//////////////////////////////////////////////////////////////
                               Helper Contracts
     //////////////////////////////////////////////////////////////*/
@@ -83,10 +76,7 @@ contract VotingEscrowNoNFT is
     address public clock;
 
     /// @notice Address of the NFT contract that is the lock
-    address public nft;
-
-    /// @dev tracks the locked balance of each NFT
-    mapping(uint256 => LockedBalance) public locked;
+    address public lockNFT;
 
     /*//////////////////////////////////////////////////////////////
                               Initialization
@@ -130,8 +120,8 @@ contract VotingEscrowNoNFT is
         clock = _clock;
     }
 
-    function setNFT(address _lock) external auth(ESCROW_ADMIN_ROLE) {
-        nft = _lock;
+    function setLockNFT(address _nft) external auth(ESCROW_ADMIN_ROLE) {
+        lockNFT = _nft;
     }
 
     function pause() external auth(PAUSER_ROLE) {
@@ -147,20 +137,16 @@ contract VotingEscrowNoNFT is
     //////////////////////////////////////////////////////////////*/
 
     function isApprovedOrOwner(address _spender, uint256 _tokenId) external view returns (bool) {
-        IERC721 nftContract = IERC721(nft);
-        // get is approved
-        bool isApproved = nftContract.getApproved(_tokenId) == _spender;
-        // get is owner
-        bool isOwner = nftContract.ownerOf(_tokenId) == _spender;
-        return isApproved || isOwner;
+        if (IERC721EMB(lockNFT).ownerOf(_tokenId) == _spender) return true;
+        else return (IERC721EMB(lockNFT).getApproved(_tokenId) == _spender);
     }
 
     /// @notice Fetch all NFTs owned by an address by leveraging the ERC721Enumerable interface
     /// @param _owner Address to query
     /// @return tokenIds Array of token IDs owned by the address
     function ownedTokens(address _owner) public view returns (uint256[] memory tokenIds) {
-        IERC721Enumerable enumerable = IERC721Enumerable(nft);
-        uint256 balance = IERC721(nft).balanceOf(_owner);
+        IERC721EMB enumerable = IERC721EMB(lockNFT);
+        uint256 balance = enumerable.balanceOf(_owner);
         uint256[] memory tokens = new uint256[](balance);
         for (uint256 i = 0; i < balance; i++) {
             tokens[i] = enumerable.tokenOfOwnerByIndex(_owner, i);
@@ -172,40 +158,40 @@ contract VotingEscrowNoNFT is
                           Getters: Voting
     //////////////////////////////////////////////////////////////*/
 
-    // /// @return The voting power of the NFT at the current block
-    // function votingPower(uint256 _tokenId) public view returns (uint256) {
-    //     return votingPowerAt(_tokenId, block.timestamp);
-    // }
+    /// @return The voting power of the NFT at the current block
+    function votingPower(uint256 _tokenId) public view returns (uint256) {
+        return votingPowerAt(_tokenId, block.timestamp);
+    }
 
-    // /// @return The voting power of the NFT at a specific timestamp
-    // function votingPowerAt(uint256 _tokenId, uint256 _t) public view returns (uint256) {
-    //     return IEscrowCurve(curve).votingPowerAt(_tokenId, _t);
-    // }
+    /// @return The voting power of the NFT at a specific timestamp
+    function votingPowerAt(uint256 _tokenId, uint256 _t) public view returns (uint256) {
+        return IEscrowCurve(curve).votingPowerAt(_tokenId, _t);
+    }
 
-    // /// @return The total voting power at the current block
-    // /// @dev Currently unsupported
-    // function totalVotingPower() external view returns (uint256) {
-    //     return totalVotingPowerAt(block.timestamp);
-    // }
+    /// @return The total voting power at the current block
+    /// @dev Currently unsupported
+    function totalVotingPower() external view returns (uint256) {
+        return totalVotingPowerAt(block.timestamp);
+    }
 
-    // /// @return The total voting power at a specific timestamp
-    // /// @dev Currently unsupported
-    // function totalVotingPowerAt(uint256 _timestamp) public view returns (uint256) {
-    //     return IEscrowCurve(curve).supplyAt(_timestamp);
-    // }
+    /// @return The total voting power at a specific timestamp
+    /// @dev Currently unsupported
+    function totalVotingPowerAt(uint256 _timestamp) public view returns (uint256) {
+        return IEscrowCurve(curve).supplyAt(_timestamp);
+    }
 
-    // /// @return accountVotingPower The voting power of an account at the current block
-    // /// @dev We cannot do historic voting power at this time because we don't current track
-    // /// histories of token transfers.
-    // function votingPowerForAccount(
-    //     address _account
-    // ) external view returns (uint256 accountVotingPower) {
-    //     uint256[] memory tokens = ownedTokens(_account);
+    /// @return accountVotingPower The voting power of an account at the current block
+    /// @dev We cannot do historic voting power at this time because we don't current track
+    /// histories of token transfers.
+    function votingPowerForAccount(
+        address _account
+    ) external view returns (uint256 accountVotingPower) {
+        uint256[] memory tokens = ownedTokens(_account);
 
-    //     for (uint256 i = 0; i < tokens.length; i++) {
-    //         accountVotingPower += votingPowerAt(tokens[i], block.timestamp);
-    //     }
-    // }
+        for (uint256 i = 0; i < tokens.length; i++) {
+            accountVotingPower += votingPowerAt(tokens[i], block.timestamp);
+        }
+    }
 
     /// @notice Checks if the NFT is currently voting. We require the user to reset their votes if so.
     function isVoting(uint256 _tokenId) public view returns (bool) {
@@ -239,7 +225,7 @@ contract VotingEscrowNoNFT is
 
         // increment the total locked supply and get the new tokenId
         totalLocked += _value;
-        uint256 newTokenId = IERC721Enumerable(nft).totalSupply() + 1;
+        uint256 newTokenId = IERC721EMB(lockNFT).totalSupply() + 1;
 
         // write the lock and checkpoint the voting power
         LockedBalance memory lock = LockedBalance(_value, startTime);
@@ -252,7 +238,7 @@ contract VotingEscrowNoNFT is
         IERC20(token).safeTransferFrom(_msgSender(), address(this), _value);
 
         // mint the NFT to complete the deposit
-        IMintBurnNFT(nft).mint(_to, newTokenId);
+        IERC721EMB(lockNFT).mint(_to, newTokenId);
         emit Deposit(_to, newTokenId, startTime, _value, totalLocked);
 
         return newTokenId;
@@ -295,13 +281,13 @@ contract VotingEscrowNoNFT is
     function beginWithdrawal(uint256 _tokenId) public nonReentrant whenNotPaused {
         // can't exit if you have votes pending
         if (isVoting(_tokenId)) revert CannotExit();
-        address owner = IERC721(nft).ownerOf(_tokenId);
+        address owner = IERC721EMB(lockNFT).ownerOf(_tokenId);
 
         // we can remove the user's voting power as it's no longer locked
         _checkpointClear(_tokenId);
 
         // transfer NFT to this and queue the exit
-        IERC721(nft).transferFrom(_msgSender(), address(this), _tokenId);
+        IERC721EMB(lockNFT).transferFrom(_msgSender(), address(this), _tokenId);
         IExitQueue(queue).queueExit(_tokenId, owner);
     }
 
@@ -330,7 +316,7 @@ contract VotingEscrowNoNFT is
         totalLocked -= value;
 
         // Burn the NFT and transfer the tokens to the user
-        IMintBurnNFT(nft).burn(_tokenId);
+        IERC721EMB(lockNFT).burn(_tokenId);
         IERC20(token).safeTransfer(sender, value - fee);
 
         emit Withdraw(sender, _tokenId, value - fee, block.timestamp, totalLocked);
