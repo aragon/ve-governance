@@ -1,11 +1,6 @@
 /// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {IERC165, IERC721, IERC721Metadata} from "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
-import {IERC6372} from "@openzeppelin/contracts/interfaces/IERC6372.sol";
-import {IERC4906} from "@openzeppelin/contracts/interfaces/IERC4906.sol";
-import {IVotes} from "./IVotes.sol";
-
 /*///////////////////////////////////////////////////////////////
                         CORE FUNCTIONALITY
 //////////////////////////////////////////////////////////////*/
@@ -175,7 +170,7 @@ interface IDynamicVoter is IDynamicVoterErrors {
                         INCREASED ESCROW
 //////////////////////////////////////////////////////////////*/
 
-interface IVotingEscrow is IVotingEscrowCore, IDynamicVoter, IWithdrawalQueue, ISweeper {
+interface IVotingEscrowIncreasing is IVotingEscrowCore, IDynamicVoter, IWithdrawalQueue, ISweeper {
 
 }
 

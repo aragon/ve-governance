@@ -4,7 +4,7 @@ pragma solidity ^0.8.17;
 // interfaces
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
-import {IVotingEscrow} from "@escrow-interfaces/IVotingEscrow.sol";
+import {IVotingEscrowIncreasing as IVotingEscrow} from "@escrow-interfaces/IVotingEscrowIncreasing.sol";
 import {IEscrowCurveIncreasing as IEscrowCurve} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
 import {IClockUser, IClock} from "@clock/IClock.sol";
 

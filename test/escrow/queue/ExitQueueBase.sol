@@ -9,7 +9,7 @@ import {DAO, createTestDAO} from "@mocks/MockDAO.sol";
 import {DaoUnauthorized} from "@aragon/osx/core/utils/auth.sol";
 import {IExitQueue, ExitQueue} from "@escrow/ExitQueue.sol";
 import {IExitQueueErrorsAndEvents} from "@escrow-interfaces/IExitQueue.sol";
-import {IVotingEscrowEventsStorageErrorsEvents} from "@escrow-interfaces/IVotingEscrow.sol";
+import {IVotingEscrowEventsStorageErrorsEvents} from "@escrow-interfaces/IVotingEscrowIncreasing.sol";
 import {MockERC20} from "@mocks/MockERC20.sol";
 
 contract MockEscrow {

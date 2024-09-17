@@ -10,7 +10,7 @@ import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
 import {IEscrowCurveUserStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
-import {VotingEscrow} from "@escrow/VotingEscrow.sol";
+import {VotingEscrow} from "@escrow/VotingEscrowIncreasing.sol";
 import {Lock} from "@escrow/Lock.sol";
 
 import {SimpleGaugeVoter, SimpleGaugeVoterSetup} from "src/voting/SimpleGaugeVoterSetup.sol";

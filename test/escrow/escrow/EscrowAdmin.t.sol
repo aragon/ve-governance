@@ -9,7 +9,7 @@ import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
 import {Lock} from "@escrow/Lock.sol";
-import {VotingEscrow} from "@escrow/VotingEscrow.sol";
+import {VotingEscrow} from "@escrow/VotingEscrowIncreasing.sol";
 import {QuadraticIncreasingEscrow} from "@escrow/QuadraticIncreasingEscrow.sol";
 import {ExitQueue} from "@escrow/ExitQueue.sol";
 import {SimpleGaugeVoter, SimpleGaugeVoterSetup} from "src/voting/SimpleGaugeVoterSetup.sol";
