@@ -27,11 +27,12 @@ contract VoterSetupTest is GaugeVotingBase {
     error WrongHelpersArrayLength(uint256 length);
 
     function testUninstall() public {
-        address[] memory currentHelpers = new address[](4);
+        address[] memory currentHelpers = new address[](5);
         currentHelpers[0] = address(curve);
         currentHelpers[1] = address(queue);
         currentHelpers[2] = address(escrow);
         currentHelpers[3] = address(clock);
+        currentHelpers[4] = address(nftLock);
 
         IPluginSetup.SetupPayload memory payload = IPluginSetup.SetupPayload({
             plugin: address(voter),
@@ -161,6 +162,13 @@ contract VoterSetupTest is GaugeVotingBase {
 
     // coverage autism
     function testConstructor() public {
-        new SimpleGaugeVoterSetup(address(0), address(0), address(0), address(0), address(0));
+        new SimpleGaugeVoterSetup(
+            address(0),
+            address(0),
+            address(0),
+            address(0),
+            address(0),
+            address(0)
+        );
     }
 }

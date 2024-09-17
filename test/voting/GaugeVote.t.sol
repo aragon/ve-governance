@@ -377,7 +377,7 @@ contract TestGaugeVote is GaugeVotingBase {
         uint256[] memory tokens = escrow.ownedTokens(owner);
 
         vm.prank(owner);
-        escrow.setApprovalForAll(address(voter), true);
+        nftLock.setApprovalForAll(address(voter), true);
 
         uint vp0 = escrow.votingPower(tokens[0]);
         uint vp1 = escrow.votingPower(tokens[1]);

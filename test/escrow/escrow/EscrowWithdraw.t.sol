@@ -10,7 +10,7 @@ import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
 import {IEscrowCurveUserStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
-import {VotingEscrow} from "@escrow/VotingEscrowIncreasing.sol";
+import {VotingEscrow721 as VotingEscrow} from "@escrow/VotingEscrowIncreasing.sol";
 
 import {SimpleGaugeVoter, SimpleGaugeVoterSetup} from "src/voting/SimpleGaugeVoterSetup.sol";
 import {IGaugeVote} from "src/voting/ISimpleGaugeVoter.sol";
@@ -61,7 +61,7 @@ contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote {
         // enter a withdrawal
         vm.startPrank(_who);
         {
-            escrow.approve(address(escrow), tokenId);
+            nftLock.approve(address(escrow), tokenId);
             escrow.resetVotesAndBeginWithdrawal(tokenId);
         }
         vm.stopPrank();
@@ -73,7 +73,7 @@ contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote {
         // can't force approve
         vm.expectRevert("ERC721: approve caller is not token owner or approved for all");
         vm.prank(_who);
-        escrow.approve(_who, tokenId);
+        nftLock.approve(_who, tokenId);
 
         // must wait till end of queue
         vm.warp(3 weeks - 1);
@@ -106,8 +106,8 @@ contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote {
         }
 
         // nft is burned
-        assertEq(escrow.balanceOf(_who), 0);
-        assertEq(escrow.balanceOf(address(escrow)), 0);
+        assertEq(nftLock.balanceOf(_who), 0);
+        assertEq(nftLock.balanceOf(address(escrow)), 0);
         assertEq(escrow.totalLocked(), 0);
 
         assertEq(escrow.votingPowerForAccount(_who), 0);
@@ -140,14 +140,14 @@ contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote {
         // enter a withdrawal
         vm.startPrank(_who);
         {
-            escrow.approve(address(escrow), tokenId);
+            nftLock.approve(address(escrow), tokenId);
             escrow.resetVotesAndBeginWithdrawal(tokenId);
         }
         vm.stopPrank();
 
         // should now have the nft in the escrow
-        assertEq(escrow.balanceOf(_who), 0);
-        assertEq(escrow.balanceOf(address(escrow)), 1);
+        assertEq(nftLock.balanceOf(_who), 0);
+        assertEq(nftLock.balanceOf(address(escrow)), 1);
 
         // voting power should still be there as the cp is still active
         assertGt(escrow.votingPower(tokenId), 0);
@@ -185,7 +185,7 @@ contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote {
             // make a vote
             voter.vote(tokenId, votes);
 
-            escrow.approve(address(escrow), tokenId);
+            nftLock.approve(address(escrow), tokenId);
             escrow.resetVotesAndBeginWithdrawal(tokenId);
         }
         vm.stopPrank();
@@ -210,8 +210,8 @@ contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote {
         // asserts
         assertEq(token.balanceOf(address(queue)), fee);
         assertEq(token.balanceOf(_who), _dep - fee);
-        assertEq(escrow.balanceOf(_who), 0);
-        assertEq(escrow.balanceOf(address(escrow)), 0);
+        assertEq(nftLock.balanceOf(_who), 0);
+        assertEq(nftLock.balanceOf(address(escrow)), 0);
         assertEq(escrow.totalLocked(), 0);
     }
 }

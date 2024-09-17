@@ -10,7 +10,7 @@ import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
 import {IEscrowCurveUserStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
-import {VotingEscrow} from "@escrow/VotingEscrowIncreasing.sol";
+import {VotingEscrow721 as VotingEscrow} from "@escrow/VotingEscrowIncreasing.sol";
 
 import {SimpleGaugeVoter, SimpleGaugeVoterSetup} from "src/voting/SimpleGaugeVoterSetup.sol";
 
@@ -95,9 +95,9 @@ contract TestCreateLock is EscrowBase, IEscrowCurveUserStorage {
         // check the user has the nft:
         {
             assertEq(tokenId, tokenId, "wrong token id");
-            assertEq(escrow.ownerOf(tokenId), _depositor);
-            assertEq(escrow.balanceOf(_depositor), tokenId);
-            assertEq(escrow.totalSupply(), tokenId);
+            assertEq(nftLock.ownerOf(tokenId), _depositor);
+            assertEq(nftLock.balanceOf(_depositor), tokenId);
+            assertEq(nftLock.totalSupply(), tokenId);
         }
 
         // check the contract has tokens
@@ -175,8 +175,8 @@ contract TestCreateLock is EscrowBase, IEscrowCurveUserStorage {
             // check the user has the nft:
             {
                 assertEq(tokenId, expectedTokenId, "token id unexpected");
-                assertEq(escrow.ownerOf(tokenId), user.addr, "owner should be the user");
-                assertEq(escrow.balanceOf(user.addr), 1, "user should only have 1 token");
+                assertEq(nftLock.ownerOf(tokenId), user.addr, "owner should be the user");
+                assertEq(nftLock.balanceOf(user.addr), 1, "user should only have 1 token");
             }
 
             // check the user has the right lock
@@ -191,7 +191,7 @@ contract TestCreateLock is EscrowBase, IEscrowCurveUserStorage {
         {
             assertEq(escrow.totalLocked(), total);
             assertEq(token.balanceOf(address(escrow)), total);
-            assertEq(escrow.totalSupply(), 2);
+            assertEq(nftLock.totalSupply(), 2);
         }
     }
 
@@ -270,7 +270,9 @@ contract TestCreateLock is EscrowBase, IEscrowCurveUserStorage {
         vm.assume(_who != address(0));
         vm.assume(_value > 0);
         vm.warp(1);
-        escrow.setWhitelisted(_who, true);
+
+        vm.prank(address(escrow));
+        nftLock.setWhitelisted(_who, true);
 
         token.mint(address(this), _value);
         token.approve(address(escrow), _value);

@@ -24,7 +24,7 @@ import {ReentrancyGuardUpgradeable as ReentrancyGuard} from "@openzeppelin/contr
 import {PausableUpgradeable as Pausable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
 
-contract Escrow is
+contract VotingEscrow is
     IVotingEscrowEventsStorageErrorsEvents,
     ReentrancyGuard,
     Pausable,
@@ -52,8 +52,8 @@ contract Escrow is
     /// @notice Total supply of underlying tokens deposited in the contract
     uint256 public totalLocked;
 
-    /// @notice tracks the locked balance of each NFT
-    mapping(uint256 => LockedBalance) public locked;
+    /// @dev tracks the locked balance of each NFT
+    mapping(uint256 => LockedBalance) private _locked;
 
     /*//////////////////////////////////////////////////////////////
                               Helper Contracts
@@ -180,6 +180,11 @@ contract Escrow is
         return IEscrowCurve(curve).supplyAt(_timestamp);
     }
 
+    /// @return The details of the underlying lock for a given veNFT
+    function locked(uint256 _tokenId) external view returns (LockedBalance memory) {
+        return _locked[_tokenId];
+    }
+
     /// @return accountVotingPower The voting power of an account at the current block
     /// @dev We cannot do historic voting power at this time because we don't current track
     /// histories of token transfers.
@@ -229,7 +234,7 @@ contract Escrow is
 
         // write the lock and checkpoint the voting power
         LockedBalance memory lock = LockedBalance(_value, startTime);
-        locked[newTokenId] = lock;
+        _locked[newTokenId] = lock;
 
         // we don't allow edits in this implementation, so only the new lock is used
         _checkpoint(newTokenId, lock);
@@ -301,7 +306,7 @@ contract Escrow is
         // check that this ticket can exit
         if (!(IExitQueue(queue).canExit(_tokenId))) revert CannotExit();
 
-        LockedBalance memory oldLocked = locked[_tokenId];
+        LockedBalance memory oldLocked = _locked[_tokenId];
         uint256 value = oldLocked.amount;
 
         // check for fees to be transferred
@@ -312,7 +317,7 @@ contract Escrow is
         }
 
         // clear out the token data
-        locked[_tokenId] = LockedBalance(0, 0);
+        _locked[_tokenId] = LockedBalance(0, 0);
         totalLocked -= value;
 
         // Burn the NFT and transfer the tokens to the user

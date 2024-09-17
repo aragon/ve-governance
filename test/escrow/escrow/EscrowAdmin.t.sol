@@ -8,13 +8,15 @@ import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
-import {VotingEscrow} from "@escrow/VotingEscrowIncreasing.sol";
+import {VotingEscrow} from "@escrow/VotingEscrow.sol";
 import {QuadraticIncreasingEscrow} from "@escrow/QuadraticIncreasingEscrow.sol";
 import {ExitQueue} from "@escrow/ExitQueue.sol";
 import {SimpleGaugeVoter, SimpleGaugeVoterSetup} from "src/voting/SimpleGaugeVoterSetup.sol";
 
 contract TestEscrowAdmin is EscrowBase {
     address attacker = address(1);
+
+    error OnlyEscrow();
 
     function testSetCurve(address _newCurve) public {
         escrow.setCurve(_newCurve);
@@ -100,25 +102,29 @@ contract TestEscrowAdmin is EscrowBase {
         address addr = address(1);
         vm.expectEmit(true, false, false, true);
         emit WhitelistSet(addr, true);
-        escrow.setWhitelisted(addr, true);
-        assertTrue(escrow.whitelisted(addr));
 
-        escrow.setWhitelisted(addr, false);
-        assertFalse(escrow.whitelisted(addr));
+        vm.startPrank(address(escrow));
+        {
+            nftLock.setWhitelisted(addr, true);
+            assertTrue(nftLock.whitelisted(addr));
 
-        escrow.enableTransfers();
-        assertTrue(
-            escrow.whitelisted(address(uint160(uint256(keccak256("WHITELIST_ANY_ADDRESS")))))
-        );
+            nftLock.setWhitelisted(addr, false);
+            assertFalse(nftLock.whitelisted(addr));
 
-        bytes memory err = _authErr(attacker, address(escrow), escrow.ESCROW_ADMIN_ROLE());
+            nftLock.enableTransfers();
+            assertTrue(
+                nftLock.whitelisted(address(uint160(uint256(keccak256("WHITELIST_ANY_ADDRESS")))))
+            );
+        }
+        vm.stopPrank();
+
         vm.startPrank(attacker);
         {
-            vm.expectRevert(err);
-            escrow.setWhitelisted(addr, true);
+            vm.expectRevert(OnlyEscrow.selector);
+            nftLock.setWhitelisted(addr, true);
 
-            vm.expectRevert(err);
-            escrow.enableTransfers();
+            vm.expectRevert(OnlyEscrow.selector);
+            nftLock.enableTransfers();
         }
         vm.stopPrank();
     }
