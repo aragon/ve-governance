@@ -9,6 +9,7 @@ import {DAO, createTestDAO} from "@mocks/MockDAO.sol";
 import {QuadraticIncreasingEscrow, IVotingEscrow, IEscrowCurve} from "src/escrow/increasing/QuadraticIncreasingEscrow.sol";
 import {Clock} from "@clock/Clock.sol";
 import {IVotingEscrowIncreasing, ILockedBalanceIncreasing} from "src/escrow/increasing/interfaces/IVotingEscrowIncreasing.sol";
+
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
 contract MockEscrow {

@@ -8,6 +8,7 @@ import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
+import {Lock} from "@escrow/Lock.sol";
 import {VotingEscrow} from "@escrow/VotingEscrowIncreasing.sol";
 import {QuadraticIncreasingEscrow} from "@escrow/QuadraticIncreasingEscrow.sol";
 import {ExitQueue} from "@escrow/ExitQueue.sol";
@@ -100,25 +101,27 @@ contract TestEscrowAdmin is EscrowBase {
         address addr = address(1);
         vm.expectEmit(true, false, false, true);
         emit WhitelistSet(addr, true);
-        escrow.setWhitelisted(addr, true);
-        assertTrue(escrow.whitelisted(addr));
 
-        escrow.setWhitelisted(addr, false);
-        assertFalse(escrow.whitelisted(addr));
+        nftLock.setWhitelisted(addr, true);
+        assertTrue(nftLock.whitelisted(addr));
 
-        escrow.enableTransfers();
+        nftLock.setWhitelisted(addr, false);
+        assertFalse(nftLock.whitelisted(addr));
+
+        nftLock.enableTransfers();
         assertTrue(
-            escrow.whitelisted(address(uint160(uint256(keccak256("WHITELIST_ANY_ADDRESS")))))
+            nftLock.whitelisted(address(uint160(uint256(keccak256("WHITELIST_ANY_ADDRESS")))))
         );
 
-        bytes memory err = _authErr(attacker, address(escrow), escrow.ESCROW_ADMIN_ROLE());
+        bytes memory err = _authErr(attacker, address(nftLock), nftLock.LOCK_ADMIN_ROLE());
+
         vm.startPrank(attacker);
         {
             vm.expectRevert(err);
-            escrow.setWhitelisted(addr, true);
+            nftLock.setWhitelisted(addr, true);
 
             vm.expectRevert(err);
-            escrow.enableTransfers();
+            nftLock.enableTransfers();
         }
         vm.stopPrank();
     }
@@ -130,5 +133,17 @@ contract TestEscrowAdmin is EscrowBase {
 
         vm.expectRevert();
         escrow.totalVotingPower();
+    }
+
+    // test upgrading the lock
+    function testUpgradeLock() public {
+        address newImpl = address(new Lock());
+        nftLock.upgradeTo(newImpl);
+        assertEq(nftLock.implementation(), newImpl);
+
+        bytes memory err = _authErr(attacker, address(nftLock), nftLock.LOCK_ADMIN_ROLE());
+        vm.prank(attacker);
+        vm.expectRevert(err);
+        nftLock.upgradeTo(newImpl);
     }
 }

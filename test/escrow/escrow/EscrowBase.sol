@@ -18,13 +18,20 @@ import "@helpers/OSxHelpers.sol";
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
 import {IVotingEscrowEventsStorageErrorsEvents} from "@escrow-interfaces/IVotingEscrowIncreasing.sol";
+import {IWhitelistErrors, IWhitelistEvents} from "@escrow-interfaces/ILock.sol";
+import {Lock} from "@escrow/Lock.sol";
 import {VotingEscrow} from "@escrow/VotingEscrowIncreasing.sol";
 import {QuadraticIncreasingEscrow} from "@escrow/QuadraticIncreasingEscrow.sol";
 import {ExitQueue} from "@escrow/ExitQueue.sol";
 import {SimpleGaugeVoter, SimpleGaugeVoterSetup} from "src/voting/SimpleGaugeVoterSetup.sol";
 import {Clock} from "@clock/Clock.sol";
 
-contract EscrowBase is Test, IVotingEscrowEventsStorageErrorsEvents {
+contract EscrowBase is
+    Test,
+    IVotingEscrowEventsStorageErrorsEvents,
+    IWhitelistErrors,
+    IWhitelistEvents
+{
     using ProxyLib for address;
     string name = "Voting Escrow";
     string symbol = "VE";
@@ -33,6 +40,7 @@ contract EscrowBase is Test, IVotingEscrowEventsStorageErrorsEvents {
     MockDAOFactory daoFactory;
     MockERC20 token;
 
+    Lock nftLock;
     VotingEscrow escrow;
     QuadraticIncreasingEscrow curve;
     SimpleGaugeVoter voter;
@@ -44,6 +52,8 @@ contract EscrowBase is Test, IVotingEscrowEventsStorageErrorsEvents {
     MultisigSetup multisigSetup;
     address deployer = address(this);
 
+    error OnlyEscrow();
+
     function setUp() public virtual {
         // _deployOSX();
         _deployDAO();
@@ -52,8 +62,9 @@ contract EscrowBase is Test, IVotingEscrowEventsStorageErrorsEvents {
         token = new MockERC20();
         clock = _deployClock(address(dao));
 
-        escrow = _deployEscrow(address(token), address(dao), name, symbol, address(clock));
+        escrow = _deployEscrow(address(token), address(dao), address(clock));
         curve = _deployCurve(address(escrow), address(dao), 3 days, address(clock));
+        nftLock = _deployLock(address(escrow), name, symbol, address(dao));
 
         // to be added as proxies
         voter = _deployVoter(address(dao), address(escrow), false, address(clock));
@@ -92,10 +103,17 @@ contract EscrowBase is Test, IVotingEscrowEventsStorageErrorsEvents {
             _permissionId: curve.CURVE_ADMIN_ROLE()
         });
 
+        dao.grant({
+            _who: address(this),
+            _where: address(nftLock),
+            _permissionId: nftLock.LOCK_ADMIN_ROLE()
+        });
+
         // link them
         escrow.setCurve(address(curve));
         escrow.setVoter(address(voter));
         escrow.setQueue(address(queue));
+        escrow.setLockNFT(address(nftLock));
     }
 
     function _authErr(
@@ -116,17 +134,30 @@ contract EscrowBase is Test, IVotingEscrowEventsStorageErrorsEvents {
     function _deployEscrow(
         address _token,
         address _dao,
-        string memory _name,
-        string memory _symbol,
         address _clock
     ) public returns (VotingEscrow) {
         VotingEscrow impl = new VotingEscrow();
 
-        bytes memory initCalldata = abi.encodeCall(
-            VotingEscrow.initialize,
-            (_token, _dao, _name, _symbol, _clock)
-        );
+        bytes memory initCalldata = abi.encodeCall(VotingEscrow.initialize, (_token, _dao, _clock));
         return VotingEscrow(address(impl).deployUUPSProxy(initCalldata));
+    }
+
+    function _deployLock(
+        address _escrow,
+        string memory _name,
+        string memory _symbol,
+        address _dao
+    ) public returns (Lock) {
+        Lock impl = new Lock();
+
+        bytes memory initCalldata = abi.encodeWithSelector(
+            Lock.initialize.selector,
+            _escrow,
+            _name,
+            _symbol,
+            _dao
+        );
+        return Lock(address(impl).deployUUPSProxy(initCalldata));
     }
 
     function _deployCurve(

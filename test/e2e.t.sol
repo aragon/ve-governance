@@ -18,7 +18,7 @@ import {Clock} from "@clock/Clock.sol";
 import {IEscrowCurveUserStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
 import {IWithdrawalQueueErrors} from "src/escrow/increasing/interfaces/IVotingEscrowIncreasing.sol";
 import {IGaugeVote} from "src/voting/ISimpleGaugeVoter.sol";
-import {VotingEscrow, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams} from "src/voting/SimpleGaugeVoterSetup.sol";
+import {VotingEscrow, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams} from "src/voting/SimpleGaugeVoterSetup.sol";
 
 /**
  * This is going to be a simple E2E test that will build the contracts on Aragon and run a deposit / withdraw flow.
@@ -47,6 +47,7 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
     MockERC20 token;
 
     VotingEscrow ve;
+    Lock nftLock;
     QuadraticIncreasingEscrow curve;
     SimpleGaugeVoter voter;
     ExitQueue queue;
@@ -117,6 +118,9 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
             // reset votes to clear
             voter.reset(tokenId);
 
+            // approve the withdrawal
+            nftLock.approve(address(ve), tokenId);
+
             // can't queue because the min lock is not reached
             uint256 minLock = queue.timeToMinLock(tokenId);
             uint256 expectedTime = 20 weeks - depositTime;
@@ -137,8 +141,8 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
             ve.beginWithdrawal(tokenId);
 
             // enter the queue
-            assertEq(ve.balanceOf(user), 0, "User should have no tokens");
-            assertEq(ve.balanceOf(address(ve)), 1, "VE should have the NFT");
+            assertEq(nftLock.balanceOf(user), 0, "User should have no tokens");
+            assertEq(nftLock.balanceOf(address(ve)), 1, "VE should have the NFT");
 
             // readjust the cached time
             atm = block.timestamp;
@@ -161,8 +165,8 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
             vm.warp(atm + 1 weeks);
             ve.withdraw(tokenId);
 
-            assertEq(ve.balanceOf(user), 0, "User not should have the token");
-            assertEq(ve.balanceOf(address(ve)), 0, "VE should not have the NFT");
+            assertEq(nftLock.balanceOf(user), 0, "User not should have the token");
+            assertEq(nftLock.balanceOf(address(ve)), 0, "VE should not have the NFT");
             assertEq(token.balanceOf(user), DEPOSIT, "User should have the tokens");
         }
         vm.stopPrank();
@@ -266,8 +270,8 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
 
             // check the user owns the nft
             assertEq(tokenId, 1, "Token ID should be 1");
-            assertEq(ve.balanceOf(user), 1, "User should have 1 token");
-            assertEq(ve.ownerOf(tokenId), user, "User should own the token");
+            assertEq(nftLock.balanceOf(user), 1, "User should have 1 token");
+            assertEq(nftLock.ownerOf(tokenId), user, "User should own the token");
             assertEq(token.balanceOf(address(ve)), DEPOSIT, "VE should have the tokens");
             assertEq(token.balanceOf(user), 0, "User should have no tokens");
         }
@@ -352,7 +356,8 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
             address(new QuadraticIncreasingEscrow()),
             address(new ExitQueue()),
             address(new VotingEscrow()),
-            address(new Clock())
+            address(new Clock()),
+            address(new Lock())
         );
 
         // push to the PSP
@@ -381,6 +386,7 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
         queue = ExitQueue(helpers[1]);
         ve = VotingEscrow(helpers[2]);
         clock = Clock(helpers[3]);
+        nftLock = Lock(helpers[4]);
 
         // set the permissions
         for (uint i = 0; i < preparedSetupData.permissions.length; i++) {
@@ -389,7 +395,7 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
     }
 
     function _actions() internal view returns (IDAO.Action[] memory) {
-        IDAO.Action[] memory actions = new IDAO.Action[](4);
+        IDAO.Action[] memory actions = new IDAO.Action[](5);
 
         // action 0: apply the ve installation
         actions[0] = IDAO.Action({
@@ -420,6 +426,12 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
             to: address(ve),
             value: 0,
             data: abi.encodeWithSelector(ve.setVoter.selector, address(voter))
+        });
+
+        actions[4] = IDAO.Action({
+            to: address(ve),
+            value: 0,
+            data: abi.encodeWithSelector(ve.setLockNFT.selector, address(nftLock))
         });
 
         return wrapGrantRevokeRoot(DAO(payable(address(dao))), address(psp), actions);

@@ -13,11 +13,13 @@ import {ProxyLib} from "@libs/ProxyLib.sol";
 import {PermissionLib} from "@aragon/osx/core/permission/PermissionLib.sol";
 import {PluginSetup} from "@aragon/osx/framework/plugin/setup/PluginSetup.sol";
 
+// these should be interfaces
 import {SimpleGaugeVoter} from "@voting/SimpleGaugeVoter.sol";
 import {VotingEscrow} from "@escrow/VotingEscrowIncreasing.sol";
 import {ExitQueue} from "@escrow/ExitQueue.sol";
 import {QuadraticIncreasingEscrow} from "@escrow/QuadraticIncreasingEscrow.sol";
 import {Clock} from "@clock/Clock.sol";
+import {Lock} from "@escrow/Lock.sol";
 
 /// @param isPaused Whether the voter contract is deployed in a paused state
 /// @param veTokenName The name of the voting escrow token
@@ -28,9 +30,10 @@ import {Clock} from "@clock/Clock.sol";
 struct ISimpleGaugeVoterSetupParams {
     // voter
     bool isPaused;
-    // escrow
+    // escrow - NFT
     string veTokenName;
     string veTokenSymbol;
+    // escrow - main
     address token;
     // queue
     uint256 cooldown;
@@ -68,19 +71,24 @@ contract SimpleGaugeVoterSetup is PluginSetup {
     /// @dev implementation of the clock
     address clockBase;
 
+    /// @dev implementation of the escrow NFT
+    address nftBase;
+
     /// @notice Deploys the setup by binding the implementation contracts required during installation.
     constructor(
         address _voterBase,
         address _curveBase,
         address _queueBase,
         address _escrowBase,
-        address _clockBase
+        address _clockBase,
+        address _nftBase
     ) PluginSetup() {
         voterBase = _voterBase;
         curveBase = _curveBase;
         queueBase = _queueBase;
         escrowBase = _escrowBase;
         clockBase = _clockBase;
+        nftBase = _nftBase;
     }
 
     function implementation() external view returns (address) {
@@ -108,10 +116,7 @@ contract SimpleGaugeVoterSetup is PluginSetup {
         // deploy the escrow locker
         VotingEscrow escrow = VotingEscrow(
             escrowBase.deployUUPSProxy(
-                abi.encodeCall(
-                    VotingEscrow.initialize,
-                    (params.token, _dao, params.veTokenName, params.veTokenSymbol, clock)
-                )
+                abi.encodeCall(VotingEscrow.initialize, (params.token, _dao, clock))
             )
         );
 
@@ -142,6 +147,14 @@ contract SimpleGaugeVoterSetup is PluginSetup {
             )
         );
 
+        // deploy the escrow NFT
+        address nftLock = nftBase.deployUUPSProxy(
+            abi.encodeCall(
+                Lock.initialize,
+                (address(escrow), params.veTokenName, params.veTokenSymbol, _dao)
+            )
+        );
+
         // encode our setup data with permissions and helpers
         PermissionLib.MultiTargetPermission[] memory permissions = getPermissions(
             _dao,
@@ -150,15 +163,17 @@ contract SimpleGaugeVoterSetup is PluginSetup {
             exitQueue,
             address(escrow),
             clock,
+            nftLock,
             PermissionLib.Operation.Grant
         );
 
-        address[] memory helpers = new address[](4);
+        address[] memory helpers = new address[](5);
 
         helpers[0] = curve;
         helpers[1] = exitQueue;
         helpers[2] = address(escrow);
         helpers[3] = clock;
+        helpers[4] = address(nftLock);
 
         preparedSetupData.helpers = helpers;
         preparedSetupData.permissions = permissions;
@@ -170,7 +185,7 @@ contract SimpleGaugeVoterSetup is PluginSetup {
         SetupPayload calldata _payload
     ) external view returns (PermissionLib.MultiTargetPermission[] memory permissions) {
         // check the helpers length
-        if (_payload.currentHelpers.length != 4) {
+        if (_payload.currentHelpers.length != 5) {
             revert WrongHelpersArrayLength(_payload.currentHelpers.length);
         }
 
@@ -178,6 +193,7 @@ contract SimpleGaugeVoterSetup is PluginSetup {
         address queue = _payload.currentHelpers[1];
         address escrow = _payload.currentHelpers[2];
         address clock = _payload.currentHelpers[3];
+        address nftLock = _payload.currentHelpers[4];
 
         permissions = getPermissions(
             _dao,
@@ -186,6 +202,7 @@ contract SimpleGaugeVoterSetup is PluginSetup {
             queue,
             escrow,
             clock,
+            nftLock,
             PermissionLib.Operation.Revoke
         );
     }
@@ -201,10 +218,11 @@ contract SimpleGaugeVoterSetup is PluginSetup {
         address _queue,
         address _escrow,
         address _clock,
+        address _nft,
         PermissionLib.Operation _grantOrRevoke
     ) public view returns (PermissionLib.MultiTargetPermission[] memory) {
         PermissionLib.MultiTargetPermission[]
-            memory permissions = new PermissionLib.MultiTargetPermission[](6);
+            memory permissions = new PermissionLib.MultiTargetPermission[](7);
 
         permissions[0] = PermissionLib.MultiTargetPermission({
             permissionId: SimpleGaugeVoter(_plugin).GAUGE_ADMIN_ROLE(),
@@ -249,6 +267,14 @@ contract SimpleGaugeVoterSetup is PluginSetup {
         permissions[5] = PermissionLib.MultiTargetPermission({
             permissionId: Clock(_clock).CLOCK_ADMIN_ROLE(),
             where: _clock,
+            who: _dao,
+            operation: _grantOrRevoke,
+            condition: PermissionLib.NO_CONDITION
+        });
+
+        permissions[6] = PermissionLib.MultiTargetPermission({
+            permissionId: Lock(_nft).LOCK_ADMIN_ROLE(),
+            where: _nft,
             who: _dao,
             operation: _grantOrRevoke,
             condition: PermissionLib.NO_CONDITION

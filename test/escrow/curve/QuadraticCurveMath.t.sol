@@ -4,6 +4,7 @@ import {console2 as console} from "forge-std/console2.sol";
 
 import {QuadraticIncreasingEscrow, IVotingEscrow, IEscrowCurve} from "src/escrow/increasing/QuadraticIncreasingEscrow.sol";
 import {IVotingEscrowIncreasing, ILockedBalanceIncreasing} from "src/escrow/increasing/interfaces/IVotingEscrowIncreasing.sol";
+
 import {QuadraticCurveBase} from "./QuadraticCurveBase.t.sol";
 
 contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
