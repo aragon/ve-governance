@@ -19,3 +19,6 @@ branch = v4.9.2
 [submodule "lib/solmate"]
 	path = lib/solmate
 	url = https://github.com/transmissions11/solmate
+[submodule "lib/ens-contracts"]
+	path = lib/ens-contracts
+	url = https://github.com/ensdomains/ens-contracts
