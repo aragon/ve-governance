@@ -30,35 +30,31 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
 
         console.log("Coefficients: %st^2 + %st + %s", quadratic, linear, const);
 
-        // for (uint i; i <= 6; i++) {
-        //     uint period = 2 weeks * i;
-        //     console.log(
-        //         "Period: %d Voting Power      : %s",
-        //         i,
-        //         curve.getBiasUnbound(period, 100e18) / 1e18
-        //     );
-        //     console.log(
-        //         "Period: %d Voting Power Bound: %s",
-        //         i,
-        //         curve.getBias(period, 100e18) / 1e18
-        //     );
-        //     console.log(
-        //         "Period: %d Voting Power Raw: %s\n",
-        //         i,
-        //         curve.getBiasUnbound(period, 100e18)
-        //     );
-        // }
-        //
-        // uncomment to see the full curve
-        for (uint i; i <= 14 * 6; i++) {
-            uint day = i * 1 days;
-            uint week = day / 7 days;
-            uint period = day / 2 weeks;
-
-            console.log("[Day: %d | Week %d | Period %d]", i, week, period);
-            console.log("Voting Power        : %s", curve.getBias(day, 100e18) / 1e18);
-            console.log("Voting Power (raw): %s\n", curve.getBias(day, 100e18));
+        for (uint i; i <= 6; i++) {
+            uint period = 2 weeks * i;
+            console.log(
+                "Period: %d Voting Power      : %s",
+                i,
+                curve.getBias(period, 100e18) / 1e18
+            );
+            console.log(
+                "Period: %d Voting Power Bound: %s",
+                i,
+                curve.getBias(period, 100e18) / 1e18
+            );
+            console.log("Period: %d Voting Power Raw: %s\n", i, curve.getBias(period, 100e18));
         }
+
+        // uncomment to see the full curve
+        // for (uint i; i <= 14 * 6; i++) {
+        //     uint day = i * 1 days;
+        //     uint week = day / 7 days;
+        //     uint period = day / 2 weeks;
+
+        //     console.log("[Day: %d | Week %d | Period %d]", i, week, period);
+        //     console.log("Voting Power        : %s", curve.getBias(day, 100e18) / 1e18);
+        //     console.log("Voting Power (raw): %s\n", curve.getBias(day, 100e18));
+        // }
     }
 
     // write a new checkpoint
@@ -109,19 +105,22 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
 
         // excel:               449.206158900000000000
         // solmate:             449.206133622001394300
-        // solmate (optimized): 449.06723257244469756
+        // python:              449.206158892128337920
+        // solmate (xmulx):     449.206133622001394304
         assertEq(
             curve.votingPowerAt(tokenIdFirst, block.timestamp),
-            449206133622001394300,
+            449206133622001394304,
             "Balance incorrect after warmup"
         );
         assertEq(curve.isWarm(tokenIdFirst), true, "Still warming up");
 
         // excel:     1_067_784_257_000000000000000000
         // solmate:   1_067_784_196_491481599990798396
+        // python:    1_067_784_256_559766801878089728
+        // solmate2:  1_067_784_196_491481600000000000
         assertEq(
             curve.votingPowerAt(tokenIdSecond, block.timestamp),
-            1067784196491481599990798396,
+            1067784196491481600000000000,
             "Balance incorrect after warmup II"
         );
 
@@ -130,14 +129,16 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
         // excel:     600.985714300000000000
         // PRB:       600.985163959347100568
         // solmate:   600.985163959347101852
+        // python :   600.985714285714341888
+        // solmate2:  600.985163959347101952
         assertEq(
             curve.votingPowerAt(tokenIdFirst, block.timestamp),
-            600985163959347101852,
+            600985163959347101952,
             "Balance incorrect after p1"
         );
 
-        uint256 expectedMaxI = 2524126241845405204467;
-        uint256 expectedMaxII = 5999967296216703996928705792;
+        uint256 expectedMaxI = 2524126241845405205760;
+        uint256 expectedMaxII = 5999967296216704000000000000;
 
         // warp to the final period
         // TECHNICALLY, this should finish at exactly 5 periodd and 6 * voting power

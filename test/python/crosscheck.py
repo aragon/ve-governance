@@ -4,7 +4,7 @@ DAY =  24 * HOUR
 WEEK = 7 * DAY
 
 # Variables
-AMOUNT = 1000  # example amount to deposit
+AMOUNT = 1_000_000_000  # example amount to deposit
 PERIOD_LENGTH = 2 * WEEK  # example period length in seconds (1 week)
 WARMUP_PERIOD = 3 * DAY  # warmup period in days
 MAX_PERIODS = 5  # maximum periods
@@ -21,6 +21,15 @@ def evaluate_y(secondsElapsed, PeriodLength, amount_scaled):
     x = secondsElapsed / PeriodLength
     y = amount_scaled * (
         QUADRATIC_COEFFICIENT * (x**2)
+        + LINEAR_COEFFICIENT * x
+        + CONSTANT         
+    )
+    return y
+
+def evaluate_y_v2(secondsElapsed, PeriodLength, amount_scaled):
+    x = secondsElapsed / PeriodLength
+    y = amount_scaled * (
+        QUADRATIC_COEFFICIENT * (x*x)
         + LINEAR_COEFFICIENT * x
         + CONSTANT         
     )
@@ -47,3 +56,5 @@ for label, t in time_points:
     y_value = evaluate_y(t, PERIOD_LENGTH, amount_scaled)
     # Avoid scientific notation by formatting with commas and align values vertically
     print(f"{label:<30} Voting Power: {y_value:>20.0f}")
+
+

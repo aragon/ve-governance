@@ -163,7 +163,8 @@ contract QuadraticIncreasingEscrow is
         int256 t = SignedFixedPointMath.toFP(timeElapsed.toInt256());
 
         // bias = a.t^2 + b.t + c
-        int256 bias = quadratic.mul(t.pow(2e18)).add(linear.mul(t)).add(const);
+        int256 tSquared = t.mul(t); // t*t much more gas efficient than t.pow(SD2)
+        int256 bias = quadratic.mul(tSquared).add(linear.mul(t)).add(const);
 
         // never return negative values
         // in the increasing case, this should never happen
@@ -297,9 +298,10 @@ contract QuadraticIncreasingEscrow is
         bool isExiting = amount == 0;
 
         if (!isExiting) {
-            uNew.coefficients = _getCoefficients(amount);
+            int256[3] memory coefficients = _getCoefficients(amount);
             // for a new lock, write the base bias (elapsed == 0)
-            uNew.bias = getBias(0, amount);
+            uNew.coefficients = coefficients;
+            uNew.bias = _getBias(0, coefficients);
         }
         // write the new timestamp - in the case of an increasing curve
         // we align the checkpoint to the start of the upcoming deposit interval
