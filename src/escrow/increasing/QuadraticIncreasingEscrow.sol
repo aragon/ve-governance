@@ -67,6 +67,8 @@ contract QuadraticIncreasingEscrow is
 
     int256 private constant SHARED_LINEAR_COEFFICIENT = CurveConstantLib.SHARED_LINEAR_COEFFICIENT;
 
+    int256 private constant SHARED_CONSTANT_COEFFICIENT = CurveConstantLib.SHARED_CONSTANT_COEFFICIENT;
+
     uint256 private constant MAX_EPOCHS = CurveConstantLib.MAX_EPOCHS;
 
     /*//////////////////////////////////////////////////////////////
@@ -111,7 +113,7 @@ contract QuadraticIncreasingEscrow is
     /// @return The constant coefficient of the quadratic curve, for the given amount
     /// @dev In this case, the constant term is 1 so we just case the amount
     function _getConstantCoeff(uint256 amount) public pure returns (int256) {
-        return (SignedFixedPointMath.toFP(amount.toInt256()));
+        return (SignedFixedPointMath.toFP(amount.toInt256())).mul(SHARED_CONSTANT_COEFFICIENT);
     }
 
     /// @return The coefficients of the quadratic curve, for the given amount
