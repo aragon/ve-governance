@@ -50,8 +50,6 @@ contract QuadraticIncreasingEscrow is
     uint256 public warmupPeriod;
 
     /// @dev tokenId => userPointEpoch => warmup
-    /// UX improvement: warmup should start from point of writing, even if
-    /// start date is in the future
     mapping(uint256 => mapping(uint256 => uint256)) internal _userPointWarmup;
 
     /// @dev tokenId => userPointEpoch => UserPoint
@@ -102,13 +100,11 @@ contract QuadraticIncreasingEscrow is
 
     /// @return The coefficient for the quadratic term of the quadratic curve, for the given amount
     function _getQuadraticCoeff(uint256 amount) internal pure returns (int256) {
-        // 1 / (7 * 2 weeks^2)
         return (SignedFixedPointMath.toFP(amount.toInt256()).mul(SHARED_QUADRATIC_COEFFICIENT));
     }
 
     /// @return The coefficient for the linear term of the quadratic curve, for the given amount
     function _getLinearCoeff(uint256 amount) internal pure returns (int256) {
-        // 2 / 7 * 2 weeks
         return (SignedFixedPointMath.toFP(amount.toInt256())).mul(SHARED_LINEAR_COEFFICIENT);
     }
 
