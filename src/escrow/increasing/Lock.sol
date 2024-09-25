@@ -61,7 +61,7 @@ contract Lock is ILock, ERC721Enumerable, UUPSUpgradeable, DaoAuthorizable {
 
         // allow sending nfts to the escrow
         whitelisted[escrow] = true;
-        emit WhitelistSet(address(this), true);
+        emit WhitelistSet(address(escrow), true);
     }
 
     /*//////////////////////////////////////////////////////////////

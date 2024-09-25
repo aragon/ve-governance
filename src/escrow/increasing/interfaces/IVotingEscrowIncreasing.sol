@@ -103,6 +103,7 @@ interface IWithdrawalQueue is IWithdrawalQueueErrors, IWithdrawalQueueEvents {
 
 interface ISweeperEvents {
     event Sweep(address indexed to, uint256 amount);
+    event SweepNFT(address indexed to, uint256 tokenId);
 }
 
 interface ISweeperErrors {
@@ -112,6 +113,8 @@ interface ISweeperErrors {
 interface ISweeper is ISweeperEvents, ISweeperErrors {
     /// @notice sweeps excess tokens from the contract to a designated address
     function sweep() external;
+
+    function sweepNFT(uint256 _tokenId, address _to) external;
 }
 
 /*///////////////////////////////////////////////////////////////

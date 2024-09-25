@@ -341,6 +341,21 @@ contract VotingEscrow is
         emit Sweep(_msgSender(), excess);
     }
 
+    /// @notice the sweeper can send NFTs mistakenly sent to the contract to a designated address
+    /// @param _tokenId the tokenId to sweep - must be currently in this contract
+    /// @param _to the address to send the NFT to - must be a whitelisted address for transfers
+    /// @dev Cannot sweep NFTs that are in the exit queue for obvious reasons
+    function sweepNFT(uint256 _tokenId, address _to) external nonReentrant auth(SWEEPER_ROLE) {
+        // if the token id is not in the contract, revert
+        if (IERC721EMB(lockNFT).ownerOf(_tokenId) != address(this)) revert NothingToSweep();
+
+        // if the token id is in the queue, we cannot sweep it
+        if (IExitQueue(queue).ticketHolder(_tokenId) != address(0)) revert CannotExit();
+
+        IERC721EMB(lockNFT).transferFrom(address(this), _to, _tokenId);
+        emit SweepNFT(_to, _tokenId);
+    }
+
     /*///////////////////////////////////////////////////////////////
                             UUPS Upgrade
     //////////////////////////////////////////////////////////////*/

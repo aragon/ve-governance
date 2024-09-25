@@ -23,6 +23,8 @@ contract TestLockMintBurn is EscrowBase, IEscrowCurveUserStorage, IGaugeVote {
         address _dao,
         address _escrow
     ) public {
+        vm.expectEmit(true, false, false, true);
+        emit WhitelistSet(address(_escrow), true);
         Lock _nftLock = _deployLock(_escrow, _name, _symbol, _dao);
 
         assertEq(_nftLock.name(), _name);
