@@ -46,7 +46,7 @@ contract TestCreateLock is EscrowBase, IEscrowCurveUserStorage {
     /// @param _time is bound to 128 bits to avoid overflow - seems reasonable as is not a user input
     function testFuzz_createLock(uint128 _value, address _depositor, uint128 _time) public {
         vm.assume(_value > 0);
-        vm.assume(_depositor != address(0));
+        vm.assume(_depositor != address(0) && _depositor != address(vm));
 
         // set zero warmup for this test
         curve.setWarmupPeriod(0);
