@@ -125,16 +125,15 @@ contract QuadraticIncreasingEscrow is
     }
 
     /// @return The coefficients of the quadratic curve, for the given amount
-    /// @dev The coefficients are returned in the order [constant, linear, quadratic, cubic]
+    /// @dev The coefficients are returned in the order [constant, linear, quadratic]
     /// and are converted to regular 256-bit signed integers instead of their fixed-point representation
-    function getCoefficients(uint256 amount) public pure returns (int256[4] memory) {
+    function getCoefficients(uint256 amount) public pure returns (int256[3] memory) {
         int256[3] memory coefficients = _getCoefficients(amount);
 
         return [
             SignedFixedPointMath.fromFP(coefficients[0]),
             SignedFixedPointMath.fromFP(coefficients[1]),
-            SignedFixedPointMath.fromFP(coefficients[2]),
-            0
+            SignedFixedPointMath.fromFP(coefficients[2])
         ];
     }
 
@@ -257,9 +256,7 @@ contract QuadraticIncreasingEscrow is
         if (!_isWarm(_tokenId, _epoch, _t)) return 0;
         uint256 timeElapsed = _t - lastPoint.ts;
 
-        // in the increasing case, we don't allow changes to locks, so the ts and blk are
-        // equivalent to the start time of the lock
-        return getBias(timeElapsed, lastPoint.bias);
+        return _getBias(timeElapsed, lastPoint.coefficients);
     }
 
     /// @notice [NOT IMPLEMENTED] Calculate total voting power at some point in the past
@@ -300,7 +297,7 @@ contract QuadraticIncreasingEscrow is
         bool isExiting = amount == 0;
 
         if (!isExiting) {
-            uNew.coefficients = getCoefficients(amount);
+            uNew.coefficients = _getCoefficients(amount);
             // for a new lock, write the base bias (elapsed == 0)
             uNew.bias = getBias(0, amount);
         }

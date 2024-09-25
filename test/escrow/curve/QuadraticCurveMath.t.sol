@@ -20,15 +20,13 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
          */
         uint256 amount = 100e18;
 
-        int256[4] memory coefficients = curve.getCoefficients(100e18);
+        int256[3] memory coefficients = curve.getCoefficients(100e18);
 
         uint256 const = uint256(coefficients[0]);
         uint256 linear = uint256(coefficients[1]);
         uint256 quadratic = uint256(coefficients[2]);
-        uint256 cubic = uint256(coefficients[3]);
 
         assertEq(const, amount);
-        assertEq(cubic, 0);
 
         console.log("Coefficients: %st^2 + %st + %s", quadratic, linear, const);
 
