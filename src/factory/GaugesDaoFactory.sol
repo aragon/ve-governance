@@ -7,7 +7,7 @@ import {Clock} from "@clock/Clock.sol";
 import {IEscrowCurveUserStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
 import {IWithdrawalQueueErrors} from "src/escrow/increasing/interfaces/IVotingEscrowIncreasing.sol";
 import {IGaugeVote} from "src/voting/ISimpleGaugeVoter.sol";
-import {SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams} from "src/voting/SimpleGaugeVoterSetup.sol";
+import {VotingEscrow, Clock, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams} from "src/voting/SimpleGaugeVoterSetup.sol";
 import {Addresslist} from "@aragon/osx/plugins/utils/Addresslist.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {PluginSetupProcessor} from "@aragon/osx/framework/plugin/setup/PluginSetupProcessor.sol";
@@ -23,22 +23,24 @@ import {createERC1967Proxy} from "@aragon/osx/utils/Proxy.sol";
 import {PermissionLib} from "@aragon/osx/core/permission/PermissionLib.sol";
 
 /// @notice The struct containing all the parameters to deploy the DAO
-/// @param token1Address The address of the IVotes compatible ERC20 token contract to use for the voting power
-/// @param token2Address The address of the IVotes compatible ERC20 token contract to use for the voting power
 /// @param minApprovals The amount of approvals required for the multisig to be able to execute a proposal on the DAO
-// OSx
+/// @param multisigMembers The list of addresses to be defined as the initial multisig signers
+/// @param tokenParameters A list with the tokens and metadata for which a plugin and a VE should be deployed
+/// @param feePercent The fee taken on withdrawals (1 ether = 100%)
+/// @param warmupPeriod Delay in seconds after depositing before voting becomes possible
+/// @param cooldownPeriod Delay seconds after queuing an exit before withdrawing becomes possible
+/// @param minLockDuration Min seconds a user must have locked in escrow before they can queue an exit
+/// @param votingPaused Prevent voting until manually activated by the multisig
+/// @param multisigPluginRepo Address of Aragon's multisig plugin repository on the given network
+/// @param multisigPluginRelease The release of the multisig plugin to target
+/// @param multisigPluginBuild The build of the multisig plugin to target
+/// @param voterPluginSetup The address of the Gauges Voter plugin setup contract to create a repository with
+/// @param voterEnsSubdomain The ENS subdomain under which the plugin reposiroty will be created
 /// @param osxDaoFactory The address of the OSx DAO factory contract, used to retrieve the DAO implementation address
 /// @param pluginSetupProcessor The address of the OSx PluginSetupProcessor contract on the target chain
 /// @param pluginRepoFactory The address of the OSx PluginRepoFactory contract on the target chain
-// Plugins
-/// @param multisigPluginSetup The address of the already deployed plugin setup for the standard multisig
-/// @param votingPluginSetup The address of the already deployed plugin setup for the optimistic voting plugin
-/// @param multisigMembers The list of addresses to be defined as the initial multisig signers
-/// @param multisigEnsDomain The subdomain to use as the ENS for the standard mulsitig plugin setup. Note: it must be unique and available.
-/// @param votingEnsDomain The subdomain to use as the ENS for the optimistic voting plugin setup. Note: it must be unique and available.
 struct DeploymentParameters {
     // Multisig settings
-    uint64 minProposalDuration;
     uint16 minApprovals;
     address[] multisigMembers;
     // Gauge Voter
@@ -66,15 +68,27 @@ struct TokenParameters {
     string veTokenSymbol;
 }
 
+/// @notice Struct containing the plugin and all of its helpers
+struct GaugePluginSet {
+    SimpleGaugeVoter plugin;
+    QuadraticIncreasingEscrow curve;
+    ExitQueue exitQueue;
+    VotingEscrow votingEscrow;
+    Clock clock;
+    Lock nftLock;
+}
+
+/// @notice Contains the artifacts that resulted from running a deployment
 struct Deployment {
     DAO dao;
     // Plugins
     Multisig multisigPlugin;
-    SimpleGaugeVoter[] voterPlugins;
+    GaugePluginSet[] gaugePluginSets;
     // Plugin repo's
     PluginRepo voterPluginRepo;
 }
 
+/// @notice A singleton contract designed to run the deployment once and become a read-only store of the contracts deployed
 contract GaugesDaoFactory {
     /// @notice Thrown when attempting to call deployOnce() when the DAO is already deployed.
     error AlreadyDeployed();
@@ -88,6 +102,7 @@ contract GaugesDaoFactory {
         parameters = _parameters;
     }
 
+    /// @notice Run the deployment and store the artifacts in a read-only store that can be retrieved via `getDeployment()` and `getDeploymentParameters()`
     function deployOnce() public {
         if (address(deployment.dao) != address(0)) revert AlreadyDeployed();
 
@@ -122,28 +137,26 @@ contract GaugesDaoFactory {
         // GAUGE VOTER(s)
         {
             IPluginSetup.PreparedSetupData memory preparedVoterSetupData;
-            SimpleGaugeVoter voterPlugin;
 
             PluginRepo.Tag memory repoTag = PluginRepo.Tag(1, 1);
-
-            deployment.voterPlugins = new SimpleGaugeVoter[](parameters.tokenParameters.length);
+            GaugePluginSet memory pluginSet;
 
             for (uint i = 0; i < parameters.tokenParameters.length; ) {
                 (
-                    voterPlugin,
+                    pluginSet,
                     deployment.voterPluginRepo,
                     preparedVoterSetupData
                 ) = prepareSimpleGaugeVoterPlugin(dao, parameters.tokenParameters[i], repoTag);
 
+                deployment.gaugePluginSets.push(pluginSet);
+
                 applyPluginInstallation(
                     dao,
-                    address(voterPlugin),
+                    address(pluginSet.plugin),
                     deployment.voterPluginRepo,
                     repoTag,
                     preparedVoterSetupData
                 );
-
-                deployment.voterPlugins[i] = voterPlugin;
 
                 unchecked {
                     i++;
@@ -229,7 +242,7 @@ contract GaugesDaoFactory {
         DAO dao,
         TokenParameters memory tokenParameters,
         PluginRepo.Tag memory repoTag
-    ) internal returns (SimpleGaugeVoter, PluginRepo, IPluginSetup.PreparedSetupData memory) {
+    ) internal returns (GaugePluginSet memory, PluginRepo, IPluginSetup.PreparedSetupData memory) {
         // Publish repo
         PluginRepo pluginRepo = PluginRepoFactory(parameters.pluginRepoFactory)
             .createPluginRepoWithFirstVersion(
@@ -263,7 +276,18 @@ contract GaugesDaoFactory {
                     settingsData
                 )
             );
-        return (SimpleGaugeVoter(plugin), pluginRepo, preparedSetupData);
+
+        address[] memory helpers = preparedSetupData.helpers;
+        GaugePluginSet memory pluginSet = GaugePluginSet({
+            plugin: SimpleGaugeVoter(plugin),
+            curve: QuadraticIncreasingEscrow(helpers[0]),
+            exitQueue: ExitQueue(helpers[1]),
+            votingEscrow: VotingEscrow(helpers[2]),
+            clock: Clock(helpers[3]),
+            nftLock: Lock(helpers[4])
+        });
+
+        return (pluginSet, pluginRepo, preparedSetupData);
     }
 
     function applyPluginInstallation(

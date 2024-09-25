@@ -9,11 +9,12 @@ import {VotingEscrow, Clock, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleG
 import {PluginRepo} from "@aragon/osx/framework/plugin/repo/PluginRepo.sol";
 import {PluginRepoFactory} from "@aragon/osx/framework/plugin/repo/PluginRepoFactory.sol";
 import {PluginSetupProcessor} from "@aragon/osx/framework/plugin/setup/PluginSetupProcessor.sol";
+import {MockERC20} from "@mocks/MockERC20.sol";
 
 contract Deploy is Script {
     SimpleGaugeVoterSetup simpleGaugeVoterSetup;
 
-    /// @dev Thrown when attempting to create a DAO with an empty multisig
+    /// @dev Thrown when attempting to deploy a multisig with no members
     error EmptyMultisig();
 
     modifier broadcast() {
@@ -26,18 +27,11 @@ contract Deploy is Script {
         vm.stopBroadcast();
     }
 
+    /// @notice Runs the deployment flow, records the given parameters and artifacts, and it becomes read only
     function run() public broadcast {
-        // NOTE:
-        // Deploying the plugin setup's separately because of the code size limit
-
-        // Note: Multisig is already deployed, not redeploying
-
-        // Deploy the voter plugin setup
-        // TODO:
-
-        DeploymentParameters memory parameters = getDeploymentParameters(
-            vm.envBool("DEPLOY_AS_PRODUCTION")
-        );
+        // Prepare all parameters
+        bool isProduction = vm.envBool("DEPLOY_AS_PRODUCTION");
+        DeploymentParameters memory parameters = getDeploymentParameters(isProduction);
 
         // Create the DAO
         GaugesDaoFactory factory = new GaugesDaoFactory(parameters);
@@ -50,13 +44,20 @@ contract Deploy is Script {
     function getDeploymentParameters(
         bool isProduction
     ) internal returns (DeploymentParameters memory parameters) {
+        address[] memory multisigMembers = readMultisigMembers();
+        TokenParameters[] memory tokenParameters = getTokenParameters(isProduction);
+
+        // NOTE: Multisig is already deployed, using the existing Aragon's repo
+        // NOTE: Deploying the plugin setup from the current script to avoid code size constraints
+
+        SimpleGaugeVoterSetup gaugeVoterPluginSetup = deploySimpleGaugeVoterPluginSetup();
+
         parameters = DeploymentParameters({
             // Multisig settings
-            minProposalDuration: uint64(vm.envUint("MIN_PROPOSAL_DURATION")),
             minApprovals: uint8(vm.envUint("MIN_APPROVALS")),
-            multisigMembers: readMultisigMembers(),
+            multisigMembers: multisigMembers,
             // Gauge Voter
-            tokenParameters: getTokenParameters(isProduction),
+            tokenParameters: tokenParameters,
             feePercent: vm.envUint("FEE_PERCENT_WEI"),
             warmupPeriod: uint64(vm.envUint("WARMUP_PERIOD")),
             cooldownPeriod: uint64(vm.envUint("COOLDOWN_PERIOD")),
@@ -67,7 +68,7 @@ contract Deploy is Script {
             multisigPluginRelease: uint8(vm.envUint("MULTISIG_PLUGIN_RELEASE")),
             multisigPluginBuild: uint16(vm.envUint("MULTISIG_PLUGIN_BUILD")),
             // Voter plugin setup and ENS
-            voterPluginSetup: deploySimpleGaugeVoterPluginSetup(),
+            voterPluginSetup: gaugeVoterPluginSetup,
             voterEnsSubdomain: vm.envString("SIMPLE_GAUGE_VOTER_REPO_ENS_SUBDOMAIN"),
             // OSx addresses
             osxDaoFactory: vm.envAddress("DAO_FACTORY"),
@@ -99,7 +100,7 @@ contract Deploy is Script {
 
     function getTokenParameters(
         bool isProduction
-    ) internal view returns (TokenParameters[] memory tokenParameters) {
+    ) internal returns (TokenParameters[] memory tokenParameters) {
         if (isProduction) {
             // USE TOKEN(s)
             console.log("Using production parameters");
@@ -122,15 +123,39 @@ contract Deploy is Script {
             }
         } else {
             // MINT TEST TOKEN
-            console.log("Using testing parameters (minting 2 token)");
+            console.log("Using testing parameters (minting 2 test tokens)");
 
-            // TODO:
+            address[] memory multisigMembers = readMultisigMembers();
+            address[] memory tokens = new address[](2);
+            tokens[0] = createTestToken(multisigMembers);
+            tokens[1] = createTestToken(multisigMembers);
+
+            tokenParameters = new TokenParameters[](2);
+            tokenParameters[0] = TokenParameters({
+                token: tokens[0],
+                veTokenName: "VE Token 1",
+                veTokenSymbol: "veTK1"
+            });
+            tokenParameters[1] = TokenParameters({
+                token: tokens[1],
+                veTokenName: "VE Token 2",
+                veTokenSymbol: "veTK2"
+            });
         }
     }
 
-    function createTestToken(address[] memory holders) internal {
-        // TODO:
-        address newToken = vm.envAddress("GOVERNANCE_ERC20_BASE");
+    function createTestToken(address[] memory holders) internal returns (address) {
+        MockERC20 newToken = new MockERC20();
+
+        for (uint i = 0; i < holders.length; ) {
+            newToken.mint(holders[i], 50 ether);
+
+            unchecked {
+                i++;
+            }
+        }
+
+        return address(newToken);
     }
 
     function printDeploymentSummary(GaugesDaoFactory factory) internal view {
@@ -147,9 +172,16 @@ contract Deploy is Script {
         console.log("Plugins");
         console.log("- Multisig plugin:", address(deployment.multisigPlugin));
         console.log("");
-        for (uint i = 0; i < deployment.voterPlugins.length; ) {
-            console.log("- Token:", address(deploymentParameters.tokenParameters[i].token));
-            console.log("  Gauge voter plugin:", address(deployment.voterPlugins[i]));
+
+        for (uint i = 0; i < deployment.gaugePluginSets.length; ) {
+            console.log("- Using token:", address(deploymentParameters.tokenParameters[i].token));
+            console.log("  Gauge voter plugin:", address(deployment.gaugePluginSets[i].plugin));
+            console.log("  Curve:", address(deployment.gaugePluginSets[i].curve));
+            console.log("  Exit Queue:", address(deployment.gaugePluginSets[i].exitQueue));
+            console.log("  Voting Escrow:", address(deployment.gaugePluginSets[i].votingEscrow));
+            console.log("  Clock:", address(deployment.gaugePluginSets[i].clock));
+            console.log("  NFT Lock:", address(deployment.gaugePluginSets[i].nftLock));
+
             unchecked {
                 i++;
             }
@@ -158,7 +190,7 @@ contract Deploy is Script {
 
         console.log("Plugin repositories");
         console.log(
-            "- Eultisig plugin repository (existing):",
+            "- Multisig plugin repository (existing):",
             address(deploymentParameters.multisigPluginRepo)
         );
         console.log("- Gauge voter plugin repository:", address(deployment.voterPluginRepo));
