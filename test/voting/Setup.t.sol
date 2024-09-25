@@ -26,83 +26,71 @@ import {IPluginSetup} from "@aragon/osx/framework/plugin/setup/IPluginSetup.sol"
 contract VoterSetupTest is GaugeVotingBase {
     error WrongHelpersArrayLength(uint256 length);
 
-    function testUninstall() public {
-        address[] memory currentHelpers = new address[](5);
-        currentHelpers[0] = address(curve);
-        currentHelpers[1] = address(queue);
-        currentHelpers[2] = address(escrow);
-        currentHelpers[3] = address(clock);
-        currentHelpers[4] = address(nftLock);
+    function testInstallAndUninstall() public {
+        // Verify permissions have been granted
+        assertTrue(dao.hasPermission(address(voter), address(dao), voter.GAUGE_ADMIN_ROLE(), ""));
+        assertTrue(
+            dao.hasPermission(address(escrow), address(dao), escrow.ESCROW_ADMIN_ROLE(), "")
+        );
+        assertTrue(dao.hasPermission(address(queue), address(dao), queue.QUEUE_ADMIN_ROLE(), ""));
+        assertTrue(dao.hasPermission(address(curve), address(dao), curve.CURVE_ADMIN_ROLE(), ""));
+        assertTrue(
+            dao.hasPermission(
+                address(voter),
+                address(dao),
+                voter.UPGRADE_PLUGIN_PERMISSION_ID(),
+                ""
+            )
+        );
+        assertTrue(dao.hasPermission(address(clock), address(dao), clock.CLOCK_ADMIN_ROLE(), ""));
+        assertTrue(
+            dao.hasPermission(address(nftLock), address(dao), nftLock.LOCK_ADMIN_ROLE(), "")
+        );
+        assertTrue(dao.hasPermission(address(escrow), address(dao), escrow.PAUSER_ROLE(), ""));
+        assertTrue(dao.hasPermission(address(escrow), address(dao), escrow.SWEEPER_ROLE(), ""));
+        assertTrue(dao.hasPermission(address(queue), address(dao), queue.WITHDRAW_ROLE(), ""));
 
+        // Prepare uninstallation and revoke permissions
         IPluginSetup.SetupPayload memory payload = IPluginSetup.SetupPayload({
             plugin: address(voter),
-            currentHelpers: currentHelpers,
+            currentHelpers: new address[](5),
             data: bytes("")
         });
 
-        PermissionLib.MultiTargetPermission[] memory permissions = voterSetup.prepareUninstallation(
-            address(dao),
-            payload
-        );
+        payload.currentHelpers[0] = address(curve);
+        payload.currentHelpers[1] = address(queue);
+        payload.currentHelpers[2] = address(escrow);
+        payload.currentHelpers[3] = address(clock);
+        payload.currentHelpers[4] = address(nftLock);
+
+        PermissionLib.MultiTargetPermission[] memory revokePermissions = voterSetup
+            .prepareUninstallation(address(dao), payload);
 
         vm.prank(address(dao));
-        dao.applyMultiTargetPermissions(permissions);
+        dao.applyMultiTargetPermissions(revokePermissions);
 
-        // dao should now not be admin of the plugins
-
+        // Verify permissions have been revoked
+        assertFalse(dao.hasPermission(address(voter), address(dao), voter.GAUGE_ADMIN_ROLE(), ""));
         assertFalse(
-            dao.hasPermission({
-                _who: address(dao),
-                _where: address(voter),
-                _permissionId: voter.GAUGE_ADMIN_ROLE(),
-                _data: ""
-            })
+            dao.hasPermission(address(escrow), address(dao), escrow.ESCROW_ADMIN_ROLE(), "")
         );
-
+        assertFalse(dao.hasPermission(address(queue), address(dao), queue.QUEUE_ADMIN_ROLE(), ""));
+        assertFalse(dao.hasPermission(address(curve), address(dao), curve.CURVE_ADMIN_ROLE(), ""));
         assertFalse(
-            dao.hasPermission({
-                _who: address(dao),
-                _where: address(curve),
-                _permissionId: curve.CURVE_ADMIN_ROLE(),
-                _data: ""
-            })
+            dao.hasPermission(
+                address(voter),
+                address(dao),
+                voter.UPGRADE_PLUGIN_PERMISSION_ID(),
+                ""
+            )
         );
-
+        assertFalse(dao.hasPermission(address(clock), address(dao), clock.CLOCK_ADMIN_ROLE(), ""));
         assertFalse(
-            dao.hasPermission({
-                _who: address(dao),
-                _where: address(queue),
-                _permissionId: queue.QUEUE_ADMIN_ROLE(),
-                _data: ""
-            })
+            dao.hasPermission(address(nftLock), address(dao), nftLock.LOCK_ADMIN_ROLE(), "")
         );
-
-        assertFalse(
-            dao.hasPermission({
-                _who: address(escrow),
-                _where: address(dao),
-                _permissionId: escrow.ESCROW_ADMIN_ROLE(),
-                _data: ""
-            })
-        );
-
-        assertFalse(
-            dao.hasPermission({
-                _who: address(voter),
-                _where: address(dao),
-                _permissionId: voter.UPGRADE_PLUGIN_PERMISSION_ID(),
-                _data: ""
-            })
-        );
-
-        assertFalse(
-            dao.hasPermission({
-                _who: address(nftLock),
-                _where: address(dao),
-                _permissionId: nftLock.LOCK_ADMIN_ROLE(),
-                _data: ""
-            })
-        );
+        assertFalse(dao.hasPermission(address(escrow), address(dao), escrow.PAUSER_ROLE(), ""));
+        assertFalse(dao.hasPermission(address(escrow), address(dao), escrow.SWEEPER_ROLE(), ""));
+        assertFalse(dao.hasPermission(address(queue), address(dao), queue.WITHDRAW_ROLE(), ""));
     }
 
     function testCantPassIncorrectHelpers() public {
