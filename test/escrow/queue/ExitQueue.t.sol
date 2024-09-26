@@ -13,11 +13,11 @@ contract TestExitQueue is ExitQueueBase {
     function testFuzz_initialState(
         address _escrow,
         uint256 _cooldown,
-        uint256 _fee,
+        uint16 _fee,
         address _clock,
         uint256 _minLock
     ) public {
-        vm.assume(_fee <= 1e18);
+        vm.assume(_fee <= 10_000);
         DAO dao_ = createTestDAO(address(this));
         queue = _deployExitQueue(
             address(_escrow),
@@ -55,8 +55,8 @@ contract TestExitQueue is ExitQueueBase {
         queue.setMinLock(0);
     }
 
-    function testFuzz_canUpdateFee(uint256 _fee) public {
-        vm.assume(_fee <= 1e18);
+    function testFuzz_canUpdateFee(uint16 _fee) public {
+        vm.assume(_fee <= 10_000);
         vm.expectEmit(false, false, true, false);
         emit FeePercentSet(_fee);
         queue.setFeePercent(_fee);

@@ -26,13 +26,13 @@ contract TestExitQueueWithdrawals is ExitQueueBase {
     }
 
     // vary the fee percent with a fixed locked amount to check it calculates correctly
-    function testFuzz_feeCalculatesCorretly(uint64 _fee) public {
-        if (_fee > 1e18) {
-            _fee = 1e18;
+    function testFuzz_feeCalculatesCorretly(uint16 _fee) public {
+        if (_fee > queue.MAX_FEE_PERCENT()) {
+            _fee = queue.MAX_FEE_PERCENT();
         }
         queue.setFeePercent(_fee);
 
-        uint256 expectedFee = (100e18 * uint(_fee)) / 1e18;
+        uint256 expectedFee = (100e18 * uint(_fee)) / 10_000;
 
         assertEq(queue.calculateFee(1), expectedFee);
     }

@@ -31,11 +31,11 @@ contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote {
     }
 
     // setup a fee withdrawal
-    function testFuzz_feeWithdrawal(uint64 _fee, uint128 _dep, address _who) public {
+    function testFuzz_feeWithdrawal(uint16 _fee, uint128 _dep, address _who) public {
         vm.assume(_who != address(0) && _who != address(queue) && _who != address(escrow));
         vm.assume(_dep > 0);
 
-        if (_fee > 1e18) _fee = 1e18;
+        if (_fee > 10_000) _fee = 10_000;
 
         queue.setFeePercent(_fee);
 
@@ -96,7 +96,7 @@ contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote {
         // remainder sent to user
         assertEq(token.balanceOf(_who), _dep - fee);
 
-        bool feeDepTooSmall = uint(_fee) * uint(_dep) < 1e18;
+        bool feeDepTooSmall = uint(_fee) * uint(_dep) < 10_000;
 
         if (_fee == 0 || feeDepTooSmall) {
             assertEq(token.balanceOf(_who), _dep);
