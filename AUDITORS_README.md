@@ -30,6 +30,7 @@ QuadraticIncreasingEscrow attempts to follow a generalised structure that can wo
 | I        | 7.12 (HAL-22) Critical roles not assigned in contract setup                                    | Fixed        | https://github.com/aragon/ve-governance/pull/11 |
 | I        | 7.19 (HAL-05) Unnecessary calculation in checkpoint function (+other simple gas optimisations) | Fixed        | https://github.com/aragon/ve-governance/pull/12 |
 | I        | 7.20 (HAL-20) Potentially unnecessary check in reset function                                  | Fixed        | https://github.com/aragon/ve-governance/pull/13 |
+| I        | 7.18 (HAL-19) Fee precision too high                                                           | Fixed        | https://github.com/aragon/ve-governance/pull/14 |
 
 ## Not yet Done
 
@@ -38,7 +39,6 @@ QuadraticIncreasingEscrow attempts to follow a generalised structure that can wo
 | L        | 7.9 (HAL-17) Potential bypass of minimum lock time at checkpoint boundaries   |        |
 | M        | 7.8 (HAL-11) Incorrect balance tracking for non-standard ERC20 tokens         |        |
 | M        | 7.7 (HAL-06) Checkpoint function allows non-chronological updates             |        |
-| I        | 7.18 (HAL-19) Fee precision too high                                          |        |
 | I        | 7.17 (HAL-18) Redundant exit check and missing documentation in exit function |        |
 | I        | 7.16 (HAL-09) Unset dependencies may cause reverts and improper behavior      |        |
 | I        | 7.15 (HAL-07) Misleading variable name for user interaction tracking          |        |
