@@ -170,14 +170,20 @@ contract Deploy is Script {
         console.log("- Multisig plugin:", address(deployment.multisigPlugin));
         console.log("");
 
-        for (uint i = 0; i < deployment.gaugePluginSets.length; ) {
+        for (uint i = 0; i < deployment.gaugeVoterPluginSets.length; ) {
             console.log("- Using token:", address(deploymentParameters.tokenParameters[i].token));
-            console.log("  Gauge voter plugin:", address(deployment.gaugePluginSets[i].plugin));
-            console.log("  Curve:", address(deployment.gaugePluginSets[i].curve));
-            console.log("  Exit Queue:", address(deployment.gaugePluginSets[i].exitQueue));
-            console.log("  Voting Escrow:", address(deployment.gaugePluginSets[i].votingEscrow));
-            console.log("  Clock:", address(deployment.gaugePluginSets[i].clock));
-            console.log("  NFT Lock:", address(deployment.gaugePluginSets[i].nftLock));
+            console.log(
+                "  Gauge voter plugin:",
+                address(deployment.gaugeVoterPluginSets[i].plugin)
+            );
+            console.log("  Curve:", address(deployment.gaugeVoterPluginSets[i].curve));
+            console.log("  Exit Queue:", address(deployment.gaugeVoterPluginSets[i].exitQueue));
+            console.log(
+                "  Voting Escrow:",
+                address(deployment.gaugeVoterPluginSets[i].votingEscrow)
+            );
+            console.log("  Clock:", address(deployment.gaugeVoterPluginSets[i].clock));
+            console.log("  NFT Lock:", address(deployment.gaugeVoterPluginSets[i].nftLock));
 
             unchecked {
                 i++;
@@ -190,7 +196,7 @@ contract Deploy is Script {
             "- Multisig plugin repository (existing):",
             address(deploymentParameters.multisigPluginRepo)
         );
-        console.log("- Gauge voter plugin repository:", address(deployment.voterPluginRepo));
+        console.log("- Gauge voter plugin repository:", address(deployment.gaugeVoterPluginRepo));
         console.log("");
 
         console.log("Helpers");

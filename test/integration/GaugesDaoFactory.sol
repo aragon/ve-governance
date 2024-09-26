@@ -4,6 +4,7 @@ pragma solidity ^0.8.17;
 import "forge-std/Test.sol";
 import {GaugesDaoFactory, Deployment, DeploymentParameters, TokenParameters} from "../../src/factory/GaugesDaoFactory.sol";
 import {MockPluginSetupProcessor} from "../mocks/osx/MockPSP.sol";
+import {MockPluginSetupProcessorMulti} from "../mocks/osx/MockPSPMulti.sol";
 import {MockPluginRepoRegistry} from "../mocks/osx/MockPluginRepoRegistry.sol";
 import {MockDAOFactory} from "../mocks/osx/MockDaoFactory.sol";
 import {PluginSetupProcessor} from "@aragon/osx/framework/plugin/setup/PluginSetupProcessor.sol";
@@ -39,8 +40,8 @@ contract GaugesDaoFactoryTest is Test {
         PluginRepoFactory pRefoFactory = new PluginRepoFactory(
             PluginRepoRegistry(address(pRepoRegistry))
         );
-        MockPluginSetupProcessor psp = new MockPluginSetupProcessor(address(0));
-        MockDAOFactory daoFactory = new MockDAOFactory(psp);
+        MockPluginSetupProcessorMulti psp = new MockPluginSetupProcessorMulti(new address[](0));
+        MockDAOFactory daoFactory = new MockDAOFactory(MockPluginSetupProcessor(address(psp)));
 
         TokenParameters[] memory tokenParameters = new TokenParameters[](2);
         tokenParameters[0] = TokenParameters({
@@ -204,8 +205,8 @@ contract GaugesDaoFactoryTest is Test {
         PluginRepoFactory pRefoFactory = new PluginRepoFactory(
             PluginRepoRegistry(address(pRepoRegistry))
         );
-        MockPluginSetupProcessor psp = new MockPluginSetupProcessor(address(0));
-        MockDAOFactory daoFactory = new MockDAOFactory(psp);
+        MockPluginSetupProcessorMulti psp = new MockPluginSetupProcessorMulti(new address[](0));
+        MockDAOFactory daoFactory = new MockDAOFactory(MockPluginSetupProcessor(address(psp)));
 
         TokenParameters[] memory tokenParameters = new TokenParameters[](2);
         tokenParameters[0] = TokenParameters({
@@ -356,7 +357,21 @@ contract GaugesDaoFactoryTest is Test {
             multisigMembers[i] = address(uint160(i + 5));
         }
 
-        PluginRepo multisigPluginRepo = PluginRepo(vm.envAddress("MULTISIG_PLUGIN_REPO_ADDRESS"));
+        PluginRepoFactory pRefoFactory = new PluginRepoFactory(
+            PluginRepoRegistry(address(new MockPluginRepoRegistry()))
+        );
+
+        // Publish repo
+        MultisigPluginSetup multisigPluginSetup = new MultisigPluginSetup();
+        PluginRepo multisigPluginRepo = PluginRepoFactory(pRefoFactory)
+            .createPluginRepoWithFirstVersion(
+                "multisig-subdomain",
+                address(multisigPluginSetup),
+                address(this),
+                " ",
+                " "
+            );
+
         SimpleGaugeVoterSetup gaugeVoterPluginSetup = new SimpleGaugeVoterSetup(
             address(new SimpleGaugeVoter()),
             address(new QuadraticIncreasingEscrow()),
@@ -366,24 +381,29 @@ contract GaugesDaoFactoryTest is Test {
             address(new Lock())
         );
 
-        MockPluginRepoRegistry pRepoRegistry = new MockPluginRepoRegistry();
-        PluginRepoFactory pRefoFactory = new PluginRepoFactory(
-            PluginRepoRegistry(address(pRepoRegistry))
-        );
-        MockPluginSetupProcessor psp = new MockPluginSetupProcessor(address(0));
-        MockDAOFactory daoFactory = new MockDAOFactory(psp);
-
         TokenParameters[] memory tokenParameters = new TokenParameters[](2);
         tokenParameters[0] = TokenParameters({
-            token: address(111),
+            token: address(deployMockERC20("T1", "T1", 18)),
             veTokenName: "Name 1",
             veTokenSymbol: "TK1"
         });
         tokenParameters[1] = TokenParameters({
-            token: address(222),
+            token: address(deployMockERC20("T2", "T2", 18)),
             veTokenName: "Name 2",
             veTokenSymbol: "TK2"
         });
+
+        // PSP with voter plugin setup and multisig
+        MockPluginSetupProcessorMulti psp;
+        {
+            address[] memory pluginSetups = new address[](3);
+            pluginSetups[0] = address(gaugeVoterPluginSetup); // Token 1
+            pluginSetups[1] = address(gaugeVoterPluginSetup); // Token 2
+            pluginSetups[2] = address(multisigPluginSetup);
+
+            psp = new MockPluginSetupProcessorMulti(pluginSetups);
+        }
+        MockDAOFactory daoFactory = new MockDAOFactory(MockPluginSetupProcessor(address(psp)));
 
         DeploymentParameters memory creationParams = DeploymentParameters({
             // Multisig settings
@@ -480,7 +500,7 @@ contract GaugesDaoFactoryTest is Test {
         }
         for (uint256 i = 14; i < 50; i++) {
             assertEq(
-                deployment.multisigPlugin.isMember(address(uint160(i))),
+                deployment.multisigPlugin.isMember(address(uint160(i + 5))),
                 false,
                 "Should not be a member"
             );
@@ -489,51 +509,138 @@ contract GaugesDaoFactoryTest is Test {
             (bool onlyListed, uint16 minApprovals) = deployment.multisigPlugin.multisigSettings();
 
             assertEq(onlyListed, true, "Invalid onlyListed");
-            assertEq(minApprovals, 7, "Invalid minApprovals");
+            assertEq(minApprovals, 2, "Invalid minApprovals");
         }
 
         // Gauge voter plugin
 
-        // assertNotEq(
-        //     address(deployment.optimisticTokenVotingPlugin),
-        //     address(0),
-        //     "Empty optimisticTokenVotingPlugin field"
-        // );
-        // assertEq(
-        //     address(deployment.optimisticTokenVotingPlugin.votingToken()),
-        //     address(tokenAddress),
-        //     "Invalid votingToken"
-        // );
-        // assertEq(
-        //     address(deployment.optimisticTokenVotingPlugin.gaugesL1()),
-        //     address(gaugesL1ContractAddress),
-        //     "Invalid gaugesL1"
-        // );
-        // assertEq(
-        //     address(deployment.optimisticTokenVotingPlugin.gaugesBridge()),
-        //     address(gaugesBridgeAddress),
-        //     "Invalid gaugesBridge"
-        // );
-        // assertEq(
-        //     deployment.optimisticTokenVotingPlugin.proposalCount(),
-        //     0,
-        //     "Invalid proposal count"
-        // );
-        // {
-        //     (
-        //         uint32 minVetoRatio,
-        //         uint64 minDuration,
-        //         uint64 l2InactivityPeriod,
-        //         uint64 l2AggregationGracePeriod,
-        //         bool skipL2
-        //     ) = deployment.optimisticTokenVotingPlugin.governanceSettings();
-
-        //     assertEq(minVetoRatio, 200_000, "Invalid minVetoRatio");
-        //     assertEq(minDuration, 0, "Invalid minDuration"); // 10 days is enforced on the condition contract
-        //     assertEq(l2InactivityPeriod, 10 minutes, "Invalid l2InactivityPeriod");
-        //     assertEq(l2AggregationGracePeriod, 2 days, "Invalid l2AggregationGracePeriod");
-        //     assertEq(skipL2, false, "Invalid skipL2");
-        // }
+        assertEq(
+            deployment.gaugeVoterPluginSets.length,
+            2,
+            "Incorrect gaugeVoterPluginSets length"
+        );
+        // 0
+        assertNotEq(
+            address(deployment.gaugeVoterPluginSets[0].plugin),
+            address(0),
+            "Empty plugin address"
+        );
+        assertNotEq(
+            address(deployment.gaugeVoterPluginSets[0].curve),
+            address(0),
+            "Empty curve address"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[0].curve.warmupPeriod(),
+            1234,
+            "Incorrect warmupPeriod"
+        );
+        assertNotEq(
+            address(deployment.gaugeVoterPluginSets[0].exitQueue),
+            address(0),
+            "Empty exitQueue address"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[0].exitQueue.feePercent(),
+            0.5 ether,
+            "Incorrect feePercent"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[0].exitQueue.cooldown(),
+            2345,
+            "Incorrect cooldown"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[0].exitQueue.minLock(),
+            3456,
+            "Incorrect minLock"
+        );
+        assertNotEq(
+            address(deployment.gaugeVoterPluginSets[0].votingEscrow),
+            address(0),
+            "Empty votingEscrow address"
+        );
+        assertNotEq(
+            address(deployment.gaugeVoterPluginSets[0].clock),
+            address(0),
+            "Empty clock address"
+        );
+        assertNotEq(
+            address(deployment.gaugeVoterPluginSets[0].nftLock),
+            address(0),
+            "Empty nftLock address"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[0].nftLock.name(),
+            tokenParameters[0].veTokenName,
+            "Incorrect veTokenName"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[0].nftLock.symbol(),
+            tokenParameters[0].veTokenSymbol,
+            "Incorrect veTokenSymbol"
+        );
+        // 1
+        assertNotEq(
+            address(deployment.gaugeVoterPluginSets[1].plugin),
+            address(0),
+            "Empty plugin address"
+        );
+        assertNotEq(
+            address(deployment.gaugeVoterPluginSets[1].curve),
+            address(0),
+            "Empty curve address"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[1].curve.warmupPeriod(),
+            1234,
+            "Incorrect warmupPeriod"
+        );
+        assertNotEq(
+            address(deployment.gaugeVoterPluginSets[1].exitQueue),
+            address(0),
+            "Empty exitQueue address"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[1].exitQueue.feePercent(),
+            0.5 ether,
+            "Incorrect feePercent"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[1].exitQueue.cooldown(),
+            2345,
+            "Incorrect cooldown"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[1].exitQueue.minLock(),
+            3456,
+            "Incorrect minLock"
+        );
+        assertNotEq(
+            address(deployment.gaugeVoterPluginSets[1].votingEscrow),
+            address(0),
+            "Empty votingEscrow address"
+        );
+        assertNotEq(
+            address(deployment.gaugeVoterPluginSets[1].clock),
+            address(0),
+            "Empty clock address"
+        );
+        assertNotEq(
+            address(deployment.gaugeVoterPluginSets[1].nftLock),
+            address(0),
+            "Empty nftLock address"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[1].nftLock.name(),
+            tokenParameters[1].veTokenName,
+            "Incorrect veTokenName"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[1].nftLock.symbol(),
+            tokenParameters[1].veTokenSymbol,
+            "Incorrect veTokenSymbol"
+        );
 
         // PLUGIN REPO's
 
@@ -542,436 +649,506 @@ contract GaugesDaoFactoryTest is Test {
         // Multisig code
         version = multisigPluginRepo.getLatestVersion(1);
         assertEq(
-            address(MultisigPluginSetup(version.pluginSetup).implementation()),
+            address(multisigPluginSetup.implementation()),
             address(deployment.multisigPlugin.implementation()),
             "Invalid multisigPluginSetup"
         );
 
-        // // Gauge voter plugin
-        // assertNotEq(
-        //     address(deployment.optimisticTokenVotingPluginRepo),
-        //     address(0),
-        //     "Empty optimisticTokenVotingPluginRepo field"
-        // );
-        // assertEq(
-        //     deployment.optimisticTokenVotingPluginRepo.latestRelease(),
-        //     1,
-        //     "Invalid latestRelease"
-        // );
-        // assertEq(deployment.optimisticTokenVotingPluginRepo.buildCount(1), 1, "Invalid buildCount");
-        // version = deployment.optimisticTokenVotingPluginRepo.getLatestVersion(1);
-        // assertEq(
-        //     address(version.pluginSetup),
-        //     address(gaugeVoterPluginSetup),
-        //     "Invalid pluginSetup"
-        // );
+        // Gauge voter plugin
+        assertNotEq(
+            address(deployment.gaugeVoterPluginRepo),
+            address(0),
+            "Empty gaugeVoterPluginRepo field"
+        );
+        assertEq(deployment.gaugeVoterPluginRepo.latestRelease(), 1, "Invalid latestRelease");
+        assertEq(deployment.gaugeVoterPluginRepo.buildCount(1), 1, "Invalid buildCount");
+        version = deployment.gaugeVoterPluginRepo.getLatestVersion(1);
+        assertEq(
+            address(version.pluginSetup),
+            address(gaugeVoterPluginSetup),
+            "Invalid gaugeVoterPluginSetup"
+        );
     }
 
-    // function test_StandardDeployment_2() public {
-    //     DAO tempMgmtDao = DAO(
-    //         payable(
-    //             createProxyAndCall(
-    //                 address(DAO_BASE),
-    //                 abi.encodeCall(DAO.initialize, ("", address(this), address(0x0), ""))
-    //             )
-    //         )
-    //     );
+    function test_StandardDeployment_2() public {
+        address[] memory multisigMembers = new address[](13);
+        for (uint256 i = 0; i < 13; i++) {
+            multisigMembers[i] = address(uint160(i + 10));
+        }
 
-    //     GovernanceERC20Mock tokenAddress = new GovernanceERC20Mock(address(tempMgmtDao));
-    //     GaugesL1Mock gaugesL1ContractAddress = new GaugesL1Mock();
-    //     address gaugesBridgeAddress = address(0x5678);
-    //     address[] memory multisigMembers = new address[](16);
-    //     for (uint256 i = 0; i < 16; i++) {
-    //         multisigMembers[i] = address(uint160(i + 1));
-    //     }
+        PluginRepoFactory pRefoFactory = new PluginRepoFactory(
+            PluginRepoRegistry(address(new MockPluginRepoRegistry()))
+        );
 
-    //     MultisigPluginSetup multisigPluginSetup = new MultisigPluginSetup();
-    //     EmergencyMultisigPluginSetup emergencyMultisigPluginSetup = new EmergencyMultisigPluginSetup();
-    //     GovernanceERC20.MintSettings memory mintSettings = GovernanceERC20.MintSettings({
-    //         receivers: new address[](0),
-    //         amounts: new uint256[](0)
-    //     });
-    //     OptimisticTokenVotingPluginSetup voterPluginSetup = new OptimisticTokenVotingPluginSetup(
-    //         new GovernanceERC20(tempMgmtDao, "", "", mintSettings),
-    //         new GovernanceWrappedERC20(tokenAddress, "", "")
-    //     );
+        // Publish repo
+        MultisigPluginSetup multisigPluginSetup = new MultisigPluginSetup();
+        PluginRepo multisigPluginRepo = PluginRepoFactory(pRefoFactory)
+            .createPluginRepoWithFirstVersion(
+                "multisig-2-subdomain",
+                address(multisigPluginSetup),
+                address(this),
+                " ",
+                " "
+            );
 
-    //     PluginRepoFactory pRefoFactory;
-    //     MockPluginSetupProcessor psp;
-    //     {
-    //         MockPluginRepoRegistry pRepoRegistry = new MockPluginRepoRegistry();
-    //         pRefoFactory = new PluginRepoFactory(PluginRepoRegistry(address(pRepoRegistry)));
+        SimpleGaugeVoterSetup gaugeVoterPluginSetup = new SimpleGaugeVoterSetup(
+            address(new SimpleGaugeVoter()),
+            address(new QuadraticIncreasingEscrow()),
+            address(new ExitQueue()),
+            address(new VotingEscrow()),
+            address(new Clock()),
+            address(new Lock())
+        );
 
-    //         address[] memory setups = new address[](3);
-    //         // adding in reverse order (stack)
-    //         setups[2] = address(multisigPluginSetup);
-    //         setups[1] = address(emergencyMultisigPluginSetup);
-    //         setups[0] = address(voterPluginSetup);
-    //         psp = new MockPluginSetupProcessor(setups);
-    //     }
-    //     MockDAOFactory daoFactory = new MockDAOFactory(psp);
+        TokenParameters[] memory tokenParameters = new TokenParameters[](3);
+        tokenParameters[0] = TokenParameters({
+            token: address(deployMockERC20("T3", "T3", 18)),
+            veTokenName: "Name 3",
+            veTokenSymbol: "TK3"
+        });
+        tokenParameters[1] = TokenParameters({
+            token: address(deployMockERC20("T4", "T4", 18)),
+            veTokenName: "Name 4",
+            veTokenSymbol: "TK4"
+        });
+        tokenParameters[2] = TokenParameters({
+            token: address(deployMockERC20("T5", "T5", 18)),
+            veTokenName: "Name 5",
+            veTokenSymbol: "TK5"
+        });
 
-    //     DeploymentParameters memory creationParams = DeploymentParameters({
-    //         // Gauges contract settings
-    //         tokenAddress: tokenAddress,
-    //         gaugesL1ContractAddress: address(gaugesL1ContractAddress), // address
-    //         gaugesBridgeAddress: gaugesBridgeAddress, // address
-    //         l2InactivityPeriod: 27 minutes, // uint64
-    //         l2AggregationGracePeriod: 3 days, // uint64
-    //         skipL2: true,
-    //         // Voting settings
-    //         minVetoRatio: 456_000, // uint32
-    //         minStdProposalDuration: 21 days, // uint64
-    //         minStdApprovals: 9, // uint16
-    //         minEmergencyApprovals: 15, // uint16
-    //         // OSx contracts
-    //         osxDaoFactory: address(daoFactory),
-    //         pluginSetupProcessor: PluginSetupProcessor(address(psp)), // PluginSetupProcessor
-    //         pluginRepoFactory: PluginRepoFactory(address(pRefoFactory)), // PluginRepoFactory
-    //         // Plugin setup's
-    //         multisigPluginSetup: multisigPluginSetup,
-    //         emergencyMultisigPluginSetup: emergencyMultisigPluginSetup,
-    //         voterPluginSetup: voterPluginSetup,
-    //         // Multisig
-    //         multisigMembers: multisigMembers, // address[]
-    //         multisigExpirationPeriod: 22 days,
-    //         // ENS
-    //         stdMultisigEnsDomain: "multisig", // string
-    //         emergencyMultisigEnsDomain: "eMultisig", // string
-    //         optimisticTokenVotingEnsDomain: "optimistic" // string
-    //     });
+        // PSP with voter plugin setup and multisig
+        MockPluginSetupProcessorMulti psp;
+        {
+            address[] memory pluginSetups = new address[](4);
+            pluginSetups[0] = address(gaugeVoterPluginSetup); // Token 1
+            pluginSetups[1] = address(gaugeVoterPluginSetup); // Token 2
+            pluginSetups[2] = address(gaugeVoterPluginSetup); // Token 3
+            pluginSetups[3] = address(multisigPluginSetup);
 
-    //     // Deploy
-    //     GaugesDaoFactory factory = new GaugesDaoFactory(creationParams);
+            psp = new MockPluginSetupProcessorMulti(pluginSetups);
+        }
+        MockDAOFactory daoFactory = new MockDAOFactory(MockPluginSetupProcessor(address(psp)));
 
-    //     factory.deployOnce();
-    //     GaugesDaoFactory.Deployment memory deployment = factory.getDeployment();
+        DeploymentParameters memory creationParams = DeploymentParameters({
+            // Multisig settings
+            minApprovals: 5,
+            multisigMembers: multisigMembers,
+            // Gauge Voter
+            tokenParameters: tokenParameters,
+            feePercent: 0.2 ether,
+            warmupPeriod: 5678,
+            cooldownPeriod: 6789,
+            minLockDuration: 7890,
+            votingPaused: false,
+            // Standard multisig repo
+            multisigPluginRepo: multisigPluginRepo,
+            multisigPluginRelease: 1,
+            multisigPluginBuild: 2,
+            // Voter plugin setup and ENS
+            voterPluginSetup: gaugeVoterPluginSetup,
+            voterEnsSubdomain: "gauge-ens-subdomain",
+            // OSx addresses
+            osxDaoFactory: address(daoFactory),
+            pluginSetupProcessor: PluginSetupProcessor(address(psp)),
+            pluginRepoFactory: pRefoFactory
+        });
 
-    //     vm.roll(block.number + 1); // mint one block
+        GaugesDaoFactory factory = new GaugesDaoFactory(creationParams);
 
-    //     // DAO checks
+        factory.deployOnce();
+        Deployment memory deployment = factory.getDeployment();
 
-    //     assertNotEq(address(deployment.dao), address(0), "Empty DAO field");
-    //     assertEq(deployment.dao.daoURI(), "", "DAO URI should be empty");
-    //     assertEq(
-    //         address(deployment.dao.signatureValidator()),
-    //         address(0),
-    //         "signatureValidator should be empty"
-    //     );
-    //     assertEq(
-    //         address(deployment.dao.getTrustedForwarder()),
-    //         address(0),
-    //         "trustedForwarder should be empty"
-    //     );
-    //     assertEq(
-    //         deployment.dao.hasPermission(
-    //             address(deployment.dao),
-    //             address(deployment.dao),
-    //             deployment.dao.ROOT_PERMISSION_ID(),
-    //             bytes("")
-    //         ),
-    //         true,
-    //         "The DAO should be ROOT on itself"
-    //     );
-    //     assertEq(
-    //         deployment.dao.hasPermission(
-    //             address(deployment.dao),
-    //             address(deployment.dao),
-    //             deployment.dao.UPGRADE_DAO_PERMISSION_ID(),
-    //             bytes("")
-    //         ),
-    //         true,
-    //         "The DAO should have UPGRADE_DAO_PERMISSION on itself"
-    //     );
-    //     assertEq(
-    //         deployment.dao.hasPermission(
-    //             address(deployment.dao),
-    //             address(deployment.dao),
-    //             deployment.dao.REGISTER_STANDARD_CALLBACK_PERMISSION_ID(),
-    //             bytes("")
-    //         ),
-    //         true,
-    //         "The DAO should have REGISTER_STANDARD_CALLBACK_PERMISSION_ID on itself"
-    //     );
+        vm.roll(block.number + 1); // mint one block
 
-    //     // Multisig plugin
+        // DAO checks
 
-    //     assertNotEq(address(deployment.multisigPlugin), address(0), "Empty multisig field");
-    //     assertEq(
-    //         deployment.multisigPlugin.lastMultisigSettingsChange(),
-    //         block.number - 1,
-    //         "Invalid lastMultisigSettingsChange"
-    //     );
-    //     assertEq(deployment.multisigPlugin.proposalCount(), 0, "Invalid proposal count");
-    //     assertEq(deployment.multisigPlugin.addresslistLength(), 16, "Invalid addresslistLength");
-    //     for (uint256 i = 0; i < 16; i++) {
-    //         assertEq(
-    //             deployment.multisigPlugin.isMember(multisigMembers[i]),
-    //             true,
-    //             "Should be a member"
-    //         );
-    //     }
-    //     for (uint256 i = 17; i < 50; i++) {
-    //         assertEq(
-    //             deployment.multisigPlugin.isMember(address(uint160(i))),
-    //             false,
-    //             "Should not be a member"
-    //         );
-    //     }
-    //     {
-    //         (
-    //             bool onlyListed,
-    //             uint16 minApprovals,
-    //             uint64 destinationProposalDuration,
-    //             uint64 expirationPeriod
-    //         ) = deployment.multisigPlugin.multisigSettings();
+        assertNotEq(address(deployment.dao), address(0), "Empty DAO field");
+        assertEq(deployment.dao.daoURI(), "", "DAO URI should be empty");
+        assertEq(
+            address(deployment.dao.signatureValidator()),
+            address(0),
+            "signatureValidator should be empty"
+        );
+        assertEq(
+            address(deployment.dao.getTrustedForwarder()),
+            address(0),
+            "trustedForwarder should be empty"
+        );
+        assertEq(
+            deployment.dao.hasPermission(
+                address(deployment.dao),
+                address(deployment.dao),
+                deployment.dao.ROOT_PERMISSION_ID(),
+                bytes("")
+            ),
+            true,
+            "The DAO should be ROOT on itself"
+        );
+        assertEq(
+            deployment.dao.hasPermission(
+                address(deployment.dao),
+                address(deployment.dao),
+                deployment.dao.UPGRADE_DAO_PERMISSION_ID(),
+                bytes("")
+            ),
+            true,
+            "The DAO should have UPGRADE_DAO_PERMISSION on itself"
+        );
+        assertEq(
+            deployment.dao.hasPermission(
+                address(deployment.dao),
+                address(deployment.dao),
+                deployment.dao.REGISTER_STANDARD_CALLBACK_PERMISSION_ID(),
+                bytes("")
+            ),
+            true,
+            "The DAO should have REGISTER_STANDARD_CALLBACK_PERMISSION_ID on itself"
+        );
 
-    //         assertEq(onlyListed, true, "Invalid onlyListed");
-    //         assertEq(minApprovals, 9, "Invalid minApprovals");
-    //         assertEq(destinationProposalDuration, 21 days, "Invalid destinationProposalDuration");
-    //         assertEq(expirationPeriod, 22 days, "Invalid expirationPeriod");
-    //     }
+        // Multisig plugin
 
-    //     // Emergency Multisig plugin
+        assertNotEq(address(deployment.multisigPlugin), address(0), "Empty multisig field");
+        assertEq(
+            deployment.multisigPlugin.lastMultisigSettingsChange(),
+            block.number - 1,
+            "Invalid lastMultisigSettingsChange"
+        );
+        assertEq(deployment.multisigPlugin.proposalCount(), 0, "Invalid proposal count");
+        assertEq(deployment.multisigPlugin.addresslistLength(), 13, "Invalid addresslistLength");
+        for (uint256 i = 0; i < 13; i++) {
+            assertEq(
+                deployment.multisigPlugin.isMember(multisigMembers[i]),
+                true,
+                "Should be a member"
+            );
+        }
+        for (uint256 i = 14; i < 50; i++) {
+            assertEq(
+                deployment.multisigPlugin.isMember(address(uint160(i + 10))),
+                false,
+                "Should not be a member"
+            );
+        }
+        {
+            (bool onlyListed, uint16 minApprovals) = deployment.multisigPlugin.multisigSettings();
 
-    //     assertNotEq(
-    //         address(deployment.emergencyMultisigPlugin),
-    //         address(0),
-    //         "Empty emergencyMultisig field"
-    //     );
-    //     assertEq(
-    //         deployment.emergencyMultisigPlugin.lastMultisigSettingsChange(),
-    //         block.number - 1,
-    //         "Invalid lastMultisigSettingsChange"
-    //     );
-    //     assertEq(deployment.emergencyMultisigPlugin.proposalCount(), 0, "Invalid proposal count");
-    //     for (uint256 i = 0; i < 16; i++) {
-    //         assertEq(
-    //             deployment.emergencyMultisigPlugin.isMember(multisigMembers[i]),
-    //             true,
-    //             "Should be a member"
-    //         );
-    //     }
-    //     for (uint256 i = 17; i < 50; i++) {
-    //         assertEq(
-    //             deployment.emergencyMultisigPlugin.isMember(address(uint160(i))),
-    //             false,
-    //             "Should not be a member"
-    //         );
-    //     }
-    //     {
-    //         (
-    //             bool onlyListed,
-    //             uint16 minApprovals,
-    //             Addresslist addresslistSource,
-    //             uint64 expirationPeriod
-    //         ) = deployment.emergencyMultisigPlugin.multisigSettings();
+            assertEq(onlyListed, true, "Invalid onlyListed");
+            assertEq(minApprovals, 5, "Invalid minApprovals");
+        }
 
-    //         assertEq(onlyListed, true, "Invalid onlyListed");
-    //         assertEq(minApprovals, 15, "Invalid minApprovals");
-    //         assertEq(
-    //             address(addresslistSource),
-    //             address(deployment.multisigPlugin),
-    //             "Invalid addresslistSource"
-    //         );
-    //         assertEq(expirationPeriod, 22 days, "Invalid expirationPeriod");
-    //     }
+        // Gauge voter plugin
 
-    //     // Optimistic token voting plugin checks
+        assertEq(
+            deployment.gaugeVoterPluginSets.length,
+            3,
+            "Incorrect gaugeVoterPluginSets length"
+        );
+        // 0
+        assertNotEq(
+            address(deployment.gaugeVoterPluginSets[0].plugin),
+            address(0),
+            "Empty plugin address"
+        );
+        assertNotEq(
+            address(deployment.gaugeVoterPluginSets[0].curve),
+            address(0),
+            "Empty curve address"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[0].curve.warmupPeriod(),
+            5678,
+            "Incorrect warmupPeriod"
+        );
+        assertNotEq(
+            address(deployment.gaugeVoterPluginSets[0].exitQueue),
+            address(0),
+            "Empty exitQueue address"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[0].exitQueue.feePercent(),
+            0.2 ether,
+            "Incorrect feePercent"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[0].exitQueue.cooldown(),
+            6789,
+            "Incorrect cooldown"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[0].exitQueue.minLock(),
+            7890,
+            "Incorrect minLock"
+        );
+        assertNotEq(
+            address(deployment.gaugeVoterPluginSets[0].votingEscrow),
+            address(0),
+            "Empty votingEscrow address"
+        );
+        assertNotEq(
+            address(deployment.gaugeVoterPluginSets[0].clock),
+            address(0),
+            "Empty clock address"
+        );
+        assertNotEq(
+            address(deployment.gaugeVoterPluginSets[0].nftLock),
+            address(0),
+            "Empty nftLock address"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[0].nftLock.name(),
+            tokenParameters[0].veTokenName,
+            "Incorrect veTokenName"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[0].nftLock.symbol(),
+            tokenParameters[0].veTokenSymbol,
+            "Incorrect veTokenSymbol"
+        );
+        // 1
+        assertNotEq(
+            address(deployment.gaugeVoterPluginSets[1].plugin),
+            address(0),
+            "Empty plugin address"
+        );
+        assertNotEq(
+            address(deployment.gaugeVoterPluginSets[1].curve),
+            address(0),
+            "Empty curve address"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[1].curve.warmupPeriod(),
+            5678,
+            "Incorrect warmupPeriod"
+        );
+        assertNotEq(
+            address(deployment.gaugeVoterPluginSets[1].exitQueue),
+            address(0),
+            "Empty exitQueue address"
+        );
+        assertNotEq(
+            address(deployment.gaugeVoterPluginSets[1].votingEscrow),
+            address(0),
+            "Empty votingEscrow address"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[1].exitQueue.feePercent(),
+            0.2 ether,
+            "Incorrect feePercent"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[1].exitQueue.cooldown(),
+            6789,
+            "Incorrect cooldown"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[1].exitQueue.minLock(),
+            7890,
+            "Incorrect minLock"
+        );
+        assertNotEq(
+            address(deployment.gaugeVoterPluginSets[1].clock),
+            address(0),
+            "Empty clock address"
+        );
+        assertNotEq(
+            address(deployment.gaugeVoterPluginSets[1].nftLock),
+            address(0),
+            "Empty nftLock address"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[1].nftLock.name(),
+            tokenParameters[1].veTokenName,
+            "Incorrect veTokenName"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[1].nftLock.symbol(),
+            tokenParameters[1].veTokenSymbol,
+            "Incorrect veTokenSymbol"
+        );
+        // 2
+        assertNotEq(
+            address(deployment.gaugeVoterPluginSets[2].plugin),
+            address(0),
+            "Empty plugin address"
+        );
+        assertNotEq(
+            address(deployment.gaugeVoterPluginSets[2].curve),
+            address(0),
+            "Empty curve address"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[2].curve.warmupPeriod(),
+            5678,
+            "Incorrect warmupPeriod"
+        );
+        assertNotEq(
+            address(deployment.gaugeVoterPluginSets[2].exitQueue),
+            address(0),
+            "Empty exitQueue address"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[2].exitQueue.feePercent(),
+            0.2 ether,
+            "Incorrect feePercent"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[2].exitQueue.cooldown(),
+            6789,
+            "Incorrect cooldown"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[2].exitQueue.minLock(),
+            7890,
+            "Incorrect minLock"
+        );
+        assertNotEq(
+            address(deployment.gaugeVoterPluginSets[2].votingEscrow),
+            address(0),
+            "Empty votingEscrow address"
+        );
+        assertNotEq(
+            address(deployment.gaugeVoterPluginSets[2].clock),
+            address(0),
+            "Empty clock address"
+        );
+        assertNotEq(
+            address(deployment.gaugeVoterPluginSets[2].nftLock),
+            address(0),
+            "Empty nftLock address"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[2].nftLock.name(),
+            tokenParameters[2].veTokenName,
+            "Incorrect veTokenName"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[2].nftLock.symbol(),
+            tokenParameters[2].veTokenSymbol,
+            "Incorrect veTokenSymbol"
+        );
 
-    //     assertNotEq(
-    //         address(deployment.optimisticTokenVotingPlugin),
-    //         address(0),
-    //         "Empty optimisticTokenVotingPlugin field"
-    //     );
-    //     assertEq(
-    //         address(deployment.optimisticTokenVotingPlugin.votingToken()),
-    //         address(tokenAddress),
-    //         "Invalid votingToken"
-    //     );
-    //     assertEq(
-    //         address(deployment.optimisticTokenVotingPlugin.gaugesL1()),
-    //         address(gaugesL1ContractAddress),
-    //         "Invalid gaugesL1"
-    //     );
-    //     assertEq(
-    //         address(deployment.optimisticTokenVotingPlugin.gaugesBridge()),
-    //         address(gaugesBridgeAddress),
-    //         "Invalid gaugesBridge"
-    //     );
-    //     assertEq(
-    //         deployment.optimisticTokenVotingPlugin.proposalCount(),
-    //         0,
-    //         "Invalid proposal count"
-    //     );
-    //     {
-    //         (
-    //             uint32 minVetoRatio,
-    //             uint64 minDuration,
-    //             uint64 l2InactivityPeriod,
-    //             uint64 l2AggregationGracePeriod,
-    //             bool skipL2
-    //         ) = deployment.optimisticTokenVotingPlugin.governanceSettings();
+        // PLUGIN REPO's
 
-    //         assertEq(minVetoRatio, 456_000, "Invalid minVetoRatio");
-    //         assertEq(minDuration, 0, "Invalid minDuration"); // 10 days is enforced on the condition contract
-    //         assertEq(l2InactivityPeriod, 27 minutes, "Invalid l2InactivityPeriod");
-    //         assertEq(l2AggregationGracePeriod, 3 days, "Invalid l2AggregationGracePeriod");
-    //         assertEq(skipL2, true, "Invalid skipL2");
-    //     }
+        PluginRepo.Version memory version;
 
-    //     // PLUGIN REPO's
+        // Multisig code
+        version = multisigPluginRepo.getLatestVersion(1);
+        assertEq(
+            address(multisigPluginSetup.implementation()),
+            address(deployment.multisigPlugin.implementation()),
+            "Invalid multisigPluginSetup"
+        );
 
-    //     PluginRepo.Version memory version;
+        // Gauge voter plugin
+        assertNotEq(
+            address(deployment.gaugeVoterPluginRepo),
+            address(0),
+            "Empty gaugeVoterPluginRepo field"
+        );
+        assertEq(deployment.gaugeVoterPluginRepo.latestRelease(), 1, "Invalid latestRelease");
+        assertEq(deployment.gaugeVoterPluginRepo.buildCount(1), 1, "Invalid buildCount");
+        version = deployment.gaugeVoterPluginRepo.getLatestVersion(1);
+        assertEq(
+            address(version.pluginSetup),
+            address(gaugeVoterPluginSetup),
+            "Invalid gaugeVoterPluginSetup"
+        );
+    }
 
-    //     // Multisig repo
-    //     assertNotEq(
-    //         address(deployment.multisigPluginRepo),
-    //         address(0),
-    //         "Empty multisigPluginRepo field"
-    //     );
-    //     assertEq(deployment.multisigPluginRepo.latestRelease(), 1, "Invalid latestRelease");
-    //     assertEq(deployment.multisigPluginRepo.buildCount(1), 1, "Invalid buildCount");
-    //     version = deployment.multisigPluginRepo.getLatestVersion(1);
-    //     assertEq(
-    //         address(version.pluginSetup),
-    //         address(multisigPluginSetup),
-    //         "Invalid multisigPluginSetup"
-    //     );
+    function test_MultipleDeploysDoNothing() public {
+        address[] memory multisigMembers = new address[](13);
+        for (uint256 i = 0; i < 13; i++) {
+            multisigMembers[i] = address(uint160(i + 10));
+        }
 
-    //     // Emergency multisig repo
-    //     assertNotEq(
-    //         address(deployment.emergencyMultisigPluginRepo),
-    //         address(0),
-    //         "Empty emergencyMultisigPluginRepo field"
-    //     );
-    //     assertEq(
-    //         deployment.emergencyMultisigPluginRepo.latestRelease(),
-    //         1,
-    //         "Invalid latestRelease"
-    //     );
-    //     assertEq(deployment.emergencyMultisigPluginRepo.buildCount(1), 1, "Invalid buildCount");
-    //     version = deployment.emergencyMultisigPluginRepo.getLatestVersion(1);
-    //     assertEq(
-    //         address(version.pluginSetup),
-    //         address(emergencyMultisigPluginSetup),
-    //         "Invalid emergencyMultisigPluginSetup"
-    //     );
+        PluginRepoFactory pRefoFactory = new PluginRepoFactory(
+            PluginRepoRegistry(address(new MockPluginRepoRegistry()))
+        );
 
-    //     // Optimistic repo
-    //     assertNotEq(
-    //         address(deployment.optimisticTokenVotingPluginRepo),
-    //         address(0),
-    //         "Empty optimisticTokenVotingPluginRepo field"
-    //     );
-    //     assertEq(
-    //         deployment.optimisticTokenVotingPluginRepo.latestRelease(),
-    //         1,
-    //         "Invalid latestRelease"
-    //     );
-    //     assertEq(deployment.optimisticTokenVotingPluginRepo.buildCount(1), 1, "Invalid buildCount");
-    //     version = deployment.optimisticTokenVotingPluginRepo.getLatestVersion(1);
-    //     assertEq(
-    //         address(version.pluginSetup),
-    //         address(voterPluginSetup),
-    //         "Invalid voterPluginSetup"
-    //     );
+        // Publish repo
+        MultisigPluginSetup multisigPluginSetup = new MultisigPluginSetup();
+        PluginRepo multisigPluginRepo = PluginRepoFactory(pRefoFactory)
+            .createPluginRepoWithFirstVersion(
+                "multisig-2-subdomain",
+                address(multisigPluginSetup),
+                address(this),
+                " ",
+                " "
+            );
 
-    //     // PUBLIC KEY REGISTRY
-    //     assertNotEq(
-    //         address(deployment.publicKeyRegistry),
-    //         address(0),
-    //         "Empty publicKeyRegistry field"
-    //     );
-    //     assertEq(
-    //         deployment.publicKeyRegistry.registeredWalletCount(),
-    //         0,
-    //         "Invalid registeredWalletCount"
-    //     );
-    // }
+        SimpleGaugeVoterSetup gaugeVoterPluginSetup = new SimpleGaugeVoterSetup(
+            address(new SimpleGaugeVoter()),
+            address(new QuadraticIncreasingEscrow()),
+            address(new ExitQueue()),
+            address(new VotingEscrow()),
+            address(new Clock()),
+            address(new Lock())
+        );
 
-    // function test_MultipleDeploysDoNothing() public {
-    //     DAO tempMgmtDao = DAO(
-    //         payable(
-    //             createProxyAndCall(
-    //                 address(DAO_BASE),
-    //                 abi.encodeCall(DAO.initialize, ("", address(this), address(0x0), ""))
-    //             )
-    //         )
-    //     );
+        TokenParameters[] memory tokenParameters = new TokenParameters[](3);
+        tokenParameters[0] = TokenParameters({
+            token: address(deployMockERC20("T3", "T3", 18)),
+            veTokenName: "Name 3",
+            veTokenSymbol: "TK3"
+        });
+        tokenParameters[1] = TokenParameters({
+            token: address(deployMockERC20("T4", "T4", 18)),
+            veTokenName: "Name 4",
+            veTokenSymbol: "TK4"
+        });
+        tokenParameters[2] = TokenParameters({
+            token: address(deployMockERC20("T5", "T5", 18)),
+            veTokenName: "Name 5",
+            veTokenSymbol: "TK5"
+        });
 
-    //     GovernanceERC20Mock tokenAddress = new GovernanceERC20Mock(address(tempMgmtDao));
-    //     GaugesL1Mock gaugesL1ContractAddress = new GaugesL1Mock();
-    //     address gaugesBridgeAddress = address(0x1234);
-    //     address[] memory multisigMembers = new address[](13);
-    //     for (uint256 i = 0; i < 13; i++) {
-    //         multisigMembers[i] = address(uint160(i + 1));
-    //     }
+        // PSP with voter plugin setup and multisig
+        MockPluginSetupProcessorMulti psp;
+        {
+            address[] memory pluginSetups = new address[](4);
+            pluginSetups[0] = address(gaugeVoterPluginSetup); // Token 1
+            pluginSetups[1] = address(gaugeVoterPluginSetup); // Token 2
+            pluginSetups[2] = address(gaugeVoterPluginSetup); // Token 3
+            pluginSetups[3] = address(multisigPluginSetup);
 
-    //     MultisigPluginSetup multisigPluginSetup = new MultisigPluginSetup();
-    //     EmergencyMultisigPluginSetup emergencyMultisigPluginSetup = new EmergencyMultisigPluginSetup();
-    //     GovernanceERC20.MintSettings memory mintSettings = GovernanceERC20.MintSettings({
-    //         receivers: new address[](0),
-    //         amounts: new uint256[](0)
-    //     });
-    //     OptimisticTokenVotingPluginSetup voterPluginSetup = new OptimisticTokenVotingPluginSetup(
-    //         new GovernanceERC20(tempMgmtDao, "", "", mintSettings),
-    //         new GovernanceWrappedERC20(tokenAddress, "", "")
-    //     );
+            psp = new MockPluginSetupProcessorMulti(pluginSetups);
+        }
+        MockDAOFactory daoFactory = new MockDAOFactory(MockPluginSetupProcessor(address(psp)));
 
-    //     PluginRepoFactory pRefoFactory;
-    //     MockPluginSetupProcessor psp;
-    //     {
-    //         MockPluginRepoRegistry pRepoRegistry = new MockPluginRepoRegistry();
-    //         pRefoFactory = new PluginRepoFactory(PluginRepoRegistry(address(pRepoRegistry)));
+        DeploymentParameters memory creationParams = DeploymentParameters({
+            // Multisig settings
+            minApprovals: 5,
+            multisigMembers: multisigMembers,
+            // Gauge Voter
+            tokenParameters: tokenParameters,
+            feePercent: 0.5 ether,
+            warmupPeriod: 1234,
+            cooldownPeriod: 2345,
+            minLockDuration: 3456,
+            votingPaused: false,
+            // Standard multisig repo
+            multisigPluginRepo: multisigPluginRepo,
+            multisigPluginRelease: 1,
+            multisigPluginBuild: 2,
+            // Voter plugin setup and ENS
+            voterPluginSetup: gaugeVoterPluginSetup,
+            voterEnsSubdomain: "gauge-ens-subdomain",
+            // OSx addresses
+            osxDaoFactory: address(daoFactory),
+            pluginSetupProcessor: PluginSetupProcessor(address(psp)),
+            pluginRepoFactory: pRefoFactory
+        });
 
-    //         address[] memory setups = new address[](3);
-    //         // adding in reverse order (stack)
-    //         setups[2] = address(multisigPluginSetup);
-    //         setups[1] = address(emergencyMultisigPluginSetup);
-    //         setups[0] = address(voterPluginSetup);
-    //         psp = new MockPluginSetupProcessor(setups);
-    //     }
-    //     MockDAOFactory daoFactory = new MockDAOFactory(psp);
+        GaugesDaoFactory factory = new GaugesDaoFactory(creationParams);
 
-    //     DeploymentParameters memory creationParams = DeploymentParameters({
-    //         // Gauges contract settings
-    //         tokenAddress: tokenAddress,
-    //         gaugesL1ContractAddress: address(gaugesL1ContractAddress), // address
-    //         gaugesBridgeAddress: gaugesBridgeAddress, // address
-    //         l2InactivityPeriod: 10 minutes, // uint64
-    //         l2AggregationGracePeriod: 2 days, // uint64
-    //         skipL2: false,
-    //         // Voting settings
-    //         minVetoRatio: 200_000, // uint32
-    //         minStdProposalDuration: 10 days, // uint64
-    //         minStdApprovals: 7, // uint16
-    //         minEmergencyApprovals: 11, // uint16
-    //         // OSx contracts
-    //         osxDaoFactory: address(daoFactory),
-    //         pluginSetupProcessor: PluginSetupProcessor(address(psp)), // PluginSetupProcessor
-    //         pluginRepoFactory: PluginRepoFactory(address(pRefoFactory)), // PluginRepoFactory
-    //         // Plugin setup's
-    //         multisigPluginSetup: multisigPluginSetup,
-    //         emergencyMultisigPluginSetup: emergencyMultisigPluginSetup,
-    //         voterPluginSetup: voterPluginSetup,
-    //         // Multisig
-    //         multisigMembers: multisigMembers, // address[]
-    //         multisigExpirationPeriod: 10 days,
-    //         // ENS
-    //         stdMultisigEnsDomain: "multisig", // string
-    //         emergencyMultisigEnsDomain: "eMultisig", // string
-    //         optimisticTokenVotingEnsDomain: "optimistic" // string
-    //     });
+        // ok
+        factory.deployOnce();
 
-    //     GaugesDaoFactory factory = new GaugesDaoFactory(creationParams);
-    //     // ok
-    //     factory.deployOnce();
+        vm.expectRevert(abi.encodeWithSelector(GaugesDaoFactory.AlreadyDeployed.selector));
+        factory.deployOnce();
 
-    //     vm.expectRevert(abi.encodeWithSelector(GaugesDaoFactory.AlreadyDeployed.selector));
-    //     factory.deployOnce();
-
-    //     vm.expectRevert(abi.encodeWithSelector(GaugesDaoFactory.AlreadyDeployed.selector));
-    //     factory.deployOnce();
-    // }
+        vm.expectRevert(abi.encodeWithSelector(GaugesDaoFactory.AlreadyDeployed.selector));
+        factory.deployOnce();
+    }
 }

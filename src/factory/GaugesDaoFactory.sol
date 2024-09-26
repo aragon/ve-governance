@@ -83,9 +83,9 @@ struct Deployment {
     DAO dao;
     // Plugins
     Multisig multisigPlugin;
-    GaugePluginSet[] gaugePluginSets;
+    GaugePluginSet[] gaugeVoterPluginSets;
     // Plugin repo's
-    PluginRepo voterPluginRepo;
+    PluginRepo gaugeVoterPluginRepo;
 }
 
 /// @notice A singleton contract designed to run the deployment once and become a read-only store of the contracts deployed
@@ -167,16 +167,16 @@ contract GaugesDaoFactory {
             for (uint i = 0; i < parameters.tokenParameters.length; ) {
                 (
                     pluginSet,
-                    deployment.voterPluginRepo,
+                    deployment.gaugeVoterPluginRepo,
                     preparedVoterSetupData
                 ) = prepareSimpleGaugeVoterPlugin(dao, parameters.tokenParameters[i], repoTag);
 
-                deployment.gaugePluginSets.push(pluginSet);
+                deployment.gaugeVoterPluginSets.push(pluginSet);
 
                 applyPluginInstallation(
                     dao,
                     address(pluginSet.plugin),
-                    deployment.voterPluginRepo,
+                    deployment.gaugeVoterPluginRepo,
                     repoTag,
                     preparedVoterSetupData
                 );
