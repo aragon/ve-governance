@@ -126,18 +126,14 @@ contract Deploy is Script {
             console.log("Using testing parameters (minting 2 test tokens)");
 
             address[] memory multisigMembers = readMultisigMembers();
-            address[] memory tokens = new address[](2);
-            tokens[0] = createTestToken(multisigMembers);
-            tokens[1] = createTestToken(multisigMembers);
-
             tokenParameters = new TokenParameters[](2);
             tokenParameters[0] = TokenParameters({
-                token: tokens[0],
+                token: createTestToken(multisigMembers),
                 veTokenName: "VE Token 1",
                 veTokenSymbol: "veTK1"
             });
             tokenParameters[1] = TokenParameters({
-                token: tokens[1],
+                token: createTestToken(multisigMembers),
                 veTokenName: "VE Token 2",
                 veTokenSymbol: "veTK2"
             });
@@ -149,6 +145,7 @@ contract Deploy is Script {
 
         for (uint i = 0; i < holders.length; ) {
             newToken.mint(holders[i], 50 ether);
+            console.log("Minting 50 tokens for", holders[i]);
 
             unchecked {
                 i++;
