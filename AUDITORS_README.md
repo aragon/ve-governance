@@ -15,11 +15,11 @@ QuadraticIncreasingEscrow attempts to follow a generalised structure that can wo
 | Severity | Issue                                                                    | Status       | Comment or PR                                                                                                                                                                                                                           |
 | -------- | ------------------------------------------------------------------------ | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | C        | (HAL-13) Token ID reuse leads to protocol deadlock                       | Fixed        | https://github.com/aragon/ve-governance/pull/3                                                                                                                                                                                          |
-| H        | (HAL-12) Inaccurate voting power reporting after withdrawal initiation   | Acknowledged | There are a few competing implementations that address this concern and we think the best approach is to compare when we add onchain voting. In the current setup this issue does not cause any obvious vulnerabilities that we can see |
 | H        | (HAL-14) Unsafe minting in Lock contract                                 | Fixed        | https://github.com/aragon/ve-governance/pull/4                                                                                                                                                                                          |
 | H        | (HAL-15) Critical withdrawal blockage due to escrow address whitelisting | Fixed        | https://github.com/aragon/ve-governance/pull/5                                                                                                                                                                                          |
 | H        | (HAL-16) Potential token lock due to unrestricted escrow transfers       | Fixed        | https://github.com/aragon/ve-governance/pull/6                                                                                                                                                                                          |
 | H        | (HAL-10) Unrestricted NFT contract change enables potential fund theft   | Fixed        | https://github.com/aragon/ve-governance/pull/6                                                                                                                                                                                          |
+| H        | (HAL-12) Inaccurate voting power reporting after withdrawal initiation   | Acknowledged | There are a few competing implementations that address this concern and we think the best approach is to compare when we add onchain voting. In the current setup this issue does not cause any obvious vulnerabilities that we can see |
 
 ## Other Severity
 
@@ -34,6 +34,7 @@ QuadraticIncreasingEscrow attempts to follow a generalised structure that can wo
 | I        | 7.17 (HAL-18) Redundant exit check and missing documentation in exit function                  | Acknowledged | Accepted the redundancy - we prefer to have the check in place given the critical nature of the exit queue |
 | I        | 7.16 (HAL-09) Unset dependencies may cause reverts and improper behavior                       | Acknowledged | Noted for future: implement a graceful and idomatic revert strategy.                                       |
 | I        | 7.15 (HAL-07) Misleading variable name for user interaction tracking                           | Fixed        | https://github.com/aragon/ve-governance/pull/15                                                            |
+| I        | 7.13 (HAL-03) Lack of contract validation in initializer                                       | Acknowledged | The DAO and deployers are responsible for ensuring they validate the contracts and can update if needed    |
 
 ## Not yet Done
 
@@ -43,5 +44,4 @@ QuadraticIncreasingEscrow attempts to follow a generalised structure that can wo
 | M        | 7.8 (HAL-11) Incorrect balance tracking for non-standard ERC20 tokens       |        |
 | M        | 7.7 (HAL-06) Checkpoint function allows non-chronological updates           |        |
 | I        | 7.14 (HAL-04) Unbounded warmup period can span multiple epochs              |        |
-| I        | 7.13 (HAL-03) Lack of contract validation in initializer                    |        |
 | I        | 7.11 (HAL-21) Inconsistent voting power reporting in Reset event            |        |
