@@ -28,6 +28,8 @@ contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote {
         // make a voting gauge
         voter.createGauge(gauge, "metadata");
         votes.push(GaugeVote({gauge: gauge, weight: 1}));
+
+        escrow.setMinDeposit(0);
     }
 
     // setup a fee withdrawal
