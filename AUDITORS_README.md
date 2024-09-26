@@ -65,17 +65,22 @@ Aragon Audits were conducted by various team members.
 
 | Severity | Issue                                                                                     | Status       | Comment or PR                                                                                                                       |
 | -------- | ----------------------------------------------------------------------------------------- | ------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
-| U        | Finding 8: For loop in `ownedTokens` can be used as a DoS vector                          |              |                                                                                                                                     |
-| U        | Finding 7: SupportsInterface should include the interface Ids                             |              |                                                                                                                                     |
-| U        | Finding 6: Check \_\_gap values to ensure they align with occupied storage slots          | Blocked      | Wait till all audit findings merged for a final review                                                                              |
 | U        | Finding 5: Fee percentage can be set by admin to 100%                                     | Acknowledged | This is a trust vector of the protocol at this current time                                                                         |
 | U        | Finding 4: Admin can update cooldown after users stake to prevent unlock near permanently | Acknowledged | This is a trust vector of the protocol at this current time                                                                         |
 | U        | Finding 3: Choice of epoch duration can affect voting power due to FPA                    | Acknowledged | We acknowledge that choosing an appropriate epoch length + testing curves is important for FPA                                      |
 | U        | Finding 2: Questions regarding the change in voting power over time                       | Resolved     | These discussions were settled in private chats                                                                                     |
 | U        | Finding 1: Tokens that do not support `.decimals` are not supported                       | TBC          | This check is potentially unneccessary https://github.com/aragon/ve-governance/pull/18                                              |
 | U        | Internal Review 1: metadata hash does nothing in the gauges                               | Fixed        | https://github.com/aragon/ve-governance/pull/19                                                                                     |
-| U        | Internal Review: Log the timestamp of deposits and warmups                                |              |                                                                                                                                     |
 | U        | Internal Review: x.pow(2) is less precise and more expensive than x.mul(x)                | Fixed        | https://github.com/aragon/ve-governance/pull/12                                                                                     |
-| U        | Internal Review: can use early returns in the clock contract                              |              |                                                                                                                                     |
 | U        | Internal Review: passing very small weights to gauges leads to precision loss             | Acknowledged | In this build, voting is signalling only, so rounding errors are ok for small values, we may wish to reevaluate with onchain voting |
 | U        | Internal Review: Small deposits and fees will round to zero in the exit queue             | Acknowledged | Fee rounding to zero simply won't charge a fee, we don't think it's a major issue + we can enforce a min deposit                    |
+
+## Not yet Done
+
+| Severity | Issue                                                                            | Status  | Comment or PR                                          |
+| -------- | -------------------------------------------------------------------------------- | ------- | ------------------------------------------------------ |
+| U        | Internal Review: can use early returns in the clock contract                     |         |                                                        |
+| U        | Internal Review: Log the timestamp of deposits and warmups                       |         |                                                        |
+| U        | Finding 8: For loop in `ownedTokens` can be used as a DoS vector                 |         |                                                        |
+| U        | Finding 7: SupportsInterface should include the interface Ids                    |         |                                                        |
+| U        | Finding 6: Check \_\_gap values to ensure they align with occupied storage slots | Blocked | Wait till all audit findings merged for a final review |
