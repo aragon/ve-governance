@@ -46,5 +46,3 @@ QuadraticIncreasingEscrow attempts to follow a generalised structure that can wo
 | I        | 7.13 (HAL-03) Lack of contract validation in initializer                      |        |
 | I        | 7.11 (HAL-21) Inconsistent voting power reporting in Reset event              |        |
 | L        | 7.9 (HAL-17) Potential bypass of minimum lock time at checkpoint boundaries   |        |
-| M        | 7.8 (HAL-11) Incorrect balance tracking for non-standard ERC20 tokens         |        |
-| M        | 7.7 (HAL-06) Checkpoint function allows non-chronological updates             |        |
