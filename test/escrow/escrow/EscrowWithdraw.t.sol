@@ -9,13 +9,13 @@ import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
-import {IEscrowCurveUserStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
+import {IEscrowCurveTokenStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
 import {VotingEscrow} from "@escrow/VotingEscrowIncreasing.sol";
 
 import {SimpleGaugeVoter, SimpleGaugeVoterSetup} from "src/voting/SimpleGaugeVoterSetup.sol";
 import {IGaugeVote} from "src/voting/ISimpleGaugeVoter.sol";
 
-contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote {
+contract TestWithdraw is EscrowBase, IEscrowCurveTokenStorage, IGaugeVote {
     address gauge = address(1);
 
     GaugeVote[] votes;
@@ -152,8 +152,8 @@ contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote {
         // voting power should still be there as the cp is still active
         assertGt(escrow.votingPower(tokenId), 0);
 
-        // but we should have written a user point in the future
-        UserPoint memory up = curve.userPointHistory(tokenId, 2);
+        // but we should have written a token point in the future
+        TokenPoint memory up = curve.tokenPointHistory(tokenId, 2);
         assertEq(up.bias, 0);
         assertEq(up.ts, 3 weeks);
 

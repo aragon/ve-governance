@@ -9,14 +9,14 @@ import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
-import {IEscrowCurveUserStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
+import {IEscrowCurveTokenStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
 import {VotingEscrow} from "@escrow/VotingEscrowIncreasing.sol";
 import {Lock} from "@escrow/Lock.sol";
 
 import {SimpleGaugeVoter, SimpleGaugeVoterSetup} from "src/voting/SimpleGaugeVoterSetup.sol";
 import {IGaugeVote} from "src/voting/ISimpleGaugeVoter.sol";
 
-contract TestLockMintBurn is EscrowBase, IEscrowCurveUserStorage, IGaugeVote {
+contract TestLockMintBurn is EscrowBase, IEscrowCurveTokenStorage, IGaugeVote {
     function testDeploy(
         string memory _name,
         string memory _symbol,
