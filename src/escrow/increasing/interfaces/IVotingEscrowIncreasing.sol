@@ -22,6 +22,7 @@ interface IVotingEscrowCoreErrors {
     error ZeroBalance();
     error SameAddress();
     error MustBe18Decimals();
+    error TransferBalanceIncorrect();
 }
 
 interface IVotingEscrowCoreEvents {

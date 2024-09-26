@@ -6,6 +6,7 @@ import {console2 as console} from "forge-std/console2.sol";
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
+import {MockERC20} from "@mocks/MockERC20.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
@@ -277,6 +278,49 @@ contract TestCreateLock is EscrowBase, IEscrowCurveUserStorage {
         vm.expectEmit(true, true, true, true);
         emit Deposit(_who, 1, 1 weeks, _value, _value);
         escrow.createLockFor(_value, _who);
+    }
+
+    function testCannotUseAJankyERC20() public {
+        // deploy a janky token
+        TaxERC20 janky = new TaxERC20();
+
+        escrow = _deployEscrow(address(janky), address(dao), address(clock));
+        curve = _deployCurve(address(escrow), address(dao), 3 days, address(clock));
+        nftLock = _deployLock(address(escrow), name, symbol, address(dao));
+
+        // grant this contract admin privileges
+        dao.grant({
+            _who: address(this),
+            _where: address(escrow),
+            _permissionId: escrow.ESCROW_ADMIN_ROLE()
+        });
+
+        escrow.setLockNFT(address(nftLock));
+        escrow.setCurve(address(curve));
+
+        // mint some tokens
+        janky.mint(address(this), 1 ether);
+        janky.approve(address(escrow), 1 ether);
+
+        // create a lock
+        vm.expectRevert(TransferBalanceIncorrect.selector);
+        escrow.createLock(1 ether);
+    }
+}
+
+contract TaxERC20 is MockERC20 {
+    function _transfer(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) internal virtual override {
+        require(amount >= 1, "Transfer amount must be at least 1 wei");
+
+        uint256 burnAmount = 1; // Amount to burn on every transfer
+        uint256 sendAmount = amount - burnAmount; // Amount to send to recipient
+
+        super._burn(sender, burnAmount); // Burn 1 wei from sender's balance
+        super._transfer(sender, recipient, sendAmount); // Transfer remaining amount to recipient
     }
 }
 
