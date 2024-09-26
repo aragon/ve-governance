@@ -78,10 +78,10 @@ Aragon Audits were conducted by various team members.
 | U        | Internal Review: Log the timestamp of checkpoints                                         | Fixed        | https://github.com/aragon/ve-governance/pull/22                                                                                     |
 | U        | Internal Review: opportunities to compress storage with structs                           | Part Fixed   | https://github.com/aragon/ve-governance/pull/23                                                                                     |
 | U        | Internal Review: can use early returns in the clock contract                              | Acknowledged | Minor optimisation - can be added as a refinement feature later                                                                     |
+| U        | Finding 8: For loop in `ownedTokens` can be used as a DoS vector                          | Fixed        | https://github.com/aragon/ve-governance/pull/24                                                                                     |
 
 ## Not yet Done
 
 | Severity | Issue                                                                            | Status  | Comment or PR                                          |
 | -------- | -------------------------------------------------------------------------------- | ------- | ------------------------------------------------------ |
-| U        | Finding 8: For loop in `ownedTokens` can be used as a DoS vector                 |         |                                                        |
 | U        | Finding 6: Check \_\_gap values to ensure they align with occupied storage slots | Blocked | Wait till all audit findings merged for a final review |
