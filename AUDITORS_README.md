@@ -10,6 +10,8 @@ QuadraticIncreasingEscrow attempts to follow a generalised structure that can wo
 
 # Notes from the Halborn Audit
 
+https://www.halborn.com/portal/reports/ve-governance-hub
+
 ## Critical and High Severity
 
 | Severity | Issue                                                                    | Status     | Comment or PR                                   |
@@ -47,6 +49,8 @@ QuadraticIncreasingEscrow attempts to follow a generalised structure that can wo
 | I        | 7.14 (HAL-04) Unbounded warmup period can span multiple epochs              |         |
 
 # Notes from the BlocSec Audit
+
+https://docs.google.com/document/d/1bLOIahrZjzf7DrraT42F9mBiLwpn4b9_Npn3GJlK93M/
 
 | Severity | Issue                                                               | Status       | Comment or PR                                                            |
 | -------- | ------------------------------------------------------------------- | ------------ | ------------------------------------------------------------------------ |
