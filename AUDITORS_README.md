@@ -23,25 +23,25 @@ QuadraticIncreasingEscrow attempts to follow a generalised structure that can wo
 
 ## Other Severity
 
-| Severity | Issue                                                                                          | Status       | Comment or PR                                   |
-| -------- | ---------------------------------------------------------------------------------------------- | ------------ | ----------------------------------------------- |
-| I        | (HAL-01/02) Naming issues with Clock contract                                                  | Fixed        | https://github.com/aragon/ve-governance/pull/10 |
-| L        | (HAL-08) Shared role for pause and unpause functions                                           | Acknowledged | Noted for future releases                       |
-| I        | 7.12 (HAL-22) Critical roles not assigned in contract setup                                    | Fixed        | https://github.com/aragon/ve-governance/pull/11 |
-| I        | 7.19 (HAL-05) Unnecessary calculation in checkpoint function (+other simple gas optimisations) | Fixed        | https://github.com/aragon/ve-governance/pull/12 |
-| I        | 7.20 (HAL-20) Potentially unnecessary check in reset function                                  | Fixed        | https://github.com/aragon/ve-governance/pull/13 |
-| I        | 7.18 (HAL-19) Fee precision too high                                                           | Fixed        | https://github.com/aragon/ve-governance/pull/14 |
+| Severity | Issue                                                                                          | Status       | Comment or PR                                                                                              |
+| -------- | ---------------------------------------------------------------------------------------------- | ------------ | ---------------------------------------------------------------------------------------------------------- |
+| I        | (HAL-01/02) Naming issues with Clock contract                                                  | Fixed        | https://github.com/aragon/ve-governance/pull/10                                                            |
+| L        | (HAL-08) Shared role for pause and unpause functions                                           | Acknowledged | Noted for future releases                                                                                  |
+| I        | 7.12 (HAL-22) Critical roles not assigned in contract setup                                    | Fixed        | https://github.com/aragon/ve-governance/pull/11                                                            |
+| I        | 7.19 (HAL-05) Unnecessary calculation in checkpoint function (+other simple gas optimisations) | Fixed        | https://github.com/aragon/ve-governance/pull/12                                                            |
+| I        | 7.20 (HAL-20) Potentially unnecessary check in reset function                                  | Fixed        | https://github.com/aragon/ve-governance/pull/13                                                            |
+| I        | 7.18 (HAL-19) Fee precision too high                                                           | Fixed        | https://github.com/aragon/ve-governance/pull/14                                                            |
+| I        | 7.17 (HAL-18) Redundant exit check and missing documentation in exit function                  | Acknowledged | Accepted the redundancy - we prefer to have the check in place given the critical nature of the exit queue |
+| I        | 7.16 (HAL-09) Unset dependencies may cause reverts and improper behavior                       | Acknowledged | Noted for future: implement a graceful and idomatic revert strategy.                                       |
+| I        | 7.15 (HAL-07) Misleading variable name for user interaction tracking                           | Fixed        | https://github.com/aragon/ve-governance/pull/15                                                            |
 
 ## Not yet Done
 
-| Severity | Issue                                                                         | Status | Comment or PR |
-| -------- | ----------------------------------------------------------------------------- | ------ | ------------- |
-| L        | 7.9 (HAL-17) Potential bypass of minimum lock time at checkpoint boundaries   |        |
-| M        | 7.8 (HAL-11) Incorrect balance tracking for non-standard ERC20 tokens         |        |
-| M        | 7.7 (HAL-06) Checkpoint function allows non-chronological updates             |        |
-| I        | 7.17 (HAL-18) Redundant exit check and missing documentation in exit function |        |
-| I        | 7.16 (HAL-09) Unset dependencies may cause reverts and improper behavior      |        |
-| I        | 7.15 (HAL-07) Misleading variable name for user interaction tracking          |        |
-| I        | 7.14 (HAL-04) Unbounded warmup period can span multiple epochs                |        |
-| I        | 7.13 (HAL-03) Lack of contract validation in initializer                      |        |
-| I        | 7.11 (HAL-21) Inconsistent voting power reporting in Reset event              |        |
+| Severity | Issue                                                                       | Status | Comment or PR |
+| -------- | --------------------------------------------------------------------------- | ------ | ------------- |
+| L        | 7.9 (HAL-17) Potential bypass of minimum lock time at checkpoint boundaries |        |
+| M        | 7.8 (HAL-11) Incorrect balance tracking for non-standard ERC20 tokens       |        |
+| M        | 7.7 (HAL-06) Checkpoint function allows non-chronological updates           |        |
+| I        | 7.14 (HAL-04) Unbounded warmup period can span multiple epochs              |        |
+| I        | 7.13 (HAL-03) Lack of contract validation in initializer                    |        |
+| I        | 7.11 (HAL-21) Inconsistent voting power reporting in Reset event            |        |

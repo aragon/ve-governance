@@ -164,9 +164,12 @@ contract ExitQueue is IExitQueue, IClockUser, DaoAuthorizable, UUPSUpgradeable {
 
     /// @notice Exits the queue for that tokenID.
     /// @dev The holder is not checked. This is left up to the escrow contract to manage.
-    function exit(uint256 _tokenId) external onlyEscrow returns (uint256 fee) {
+    function safeExit(uint256 _tokenId) external onlyEscrow returns (uint256 fee) {
         if (!canExit(_tokenId)) revert CannotExit();
+        return exit(_tokenId);
+    }
 
+    function exit(uint256 _tokenId) public onlyEscrow returns (uint256 fee) {
         // reset the ticket for that tokenId
         _queue[_tokenId] = Ticket(address(0), 0);
 
