@@ -74,6 +74,7 @@ Aragon Audits were conducted by various team members.
 | U        | Internal Review: x.pow(2) is less precise and more expensive than x.mul(x)                | Fixed        | https://github.com/aragon/ve-governance/pull/12                                                                                     |
 | U        | Internal Review: passing very small weights to gauges leads to precision loss             | Acknowledged | In this build, voting is signalling only, so rounding errors are ok for small values, we may wish to reevaluate with onchain voting |
 | U        | Internal Review: Small deposits and fees will round to zero in the exit queue             | Acknowledged | Fee rounding to zero simply won't charge a fee, we don't think it's a major issue + we can enforce a min deposit                    |
+| U        | Finding 7: SupportsInterface should include the interface Ids                             | Fixed        | https://github.com/aragon/ve-governance/pull/20                                                                                     |
 
 ## Not yet Done
 
@@ -82,5 +83,4 @@ Aragon Audits were conducted by various team members.
 | U        | Internal Review: can use early returns in the clock contract                     |         |                                                        |
 | U        | Internal Review: Log the timestamp of checkpoints                                |         |                                                        |
 | U        | Finding 8: For loop in `ownedTokens` can be used as a DoS vector                 |         |                                                        |
-| U        | Finding 7: SupportsInterface should include the interface Ids                    |         |                                                        |
 | U        | Finding 6: Check \_\_gap values to ensure they align with occupied storage slots | Blocked | Wait till all audit findings merged for a final review |
