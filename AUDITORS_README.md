@@ -54,12 +54,7 @@ QuadraticIncreasingEscrow attempts to follow a generalised structure that can wo
 | U        | Override function \_baseURI() for contract Lock                     | Acknowledged | Noted for future: have a proper Art Proxy or metadata proxy for the NFTs |
 | U        | Lack of checks in function setWhitelisted()                         | Fixed        | https://github.com/aragon/ve-governance/pull/5                           |
 | U        | Lack of refund method in contract VotingEscrow                      | Fixed        | https://github.com/aragon/ve-governance/pull/6                           |
-
-## Not Yet Done
-
-| Severity | Issue                                              | Status | Comment or PR |
-| -------- | -------------------------------------------------- | ------ | ------------- |
-| U        | Use dedicated event for function enableTransfers() |        |               |
+| U        | Use dedicated event for function enableTransfers()                  | Acknowledged | Happy to leave as the single event with the signalling address           |
 
 # Notes from Aragon Internal Audit
 
@@ -68,19 +63,19 @@ Aragon Audits were conducted by various team members.
 - @novaknole provided a [gist](https://gist.github.com/novaknole/53d1478a724ab707b2c39ad41f05a636)
 - @brickpop @xavikh @carlosgj94 all contributed on an [internal audit document that you may not have access to](https://www.notion.so/aragonorg/ve-Internal-Review-641d2e99c53e4f2391821e6d3ef0673a)
 
-| Severity | Issue                                                                                     | Status       | Comment or PR                                                                                  |
-| -------- | ----------------------------------------------------------------------------------------- | ------------ | ---------------------------------------------------------------------------------------------- |
-| U        | Finding 8: For loop in `ownedTokens` can be used as a DoS vector                          |              |                                                                                                |
-| U        | Finding 7: SupportsInterface should include the interface Ids                             |              |                                                                                                |
-| U        | Finding 6: Check \_\_gap values to ensure they align with occupied storage slots          |              |                                                                                                |
-| U        | Finding 5: Fee percentage can be set by admin to 100%                                     | Acknowledged | This is a trust vector of the protocol at this current time                                    |
-| U        | Finding 4: Admin can update cooldown after users stake to prevent unlock near permanently | Acknowledged | This is a trust vector of the protocol at this current time                                    |
-| U        | Finding 3: Choice of epoch duration can affect voting power due to FPA                    | Acknowledged | We acknowledge that choosing an appropriate epoch length + testing curves is important for FPA |
-| U        | Finding 2: Questions regarding the change in voting power over time                       | Resolved     | These discussions were settled in private chats                                                |
-| U        | Finding 1: Tokens that do not support `.decimals` are not supported                       |              |                                                                                                |
-| U        | Internal Review: metadata hash does nothing in the gauges                                 |              |                                                                                                |
-| U        | Internal Review: Log the timestamp of deposits and warmups                                |              |                                                                                                |
-| U        | Internal Review: x.pow(2) is less precise and more expensive than x.mul(x)                | Fixed        | https://github.com/aragon/ve-governance/pull/12                                                |
-| U        | Internal Review: can use early returns in the clock contract                              |              |                                                                                                |
-| U        | Internal Review: passing very small weights to gauges leads to precision loss             |              |                                                                                                |
-| U        | Internal Review: Small deposits and fees will round to zero in the exit queue             |              |                                                                                                |
+| Severity | Issue                                                                                     | Status       | Comment or PR                                                                                                                       |
+| -------- | ----------------------------------------------------------------------------------------- | ------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| U        | Finding 8: For loop in `ownedTokens` can be used as a DoS vector                          |              |                                                                                                                                     |
+| U        | Finding 7: SupportsInterface should include the interface Ids                             |              |                                                                                                                                     |
+| U        | Finding 6: Check \_\_gap values to ensure they align with occupied storage slots          |              |                                                                                                                                     |
+| U        | Finding 5: Fee percentage can be set by admin to 100%                                     | Acknowledged | This is a trust vector of the protocol at this current time                                                                         |
+| U        | Finding 4: Admin can update cooldown after users stake to prevent unlock near permanently | Acknowledged | This is a trust vector of the protocol at this current time                                                                         |
+| U        | Finding 3: Choice of epoch duration can affect voting power due to FPA                    | Acknowledged | We acknowledge that choosing an appropriate epoch length + testing curves is important for FPA                                      |
+| U        | Finding 2: Questions regarding the change in voting power over time                       | Resolved     | These discussions were settled in private chats                                                                                     |
+| U        | Finding 1: Tokens that do not support `.decimals` are not supported                       |              |                                                                                                                                     |
+| U        | Internal Review: metadata hash does nothing in the gauges                                 |              |                                                                                                                                     |
+| U        | Internal Review: Log the timestamp of deposits and warmups                                |              |                                                                                                                                     |
+| U        | Internal Review: x.pow(2) is less precise and more expensive than x.mul(x)                | Fixed        | https://github.com/aragon/ve-governance/pull/12                                                                                     |
+| U        | Internal Review: can use early returns in the clock contract                              |              |                                                                                                                                     |
+| U        | Internal Review: passing very small weights to gauges leads to precision loss             | Acknowledged | In this build, voting is signalling only, so rounding errors are ok for small values, we may wish to reevaluate with onchain voting |
+| U        | Internal Review: Small deposits and fees will round to zero in the exit queue             |              |                                                                                                                                     |
