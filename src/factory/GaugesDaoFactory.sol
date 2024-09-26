@@ -96,10 +96,37 @@ contract GaugesDaoFactory {
     DeploymentParameters parameters;
     Deployment deployment;
 
+    /// @dev Solidity doesn't allow to store a struct array on a storage struct. Storing a reference to link from parameters.tokenParameters
+    TokenParameters[] private storageTokenParams;
+
     /// @notice Initializes the factory and performs the full deployment. Values become read-only after that.
     /// @param _parameters The parameters of the one-time deployment.
     constructor(DeploymentParameters memory _parameters) {
-        parameters = _parameters;
+        parameters.minApprovals = _parameters.minApprovals;
+        parameters.multisigMembers = _parameters.multisigMembers;
+
+        for (uint i = 0; i < _parameters.tokenParameters.length; ) {
+            storageTokenParams.push(_parameters.tokenParameters[i]);
+
+            unchecked {
+                i++;
+            }
+        }
+        parameters.tokenParameters = storageTokenParams;
+
+        parameters.feePercent = _parameters.feePercent;
+        parameters.warmupPeriod = _parameters.warmupPeriod;
+        parameters.cooldownPeriod = _parameters.cooldownPeriod;
+        parameters.minLockDuration = _parameters.minLockDuration;
+        parameters.votingPaused = _parameters.votingPaused;
+        parameters.multisigPluginRepo = _parameters.multisigPluginRepo;
+        parameters.multisigPluginRelease = _parameters.multisigPluginRelease;
+        parameters.multisigPluginBuild = _parameters.multisigPluginBuild;
+        parameters.voterPluginSetup = _parameters.voterPluginSetup;
+        parameters.voterEnsSubdomain = _parameters.voterEnsSubdomain;
+        parameters.osxDaoFactory = _parameters.osxDaoFactory;
+        parameters.pluginSetupProcessor = _parameters.pluginSetupProcessor;
+        parameters.pluginRepoFactory = _parameters.pluginRepoFactory;
     }
 
     /// @notice Run the deployment and store the artifacts in a read-only store that can be retrieved via `getDeployment()` and `getDeploymentParameters()`
