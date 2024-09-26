@@ -49,11 +49,6 @@ contract QuadraticIncreasingEscrow is
     /// @notice The warmup period for the curve
     uint256 public warmupPeriod;
 
-    /// @dev tokenId => userPointEpoch => warmup
-    /// UX improvement: warmup should start from point of writing, even if
-    /// start date is in the future
-    mapping(uint256 => mapping(uint256 => uint256)) internal _userPointWarmup;
-
     /// @dev tokenId => userPointEpoch => UserPoint
     /// @dev The Array is fixed so we can write to it in the future
     /// This implementation means that very short intervals may be challenging
@@ -193,11 +188,11 @@ contract QuadraticIncreasingEscrow is
         uint256 _epoch = _getPastUserPointIndex(tokenId, block.timestamp);
         UserPoint memory point = _userPointHistory[tokenId][_epoch];
         if (point.bias == 0) return false;
-        else return _isWarm(tokenId, _epoch, block.timestamp);
+        else return _isWarm(point);
     }
 
-    function _isWarm(uint256 _tokenId, uint256 _userEpoch, uint256 t) public view returns (bool) {
-        return t >= _userPointWarmup[_tokenId][_userEpoch];
+    function _isWarm(UserPoint memory _point) public view returns (bool) {
+        return block.timestamp >= _point.writtenTs + warmupPeriod;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -225,20 +220,20 @@ contract QuadraticIncreasingEscrow is
         if (_userEpoch == 0) return 0;
 
         // if the most recent point is before the timestamp, return it
-        if (_userPointHistory[_tokenId][_userEpoch].ts <= _timestamp) return (_userEpoch);
+        if (_userPointHistory[_tokenId][_userEpoch].checkpointTs <= _timestamp) return (_userEpoch);
 
         // Check if the first balance is after the timestamp
         // this means that the first epoch has yet to start
-        if (_userPointHistory[_tokenId][1].ts > _timestamp) return 0;
+        if (_userPointHistory[_tokenId][1].checkpointTs > _timestamp) return 0;
 
         uint256 lower = 0;
         uint256 upper = _userEpoch;
         while (upper > lower) {
             uint256 center = upper - (upper - lower) / 2; // ceil, avoiding overflow
             UserPoint storage userPoint = _userPointHistory[_tokenId][center];
-            if (userPoint.ts == _timestamp) {
+            if (userPoint.checkpointTs == _timestamp) {
                 return center;
-            } else if (userPoint.ts < _timestamp) {
+            } else if (userPoint.checkpointTs < _timestamp) {
                 lower = center;
             } else {
                 upper = center - 1;
@@ -254,8 +249,8 @@ contract QuadraticIncreasingEscrow is
         if (_epoch == 0) return 0;
         UserPoint memory lastPoint = _userPointHistory[_tokenId][_epoch];
 
-        if (!_isWarm(_tokenId, _epoch, _t)) return 0;
-        uint256 timeElapsed = _t - lastPoint.ts;
+        if (!_isWarm(lastPoint)) return 0;
+        uint256 timeElapsed = _t - lastPoint.checkpointTs;
 
         // in the increasing case, we don't allow changes to locks, so the ts and blk are
         // equivalent to the start time of the lock
@@ -308,23 +303,25 @@ contract QuadraticIncreasingEscrow is
         // we align the checkpoint to the start of the upcoming deposit interval
         // to ensure global slope changes can be scheduled
         // NOTE: the above global functionality is not implemented in this version of the contracts
-        uNew.ts = _newLocked.start;
+        uNew.checkpointTs = _newLocked.start.toUint128();
+
+        // log the written ts - this can be used to compute warmups and burn downs
+        uNew.writtenTs = block.timestamp.toUint128();
 
         // check to see if we have an existing epoch for this token
         uint256 userEpoch = userPointEpoch[_tokenId];
 
-        // If this is a new timestamp, increment the epoch
-        if (userEpoch == 0 || _userPointHistory[_tokenId][userEpoch].ts != uNew.ts) {
+        // Our checkpoint ts determines whether we overwrite the point or not
+        // if the checkpoint ts is the same as the last point, we don't increment the epoch
+        if (
+            userEpoch == 0 ||
+            _userPointHistory[_tokenId][userEpoch].checkpointTs != uNew.checkpointTs
+        ) {
             userPointEpoch[_tokenId] = ++userEpoch;
         }
 
-        // Record the new point and warmup period
+        // Record the new point
         _userPointHistory[_tokenId][userEpoch] = uNew;
-
-        // if the user is exiting, we don't need to set the warmup period
-        if (!isExiting) {
-            _userPointWarmup[_tokenId][userEpoch] = block.timestamp + warmupPeriod;
-        }
     }
 
     /*///////////////////////////////////////////////////////////////

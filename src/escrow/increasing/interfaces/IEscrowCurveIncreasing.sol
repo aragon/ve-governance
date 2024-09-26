@@ -34,13 +34,15 @@ interface IEscrowCurveGlobal is IEscrowCurveGlobalStorage {
 interface IEscrowCurveUserStorage {
     /// @notice Captures the shape of the user's voting curve at a specific point in time
     /// @param bias The y intercept of the user's voting curve at the given time
-    /// @param ts The timestamp at which the user's voting curve was captured
+    /// @param checkpointTs The checkpoint when the user voting curve is/was/will be updated
+    /// @param writtenTs The timestamp at which we locked the checkpoint
     /// @param coefficients The coefficients of the curve, supports up to cubic curves.
     /// @dev Coefficients are stored in the following order: [constant, linear, quadratic, cubic]
     /// and not all coefficients are used for all curves.
     struct UserPoint {
         uint256 bias;
-        uint256 ts;
+        uint128 checkpointTs;
+        uint128 writtenTs;
         int256[4] coefficients;
     }
 }

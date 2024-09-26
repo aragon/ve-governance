@@ -155,7 +155,8 @@ contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote {
         // but we should have written a user point in the future
         UserPoint memory up = curve.userPointHistory(tokenId, 2);
         assertEq(up.bias, 0);
-        assertEq(up.ts, 3 weeks);
+        assertEq(up.writtenTs, block.timestamp);
+        assertEq(up.checkpointTs, 3 weeks);
 
         // should have a ticket expiring in a few days
         assertEq(queue.canExit(tokenId), false);

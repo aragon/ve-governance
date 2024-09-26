@@ -43,8 +43,8 @@ contract TestCreateLock is EscrowBase, IEscrowCurveUserStorage {
     /// @param _value is positive, we check this in a previous test. It needs to fit inside an int256
     /// so we use the maximum value for a uint128
     /// @param _depositor is not the zero address, we check this in a previous test
-    /// @param _time is bound to 128 bits to avoid overflow - seems reasonable as is not a user input
-    function testFuzz_createLock(uint128 _value, address _depositor, uint128 _time) public {
+    /// @param _time is bound to 120 bits to avoid overflow - seems reasonable as is not a user input
+    function testFuzz_createLock(uint128 _value, address _depositor, uint120 _time) public {
         vm.assume(_value > 0);
         vm.assume(_depositor != address(0));
 
@@ -117,7 +117,7 @@ contract TestCreateLock is EscrowBase, IEscrowCurveUserStorage {
             uint256 epoch = curve.userPointEpoch(tokenId);
             UserPoint memory checkpoint = curve.userPointHistory(tokenId, epoch);
             assertEq(checkpoint.bias, _value);
-            assertEq(checkpoint.ts, expectedTime);
+            assertEq(checkpoint.checkpointTs, expectedTime);
         }
     }
 
