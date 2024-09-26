@@ -65,22 +65,31 @@ interface IGaugeManager is IGaugeManagerEvents, IGaugeManagerErrors {
 //////////////////////////////////////////////////////////////*/
 
 interface IGaugeVoterEvents {
+    /// @param votingPowerCastForGauge votes cast by this token for this gauge in this vote
+    /// @param totalVotingPowerInGauge total voting power in the gauge at the time of the vote, after applying the vote
+    /// @param totalVotingPowerInContract total voting power in the contract at the time of the vote, after applying the vote
     event Voted(
         address indexed voter,
         address indexed gauge,
         uint256 indexed epoch,
         uint256 tokenId,
-        uint256 votingPower,
-        uint256 totalVotingPower,
+        uint256 votingPowerCastForGauge,
+        uint256 totalVotingPowerInGauge,
+        uint256 totalVotingPowerInContract,
         uint256 timestamp
     );
+
+    /// @param votingPowerRemovedFromGauge votes removed by this token for this gauge, at the time of this rest
+    /// @param totalVotingPowerInGauge total voting power in the gauge at the time of the reset, after applying the reset
+    /// @param totalVotingPowerInContract total voting power in the contract at the time of the reset, after applying the reset
     event Reset(
         address indexed voter,
         address indexed gauge,
         uint256 indexed epoch,
         uint256 tokenId,
-        uint256 votingPower,
-        uint256 totalVotingPower,
+        uint256 votingPowerRemovedFromGauge,
+        uint256 totalVotingPowerInGauge,
+        uint256 totalVotingPowerInContract,
         uint256 timestamp
     );
 }
