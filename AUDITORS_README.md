@@ -23,10 +23,11 @@ QuadraticIncreasingEscrow attempts to follow a generalised structure that can wo
 
 ## Other Severity
 
-| Severity | Issue                                                | Status       | Comment or PR                                   |
-| -------- | ---------------------------------------------------- | ------------ | ----------------------------------------------- |
-| I        | (HAL-01/02) Naming issues with Clock contract        | Fixed        | https://github.com/aragon/ve-governance/pull/10 |
-| L        | (HAL-08) Shared role for pause and unpause functions | Acknowledged | Noted for future releases                       |
+| Severity | Issue                                                       | Status       | Comment or PR                                   |
+| -------- | ----------------------------------------------------------- | ------------ | ----------------------------------------------- |
+| I        | (HAL-01/02) Naming issues with Clock contract               | Fixed        | https://github.com/aragon/ve-governance/pull/10 |
+| L        | (HAL-08) Shared role for pause and unpause functions        | Acknowledged | Noted for future releases                       |
+| I        | 7.12 (HAL-22) Critical roles not assigned in contract setup | Fixed        | https://github.com/aragon/ve-governance/pull/11 |
 
 ## Not yet Done
 
@@ -43,7 +44,6 @@ QuadraticIncreasingEscrow attempts to follow a generalised structure that can wo
 | I        | 7.15 (HAL-07) Misleading variable name for user interaction tracking          |        |
 | I        | 7.14 (HAL-04) Unbounded warmup period can span multiple epochs                |        |
 | I        | 7.13 (HAL-03) Lack of contract validation in initializer                      |        |
-| I        | 7.12 (HAL-22) Critical roles not assigned in contract setup                   |        |
 | I        | 7.11 (HAL-21) Inconsistent voting power reporting in Reset event              |        |
 | L        | 7.9 (HAL-17) Potential bypass of minimum lock time at checkpoint boundaries   |        |
 | M        | 7.8 (HAL-11) Incorrect balance tracking for non-standard ERC20 tokens         |        |
