@@ -46,9 +46,6 @@ contract VotingEscrow is
                               NFT Data
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Decimals of the voting power
-    uint8 public constant decimals = 18;
-
     /// @notice Total supply of underlying tokens deposited in the contract
     uint256 public totalLocked;
 
@@ -91,7 +88,6 @@ contract VotingEscrow is
         __ReentrancyGuard_init();
         __Pausable_init();
 
-        if (IERC20Metadata(_token).decimals() != 18) revert MustBe18Decimals();
         token = _token;
         clock = _clock;
     }
@@ -285,6 +281,7 @@ contract VotingEscrow is
     function beginWithdrawal(uint256 _tokenId) public nonReentrant whenNotPaused {
         // can't exit if you have votes pending
         if (isVoting(_tokenId)) revert CannotExit();
+
         address owner = IERC721EMB(lockNFT).ownerOf(_tokenId);
 
         // we can remove the user's voting power as it's no longer locked
