@@ -40,11 +40,11 @@ QuadraticIncreasingEscrow attempts to follow a generalised structure that can wo
 
 ## Not yet Done
 
-| Severity | Issue                                                                       | Status | Comment or PR |
-| -------- | --------------------------------------------------------------------------- | ------ | ------------- |
-| L        | 7.9 (HAL-17) Potential bypass of minimum lock time at checkpoint boundaries |        |
-| M        | 7.7 (HAL-06) Checkpoint function allows non-chronological updates           |        |
-| I        | 7.14 (HAL-04) Unbounded warmup period can span multiple epochs              |        |
+| Severity | Issue                                                                       | Status  | Comment or PR                                                              |
+| -------- | --------------------------------------------------------------------------- | ------- | -------------------------------------------------------------------------- |
+| L        | 7.9 (HAL-17) Potential bypass of minimum lock time at checkpoint boundaries |         |
+| M        | 7.7 (HAL-06) Checkpoint function allows non-chronological updates           | Blocked | Description of the issue does not match the title - awaiting clarification |
+| I        | 7.14 (HAL-04) Unbounded warmup period can span multiple epochs              |         |
 
 # Notes from the BlocSec Audit
 
