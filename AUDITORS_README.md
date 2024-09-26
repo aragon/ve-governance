@@ -76,6 +76,7 @@ Aragon Audits were conducted by various team members.
 | U        | Internal Review: Small deposits and fees will round to zero in the exit queue             | Acknowledged | Fee rounding to zero simply won't charge a fee, we don't think it's a major issue + we can enforce a min deposit                    |
 | U        | Finding 7: SupportsInterface should include the interface Ids                             | Fixed        | https://github.com/aragon/ve-governance/pull/20                                                                                     |
 | U        | Internal Review: Log the timestamp of checkpoints                                         | Fixed        | https://github.com/aragon/ve-governance/pull/22                                                                                     |
+| U        | Internal Review: opportunities to compress storage with structs                           | Part Fixed   | https://github.com/aragon/ve-governance/pull/23                                                                                     |
 
 ## Not yet Done
 
@@ -84,4 +85,3 @@ Aragon Audits were conducted by various team members.
 | U        | Internal Review: can use early returns in the clock contract                     |         |                                                        |
 | U        | Finding 8: For loop in `ownedTokens` can be used as a DoS vector                 |         |                                                        |
 | U        | Finding 6: Check \_\_gap values to ensure they align with occupied storage slots | Blocked | Wait till all audit findings merged for a final review |
-| U        | Internal Review: opportunities to compress storage with structs                  |         |                                                        |
