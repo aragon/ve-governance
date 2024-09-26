@@ -80,7 +80,7 @@ Aragon Audits were conducted by various team members.
 | Severity | Issue                                                                            | Status  | Comment or PR                                          |
 | -------- | -------------------------------------------------------------------------------- | ------- | ------------------------------------------------------ |
 | U        | Internal Review: can use early returns in the clock contract                     |         |                                                        |
-| U        | Internal Review: Log the timestamp of deposits and warmups                       |         |                                                        |
+| U        | Internal Review: Log the timestamp of checkpoints                                |         |                                                        |
 | U        | Finding 8: For loop in `ownedTokens` can be used as a DoS vector                 |         |                                                        |
 | U        | Finding 7: SupportsInterface should include the interface Ids                    |         |                                                        |
 | U        | Finding 6: Check \_\_gap values to ensure they align with occupied storage slots | Blocked | Wait till all audit findings merged for a final review |
