@@ -32,8 +32,13 @@ contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote {
 
     // setup a fee withdrawal
     function testFuzz_feeWithdrawal(uint64 _fee, uint128 _dep, address _who) public {
-        vm.assume(_who != address(0) && _who != address(queue) && _who != address(escrow));
-        vm.assume(_who != address(vm)); // causes problems with erc721 receiver
+        vm.assume(
+            _who != address(0) &&
+                _who != address(queue) &&
+                _who != address(escrow) &&
+                _who != address(this) &&
+                _who != address(vm)
+        );
         vm.assume(_dep > 0);
 
         if (_fee > 1e18) _fee = 1e18;
