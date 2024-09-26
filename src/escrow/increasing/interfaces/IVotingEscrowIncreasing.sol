@@ -22,9 +22,12 @@ interface IVotingEscrowCoreErrors {
     error ZeroBalance();
     error SameAddress();
     error MustBe18Decimals();
+    error AmountTooSmall();
 }
 
 interface IVotingEscrowCoreEvents {
+    event MinDepositSet(uint256 minDeposit);
+
     event Deposit(
         address indexed depositor,
         uint256 indexed tokenId,

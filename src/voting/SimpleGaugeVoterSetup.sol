@@ -35,6 +35,7 @@ struct ISimpleGaugeVoterSetupParams {
     string veTokenSymbol;
     // escrow - main
     address token;
+    uint256 minDeposit;
     // queue
     uint256 cooldown;
     uint256 feePercent;
@@ -116,7 +117,10 @@ contract SimpleGaugeVoterSetup is PluginSetup {
         // deploy the escrow locker
         VotingEscrow escrow = VotingEscrow(
             escrowBase.deployUUPSProxy(
-                abi.encodeCall(VotingEscrow.initialize, (params.token, _dao, clock))
+                abi.encodeCall(
+                    VotingEscrow.initialize,
+                    (params.token, _dao, clock, params.minDeposit)
+                )
             )
         );
 
@@ -298,7 +302,8 @@ contract SimpleGaugeVoterSetup is PluginSetup {
         uint256 cooldown,
         uint256 warmup,
         uint256 feePercent,
-        uint256 minLock
+        uint256 minLock,
+        uint256 minDeposit
     ) external pure returns (bytes memory) {
         return
             abi.encode(
@@ -310,7 +315,8 @@ contract SimpleGaugeVoterSetup is PluginSetup {
                     warmup: warmup,
                     cooldown: cooldown,
                     feePercent: feePercent,
-                    minLock: minLock
+                    minLock: minLock,
+                    minDeposit: minDeposit
                 })
             );
     }

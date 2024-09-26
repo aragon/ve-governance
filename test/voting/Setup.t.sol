@@ -135,6 +135,7 @@ contract VoterSetupTest is GaugeVotingBase {
         uint256 cooldown = 7 days;
         uint256 feePercent = 0.05e18;
         uint minLock = 2 weeks;
+        uint minDeposit = 1e18;
 
         ISimpleGaugeVoterSetupParams memory params = ISimpleGaugeVoterSetupParams({
             isPaused: isPaused,
@@ -144,7 +145,8 @@ contract VoterSetupTest is GaugeVotingBase {
             warmup: warmup,
             cooldown: cooldown,
             feePercent: feePercent,
-            minLock: minLock
+            minLock: minLock,
+            minDeposit: minDeposit
         });
 
         bytes memory encodedStruct = voterSetup.encodeSetupData(params);
@@ -158,7 +160,8 @@ contract VoterSetupTest is GaugeVotingBase {
             cooldown,
             warmup,
             feePercent,
-            minLock
+            minLock,
+            minDeposit
         );
         bytes32 encodedArgsHash = keccak256(encodedArgs);
 

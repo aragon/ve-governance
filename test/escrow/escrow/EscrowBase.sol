@@ -62,7 +62,7 @@ contract EscrowBase is
         token = new MockERC20();
         clock = _deployClock(address(dao));
 
-        escrow = _deployEscrow(address(token), address(dao), address(clock));
+        escrow = _deployEscrow(address(token), address(dao), address(clock), 1 ether);
         curve = _deployCurve(address(escrow), address(dao), 3 days, address(clock));
         nftLock = _deployLock(address(escrow), name, symbol, address(dao));
 
@@ -134,11 +134,15 @@ contract EscrowBase is
     function _deployEscrow(
         address _token,
         address _dao,
-        address _clock
+        address _clock,
+        uint256 _minDeposit
     ) public returns (VotingEscrow) {
         VotingEscrow impl = new VotingEscrow();
 
-        bytes memory initCalldata = abi.encodeCall(VotingEscrow.initialize, (_token, _dao, _clock));
+        bytes memory initCalldata = abi.encodeCall(
+            VotingEscrow.initialize,
+            (_token, _dao, _clock, _minDeposit)
+        );
         return VotingEscrow(address(impl).deployUUPSProxy(initCalldata));
     }
 

@@ -373,7 +373,8 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
                 warmup: 3 days,
                 cooldown: 3 days,
                 feePercent: 0,
-                minLock: 20 weeks
+                minLock: 20 weeks,
+                minDeposit: 1 ether
             })
         );
         (address pluginAddress, IPluginSetup.PreparedSetupData memory preparedSetupData) = psp

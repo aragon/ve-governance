@@ -46,6 +46,9 @@ contract VotingEscrow is
                               NFT Data
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Minimum deposit amount
+    uint256 public minDeposit;
+
     /// @notice Decimals of the voting power
     uint8 public constant decimals = 18;
 
@@ -86,7 +89,12 @@ contract VotingEscrow is
         _disableInitializers();
     }
 
-    function initialize(address _token, address _dao, address _clock) external initializer {
+    function initialize(
+        address _token,
+        address _dao,
+        address _clock,
+        uint256 _initialMinDeposit
+    ) external initializer {
         __DaoAuthorizableUpgradeable_init(IDAO(_dao));
         __ReentrancyGuard_init();
         __Pausable_init();
@@ -94,6 +102,8 @@ contract VotingEscrow is
         if (IERC20Metadata(_token).decimals() != 18) revert MustBe18Decimals();
         token = _token;
         clock = _clock;
+        minDeposit = _initialMinDeposit;
+        emit MinDepositSet(_initialMinDeposit);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -130,6 +140,11 @@ contract VotingEscrow is
 
     function unpause() external auth(PAUSER_ROLE) {
         _unpause();
+    }
+
+    function setMinDeposit(uint256 _minDeposit) external auth(ESCROW_ADMIN_ROLE) {
+        minDeposit = _minDeposit;
+        emit MinDepositSet(_minDeposit);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -223,6 +238,7 @@ contract VotingEscrow is
     /// @param _to Address to deposit
     function _createLockFor(uint256 _value, address _to) internal returns (uint256) {
         if (_value == 0) revert ZeroAmount();
+        if (_value < minDeposit) revert AmountTooSmall();
 
         // query the duration lib to get the next time we can deposit
         uint256 startTime = IClock(clock).epochNextCheckpointTs();
