@@ -35,6 +35,7 @@ QuadraticIncreasingEscrow attempts to follow a generalised structure that can wo
 | I        | 7.16 (HAL-09) Unset dependencies may cause reverts and improper behavior                       | Acknowledged | Noted for future: implement a graceful and idomatic revert strategy.                                       |
 | I        | 7.15 (HAL-07) Misleading variable name for user interaction tracking                           | Fixed        | https://github.com/aragon/ve-governance/pull/15                                                            |
 | I        | 7.13 (HAL-03) Lack of contract validation in initializer                                       | Acknowledged | The DAO and deployers are responsible for ensuring they validate the contracts and can update if needed    |
+| I        | 7.11 (HAL-21) Inconsistent voting power reporting in Reset event                               | Fixed        | https://github.com/aragon/ve-governance/pull/16                                                            |
 
 ## Not yet Done
 
@@ -44,4 +45,3 @@ QuadraticIncreasingEscrow attempts to follow a generalised structure that can wo
 | M        | 7.8 (HAL-11) Incorrect balance tracking for non-standard ERC20 tokens       |        |
 | M        | 7.7 (HAL-06) Checkpoint function allows non-chronological updates           |        |
 | I        | 7.14 (HAL-04) Unbounded warmup period can span multiple epochs              |        |
-| I        | 7.11 (HAL-21) Inconsistent voting power reporting in Reset event            |        |
