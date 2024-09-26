@@ -7,8 +7,8 @@ pragma solidity ^0.8.0;
 
 interface ILockedBalanceIncreasing {
     struct LockedBalance {
-        uint256 amount;
-        uint256 start;
+        uint208 amount;
+        uint48 start; // mirrors oz ERC20 timestamp clocks
     }
 }
 

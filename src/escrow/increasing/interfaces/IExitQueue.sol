@@ -47,16 +47,16 @@ interface IExitQueueFee is IExitQueueFeeErrorsAndEvents {
 interface IExitQueueCooldownErrorsAndEvents {
     error CooldownTooHigh();
 
-    event CooldownSet(uint256 cooldown);
+    event CooldownSet(uint48 cooldown);
 }
 
 interface IExitQueueCooldown is IExitQueueCooldownErrorsAndEvents {
     /// @notice time in seconds between exit and withdrawal
-    function cooldown() external view returns (uint256);
+    function cooldown() external view returns (uint48);
 
     /// @notice The exit queue manager can set the cooldown period
     /// @param _cooldown time in seconds between exit and withdrawal
-    function setCooldown(uint256 _cooldown) external;
+    function setCooldown(uint48 _cooldown) external;
 }
 
 /*///////////////////////////////////////////////////////////////
@@ -64,17 +64,17 @@ interface IExitQueueCooldown is IExitQueueCooldownErrorsAndEvents {
 //////////////////////////////////////////////////////////////*/
 
 interface IExitMinLockCooldownErrorsAndEvents {
-    event MinLockSet(uint256 minLock);
+    event MinLockSet(uint48 minLock);
 
-    error MinLockNotReached(uint256 tokenId, uint256 minLock, uint256 earliestExitDate);
+    error MinLockNotReached(uint256 tokenId, uint48 minLock, uint48 earliestExitDate);
 }
 
 interface IExitQueueMinLock is IExitMinLockCooldownErrorsAndEvents {
     /// @notice minimum time from the original lock date before one can enter the queue
-    function minLock() external view returns (uint256);
+    function minLock() external view returns (uint48);
 
     /// @notice The exit queue manager can set the minimum lock time
-    function setMinLock(uint256 _cooldown) external;
+    function setMinLock(uint48 _cooldown) external;
 }
 
 /*///////////////////////////////////////////////////////////////

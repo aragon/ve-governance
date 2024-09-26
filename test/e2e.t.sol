@@ -70,7 +70,7 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
 
     uint depositTime;
 
-    error MinLockNotReached(uint256 minLock, uint256 expected, uint256 actual);
+    error MinLockNotReached(uint256 tokenId, uint48 expected, uint48 actual);
 
     function testE2E() public {
         // clock reset

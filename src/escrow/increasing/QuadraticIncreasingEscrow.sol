@@ -47,7 +47,7 @@ contract QuadraticIncreasingEscrow is
     mapping(uint256 => uint256) public userPointEpoch;
 
     /// @notice The warmup period for the curve
-    uint256 public warmupPeriod;
+    uint48 public warmupPeriod;
 
     /// @dev tokenId => userPointEpoch => warmup
     /// UX improvement: warmup should start from point of writing, even if
@@ -83,7 +83,7 @@ contract QuadraticIncreasingEscrow is
     function initialize(
         address _escrow,
         address _dao,
-        uint256 _warmupPeriod,
+        uint48 _warmupPeriod,
         address _clock
     ) external initializer {
         escrow = _escrow;
@@ -183,7 +183,7 @@ contract QuadraticIncreasingEscrow is
                               Warmup
     //////////////////////////////////////////////////////////////*/
 
-    function setWarmupPeriod(uint256 _warmupPeriod) external auth(CURVE_ADMIN_ROLE) {
+    function setWarmupPeriod(uint48 _warmupPeriod) external auth(CURVE_ADMIN_ROLE) {
         warmupPeriod = _warmupPeriod;
         emit WarmupSet(_warmupPeriod);
     }
