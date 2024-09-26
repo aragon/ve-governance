@@ -96,9 +96,6 @@ contract GaugesDaoFactory {
     DeploymentParameters parameters;
     Deployment deployment;
 
-    /// @dev Solidity doesn't allow to store a struct array on a storage struct. Storing a reference to link from parameters.tokenParameters
-    TokenParameters[] private storageTokenParams;
-
     /// @notice Initializes the factory and performs the full deployment. Values become read-only after that.
     /// @param _parameters The parameters of the one-time deployment.
     constructor(DeploymentParameters memory _parameters) {
@@ -106,13 +103,12 @@ contract GaugesDaoFactory {
         parameters.multisigMembers = _parameters.multisigMembers;
 
         for (uint i = 0; i < _parameters.tokenParameters.length; ) {
-            storageTokenParams.push(_parameters.tokenParameters[i]);
+            parameters.tokenParameters.push(_parameters.tokenParameters[i]);
 
             unchecked {
                 i++;
             }
         }
-        parameters.tokenParameters = storageTokenParams;
 
         parameters.feePercent = _parameters.feePercent;
         parameters.warmupPeriod = _parameters.warmupPeriod;
