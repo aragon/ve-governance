@@ -188,39 +188,40 @@ contract SimpleGaugeVoter is
     }
 
     function _reset(uint256 _tokenId) internal {
+        // get what we need
         TokenVoteData storage voteData = tokenVoteData[_tokenId];
         address[] storage pastVotes = voteData.gaugesVotedFor;
-        uint256 votingPowerToRemove = 0;
+
+        // reset the global state variables we don't need
+        voteData.usedVotingPower = 0;
+        voteData.lastVoted = 0;
 
         // iterate over all the gauges voted for and reset the votes
+        uint256 votingPowerToRemove = 0;
         for (uint256 i = 0; i < pastVotes.length; i++) {
             address gauge = pastVotes[i];
             uint256 _votes = voteData.votes[gauge];
 
-            if (_votes != 0) {
-                // remove from the total weight and globals
-                gaugeVotes[gauge] -= _votes;
-                votingPowerToRemove += _votes;
+            // remove from the total weight and globals
+            gaugeVotes[gauge] -= _votes;
+            votingPowerToRemove += _votes;
 
-                delete voteData.votes[gauge];
+            delete voteData.votes[gauge];
 
-                emit Reset({
-                    voter: _msgSender(),
-                    gauge: gauge,
-                    epoch: epochId(),
-                    tokenId: _tokenId,
-                    votingPower: _votes,
-                    totalVotingPower: totalVotingPowerCast - _votes,
-                    timestamp: block.timestamp
-                });
-            }
+            emit Reset({
+                voter: _msgSender(),
+                gauge: gauge,
+                epoch: epochId(),
+                tokenId: _tokenId,
+                votingPower: _votes,
+                totalVotingPower: totalVotingPowerCast - _votes,
+                timestamp: block.timestamp
+            });
         }
 
-        // scrub the global state for the token
+        // clear the remaining state
         voteData.gaugesVotedFor = new address[](0);
         totalVotingPowerCast -= votingPowerToRemove;
-        voteData.usedVotingPower = 0;
-        voteData.lastVoted = 0;
     }
 
     /*///////////////////////////////////////////////////////////////
