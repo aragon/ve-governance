@@ -29,6 +29,7 @@ QuadraticIncreasingEscrow attempts to follow a generalised structure that can wo
 | L        | (HAL-08) Shared role for pause and unpause functions                                           | Acknowledged | Noted for future releases                       |
 | I        | 7.12 (HAL-22) Critical roles not assigned in contract setup                                    | Fixed        | https://github.com/aragon/ve-governance/pull/11 |
 | I        | 7.19 (HAL-05) Unnecessary calculation in checkpoint function (+other simple gas optimisations) | Fixed        | https://github.com/aragon/ve-governance/pull/12 |
+| I        | 7.20 (HAL-20) Potentially unnecessary check in reset function                                  | Fixed        | https://github.com/aragon/ve-governance/pull/13 |
 
 ## Not yet Done
 
@@ -37,7 +38,6 @@ QuadraticIncreasingEscrow attempts to follow a generalised structure that can wo
 | L        | 7.9 (HAL-17) Potential bypass of minimum lock time at checkpoint boundaries   |        |
 | M        | 7.8 (HAL-11) Incorrect balance tracking for non-standard ERC20 tokens         |        |
 | M        | 7.7 (HAL-06) Checkpoint function allows non-chronological updates             |        |
-| I        | 7.20 (HAL-20) Potentially unnecessary check in reset function                 |        |
 | I        | 7.18 (HAL-19) Fee precision too high                                          |        |
 | I        | 7.17 (HAL-18) Redundant exit check and missing documentation in exit function |        |
 | I        | 7.16 (HAL-09) Unset dependencies may cause reverts and improper behavior      |        |
@@ -45,4 +45,3 @@ QuadraticIncreasingEscrow attempts to follow a generalised structure that can wo
 | I        | 7.14 (HAL-04) Unbounded warmup period can span multiple epochs                |        |
 | I        | 7.13 (HAL-03) Lack of contract validation in initializer                      |        |
 | I        | 7.11 (HAL-21) Inconsistent voting power reporting in Reset event              |        |
-| L        | 7.9 (HAL-17) Potential bypass of minimum lock time at checkpoint boundaries   |        |
