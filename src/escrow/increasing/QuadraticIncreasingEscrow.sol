@@ -190,34 +190,38 @@ contract QuadraticIncreasingEscrow is
 
     /// @notice Returns whether the NFT is warm
     function isWarm(uint256 tokenId) public view returns (bool) {
-        uint256 _epoch = _getPastTokenPointIndex(tokenId, block.timestamp);
-        TokenPoint memory point = _tokenPointHistory[tokenId][_epoch];
+        uint256 interval = _getPastTokenPointInterval(tokenId, block.timestamp);
+        TokenPoint memory point = _tokenPointHistory[tokenId][interval];
         if (point.bias == 0) return false;
-        else return _isWarm(tokenId, _epoch, block.timestamp);
+        else return _isWarm(tokenId, interval, block.timestamp);
     }
 
-    function _isWarm(uint256 _tokenId, uint256 _userEpoch, uint256 t) public view returns (bool) {
-        return t >= _tokenPointWarmup[_tokenId][_userEpoch];
+    function _isWarm(
+        uint256 _tokenId,
+        uint256 _tokenInterval,
+        uint256 t
+    ) public view returns (bool) {
+        return t >= _tokenPointWarmup[_tokenId][_tokenInterval];
     }
 
     /*//////////////////////////////////////////////////////////////
                               BALANCE
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Returns the TokenPoint at the passed epoch
+    /// @notice Returns the TokenPoint at the passed interval
     /// @param _tokenId The NFT to return the TokenPoint for
-    /// @param _userEpoch The epoch to return the TokenPoint at
+    /// @param _tokenInterval The epoch to return the TokenPoint at
     function tokenPointHistory(
         uint256 _tokenId,
-        uint256 _userEpoch
+        uint256 _tokenInterval
     ) external view returns (TokenPoint memory) {
-        return _tokenPointHistory[_tokenId][_userEpoch];
+        return _tokenPointHistory[_tokenId][_tokenInterval];
     }
 
-    /// @notice Binary search to get the token point index for a token id at or prior to a given timestamp
+    /// @notice Binary search to get the token point interval for a token id at or prior to a given timestamp
     /// Once we have the point, we can apply the bias calculation to get the voting power.
     /// @dev If a token point does not exist prior to the timestamp, this will return 0.
-    function _getPastTokenPointIndex(
+    function _getPastTokenPointInterval(
         uint256 _tokenId,
         uint256 _timestamp
     ) internal view returns (uint256) {
@@ -248,13 +252,13 @@ contract QuadraticIncreasingEscrow is
     }
 
     function votingPowerAt(uint256 _tokenId, uint256 _t) external view returns (uint256) {
-        uint256 _epoch = _getPastTokenPointIndex(_tokenId, _t);
+        uint256 interval = _getPastTokenPointInterval(_tokenId, _t);
 
         // epoch 0 is an empty point
-        if (_epoch == 0) return 0;
-        TokenPoint memory lastPoint = _tokenPointHistory[_tokenId][_epoch];
+        if (interval == 0) return 0;
+        TokenPoint memory lastPoint = _tokenPointHistory[_tokenId][interval];
 
-        if (!_isWarm(_tokenId, _epoch, _t)) return 0;
+        if (!_isWarm(_tokenId, interval, _t)) return 0;
         uint256 timeElapsed = _t - lastPoint.ts;
 
         // in the increasing case, we don't allow changes to locks, so the ts and blk are
@@ -284,7 +288,7 @@ contract QuadraticIncreasingEscrow is
 
     /// @notice Record gper-user data to checkpoints. Used by VotingEscrow system.
     /// @dev Curve finance style but just for users at this stage
-    /// @param _tokenId NFT token ID. No user checkpoint if 0
+    /// @param _tokenId NFT token ID.
     /// @param _newLocked New locked amount / end lock time for the user
     function _checkpoint(
         uint256 _tokenId,
@@ -310,20 +314,20 @@ contract QuadraticIncreasingEscrow is
         // NOTE: the above global functionality is not implemented in this version of the contracts
         uNew.ts = _newLocked.start;
 
-        // check to see if we have an existing epoch for this token
-        uint256 userEpoch = tokenPointIntervals[_tokenId];
+        // check to see if we have an existing interval for this token
+        uint256 tokenInterval = tokenPointIntervals[_tokenId];
 
-        // If this is a new timestamp, increment the epoch
-        if (userEpoch == 0 || _tokenPointHistory[_tokenId][userEpoch].ts != uNew.ts) {
-            tokenPointIntervals[_tokenId] = ++userEpoch;
+        // If this is a new timestamp, increment the interval
+        if (tokenInterval == 0 || _tokenPointHistory[_tokenId][tokenInterval].ts != uNew.ts) {
+            tokenPointIntervals[_tokenId] = ++tokenInterval;
         }
 
         // Record the new point and warmup period
-        _tokenPointHistory[_tokenId][userEpoch] = uNew;
+        _tokenPointHistory[_tokenId][tokenInterval] = uNew;
 
         // if the user is exiting, we don't need to set the warmup period
         if (!isExiting) {
-            _tokenPointWarmup[_tokenId][userEpoch] = block.timestamp + warmupPeriod;
+            _tokenPointWarmup[_tokenId][tokenInterval] = block.timestamp + warmupPeriod;
         }
     }
 
