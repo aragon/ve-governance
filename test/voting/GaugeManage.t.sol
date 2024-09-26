@@ -168,6 +168,18 @@ contract TestGaugeManage is GaugeVotingBase {
         voter.updateGaugeMetadata(_gauge, newMetadata);
     }
 
+    function testFuzz_canUpdateGaugeMetadata(address _gauge, string calldata metadata) public {
+        vm.assume(_gauge != address(0));
+        voter.createGauge(_gauge, metadata);
+
+        assertEq(voter.getGauge(_gauge).metadataURI, metadata);
+
+        string memory newMetadata = "new metadata";
+        voter.updateGaugeMetadata(_gauge, newMetadata);
+
+        assertEq(voter.getGauge(_gauge).metadataURI, newMetadata);
+    }
+
     // can pause votes and resets
     function testCanPauseVoteAndResets() public {
         bytes memory err = "Pausable: paused";

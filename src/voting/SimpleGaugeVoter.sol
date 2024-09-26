@@ -239,15 +239,15 @@ contract SimpleGaugeVoter is
 
     function createGauge(
         address _gauge,
-        string calldata _metadata
+        string calldata _metadataURI
     ) external auth(GAUGE_ADMIN_ROLE) nonReentrant returns (address gauge) {
         if (_gauge == address(0)) revert ZeroGauge();
         if (gaugeExists(_gauge)) revert GaugeExists();
 
-        gauges[_gauge] = Gauge(true, block.timestamp, bytes32(abi.encode(_metadata)));
+        gauges[_gauge] = Gauge(true, block.timestamp, _metadataURI);
         gaugeList.push(_gauge);
 
-        emit GaugeCreated(_gauge, _msgSender(), _metadata);
+        emit GaugeCreated(_gauge, _msgSender(), _metadataURI);
         return _gauge;
     }
 
@@ -267,11 +267,11 @@ contract SimpleGaugeVoter is
 
     function updateGaugeMetadata(
         address _gauge,
-        string calldata _metadata
+        string calldata _metadataURI
     ) external auth(GAUGE_ADMIN_ROLE) {
         if (!gaugeExists(_gauge)) revert GaugeDoesNotExist(_gauge);
-        gauges[_gauge].metadata = keccak256(abi.encode(_metadata));
-        emit GaugeMetadataUpdated(_gauge, _metadata);
+        gauges[_gauge].metadataURI = _metadataURI;
+        emit GaugeMetadataUpdated(_gauge, _metadataURI);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -306,6 +306,10 @@ contract SimpleGaugeVoter is
     /*///////////////////////////////////////////////////////////////
                             Getters: Mappings
     //////////////////////////////////////////////////////////////*/
+
+    function getGauge(address _gauge) external view returns (Gauge memory) {
+        return gauges[_gauge];
+    }
 
     function getAllGauges() external view returns (address[] memory) {
         return gaugeList;
