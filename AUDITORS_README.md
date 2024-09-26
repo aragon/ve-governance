@@ -12,14 +12,14 @@ QuadraticIncreasingEscrow attempts to follow a generalised structure that can wo
 
 ## Critical and High Severity
 
-| Severity | Issue                                                                    | Status       | Comment or PR                                                                                                                                                                                                                           |
-| -------- | ------------------------------------------------------------------------ | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| C        | (HAL-13) Token ID reuse leads to protocol deadlock                       | Fixed        | https://github.com/aragon/ve-governance/pull/3                                                                                                                                                                                          |
-| H        | (HAL-14) Unsafe minting in Lock contract                                 | Fixed        | https://github.com/aragon/ve-governance/pull/4                                                                                                                                                                                          |
-| H        | (HAL-15) Critical withdrawal blockage due to escrow address whitelisting | Fixed        | https://github.com/aragon/ve-governance/pull/5                                                                                                                                                                                          |
-| H        | (HAL-16) Potential token lock due to unrestricted escrow transfers       | Fixed        | https://github.com/aragon/ve-governance/pull/6                                                                                                                                                                                          |
-| H        | (HAL-10) Unrestricted NFT contract change enables potential fund theft   | Fixed        | https://github.com/aragon/ve-governance/pull/6                                                                                                                                                                                          |
-| H        | (HAL-12) Inaccurate voting power reporting after withdrawal initiation   | Acknowledged | There are a few competing implementations that address this concern and we think the best approach is to compare when we add onchain voting. In the current setup this issue does not cause any obvious vulnerabilities that we can see |
+| Severity | Issue                                                                    | Status     | Comment or PR                                   |
+| -------- | ------------------------------------------------------------------------ | ---------- | ----------------------------------------------- |
+| C        | (HAL-13) Token ID reuse leads to protocol deadlock                       | Fixed      | https://github.com/aragon/ve-governance/pull/3  |
+| H        | (HAL-14) Unsafe minting in Lock contract                                 | Fixed      | https://github.com/aragon/ve-governance/pull/4  |
+| H        | (HAL-15) Critical withdrawal blockage due to escrow address whitelisting | Fixed      | https://github.com/aragon/ve-governance/pull/5  |
+| H        | (HAL-16) Potential token lock due to unrestricted escrow transfers       | Fixed      | https://github.com/aragon/ve-governance/pull/6  |
+| H        | (HAL-10) Unrestricted NFT contract change enables potential fund theft   | Fixed      | https://github.com/aragon/ve-governance/pull/6  |
+| H        | (HAL-12) Inaccurate voting power reporting after withdrawal initiation   | Semi-Fixed | https://github.com/aragon/ve-governance/pull/22 |
 
 ## Other Severity
 
@@ -75,13 +75,13 @@ Aragon Audits were conducted by various team members.
 | U        | Internal Review: passing very small weights to gauges leads to precision loss             | Acknowledged | In this build, voting is signalling only, so rounding errors are ok for small values, we may wish to reevaluate with onchain voting |
 | U        | Internal Review: Small deposits and fees will round to zero in the exit queue             | Acknowledged | Fee rounding to zero simply won't charge a fee, we don't think it's a major issue + we can enforce a min deposit                    |
 | U        | Finding 7: SupportsInterface should include the interface Ids                             | Fixed        | https://github.com/aragon/ve-governance/pull/20                                                                                     |
+| U        | Internal Review: Log the timestamp of checkpoints                                         | Fixed        | https://github.com/aragon/ve-governance/pull/22                                                                                     |
 
 ## Not yet Done
 
 | Severity | Issue                                                                            | Status  | Comment or PR                                          |
 | -------- | -------------------------------------------------------------------------------- | ------- | ------------------------------------------------------ |
 | U        | Internal Review: can use early returns in the clock contract                     |         |                                                        |
-| U        | Internal Review: Log the timestamp of checkpoints                                |         |                                                        |
 | U        | Finding 8: For loop in `ownedTokens` can be used as a DoS vector                 |         |                                                        |
 | U        | Finding 6: Check \_\_gap values to ensure they align with occupied storage slots | Blocked | Wait till all audit findings merged for a final review |
 | U        | Internal Review: opportunities to compress storage with structs                  |         |                                                        |
