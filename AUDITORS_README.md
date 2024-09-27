@@ -40,19 +40,17 @@ https://www.halborn.com/portal/reports/ve-governance-hub
 | I        | 7.11 (HAL-21) Inconsistent voting power reporting in Reset event                               | Fixed        | https://github.com/aragon/ve-governance/pull/16                                                            |
 | M        | 7.8 (HAL-11) Incorrect balance tracking for non-standard ERC20 tokens                          | Fixed        | https://github.com/aragon/ve-governance/pull/17                                                            |
 | L        | 7.9 (HAL-17) Potential bypass of minimum lock time at checkpoint boundaries                    | Fixed        | https://github.com/aragon/ve-governance/pull/25                                                            |
+| M        | 7.7 (HAL-06) Checkpoint function allows non-chronological updates                              | Fixed        | See [HAL-06 Below](#HAL-06) Fix is https://github.com/aragon/ve-governance/pull/26                         |
 
 ## Not yet Done
 
-| Severity | Issue                                                             | Status  | Comment or PR                                                              |
-| -------- | ----------------------------------------------------------------- | ------- | -------------------------------------------------------------------------- |
-| M        | 7.7 (HAL-06) Checkpoint function allows non-chronological updates | Blocked | See [HAL-06 Below](#HAL-06) |
-| I        | 7.14 (HAL-04) Unbounded warmup period can span multiple epochs    |         |
-
-
+| Severity | Issue                                                          | Status | Comment or PR |
+| -------- | -------------------------------------------------------------- | ------ | ------------- |
+| I        | 7.14 (HAL-04) Unbounded warmup period can span multiple epochs |        |
 
 ### HAL-06
-![image](https://github.com/user-attachments/assets/b211c368-2e14-4d80-a7f4-de7d1b83fbfb)
 
+![image](https://github.com/user-attachments/assets/b211c368-2e14-4d80-a7f4-de7d1b83fbfb)
 
 # Notes from the BlocSec Audit
 
