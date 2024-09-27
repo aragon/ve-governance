@@ -69,21 +69,34 @@ To deploy the DAO, ensure that [Foundry](https://getfoundry.sh/) is installed on
 1. Edit `script/multisig-members.json` with the list of addresses to set as signers
 2. Run `forge build && forge test`
 3. Copy `.env.example` into `.env` and define the parameters
-4. Run `source .env` to load them
-5. Set the RPC URL and run the deployment script
 
 ```sh
-RPC_URL="https://eth-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}"
-forge script --chain "$NETWORK" script/Deploy.s.sol:Deploy --rpc-url "$RPC_URL" --broadcast --verify
+# Load the env vars
+source .env
 ```
 
-If you get the error Failed to get EIP-1559 fees, add --legacy to the last command:
+```sh
+# Set the right RPC URL
+RPC_URL="https://eth-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}"
+```
+
+```sh
+# Run the deployment script
+
+# If using Etherscan
+forge script --chain "$NETWORK" script/Deploy.s.sol:Deploy --rpc-url "$RPC_URL" --broadcast --verify
+
+# If using BlockScout
+forge script --chain "$NETWORK" script/Deploy.s.sol:Deploy --rpc-url "$RPC_URL" --broadcast --verify --verifier blockscout --verifier-url "https://sepolia.explorer.mode.network/api\?"
+```
+
+If you get the error Failed to get EIP-1559 fees, add `--legacy` to the command:
 
 ```sh
 forge script --chain "$NETWORK" script/Deploy.s.sol:Deploy --rpc-url "$RPC_URL" --broadcast --verify --legacy
 ```
 
-If a some contracts fail to verify on Etherscan, retry with this command:
+If some contracts fail to verify on Etherscan, retry with this command:
 
 ```sh
 forge script --chain "$NETWORK" script/Deploy.s.sol:Deploy --rpc-url "$RPC_URL" --verify --legacy --private-key "$DEPLOYMENT_PRIVATE_KEY" --resume
