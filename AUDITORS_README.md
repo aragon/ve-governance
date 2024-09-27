@@ -39,14 +39,14 @@ https://www.halborn.com/portal/reports/ve-governance-hub
 | I        | 7.13 (HAL-03) Lack of contract validation in initializer                                       | Acknowledged | The DAO and deployers are responsible for ensuring they validate the contracts and can update if needed    |
 | I        | 7.11 (HAL-21) Inconsistent voting power reporting in Reset event                               | Fixed        | https://github.com/aragon/ve-governance/pull/16                                                            |
 | M        | 7.8 (HAL-11) Incorrect balance tracking for non-standard ERC20 tokens                          | Fixed        | https://github.com/aragon/ve-governance/pull/17                                                            |
+| L        | 7.9 (HAL-17) Potential bypass of minimum lock time at checkpoint boundaries                    | Fixed        | https://github.com/aragon/ve-governance/pull/25                                                            |
 
 ## Not yet Done
 
-| Severity | Issue                                                                       | Status  | Comment or PR                                                              |
-| -------- | --------------------------------------------------------------------------- | ------- | -------------------------------------------------------------------------- |
-| L        | 7.9 (HAL-17) Potential bypass of minimum lock time at checkpoint boundaries |         |
-| M        | 7.7 (HAL-06) Checkpoint function allows non-chronological updates           | Blocked | Description of the issue does not match the title - awaiting clarification |
-| I        | 7.14 (HAL-04) Unbounded warmup period can span multiple epochs              |         |
+| Severity | Issue                                                             | Status  | Comment or PR                                                              |
+| -------- | ----------------------------------------------------------------- | ------- | -------------------------------------------------------------------------- |
+| M        | 7.7 (HAL-06) Checkpoint function allows non-chronological updates | Blocked | Description of the issue does not match the title - awaiting clarification |
+| I        | 7.14 (HAL-04) Unbounded warmup period can span multiple epochs    |         |
 
 # Notes from the BlocSec Audit
 
