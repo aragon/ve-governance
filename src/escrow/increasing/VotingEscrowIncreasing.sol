@@ -239,8 +239,6 @@ contract VotingEscrow is
         // we don't allow edits in this implementation, so only the new lock is used
         _checkpoint(newTokenId, lock);
 
-        // mint the NFT before we reach out to the semi-trusted token
-        IERC721EMB(lockNFT).mint(_to, newTokenId);
 
         uint256 balanceBefore = IERC20(token).balanceOf(address(this));
 
@@ -251,7 +249,8 @@ contract VotingEscrow is
         if (IERC20(token).balanceOf(address(this)) != balanceBefore + _value)
             revert TransferBalanceIncorrect();
 
-        // emit the deposit event
+        // mint the NFT before and emit the event to complete the lock
+        IERC721EMB(lockNFT).mint(_to, newTokenId);
         emit Deposit(_to, newTokenId, startTime, _value, totalLocked);
 
         return newTokenId;
