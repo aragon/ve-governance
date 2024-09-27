@@ -9,6 +9,7 @@ import {QuadraticCurveBase, MockEscrow} from "./QuadraticCurveBase.t.sol";
 
 contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
     address attacker = address(0x1);
+    error InvalidCheckpoint();
 
     function testUUPSUpgrade() public {
         address newImpl = address(new QuadraticIncreasingEscrow());
@@ -19,5 +20,14 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
         vm.prank(attacker);
         vm.expectRevert(err);
         curve.upgradeTo(newImpl);
+    }
+
+    function testCannotWriteNewCheckpointInPast() public {
+        LockedBalance memory first = LockedBalance({amount: 100, start: 100});
+        LockedBalance memory second = LockedBalance({amount: 200, start: 99});
+
+        escrow.checkpoint(1, LockedBalance(0, 0), first);
+        vm.expectRevert(InvalidCheckpoint.selector);
+        escrow.checkpoint(1, first, second);
     }
 }

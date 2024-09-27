@@ -313,9 +313,21 @@ contract QuadraticIncreasingEscrow is
         // check to see if we have an existing epoch for this token
         uint256 userEpoch = userPointEpoch[_tokenId];
 
-        // If this is a new timestamp, increment the epoch
-        if (userEpoch == 0 || _userPointHistory[_tokenId][userEpoch].ts != uNew.ts) {
+        // if we don't have a point, we can write to the first epoch
+        if (userEpoch == 0) {
             userPointEpoch[_tokenId] = ++userEpoch;
+        }
+        // else we need to check the last point
+        else {
+            UserPoint memory lastPoint = _userPointHistory[_tokenId][userEpoch];
+
+            // can't do this: we can only write to same point or future
+            if (lastPoint.ts > uNew.ts) revert InvalidCheckpoint();
+
+            // if we're writing to a new point, increment the epoch
+            if (lastPoint.ts != uNew.ts) {
+                userPointEpoch[_tokenId] = ++userEpoch;
+            }
         }
 
         // Record the new point and warmup period
