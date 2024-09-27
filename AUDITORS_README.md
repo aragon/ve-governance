@@ -41,12 +41,11 @@ https://www.halborn.com/portal/reports/ve-governance-hub
 | M        | 7.8 (HAL-11) Incorrect balance tracking for non-standard ERC20 tokens                          | Fixed        | https://github.com/aragon/ve-governance/pull/17                                                            |
 | L        | 7.9 (HAL-17) Potential bypass of minimum lock time at checkpoint boundaries                    | Fixed        | https://github.com/aragon/ve-governance/pull/25                                                            |
 | M        | 7.7 (HAL-06) Checkpoint function allows non-chronological updates                              | Fixed        | See [HAL-06 Below](#HAL-06) Fix is https://github.com/aragon/ve-governance/pull/26                         |
+| I        | 7.14 (HAL-04) Unbounded warmup period can span multiple epochs                                 | Semi-Fixed   | https://github.com/aragon/ve-governance/pull/27                                                            |
 
 ## Not yet Done
 
-| Severity | Issue                                                          | Status | Comment or PR |
-| -------- | -------------------------------------------------------------- | ------ | ------------- |
-| I        | 7.14 (HAL-04) Unbounded warmup period can span multiple epochs |        |
+- Make strict equalities everywhere
 
 ### HAL-06
 
