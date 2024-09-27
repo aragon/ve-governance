@@ -86,6 +86,7 @@ Aragon Audits were conducted by various team members.
 | U        | Internal Review: opportunities to compress storage with structs                           | Part Fixed   | https://github.com/aragon/ve-governance/pull/23                                                                                     |
 | U        | Internal Review: can use early returns in the clock contract                              | Acknowledged | Minor optimisation - can be added as a refinement feature later                                                                     |
 | U        | Finding 8: For loop in `ownedTokens` can be used as a DoS vector                          | Fixed        | https://github.com/aragon/ve-governance/pull/24                                                                                     |
+| U        | Internal Review: use strict inequalities where possible                                   | Fixed        | https://github.com/aragon/ve-governance/pull/28                                                                                     |
 
 ## Not yet Done
 
