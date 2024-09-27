@@ -214,4 +214,31 @@ contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote {
         assertEq(nftLock.balanceOf(address(escrow)), 0);
         assertEq(escrow.totalLocked(), 0);
     }
+
+    error MinLockNotReached(uint256 tokenId, uint256 minLock, uint256 earliestExitDate);
+
+    function testCantDepositAndWithdrawInTheSameBlock() public {
+        // this is a timing attack that requires a few things:
+        // 1. deposit falls exactly on the week boundary, so that we start immediately
+
+        // warp to a week boundary
+        vm.warp(1 weeks);
+
+        // deposit
+        token.mint(address(1), 100e18);
+
+        uint tokenId;
+
+        bytes memory data = abi.encodeWithSelector(MinLockNotReached.selector, 1, 1, 1 weeks + 1);
+        // start the deposit
+        vm.startPrank(address(1));
+        {
+            token.approve(address(escrow), 100e18);
+            tokenId = escrow.createLock(100e18);
+            nftLock.approve(address(escrow), tokenId);
+            vm.expectRevert(data);
+            escrow.beginWithdrawal(tokenId);
+        }
+        vm.stopPrank();
+    }
 }

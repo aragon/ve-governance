@@ -131,7 +131,7 @@ contract GaugeVotingBase is
                 warmup: 3 days,
                 cooldown: 3 days,
                 feePercent: 0,
-                minLock: 0
+                minLock: 1
             })
         );
         (address pluginAddress, IPluginSetup.PreparedSetupData memory preparedSetupData) = psp
