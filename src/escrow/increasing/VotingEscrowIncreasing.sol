@@ -285,6 +285,10 @@ contract VotingEscrow is
     function beginWithdrawal(uint256 _tokenId) public nonReentrant whenNotPaused {
         // can't exit if you have votes pending
         if (isVoting(_tokenId)) revert CannotExit();
+
+        // in the event of an increasing curve, 0 voting power means voting isn't active
+        if (votingPower(_tokenId) == 0) revert CannotExit();
+
         address owner = IERC721EMB(lockNFT).ownerOf(_tokenId);
 
         // we can remove the user's voting power as it's no longer locked

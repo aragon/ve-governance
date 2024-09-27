@@ -214,4 +214,41 @@ contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote {
         assertEq(nftLock.balanceOf(address(escrow)), 0);
         assertEq(escrow.totalLocked(), 0);
     }
+
+    function testCannotExitDuringWarmupIfWarmupIsLong() public {
+        // warp to genesis
+        vm.warp(1);
+
+        // set a long warmup that crosses an epoch boundary
+        curve.setWarmupPeriod(4 weeks);
+
+        // make a deposit
+        token.mint(address(1), 100e18);
+
+        uint tokenId;
+
+        vm.startPrank(address(1));
+        {
+            token.approve(address(escrow), 100e18);
+            tokenId = escrow.createLock(100e18);
+        }
+        vm.stopPrank();
+
+        // check the start date
+        uint start = escrow.locked(tokenId).start;
+        assertEq(start, 1 weeks);
+
+        vm.warp(1 weeks);
+
+        // should  not be able to exit
+        vm.startPrank(address(1));
+        {
+            nftLock.approve(address(escrow), tokenId);
+            vm.expectRevert(CannotExit.selector);
+            escrow.beginWithdrawal(tokenId);
+        }
+        vm.stopPrank();
+    }
+
+    // should not be able to exit during warmup
 }
