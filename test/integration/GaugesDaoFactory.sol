@@ -3,10 +3,10 @@ pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
 import {GaugesDaoFactory, Deployment, DeploymentParameters, TokenParameters} from "../../src/factory/GaugesDaoFactory.sol";
-import {MockPluginSetupProcessor} from "../mocks/osx/MockPSP.sol";
-import {MockPluginSetupProcessorMulti} from "../mocks/osx/MockPSPMulti.sol";
-import {MockPluginRepoRegistry} from "../mocks/osx/MockPluginRepoRegistry.sol";
-import {MockDAOFactory} from "../mocks/osx/MockDaoFactory.sol";
+import {MockPluginSetupProcessor} from "@mocks/osx/MockPSP.sol";
+import {MockPluginSetupProcessorMulti} from "@mocks/osx/MockPSPMulti.sol";
+import {MockPluginRepoRegistry} from "@mocks/osx/MockPluginRepoRegistry.sol";
+import {MockDAOFactory} from "@mocks/osx/MockDAOFactory.sol";
 import {PluginSetupProcessor} from "@aragon/osx/framework/plugin/setup/PluginSetupProcessor.sol";
 import {PluginRepoFactory} from "@aragon/osx/framework/plugin/repo/PluginRepoFactory.sol";
 import {PluginRepoRegistry} from "@aragon/osx/framework/plugin/repo/PluginRepoRegistry.sol";
