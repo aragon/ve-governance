@@ -7,7 +7,7 @@ import {IVotingEscrowIncreasing, ILockedBalanceIncreasing} from "src/escrow/incr
 
 import {QuadraticCurveBase, MockEscrow} from "./QuadraticCurveBase.t.sol";
 
-contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
+contract TestQuadraticIncreasingCurveLogic is QuadraticCurveBase {
     address attacker = address(0x1);
     error InvalidCheckpoint();
 
@@ -29,5 +29,17 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
         escrow.checkpoint(1, LockedBalance(0, 0), first);
         vm.expectRevert(InvalidCheckpoint.selector);
         escrow.checkpoint(1, first, second);
+    }
+
+    function testCanWriteNewCheckpointsAtSameTime() public {
+        LockedBalance memory first = LockedBalance({amount: 100, start: 100});
+        LockedBalance memory second = LockedBalance({amount: 200, start: 100});
+
+        escrow.checkpoint(1, LockedBalance(0, 0), first);
+        escrow.checkpoint(1, first, second);
+
+        // check we have only 1 user epoch
+        assertEq(curve.userPointEpoch(1), 1);
+        assertEq(curve.userPointHistory(1, 1).bias, 200);
     }
 }
