@@ -61,3 +61,30 @@ The main workflow in the Mode Governance build is as follows:
 ## Curve design
 
 To build a flexible approach to curve design, we reviewed implementations such as seen in Curve and Aerodrome and attempted to generalise to higher order polynomials [Details on the curve design research can be found here](https://github.com/jordaniza/ve-explainer/blob/main/README.md)
+
+## Deployment
+
+To deploy the DAO, ensure that [Foundry](https://getfoundry.sh/) is installed on your computer.
+
+1. Edit `script/multisig-members.json` with the list of addresses to set as signers
+2. Run `forge build && forge test`
+3. Copy `.env.example` into `.env` and define the parameters
+4. Run `source .env` to load them
+5. Set the RPC URL and run the deployment script
+
+```sh
+RPC_URL="https://eth-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}"
+forge script --chain "$NETWORK" script/Deploy.s.sol:Deploy --rpc-url "$RPC_URL" --broadcast --verify
+```
+
+If you get the error Failed to get EIP-1559 fees, add --legacy to the last command:
+
+```sh
+forge script --chain "$NETWORK" script/Deploy.s.sol:Deploy --rpc-url "$RPC_URL" --broadcast --verify --legacy
+```
+
+If a some contracts fail to verify on Etherscan, retry with this command:
+
+```sh
+forge script --chain "$NETWORK" script/Deploy.s.sol:Deploy --rpc-url "$RPC_URL" --verify --legacy --private-key "$DEPLOYMENT_PRIVATE_KEY" --resume
+```
