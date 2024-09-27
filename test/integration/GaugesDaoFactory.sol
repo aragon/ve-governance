@@ -525,6 +525,7 @@ contract GaugesDaoFactoryTest is Test {
             address(0),
             "Empty plugin address"
         );
+        assertEq(deployment.gaugeVoterPluginSets[0].plugin.paused(), false, "Should not be paused");
         assertNotEq(
             address(deployment.gaugeVoterPluginSets[0].curve),
             address(0),
@@ -550,11 +551,7 @@ contract GaugesDaoFactoryTest is Test {
             2345,
             "Incorrect cooldown"
         );
-        assertEq(
-            deployment.gaugeVoterPluginSets[0].exitQueue.minLock(),
-            3456,
-            "Incorrect minLock"
-        );
+        assertEq(deployment.gaugeVoterPluginSets[0].exitQueue.minLock(), 3456, "Incorrect minLock");
         assertNotEq(
             address(deployment.gaugeVoterPluginSets[0].votingEscrow),
             address(0),
@@ -586,6 +583,7 @@ contract GaugesDaoFactoryTest is Test {
             address(0),
             "Empty plugin address"
         );
+        assertEq(deployment.gaugeVoterPluginSets[1].plugin.paused(), false, "Should not be paused");
         assertNotEq(
             address(deployment.gaugeVoterPluginSets[1].curve),
             address(0),
@@ -611,11 +609,7 @@ contract GaugesDaoFactoryTest is Test {
             2345,
             "Incorrect cooldown"
         );
-        assertEq(
-            deployment.gaugeVoterPluginSets[1].exitQueue.minLock(),
-            3456,
-            "Incorrect minLock"
-        );
+        assertEq(deployment.gaugeVoterPluginSets[1].exitQueue.minLock(), 3456, "Incorrect minLock");
         assertNotEq(
             address(deployment.gaugeVoterPluginSets[1].votingEscrow),
             address(0),
@@ -740,7 +734,7 @@ contract GaugesDaoFactoryTest is Test {
             warmupPeriod: 5678,
             cooldownPeriod: 6789,
             minLockDuration: 7890,
-            votingPaused: false,
+            votingPaused: true,
             // Standard multisig repo
             multisigPluginRepo: multisigPluginRepo,
             multisigPluginRelease: 1,
@@ -850,6 +844,7 @@ contract GaugesDaoFactoryTest is Test {
             address(0),
             "Empty plugin address"
         );
+        assertEq(deployment.gaugeVoterPluginSets[0].plugin.paused(), true, "Should be paused");
         assertNotEq(
             address(deployment.gaugeVoterPluginSets[0].curve),
             address(0),
@@ -875,11 +870,7 @@ contract GaugesDaoFactoryTest is Test {
             6789,
             "Incorrect cooldown"
         );
-        assertEq(
-            deployment.gaugeVoterPluginSets[0].exitQueue.minLock(),
-            7890,
-            "Incorrect minLock"
-        );
+        assertEq(deployment.gaugeVoterPluginSets[0].exitQueue.minLock(), 7890, "Incorrect minLock");
         assertNotEq(
             address(deployment.gaugeVoterPluginSets[0].votingEscrow),
             address(0),
@@ -911,6 +902,7 @@ contract GaugesDaoFactoryTest is Test {
             address(0),
             "Empty plugin address"
         );
+        assertEq(deployment.gaugeVoterPluginSets[1].plugin.paused(), true, "Should be paused");
         assertNotEq(
             address(deployment.gaugeVoterPluginSets[1].curve),
             address(0),
@@ -926,11 +918,6 @@ contract GaugesDaoFactoryTest is Test {
             address(0),
             "Empty exitQueue address"
         );
-        assertNotEq(
-            address(deployment.gaugeVoterPluginSets[1].votingEscrow),
-            address(0),
-            "Empty votingEscrow address"
-        );
         assertEq(
             deployment.gaugeVoterPluginSets[1].exitQueue.feePercent(),
             0.2 ether,
@@ -941,10 +928,11 @@ contract GaugesDaoFactoryTest is Test {
             6789,
             "Incorrect cooldown"
         );
-        assertEq(
-            deployment.gaugeVoterPluginSets[1].exitQueue.minLock(),
-            7890,
-            "Incorrect minLock"
+        assertEq(deployment.gaugeVoterPluginSets[1].exitQueue.minLock(), 7890, "Incorrect minLock");
+        assertNotEq(
+            address(deployment.gaugeVoterPluginSets[1].votingEscrow),
+            address(0),
+            "Empty votingEscrow address"
         );
         assertNotEq(
             address(deployment.gaugeVoterPluginSets[1].clock),
@@ -972,6 +960,7 @@ contract GaugesDaoFactoryTest is Test {
             address(0),
             "Empty plugin address"
         );
+        assertEq(deployment.gaugeVoterPluginSets[2].plugin.paused(), true, "Should be paused");
         assertNotEq(
             address(deployment.gaugeVoterPluginSets[2].curve),
             address(0),
@@ -997,11 +986,7 @@ contract GaugesDaoFactoryTest is Test {
             6789,
             "Incorrect cooldown"
         );
-        assertEq(
-            deployment.gaugeVoterPluginSets[2].exitQueue.minLock(),
-            7890,
-            "Incorrect minLock"
-        );
+        assertEq(deployment.gaugeVoterPluginSets[2].exitQueue.minLock(), 7890, "Incorrect minLock");
         assertNotEq(
             address(deployment.gaugeVoterPluginSets[2].votingEscrow),
             address(0),
