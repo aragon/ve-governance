@@ -25,7 +25,7 @@ contract ExitQueue is IExitQueue, IClockUser, DaoAuthorizable, UUPSUpgradeable {
     bytes32 public constant WITHDRAW_ROLE = keccak256("WITHDRAW_ROLE");
 
     /// @dev 10_000 = 100%
-    uint16 public constant MAX_FEE_PERCENT = 10_000;
+    uint16 private constant MAX_FEE_PERCENT = 10_000;
 
     /// @notice the fee percent charged on withdrawals
     uint256 public feePercent;
@@ -102,7 +102,7 @@ contract ExitQueue is IExitQueue, IClockUser, DaoAuthorizable, UUPSUpgradeable {
     }
 
     function _setFeePercent(uint256 _feePercent) internal {
-        if (_feePercent > MAX_FEE_PERCENT) revert FeeTooHigh();
+        if (_feePercent > MAX_FEE_PERCENT) revert FeeTooHigh(MAX_FEE_PERCENT);
         feePercent = _feePercent;
         emit FeePercentSet(_feePercent);
     }

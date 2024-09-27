@@ -23,7 +23,7 @@ interface ITicket {
 //////////////////////////////////////////////////////////////*/
 
 interface IExitQueueFeeErrorsAndEvents {
-    error FeeTooHigh();
+    error FeeTooHigh(uint256 maxFee);
 
     event Withdraw(address indexed to, uint256 amount);
     event FeePercentSet(uint256 feePercent);
