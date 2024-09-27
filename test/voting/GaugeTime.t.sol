@@ -42,7 +42,7 @@ contract TestGaugeTime is GaugeVotingBase {
             assertEq(voter.epochVoteStart(), block.timestamp + 1 hours);
             assertEq(voter.epochVoteEnd(), block.timestamp + 1 weeks - 1 hours);
             assertEq(voter.votingActive(), false);
-            assertEq(nextDeposit(), block.timestamp);
+            assertEq(nextDeposit(), block.timestamp + 1 weeks);
             assertEq(clock.epochStartsIn(), 0);
 
             // +1hr: voting starts
@@ -78,7 +78,7 @@ contract TestGaugeTime is GaugeVotingBase {
             assertEq(voter.epochVoteStart(), block.timestamp + 1 weeks + 1 hours);
             assertEq(voter.epochVoteEnd(), block.timestamp);
             assertEq(voter.votingActive(), false);
-            assertEq(nextDeposit(), block.timestamp);
+            assertEq(nextDeposit(), block.timestamp + 1 weeks);
             assertEq(clock.epochStartsIn(), 1 weeks);
 
             // whole of next week calculates correctly

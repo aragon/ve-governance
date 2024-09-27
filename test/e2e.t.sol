@@ -123,7 +123,7 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
 
             // can't queue because the min lock is not reached
             uint256 minLock = queue.timeToMinLock(tokenId);
-            uint256 expectedTime = 20 weeks - depositTime;
+            uint256 expectedTime = depositTime + 20 weeks;
             assertEq(minLock, expectedTime, "Min lock time incorrect");
 
             bytes memory err = abi.encodeWithSelector(
@@ -244,7 +244,7 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
 
         assertEq(voter.votingActive(), false, "Voting should not be active");
 
-        vm.warp(block.timestamp + 1 hours + 1);
+        vm.warp(block.timestamp + 1 weeks + 1 hours + 1);
 
         assertEq(voter.votingActive(), true, "Voting should be active");
     }
@@ -257,9 +257,9 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
         {
             token.approve(address(ve), DEPOSIT);
 
-            // warp to exactly the next epoch so that warmup math is easier
+            // warp to exactly 1 sec before the next epoch so that warmup math is easier
             uint expectedStart = clock.epochNextCheckpointTs();
-            vm.warp(expectedStart);
+            vm.warp(expectedStart - 1);
 
             // create the lock
             tokenId = ve.createLock(DEPOSIT);
@@ -279,20 +279,20 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
     }
 
     function _checkBalanceOverTime() internal {
-        uint start = block.timestamp;
+        uint start = block.timestamp + 1;
         // balance now is zero but Warm up
         assertEq(curve.votingPowerAt(tokenId, 0), 0, "Balance after deposit before warmup");
         assertEq(curve.isWarm(tokenId), false, "Should not be warm after 0 seconds");
 
-        // wait for warmup
-        vm.warp(block.timestamp + curve.warmupPeriod() - 1);
+        // wait for warmup - should be warm 1 second after
+        vm.warp(block.timestamp + curve.warmupPeriod());
         assertEq(curve.votingPowerAt(tokenId, 0), 0, "Balance after deposit before warmup");
         assertEq(curve.isWarm(tokenId), false, "Should not be warm yet");
 
-        // warmup complete
+        // warmup complete + 1
         vm.warp(block.timestamp + 1);
-        // python:    1067.784256559766831104
-        // solmate:   1067.784196491481599990
+        // solmate:   1067.784483312193384992
+        // python:    1067.784543380942056100
         assertEq(
             curve.votingPowerAt(tokenId, block.timestamp),
             1067784196491481599990,

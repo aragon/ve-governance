@@ -4,7 +4,7 @@ DAY =  24 * HOUR
 WEEK = 7 * DAY
 
 # Variables
-AMOUNT = 1000  # example amount to deposit
+AMOUNT = 1_000_000_000  # example amount to deposit
 PERIOD_LENGTH = 2 * WEEK  # example period length in seconds (1 week)
 WARMUP_PERIOD = 3 * DAY  # warmup period in days
 MAX_PERIODS = 5  # maximum periods

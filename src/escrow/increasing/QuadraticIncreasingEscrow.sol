@@ -197,7 +197,7 @@ contract QuadraticIncreasingEscrow is
     }
 
     function _isWarm(uint256 _tokenId, uint256 _userEpoch, uint256 t) public view returns (bool) {
-        return t >= _userPointWarmup[_tokenId][_userEpoch];
+        return t > _userPointWarmup[_tokenId][_userEpoch];
     }
 
     /*//////////////////////////////////////////////////////////////
