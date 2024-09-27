@@ -159,12 +159,19 @@ contract GaugesDaoFactory {
             PluginRepo.Tag memory repoTag = PluginRepo.Tag(1, 1);
             GaugePluginSet memory pluginSet;
 
+            PluginRepo pluginRepo = prepareSimpleGaugeVoterPluginRepo(dao);
+
             for (uint i = 0; i < parameters.tokenParameters.length; ) {
                 (
                     pluginSet,
                     deployment.gaugeVoterPluginRepo,
                     preparedVoterSetupData
-                ) = prepareSimpleGaugeVoterPlugin(dao, parameters.tokenParameters[i], repoTag);
+                ) = prepareSimpleGaugeVoterPlugin(
+                    dao,
+                    parameters.tokenParameters[i],
+                    pluginRepo,
+                    repoTag
+                );
 
                 deployment.gaugeVoterPluginSets.push(pluginSet);
 
@@ -256,13 +263,9 @@ contract GaugesDaoFactory {
         return (Multisig(plugin), preparedSetupData);
     }
 
-    function prepareSimpleGaugeVoterPlugin(
-        DAO dao,
-        TokenParameters memory tokenParameters,
-        PluginRepo.Tag memory repoTag
-    ) internal returns (GaugePluginSet memory, PluginRepo, IPluginSetup.PreparedSetupData memory) {
+    function prepareSimpleGaugeVoterPluginRepo(DAO dao) internal returns (PluginRepo pluginRepo) {
         // Publish repo
-        PluginRepo pluginRepo = PluginRepoFactory(parameters.pluginRepoFactory)
+        pluginRepo = PluginRepoFactory(parameters.pluginRepoFactory)
             .createPluginRepoWithFirstVersion(
                 parameters.voterEnsSubdomain,
                 address(parameters.voterPluginSetup),
@@ -270,7 +273,14 @@ contract GaugesDaoFactory {
                 " ",
                 " "
             );
+    }
 
+    function prepareSimpleGaugeVoterPlugin(
+        DAO dao,
+        TokenParameters memory tokenParameters,
+        PluginRepo pluginRepo,
+        PluginRepo.Tag memory repoTag
+    ) internal returns (GaugePluginSet memory, PluginRepo, IPluginSetup.PreparedSetupData memory) {
         // Plugin settings
         bytes memory settingsData = parameters.voterPluginSetup.encodeSetupData(
             ISimpleGaugeVoterSetupParams({
