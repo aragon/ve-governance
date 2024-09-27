@@ -183,6 +183,8 @@ contract GaugesDaoFactory {
                     preparedVoterSetupData
                 );
 
+                activateSimpleGaugeVoterInstallation(dao, pluginSet);
+
                 unchecked {
                     i++;
                 }
@@ -333,6 +335,28 @@ contract GaugesDaoFactory {
                 preparedSetupData.permissions,
                 hashHelpers(preparedSetupData.helpers)
             )
+        );
+    }
+
+    function activateSimpleGaugeVoterInstallation(
+        DAO dao,
+        GaugePluginSet memory pluginSet
+    ) internal {
+        dao.grant(
+            address(pluginSet.votingEscrow),
+            address(this),
+            pluginSet.votingEscrow.ESCROW_ADMIN_ROLE()
+        );
+
+        pluginSet.votingEscrow.setCurve(address(pluginSet.curve));
+        pluginSet.votingEscrow.setQueue(address(pluginSet.exitQueue));
+        pluginSet.votingEscrow.setVoter(address(pluginSet.plugin));
+        pluginSet.votingEscrow.setLockNFT(address(pluginSet.nftLock));
+
+        dao.revoke(
+            address(pluginSet.votingEscrow),
+            address(this),
+            pluginSet.votingEscrow.ESCROW_ADMIN_ROLE()
         );
     }
 

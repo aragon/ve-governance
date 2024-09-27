@@ -123,7 +123,7 @@ contract Deploy is Script {
             }
         } else {
             // MINT TEST TOKEN
-            console.log("Using testing parameters (minting 2 test tokens)");
+            console.log("Using testing parameters (minting 2 dev tokens)");
 
             address[] memory multisigMembers = readMultisigMembers();
             tokenParameters = new TokenParameters[](2);
@@ -141,11 +141,12 @@ contract Deploy is Script {
     }
 
     function createTestToken(address[] memory holders) internal returns (address) {
+        console.log("");
         MockERC20 newToken = new MockERC20();
 
         for (uint i = 0; i < holders.length; ) {
             newToken.mint(holders[i], 50 ether);
-            console.log("Minting 50 tokens for", holders[i]);
+            console.log("Minting 50 eth for", holders[i]);
 
             unchecked {
                 i++;
@@ -160,8 +161,8 @@ contract Deploy is Script {
         Deployment memory deployment = factory.getDeployment();
 
         console.log("");
-        console.log("Factory:", address(factory));
         console.log("Chain ID:", block.chainid);
+        console.log("Factory:", address(factory));
         console.log("");
         console.log("DAO:", address(deployment.dao));
         console.log("");
@@ -184,12 +185,12 @@ contract Deploy is Script {
             );
             console.log("  Clock:", address(deployment.gaugeVoterPluginSets[i].clock));
             console.log("  NFT Lock:", address(deployment.gaugeVoterPluginSets[i].nftLock));
+            console.log("");
 
             unchecked {
                 i++;
             }
         }
-        console.log("");
 
         console.log("Plugin repositories");
         console.log(
@@ -197,8 +198,5 @@ contract Deploy is Script {
             address(deploymentParameters.multisigPluginRepo)
         );
         console.log("- Gauge voter plugin repository:", address(deployment.gaugeVoterPluginRepo));
-        console.log("");
-
-        console.log("Helpers");
     }
 }

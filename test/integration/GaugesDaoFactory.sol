@@ -554,6 +554,38 @@ contract GaugesDaoFactoryTest is Test {
             address(0),
             "Empty votingEscrow address"
         );
+
+        assertEq(
+            deployment.gaugeVoterPluginSets[0].votingEscrow.token(),
+            tokenParameters[0].token,
+            "Incorrect token contract"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[0].votingEscrow.voter(),
+            address(deployment.gaugeVoterPluginSets[0].plugin),
+            "Incorrect voter"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[0].votingEscrow.curve(),
+            address(deployment.gaugeVoterPluginSets[0].curve),
+            "Incorrect curve"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[0].votingEscrow.queue(),
+            address(deployment.gaugeVoterPluginSets[0].exitQueue),
+            "Incorrect queue"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[0].votingEscrow.clock(),
+            address(deployment.gaugeVoterPluginSets[0].clock),
+            "Incorrect clock"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[0].votingEscrow.lockNFT(),
+            address(deployment.gaugeVoterPluginSets[0].nftLock),
+            "Incorrect lockNFT"
+        );
+
         assertNotEq(
             address(deployment.gaugeVoterPluginSets[0].clock),
             address(0),
@@ -612,6 +644,38 @@ contract GaugesDaoFactoryTest is Test {
             address(0),
             "Empty votingEscrow address"
         );
+
+        assertEq(
+            deployment.gaugeVoterPluginSets[1].votingEscrow.token(),
+            tokenParameters[1].token,
+            "Incorrect token contract"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[1].votingEscrow.voter(),
+            address(deployment.gaugeVoterPluginSets[1].plugin),
+            "Incorrect voter"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[1].votingEscrow.curve(),
+            address(deployment.gaugeVoterPluginSets[1].curve),
+            "Incorrect curve"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[1].votingEscrow.queue(),
+            address(deployment.gaugeVoterPluginSets[1].exitQueue),
+            "Incorrect queue"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[1].votingEscrow.clock(),
+            address(deployment.gaugeVoterPluginSets[1].clock),
+            "Incorrect clock"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[1].votingEscrow.lockNFT(),
+            address(deployment.gaugeVoterPluginSets[1].nftLock),
+            "Incorrect lockNFT"
+        );
+
         assertNotEq(
             address(deployment.gaugeVoterPluginSets[1].clock),
             address(0),
@@ -873,6 +937,38 @@ contract GaugesDaoFactoryTest is Test {
             address(0),
             "Empty votingEscrow address"
         );
+
+        assertEq(
+            deployment.gaugeVoterPluginSets[0].votingEscrow.token(),
+            tokenParameters[0].token,
+            "Incorrect token contract"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[0].votingEscrow.voter(),
+            address(deployment.gaugeVoterPluginSets[0].plugin),
+            "Incorrect voter"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[0].votingEscrow.curve(),
+            address(deployment.gaugeVoterPluginSets[0].curve),
+            "Incorrect curve"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[0].votingEscrow.queue(),
+            address(deployment.gaugeVoterPluginSets[0].exitQueue),
+            "Incorrect queue"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[0].votingEscrow.clock(),
+            address(deployment.gaugeVoterPluginSets[0].clock),
+            "Incorrect clock"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[0].votingEscrow.lockNFT(),
+            address(deployment.gaugeVoterPluginSets[0].nftLock),
+            "Incorrect lockNFT"
+        );
+
         assertNotEq(
             address(deployment.gaugeVoterPluginSets[0].clock),
             address(0),
@@ -931,6 +1027,38 @@ contract GaugesDaoFactoryTest is Test {
             address(0),
             "Empty votingEscrow address"
         );
+
+        assertEq(
+            deployment.gaugeVoterPluginSets[1].votingEscrow.token(),
+            tokenParameters[1].token,
+            "Incorrect token contract"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[1].votingEscrow.voter(),
+            address(deployment.gaugeVoterPluginSets[1].plugin),
+            "Incorrect voter"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[1].votingEscrow.curve(),
+            address(deployment.gaugeVoterPluginSets[1].curve),
+            "Incorrect curve"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[1].votingEscrow.queue(),
+            address(deployment.gaugeVoterPluginSets[1].exitQueue),
+            "Incorrect queue"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[1].votingEscrow.clock(),
+            address(deployment.gaugeVoterPluginSets[1].clock),
+            "Incorrect clock"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[1].votingEscrow.lockNFT(),
+            address(deployment.gaugeVoterPluginSets[1].nftLock),
+            "Incorrect lockNFT"
+        );
+
         assertNotEq(
             address(deployment.gaugeVoterPluginSets[1].clock),
             address(0),
@@ -989,6 +1117,38 @@ contract GaugesDaoFactoryTest is Test {
             address(0),
             "Empty votingEscrow address"
         );
+
+        assertEq(
+            deployment.gaugeVoterPluginSets[2].votingEscrow.token(),
+            tokenParameters[2].token,
+            "Incorrect token contract"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[2].votingEscrow.voter(),
+            address(deployment.gaugeVoterPluginSets[2].plugin),
+            "Incorrect voter"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[2].votingEscrow.curve(),
+            address(deployment.gaugeVoterPluginSets[2].curve),
+            "Incorrect curve"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[2].votingEscrow.queue(),
+            address(deployment.gaugeVoterPluginSets[2].exitQueue),
+            "Incorrect queue"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[2].votingEscrow.clock(),
+            address(deployment.gaugeVoterPluginSets[2].clock),
+            "Incorrect clock"
+        );
+        assertEq(
+            deployment.gaugeVoterPluginSets[2].votingEscrow.lockNFT(),
+            address(deployment.gaugeVoterPluginSets[2].nftLock),
+            "Incorrect lockNFT"
+        );
+
         assertNotEq(
             address(deployment.gaugeVoterPluginSets[2].clock),
             address(0),
