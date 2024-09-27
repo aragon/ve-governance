@@ -45,8 +45,14 @@ https://www.halborn.com/portal/reports/ve-governance-hub
 
 | Severity | Issue                                                             | Status  | Comment or PR                                                              |
 | -------- | ----------------------------------------------------------------- | ------- | -------------------------------------------------------------------------- |
-| M        | 7.7 (HAL-06) Checkpoint function allows non-chronological updates | Blocked | Description of the issue does not match the title - awaiting clarification |
+| M        | 7.7 (HAL-06) Checkpoint function allows non-chronological updates | Blocked | See [HAL-06 Below](#HAL-06) |
 | I        | 7.14 (HAL-04) Unbounded warmup period can span multiple epochs    |         |
+
+
+
+### HAL-06
+![image](https://github.com/user-attachments/assets/b211c368-2e14-4d80-a7f4-de7d1b83fbfb)
+
 
 # Notes from the BlocSec Audit
 
