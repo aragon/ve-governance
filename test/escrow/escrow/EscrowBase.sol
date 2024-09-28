@@ -163,7 +163,7 @@ contract EscrowBase is
     function _deployCurve(
         address _escrow,
         address _dao,
-        uint256 _warmup,
+        uint48 _warmup,
         address _clock
     ) public returns (QuadraticIncreasingEscrow) {
         QuadraticIncreasingEscrow impl = new QuadraticIncreasingEscrow();
@@ -192,11 +192,11 @@ contract EscrowBase is
 
     function _deployExitQueue(
         address _escrow,
-        uint _cooldown,
+        uint48 _cooldown,
         address _dao,
         uint256 _feePercent,
         address _clock,
-        uint256 _minLock
+        uint48 _minLock
     ) public returns (ExitQueue) {
         ExitQueue impl = new ExitQueue();
 

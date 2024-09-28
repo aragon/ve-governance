@@ -13,10 +13,10 @@ contract TestExitQueue is ExitQueueBase, ITicket {
     // test inital state - escrow, queue, cooldown is set in constructor + dao
     function testFuzz_initialState(
         address _escrow,
-        uint256 _cooldown,
         uint16 _fee,
+        uint48 _cooldown,
         address _clock,
-        uint256 _minLock
+        uint48 _minLock
     ) public {
         vm.assume(_fee <= 10_000);
         vm.assume(_minLock > 0);
@@ -36,7 +36,7 @@ contract TestExitQueue is ExitQueueBase, ITicket {
         assertEq(queue.feePercent(), _fee);
     }
 
-    function testFuzz_canUpdateMinLock(uint256 _minLock) public {
+    function testFuzz_canUpdateMinLock(uint48 _minLock) public {
         vm.assume(_minLock > 0);
         vm.expectEmit(false, false, false, true);
         emit MinLockSet(_minLock);
@@ -85,7 +85,7 @@ contract TestExitQueue is ExitQueueBase, ITicket {
     }
 
     // test the exit queue manager can udpdate the cooldown && emits event
-    function testFuzz_canUpdateCooldown(uint256 _cooldown) public {
+    function testFuzz_canUpdateCooldown(uint48 _cooldown) public {
         vm.expectEmit(false, false, false, true);
         emit CooldownSet(_cooldown);
         queue.setCooldown(_cooldown);
@@ -182,7 +182,7 @@ contract TestExitQueue is ExitQueueBase, ITicket {
     }
 
     // test can exit updates only after the cooldown period
-    function testFuzz_canExitAfterCooldown(uint216 _cooldown) public {
+    function testFuzz_canExit(uint48 _cooldown) public {
         vm.assume(_cooldown > 0);
         vm.warp(1);
 

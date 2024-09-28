@@ -110,15 +110,15 @@ interface IEscrowCurveMath {
 //////////////////////////////////////////////////////////////*/
 
 interface IWarmupEvents {
-    event WarmupSet(uint256 warmup);
+    event WarmupSet(uint48 warmup);
 }
 
 interface IWarmup is IWarmupEvents {
     /// @notice Set the warmup period for the curve
-    function setWarmupPeriod(uint256 _warmup) external;
+    function setWarmupPeriod(uint48 _warmup) external;
 
     /// @notice the warmup period for the curve
-    function warmupPeriod() external view returns (uint256);
+    function warmupPeriod() external view returns (uint48);
 
     /// @notice check if the curve is past the warming period
     function isWarm(uint256 _tokenId) external view returns (bool);

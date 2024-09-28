@@ -36,11 +36,11 @@ struct ISimpleGaugeVoterSetupParams {
     // escrow - main
     address token;
     // queue
-    uint256 cooldown;
     uint256 feePercent;
-    uint256 minLock;
+    uint48 cooldown;
+    uint48 minLock;
     // curve
-    uint256 warmup;
+    uint48 warmup;
 }
 
 contract SimpleGaugeVoterSetup is PluginSetup {
@@ -318,10 +318,10 @@ contract SimpleGaugeVoterSetup is PluginSetup {
         string calldata veTokenName,
         string calldata veTokenSymbol,
         address token,
-        uint256 cooldown,
-        uint256 warmup,
+        uint48 cooldown,
+        uint48 warmup,
         uint256 feePercent,
-        uint256 minLock
+        uint48 minLock
     ) external pure returns (bytes memory) {
         return
             abi.encode(

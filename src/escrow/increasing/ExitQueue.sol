@@ -37,10 +37,10 @@ contract ExitQueue is IExitQueue, IClockUser, DaoAuthorizable, UUPSUpgradeable {
     address public clock;
 
     /// @notice time in seconds between exit and withdrawal
-    uint256 public cooldown;
+    uint48 public cooldown;
 
     /// @notice minimum time from the original lock date before one can enter the queue
-    uint256 public minLock;
+    uint48 public minLock;
 
     /// @notice tokenId => Ticket
     mapping(uint256 => Ticket) internal _queue;
@@ -57,11 +57,11 @@ contract ExitQueue is IExitQueue, IClockUser, DaoAuthorizable, UUPSUpgradeable {
     /// @param _dao address of the DAO that will be able to set the queue
     function initialize(
         address _escrow,
-        uint256 _cooldown,
+        uint48 _cooldown,
         address _dao,
         uint256 _feePercent,
         address _clock,
-        uint256 _minLock
+        uint48 _minLock
     ) external initializer {
         __DaoAuthorizableUpgradeable_init(IDAO(_dao));
         escrow = _escrow;
@@ -86,11 +86,11 @@ contract ExitQueue is IExitQueue, IClockUser, DaoAuthorizable, UUPSUpgradeable {
 
     /// @notice The exit queue manager can set the cooldown period
     /// @param _cooldown time in seconds between exit and withdrawal
-    function setCooldown(uint256 _cooldown) external auth(QUEUE_ADMIN_ROLE) {
+    function setCooldown(uint48 _cooldown) external auth(QUEUE_ADMIN_ROLE) {
         _setCooldown(_cooldown);
     }
 
-    function _setCooldown(uint256 _cooldown) internal {
+    function _setCooldown(uint48 _cooldown) internal {
         cooldown = _cooldown;
         emit CooldownSet(_cooldown);
     }
@@ -110,11 +110,11 @@ contract ExitQueue is IExitQueue, IClockUser, DaoAuthorizable, UUPSUpgradeable {
     /// @notice The exit queue manager can set the minimum lock time
     /// @param _minLock the minimum time from the original lock date before one can enter the queue
     /// @dev Min 1 second to prevent single block deposit-withdrawal attacks
-    function setMinLock(uint256 _minLock) external auth(QUEUE_ADMIN_ROLE) {
+    function setMinLock(uint48 _minLock) external auth(QUEUE_ADMIN_ROLE) {
         _setMinLock(_minLock);
     }
 
-    function _setMinLock(uint256 _minLock) internal {
+    function _setMinLock(uint48 _minLock) internal {
         if (_minLock == 0) revert MinLockOutOfBounds();
         minLock = _minLock;
         emit MinLockSet(_minLock);
@@ -146,7 +146,7 @@ contract ExitQueue is IExitQueue, IClockUser, DaoAuthorizable, UUPSUpgradeable {
         if (_queue[_tokenId].holder != address(0)) revert AlreadyQueued();
 
         // get time to min lock and revert if it hasn't been reached
-        uint minLockTime = timeToMinLock(_tokenId);
+        uint48 minLockTime = timeToMinLock(_tokenId);
         if (minLockTime > block.timestamp) revert MinLockNotReached(_tokenId, minLock, minLockTime);
 
         uint exitDate = nextExitDate();
@@ -208,8 +208,8 @@ contract ExitQueue is IExitQueue, IClockUser, DaoAuthorizable, UUPSUpgradeable {
         return _queue[_tokenId];
     }
 
-    function timeToMinLock(uint256 _tokenId) public view returns (uint256) {
-        uint256 lockStart = IVotingEscrow(escrow).locked(_tokenId).start;
+    function timeToMinLock(uint256 _tokenId) public view returns (uint48) {
+        uint48 lockStart = IVotingEscrow(escrow).locked(_tokenId).start;
         return lockStart + minLock;
     }
 

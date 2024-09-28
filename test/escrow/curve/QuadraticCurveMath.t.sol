@@ -61,8 +61,8 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
     function testWritesCheckpoint() public {
         uint tokenIdFirst = 1;
         uint tokenIdSecond = 2;
-        uint depositFirst = 420.69e18;
-        uint depositSecond = 1_000_000_000e18;
+        uint208 depositFirst = 420.69e18;
+        uint208 depositSecond = 1_000_000_000e18;
         uint start = 52 weeks;
 
         // initial conditions, no balance
@@ -77,12 +77,12 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
         escrow.checkpoint(
             tokenIdFirst,
             LockedBalance(0, 0),
-            LockedBalance(depositFirst, block.timestamp)
+            LockedBalance(depositFirst, uint48(block.timestamp))
         );
         escrow.checkpoint(
             tokenIdSecond,
             LockedBalance(0, 0),
-            LockedBalance(depositSecond, block.timestamp)
+            LockedBalance(depositSecond, uint48(block.timestamp))
         );
 
         // check the user point is registered

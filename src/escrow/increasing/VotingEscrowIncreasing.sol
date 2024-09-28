@@ -32,6 +32,7 @@ contract VotingEscrow is
     UUPSUpgradeable
 {
     using SafeERC20 for IERC20;
+    using SafeCast for uint256;
 
     /// @notice Role required to manage the Escrow curve, this typically will be the DAO
     bytes32 public constant ESCROW_ADMIN_ROLE = keccak256("ESCROW_ADMIN");
@@ -243,7 +244,7 @@ contract VotingEscrow is
         uint256 newTokenId = ++lastLockId;
 
         // write the lock and checkpoint the voting power
-        LockedBalance memory lock = LockedBalance(_value, startTime);
+        LockedBalance memory lock = LockedBalance(_value.toUint208(), startTime.toUint48());
         _locked[newTokenId] = lock;
 
         // we don't allow edits in this implementation, so only the new lock is used
@@ -282,7 +283,7 @@ contract VotingEscrow is
         IEscrowCurve(curve).checkpoint(
             _tokenId,
             LockedBalance(0, 0),
-            LockedBalance(0, checkpointClearTime)
+            LockedBalance(0, checkpointClearTime.toUint48())
         );
     }
 

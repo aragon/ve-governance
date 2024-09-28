@@ -45,11 +45,11 @@ contract ExitQueueBase is TestHelpers, IExitQueueErrorsAndEvents {
 
     function _deployExitQueue(
         address _escrow,
-        uint _cooldown,
+        uint48 _cooldown,
         address _dao,
         uint256 _feePercent,
         address _clock,
-        uint256 _minLock
+        uint48 _minLock
     ) public returns (ExitQueue) {
         ExitQueue impl = new ExitQueue();
 

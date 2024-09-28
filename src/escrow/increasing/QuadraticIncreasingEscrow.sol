@@ -47,7 +47,7 @@ contract QuadraticIncreasingEscrow is
     mapping(uint256 => uint256) public userPointEpoch;
 
     /// @notice The warmup period for the curve
-    uint256 public warmupPeriod;
+    uint48 public warmupPeriod;
 
     /// @dev tokenId => userPointEpoch => UserPoint
     /// @dev The Array is fixed so we can write to it in the future
@@ -81,7 +81,7 @@ contract QuadraticIncreasingEscrow is
     function initialize(
         address _escrow,
         address _dao,
-        uint256 _warmupPeriod,
+        uint48 _warmupPeriod,
         address _clock
     ) external initializer {
         escrow = _escrow;
@@ -179,7 +179,7 @@ contract QuadraticIncreasingEscrow is
                               Warmup
     //////////////////////////////////////////////////////////////*/
 
-    function setWarmupPeriod(uint256 _warmupPeriod) external auth(CURVE_ADMIN_ROLE) {
+    function setWarmupPeriod(uint48 _warmupPeriod) external auth(CURVE_ADMIN_ROLE) {
         warmupPeriod = _warmupPeriod;
         emit WarmupSet(_warmupPeriod);
     }
@@ -303,7 +303,8 @@ contract QuadraticIncreasingEscrow is
         // we align the checkpoint to the start of the upcoming deposit interval
         // to ensure global slope changes can be scheduled
         // NOTE: the above global functionality is not implemented in this version of the contracts
-        uNew.checkpointTs = _newLocked.start.toUint128();
+        // safe to cast as .start is 48 bit unsigned
+        uNew.checkpointTs = uint128(_newLocked.start);
 
         // log the written ts - this can be used to compute warmups and burn downs
         uNew.writtenTs = block.timestamp.toUint128();
