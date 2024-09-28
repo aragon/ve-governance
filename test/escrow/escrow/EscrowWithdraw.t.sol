@@ -12,10 +12,11 @@ import {ProxyLib} from "@libs/ProxyLib.sol";
 import {IEscrowCurveUserStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
 import {VotingEscrow} from "@escrow/VotingEscrowIncreasing.sol";
 
-import {SimpleGaugeVoter, SimpleGaugeVoterSetup} from "src/voting/SimpleGaugeVoterSetup.sol";
-import {IGaugeVote} from "src/voting/ISimpleGaugeVoter.sol";
+import {SimpleGaugeVoter, SimpleGaugeVoterSetup} from "@voting/SimpleGaugeVoterSetup.sol";
+import {IGaugeVote} from "@voting/ISimpleGaugeVoter.sol";
+import {ITicket} from "@escrow-interfaces/IExitQueue.sol";
 
-contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote {
+contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote, ITicket {
     address gauge = address(1);
 
     GaugeVote[] votes;
@@ -218,5 +219,52 @@ contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote {
         assertEq(nftLock.balanceOf(_who), 0);
         assertEq(nftLock.balanceOf(address(escrow)), 0);
         assertEq(escrow.totalLocked(), 0);
+    }
+
+    // HAL-13: locks are re-used causing reverts and duplications
+    function testCanCreateLockAfterBurning() public {
+        address USER1 = address(1);
+        address USER2 = address(2);
+
+        // mint
+        token.mint(USER1, 100);
+        token.mint(USER2, 100);
+
+        vm.prank(USER1);
+        token.approve(address(escrow), 100);
+
+        vm.prank(USER2);
+        token.approve(address(escrow), 100);
+
+        vm.prank(USER1);
+        uint256 tokenId = escrow.createLockFor(100, USER1); // Token ID 1
+
+        vm.prank(USER2);
+        uint256 tokenId2 = escrow.createLockFor(100, USER2); // Token ID 2
+
+        // approve
+        uint256 tokenId3;
+        vm.startPrank(USER1);
+        {
+            nftLock.approve(address(escrow), tokenId);
+
+            vm.warp(1 weeks + 1 days);
+
+            escrow.beginWithdrawal(tokenId);
+
+            Ticket memory ticket = queue.queue(tokenId);
+            vm.warp(ticket.exitDate);
+
+            escrow.withdraw(tokenId);
+            token.approve(address(escrow), 100);
+            tokenId3 = escrow.createLockFor(100, USER1); // Token ID 2 - Duplicated - Reescrowrt
+        }
+        vm.stopPrank();
+
+        // assert that the lock Id is incremented
+        assertEq(tokenId3, 3);
+        assertNotEq(tokenId2, tokenId3);
+        assertEq(nftLock.totalSupply(), 2);
+        assertEq(escrow.lastLockId(), 3);
     }
 }
