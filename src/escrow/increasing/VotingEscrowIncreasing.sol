@@ -81,6 +81,8 @@ contract VotingEscrow is
     /// @notice Address of the NFT contract that is the lock
     address public lockNFT;
 
+    bool private _lockNFTSet;
+
     /*//////////////////////////////////////////////////////////////
                               Initialization
     //////////////////////////////////////////////////////////////*/
@@ -123,8 +125,13 @@ contract VotingEscrow is
         clock = _clock;
     }
 
+    /// @notice Sets the NFT contract that is the lock
+    /// @dev By default this can only be set once due to the high risk of changing the lock
+    /// and having the ability to steal user funds.
     function setLockNFT(address _nft) external auth(ESCROW_ADMIN_ROLE) {
+        if (_lockNFTSet) revert LockNFTAlreadySet();
         lockNFT = _nft;
+        _lockNFTSet = true;
     }
 
     function pause() external auth(PAUSER_ROLE) {

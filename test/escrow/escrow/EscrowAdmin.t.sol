@@ -17,6 +17,11 @@ import {SimpleGaugeVoter, SimpleGaugeVoterSetup} from "src/voting/SimpleGaugeVot
 contract TestEscrowAdmin is EscrowBase {
     address attacker = address(1);
 
+    function testCannotResetLockNFT() public {
+        vm.expectRevert(LockNFTAlreadySet.selector);
+        escrow.setLockNFT(address(0));
+    }
+
     function testSetCurve(address _newCurve) public {
         escrow.setCurve(_newCurve);
         assertEq(escrow.curve(), _newCurve);

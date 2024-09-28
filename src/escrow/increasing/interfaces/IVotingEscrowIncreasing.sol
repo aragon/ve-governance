@@ -21,6 +21,7 @@ interface IVotingEscrowCoreErrors {
     error ZeroAmount();
     error ZeroBalance();
     error SameAddress();
+    error LockNFTAlreadySet();
     error MustBe18Decimals();
 }
 
