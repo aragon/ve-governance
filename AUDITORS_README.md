@@ -43,9 +43,7 @@ https://www.halborn.com/portal/reports/ve-governance-hub
 | M        | 7.7 (HAL-06) Checkpoint function allows non-chronological updates                              | Fixed           | See [HAL-06 Below](#HAL-06) Fix is https://github.com/aragon/ve-governance/pull/26                         |
 | I        | 7.14 (HAL-04) Unbounded warmup period can span multiple epochs                                 | Semi-Fixed      | https://github.com/aragon/ve-governance/pull/27                                                            |
 
-## Not yet Done
-
-- Make strict equalities everywhere
+- See the aragon section below for some consistent findings wrt strict inequalities which we have addressed
 
 ### HAL-06
 
