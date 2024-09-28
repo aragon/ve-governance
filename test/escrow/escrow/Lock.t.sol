@@ -15,6 +15,7 @@ import {Lock} from "@escrow/Lock.sol";
 
 import {SimpleGaugeVoter, SimpleGaugeVoterSetup} from "src/voting/SimpleGaugeVoterSetup.sol";
 import {IGaugeVote} from "src/voting/ISimpleGaugeVoter.sol";
+import {ILock} from "@escrow-interfaces/ILock.sol";
 
 contract TestLockMintBurn is EscrowBase, IEscrowCurveUserStorage, IGaugeVote {
     function testDeploy(
@@ -31,6 +32,11 @@ contract TestLockMintBurn is EscrowBase, IEscrowCurveUserStorage, IGaugeVote {
         assertEq(_nftLock.symbol(), _symbol);
         assertEq(_nftLock.escrow(), _escrow);
         assertEq(address(_nftLock.dao()), _dao);
+    }
+
+    function testSupportsInterface() public view {
+        assertTrue(nftLock.supportsInterface(type(ILock).interfaceId));
+        assertFalse(nftLock.supportsInterface(0xffffffff));
     }
 
     function testFuzz_OnlyEscrowCanMint(address _notEscrow) public {

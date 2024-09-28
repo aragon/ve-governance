@@ -39,7 +39,7 @@ contract Lock is ILock, ERC721Enumerable, UUPSUpgradeable, DaoAuthorizable, Reen
     function supportsInterface(
         bytes4 _interfaceId
     ) public view override(ERC721Enumerable) returns (bool) {
-        return super.supportsInterface(_interfaceId);
+        return super.supportsInterface(_interfaceId) || _interfaceId == type(ILock).interfaceId;
     }
 
     /*//////////////////////////////////////////////////////////////
