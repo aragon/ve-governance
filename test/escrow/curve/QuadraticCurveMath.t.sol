@@ -94,7 +94,8 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
         // check the user point is registered
         IEscrowCurve.UserPoint memory userPoint = curve.userPointHistory(tokenIdFirst, 1);
         assertEq(userPoint.bias, depositFirst, "Bias is incorrect");
-        assertEq(userPoint.ts, block.timestamp, "Timestamp is incorrect");
+        assertEq(userPoint.checkpointTs, block.timestamp, "CP Timestamp is incorrect");
+        assertEq(userPoint.writtenTs, block.timestamp, "Written Timestamp is incorrect");
 
         // balance now is zero but Warm up
         assertEq(curve.votingPowerAt(tokenIdFirst, 0), 0, "Balance after deposit before warmup");
