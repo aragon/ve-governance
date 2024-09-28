@@ -150,4 +150,14 @@ contract TestSweep is EscrowBase, IEscrowCurveUserStorage, IGaugeVote {
         assertEq(nftLock.balanceOf(address(this)), 1);
         assertEq(nftLock.balanceOf(address(escrow)), 0);
     }
+
+    // Needed for the ERC721Receiver interface
+    function onERC721Received(
+        address,
+        address,
+        uint256,
+        bytes calldata
+    ) external pure returns (bytes4) {
+        return this.onERC721Received.selector;
+    }
 }
