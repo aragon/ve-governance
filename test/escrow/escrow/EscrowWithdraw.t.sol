@@ -33,12 +33,7 @@ contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote, ITicke
 
     // setup a fee withdrawal
     function testFuzz_feeWithdrawal(uint64 _fee, uint128 _dep, address _who) public {
-        vm.assume(
-            _who != address(0) &&
-                _who != address(queue) &&
-                _who != address(escrow) &&
-                _who != address(this)
-        );
+        vm.assume(_who != address(0) && address(_who).code.length == 0);
         vm.assume(_dep > 0);
 
         if (_fee > 1e18) _fee = 1e18;
@@ -120,7 +115,7 @@ contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote, ITicke
     }
 
     function testFuzz_enterWithdrawal(uint128 _dep, address _who) public {
-        vm.assume(_who != address(0) && _who != address(queue) && _who != address(escrow));
+        vm.assume(_who != address(0) && address(_who).code.length == 0);
         vm.assume(_dep > 0);
 
         // make a deposit

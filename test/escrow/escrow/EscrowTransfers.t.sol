@@ -48,4 +48,13 @@ contract TestEscrowTransfers is EscrowBase, IEscrowCurveUserStorage {
         assertEq(nftLock.balanceOf(address(123)), 1);
         assertEq(nftLock.balanceOf(address(this)), 0);
     }
+
+    function onERC721Received(
+        address,
+        address,
+        uint256,
+        bytes calldata
+    ) external pure returns (bytes4) {
+        return this.onERC721Received.selector;
+    }
 }

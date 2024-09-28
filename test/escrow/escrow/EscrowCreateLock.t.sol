@@ -42,11 +42,11 @@ contract TestCreateLock is EscrowBase, IEscrowCurveUserStorage {
 
     /// @param _value is positive, we check this in a previous test. It needs to fit inside an int256
     /// so we use the maximum value for a uint128
-    /// @param _depositor is not the zero address, we check this in a previous test
+    /// @param _depositor is not the zero address, we check this in a previous test we need to restrict to non contracts in fuzzing as too many revert cases
     /// @param _time is bound to 128 bits to avoid overflow - seems reasonable as is not a user input
     function testFuzz_createLock(uint128 _value, address _depositor, uint128 _time) public {
         vm.assume(_value > 0);
-        vm.assume(_depositor != address(0));
+        vm.assume(_depositor != address(0) && address(_depositor).code.length == 0);
 
         // set zero warmup for this test
         curve.setWarmupPeriod(0);
@@ -266,10 +266,12 @@ contract TestCreateLock is EscrowBase, IEscrowCurveUserStorage {
         );
     }
 
-    function testFuzz_createLockFor(address _who, uint128 _value) public {
-        vm.assume(_who != address(0));
+    function testFuzz_createLockFor(uint128 _value) public {
         vm.assume(_value > 0);
         vm.warp(1);
+
+        // try with regular user
+        address _who = address(0x1);
 
         token.mint(address(this), _value);
         token.approve(address(escrow), _value);
@@ -277,6 +279,27 @@ contract TestCreateLock is EscrowBase, IEscrowCurveUserStorage {
         vm.expectEmit(true, true, true, true);
         emit Deposit(_who, 1, 1 weeks, _value, _value);
         escrow.createLockFor(_value, _who);
+
+        // try with a contract
+        address _contract = address(new ERC721Receiver());
+
+        token.mint(address(this), _value);
+        token.approve(address(escrow), _value);
+
+        vm.expectEmit(true, true, true, true);
+        emit Deposit(_contract, 2, 1 weeks, _value, 2 * uint(_value));
+        escrow.createLockFor(_value, _contract);
+    }
+}
+
+contract ERC721Receiver {
+    function onERC721Received(
+        address,
+        address,
+        uint256,
+        bytes memory
+    ) public pure returns (bytes4) {
+        return this.onERC721Received.selector;
     }
 }
 

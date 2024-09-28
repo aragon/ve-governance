@@ -69,4 +69,34 @@ contract TestLockMintBurn is EscrowBase, IEscrowCurveUserStorage, IGaugeVote {
         assertEq(nftLock.balanceOf(address(123)), 0);
         assertEq(nftLock.totalSupply(), 0);
     }
+
+    // HAL-14 receiver must implement ERC721Receiver
+    function testCannotMintToNonReceiver() public {
+        vm.prank(address(escrow));
+        vm.expectRevert("ERC721: transfer to non ERC721Receiver implementer");
+        nftLock.mint(address(this), 1);
+    }
+
+    // HAL-14 test reentrancy with safe mint
+    function testReentrantCantCallMint() public {
+        NFTReentrant reentrant = new NFTReentrant();
+
+        Lock newLock = _deployLock(address(reentrant), "name", "symbol", address(dao));
+
+        vm.prank(address(reentrant));
+        vm.expectRevert("revert");
+        newLock.mint(address(reentrant), 1);
+    }
+}
+
+contract NFTReentrant {
+    function onERC721Received(address, address, uint256, bytes memory) public returns (bytes4) {
+        (bool success, ) = msg.sender.call(
+            abi.encodeWithSignature("mint(address,uint256)", address(this), 1)
+        );
+        if (!success) {
+            revert("revert");
+        }
+        return this.onERC721Received.selector;
+    }
 }
