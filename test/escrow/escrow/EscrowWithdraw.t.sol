@@ -266,8 +266,11 @@ contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote, ITicke
     error MinLockNotReached(uint256 tokenId, uint256 minLock, uint256 earliestExitDate);
 
     function testCantDepositAndWithdrawInTheSameBlock() public {
-        // this is a timing attack that requires a few things:
-        // 1. deposit falls exactly on the week boundary, so that we start immediately
+        // this is a timing
+        // deposit falls exactly on the week boundary, so that we start immediately
+        // then we try to withdraw in the same block
+        // we also need a zero warmup period or we will error with a zero voting power
+        curve.setWarmupPeriod(0);
 
         // warp to a week boundary
         vm.warp(1 weeks);
@@ -281,8 +284,11 @@ contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote, ITicke
         // start the deposit
         vm.startPrank(address(1));
         {
+            // create
             token.approve(address(escrow), 100e18);
             tokenId = escrow.createLock(100e18);
+
+            // withdraw
             nftLock.approve(address(escrow), tokenId);
             vm.expectRevert(data);
             escrow.beginWithdrawal(tokenId);
