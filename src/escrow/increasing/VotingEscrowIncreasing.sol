@@ -49,6 +49,9 @@ contract VotingEscrow is
     /// @notice Decimals of the voting power
     uint8 public constant decimals = 18;
 
+    /// @notice Auto-incrementing ID for the most recently created lock, does not decrease on withdrawal
+    uint256 public lastLockId;
+
     /// @notice Total supply of underlying tokens deposited in the contract
     uint256 public totalLocked;
 
@@ -229,7 +232,7 @@ contract VotingEscrow is
 
         // increment the total locked supply and get the new tokenId
         totalLocked += _value;
-        uint256 newTokenId = IERC721EMB(lockNFT).totalSupply() + 1;
+        uint256 newTokenId = ++lastLockId;
 
         // write the lock and checkpoint the voting power
         LockedBalance memory lock = LockedBalance(_value, startTime);
