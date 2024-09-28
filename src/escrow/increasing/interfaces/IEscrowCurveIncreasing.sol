@@ -11,13 +11,13 @@ interface IEscrowCurveGlobalStorage {
     /// @notice Captures the shape of the aggregate voting curve at a specific point in time
     /// @param bias The y intercept of the aggregate voting curve at the given time
     /// @param ts The timestamp at which the we last updated the aggregate voting curve
-    /// @param coefficients The coefficients of the aggregated curve, supports up to cubic curves.
-    /// @dev Coefficients are stored in the following order: [constant, linear, quadratic, cubic]
+    /// @param coefficients The coefficients of the aggregated curve, supports up to quadratic curves.
+    /// @dev Coefficients are stored in the following order: [constant, linear, quadratic]
     /// and not all coefficients are used for all curves.
     struct GlobalPoint {
         uint128 bias;
         uint256 ts;
-        int256[4] coefficients;
+        int256[3] coefficients;
     }
 }
 
@@ -36,14 +36,14 @@ interface IEscrowCurveUserStorage {
     /// @param bias The y intercept of the user's voting curve at the given time
     /// @param checkpointTs The checkpoint when the user voting curve is/was/will be updated
     /// @param writtenTs The timestamp at which we locked the checkpoint
-    /// @param coefficients The coefficients of the curve, supports up to cubic curves.
-    /// @dev Coefficients are stored in the following order: [constant, linear, quadratic, cubic]
+    /// @param coefficients The coefficients of the curve, supports up to quadratic curves.
+    /// @dev Coefficients are stored in the following order: [constant, linear, quadratic]
     /// and not all coefficients are used for all curves.
     struct UserPoint {
         uint256 bias;
         uint128 checkpointTs;
         uint128 writtenTs;
-        int256[4] coefficients;
+        int256[3] coefficients;
     }
 }
 
@@ -94,11 +94,11 @@ interface IEscrowCurveCore is IEscrowCurveErrorsAndEvents {
 }
 
 interface IEscrowCurveMath {
-    /// @notice Preview the curve coefficients for curves up to cubic.
+    /// @notice Preview the curve coefficients for curves up to quadratic.
     /// @param amount The amount of tokens to calculate the coefficients for - given a fixed algebraic representation
-    /// @return coefficients in the form [constant, linear, quadratic, cubic]
+    /// @return coefficients in the form [constant, linear, quadratic]
     /// @dev Not all coefficients are used for all curves
-    function getCoefficients(uint256 amount) external view returns (int256[4] memory coefficients);
+    function getCoefficients(uint256 amount) external view returns (int256[3] memory coefficients);
 
     /// @notice Bias is the user's voting weight
     function getBias(uint256 timeElapsed, uint256 amount) external view returns (uint256 bias);
@@ -128,6 +128,4 @@ interface IWarmup is IWarmupEvents {
 //////////////////////////////////////////////////////////////*/
 
 /// @dev first version only accounts for user-level point histories
-interface IEscrowCurveIncreasing is IEscrowCurveCore, IEscrowCurveMath, IEscrowCurveUser, IWarmup {
-
-}
+interface IEscrowCurveIncreasing is IEscrowCurveCore, IEscrowCurveMath, IEscrowCurveUser, IWarmup {}

@@ -64,6 +64,9 @@ contract QuadraticIncreasingEscrow is
 
     int256 private constant SHARED_LINEAR_COEFFICIENT = CurveConstantLib.SHARED_LINEAR_COEFFICIENT;
 
+    int256 private constant SHARED_CONSTANT_COEFFICIENT =
+        CurveConstantLib.SHARED_CONSTANT_COEFFICIENT;
+
     uint256 private constant MAX_EPOCHS = CurveConstantLib.MAX_EPOCHS;
 
     /*//////////////////////////////////////////////////////////////
@@ -97,20 +100,18 @@ contract QuadraticIncreasingEscrow is
 
     /// @return The coefficient for the quadratic term of the quadratic curve, for the given amount
     function _getQuadraticCoeff(uint256 amount) internal pure returns (int256) {
-        // 1 / (7 * 2 weeks^2)
         return (SignedFixedPointMath.toFP(amount.toInt256()).mul(SHARED_QUADRATIC_COEFFICIENT));
     }
 
     /// @return The coefficient for the linear term of the quadratic curve, for the given amount
     function _getLinearCoeff(uint256 amount) internal pure returns (int256) {
-        // 2 / 7 * 2 weeks
         return (SignedFixedPointMath.toFP(amount.toInt256())).mul(SHARED_LINEAR_COEFFICIENT);
     }
 
     /// @return The constant coefficient of the quadratic curve, for the given amount
     /// @dev In this case, the constant term is 1 so we just case the amount
     function _getConstantCoeff(uint256 amount) public pure returns (int256) {
-        return (SignedFixedPointMath.toFP(amount.toInt256()));
+        return (SignedFixedPointMath.toFP(amount.toInt256())).mul(SHARED_CONSTANT_COEFFICIENT);
     }
 
     /// @return The coefficients of the quadratic curve, for the given amount
@@ -120,16 +121,15 @@ contract QuadraticIncreasingEscrow is
     }
 
     /// @return The coefficients of the quadratic curve, for the given amount
-    /// @dev The coefficients are returned in the order [constant, linear, quadratic, cubic]
+    /// @dev The coefficients are returned in the order [constant, linear, quadratic]
     /// and are converted to regular 256-bit signed integers instead of their fixed-point representation
-    function getCoefficients(uint256 amount) public pure returns (int256[4] memory) {
+    function getCoefficients(uint256 amount) public pure returns (int256[3] memory) {
         int256[3] memory coefficients = _getCoefficients(amount);
 
         return [
             SignedFixedPointMath.fromFP(coefficients[0]),
             SignedFixedPointMath.fromFP(coefficients[1]),
-            SignedFixedPointMath.fromFP(coefficients[2]),
-            0
+            SignedFixedPointMath.fromFP(coefficients[2])
         ];
     }
 
@@ -159,7 +159,8 @@ contract QuadraticIncreasingEscrow is
         int256 t = SignedFixedPointMath.toFP(timeElapsed.toInt256());
 
         // bias = a.t^2 + b.t + c
-        int256 bias = quadratic.mul(t.pow(2e18)).add(linear.mul(t)).add(const);
+        int256 tSquared = t.mul(t); // t*t much more gas efficient than t.pow(SD2)
+        int256 bias = quadratic.mul(tSquared).add(linear.mul(t)).add(const);
 
         // never return negative values
         // in the increasing case, this should never happen
@@ -252,9 +253,7 @@ contract QuadraticIncreasingEscrow is
         if (!_isWarm(lastPoint)) return 0;
         uint256 timeElapsed = _t - lastPoint.checkpointTs;
 
-        // in the increasing case, we don't allow changes to locks, so the ts and blk are
-        // equivalent to the start time of the lock
-        return getBias(timeElapsed, lastPoint.bias);
+        return _getBias(timeElapsed, lastPoint.coefficients);
     }
 
     /// @notice [NOT IMPLEMENTED] Calculate total voting power at some point in the past
@@ -295,9 +294,10 @@ contract QuadraticIncreasingEscrow is
         bool isExiting = amount == 0;
 
         if (!isExiting) {
-            uNew.coefficients = getCoefficients(amount);
+            int256[3] memory coefficients = _getCoefficients(amount);
             // for a new lock, write the base bias (elapsed == 0)
-            uNew.bias = getBias(0, amount);
+            uNew.coefficients = coefficients;
+            uNew.bias = _getBias(0, coefficients);
         }
         // write the new timestamp - in the case of an increasing curve
         // we align the checkpoint to the start of the upcoming deposit interval
