@@ -166,8 +166,9 @@ contract SimpleGaugeVoter is
                 gauge: gauge,
                 epoch: epochId(),
                 tokenId: _tokenId,
-                votingPower: votesForGauge,
-                totalVotingPower: gaugeVotes[gauge],
+                votingPowerCastForGauge: votesForGauge,
+                totalVotingPowerInGauge: gaugeVotes[gauge],
+                totalVotingPowerInContract: totalVotingPowerCast + votingPowerUsed,
                 timestamp: block.timestamp
             });
         }
@@ -213,8 +214,9 @@ contract SimpleGaugeVoter is
                 gauge: gauge,
                 epoch: epochId(),
                 tokenId: _tokenId,
-                votingPower: _votes,
-                totalVotingPower: totalVotingPowerCast - _votes,
+                votingPowerRemovedFromGauge: _votes,
+                totalVotingPowerInGauge: gaugeVotes[gauge],
+                totalVotingPowerInContract: totalVotingPowerCast - votingPowerToRemove,
                 timestamp: block.timestamp
             });
         }
