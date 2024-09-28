@@ -68,7 +68,7 @@ contract EscrowBase is
 
         // to be added as proxies
         voter = _deployVoter(address(dao), address(escrow), false, address(clock));
-        queue = _deployExitQueue(address(escrow), 3 days, address(dao), 0, address(clock), 0);
+        queue = _deployExitQueue(address(escrow), 3 days, address(dao), 0, address(clock), 1);
 
         // grant this contract admin privileges
         dao.grant({

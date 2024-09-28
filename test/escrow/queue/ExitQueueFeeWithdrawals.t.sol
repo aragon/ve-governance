@@ -78,6 +78,7 @@ contract TestExitQueueWithdrawals is ExitQueueBase {
     /// @dev using 128 bit integers to avoid overflow
     function testFuzz_CannotQueueWithIfBeforeMinLock(uint128 _minLock, uint128 _lockStart) public {
         // create a lock at a random time
+        vm.assume(_minLock > 0);
         vm.warp(_lockStart);
         escrow.setMockLockedBalance(100e18, _lockStart);
 

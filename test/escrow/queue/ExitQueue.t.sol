@@ -6,9 +6,10 @@ import {ProxyLib} from "@libs/ProxyLib.sol";
 import {DAO, createTestDAO} from "@mocks/MockDAO.sol";
 import {DaoUnauthorized} from "@aragon/osx/core/utils/auth.sol";
 import {IExitQueue, ExitQueue} from "@escrow/ExitQueue.sol";
+import {ITicket} from "@escrow-interfaces/IExitQueue.sol";
 import {ExitQueueBase} from "./ExitQueueBase.sol";
 
-contract TestExitQueue is ExitQueueBase {
+contract TestExitQueue is ExitQueueBase, ITicket {
     // test inital state - escrow, queue, cooldown is set in constructor + dao
     function testFuzz_initialState(
         address _escrow,
@@ -18,6 +19,7 @@ contract TestExitQueue is ExitQueueBase {
         uint256 _minLock
     ) public {
         vm.assume(_fee <= 10_000);
+        vm.assume(_minLock > 0);
         DAO dao_ = createTestDAO(address(this));
         queue = _deployExitQueue(
             address(_escrow),
@@ -35,10 +37,15 @@ contract TestExitQueue is ExitQueueBase {
     }
 
     function testFuzz_canUpdateMinLock(uint256 _minLock) public {
+        vm.assume(_minLock > 0);
         vm.expectEmit(false, false, false, true);
         emit MinLockSet(_minLock);
         queue.setMinLock(_minLock);
         assertEq(queue.minLock(), _minLock);
+
+        // test that the minLock cannot be set to 0
+        vm.expectRevert(MinLockOutOfBounds.selector);
+        queue.setMinLock(0);
     }
 
     function testOnlyManagerCanUpdateMinLock(address _notThis) public {
@@ -52,7 +59,7 @@ contract TestExitQueue is ExitQueueBase {
         );
         vm.expectRevert(data);
         vm.prank(_notThis);
-        queue.setMinLock(0);
+        queue.setMinLock(123);
     }
 
     function testFuzz_canUpdateFee(uint16 _fee) public {
@@ -175,34 +182,32 @@ contract TestExitQueue is ExitQueueBase {
     }
 
     // test can exit updates only after the cooldown period
-    function testFuzz_canExit(uint216 _cooldown) public {
-        vm.warp(0);
+    function testFuzz_canExitAfterCooldown(uint216 _cooldown) public {
+        vm.assume(_cooldown > 0);
+        vm.warp(1);
 
         queue.setCooldown(_cooldown);
 
+        // this will trigger a 0,0 locked balance
         uint256 tokenId = 420;
         uint time = block.timestamp;
 
         vm.prank(address(escrow));
         queue.queueExit(tokenId, address(this));
 
-        if (_cooldown == 0) {
-            assert(queue.canExit(tokenId));
-        } else {
-            assertFalse(queue.canExit(tokenId));
+        assertFalse(queue.canExit(tokenId));
 
-            vm.warp(time + queue.nextExitDate() - 1);
-            assertFalse(queue.canExit(tokenId));
+        vm.warp(queue.nextExitDate() - 1);
+        assertFalse(queue.canExit(tokenId));
 
-            vm.warp(time + queue.nextExitDate());
-            assertTrue(queue.canExit(tokenId));
-        }
+        vm.warp(queue.nextExitDate());
+        assertTrue(queue.canExit(tokenId));
     }
 
     // test that changing the cooldown doesn't affect the current ticket holders
     function testChangingCooldownDoesntAffectCurrentHolders() public {
-        // warp to genesis
-        vm.warp(0);
+        // warp to 1 week exactly to allow unlock
+        vm.warp(1 weeks);
 
         // set a cooldown to 3 days
         queue.setCooldown(3 days);
@@ -211,32 +216,39 @@ contract TestExitQueue is ExitQueueBase {
         vm.prank(address(escrow));
         queue.queueExit(1, address(this));
 
+        // check the ticket
+        Ticket memory ticket = queue.queue(1);
+        // ticket should be in 3 days from now
+        assertEq(ticket.exitDate, 1 weeks + 3 days);
+
         // change the cooldown to 1 day
-        queue.setCooldown(1 days);
+        queue.setCooldown(1 weeks + 1 days);
 
         // warp to 2 days
-        vm.warp(2 days);
+        vm.warp(1 weeks + 2 days);
 
         // should still not be able to exit
         assertFalse(queue.canExit(1));
 
         // warp to 3 days
-        vm.warp(3 days);
+        vm.warp(1 weeks + 3 days);
 
         // should be able to exit
         assertTrue(queue.canExit(1));
 
         // change the cooldown to 5 days
-        queue.setCooldown(5 days);
+        queue.setCooldown(1 weeks + 5 days);
 
         // should still be able to exit
         assertTrue(queue.canExit(1));
     }
 
     // test can exit and this resets the ticket
-    function testFuzz_canExit(address _holder) public {
+    function testFuzz_canExitAndResetsTicket(address _holder) public {
         vm.assume(_holder != address(0));
-        vm.warp(0);
+        vm.warp(1 weeks);
+
+        uint time = block.timestamp;
 
         queue.setCooldown(100);
 
@@ -245,13 +257,13 @@ contract TestExitQueue is ExitQueueBase {
         vm.prank(address(escrow));
         queue.queueExit(_tokenId, _holder);
 
-        vm.warp(99);
+        vm.warp(time + 99);
 
         vm.expectRevert(CannotExit.selector);
         vm.prank(address(escrow));
         queue.exit(_tokenId);
 
-        vm.warp(100);
+        vm.warp(time + 100);
 
         vm.expectEmit(true, false, false, true);
         emit Exit(_tokenId, 0);

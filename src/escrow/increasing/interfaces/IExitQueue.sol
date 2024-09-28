@@ -65,7 +65,7 @@ interface IExitQueueCooldown is IExitQueueCooldownErrorsAndEvents {
 
 interface IExitMinLockCooldownErrorsAndEvents {
     event MinLockSet(uint256 minLock);
-
+    error MinLockOutOfBounds();
     error MinLockNotReached(uint256 tokenId, uint256 minLock, uint256 earliestExitDate);
 }
 

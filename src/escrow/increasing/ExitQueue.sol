@@ -109,11 +109,13 @@ contract ExitQueue is IExitQueue, IClockUser, DaoAuthorizable, UUPSUpgradeable {
 
     /// @notice The exit queue manager can set the minimum lock time
     /// @param _minLock the minimum time from the original lock date before one can enter the queue
+    /// @dev Min 1 second to prevent single block deposit-withdrawal attacks
     function setMinLock(uint256 _minLock) external auth(QUEUE_ADMIN_ROLE) {
         _setMinLock(_minLock);
     }
 
     function _setMinLock(uint256 _minLock) internal {
+        if (_minLock == 0) revert MinLockOutOfBounds();
         minLock = _minLock;
         emit MinLockSet(_minLock);
     }
