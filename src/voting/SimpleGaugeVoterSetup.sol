@@ -222,7 +222,7 @@ contract SimpleGaugeVoterSetup is PluginSetup {
         PermissionLib.Operation _grantOrRevoke
     ) public view returns (PermissionLib.MultiTargetPermission[] memory) {
         PermissionLib.MultiTargetPermission[]
-            memory permissions = new PermissionLib.MultiTargetPermission[](7);
+            memory permissions = new PermissionLib.MultiTargetPermission[](10);
 
         permissions[0] = PermissionLib.MultiTargetPermission({
             permissionId: SimpleGaugeVoter(_plugin).GAUGE_ADMIN_ROLE(),
@@ -258,7 +258,7 @@ contract SimpleGaugeVoterSetup is PluginSetup {
 
         permissions[4] = PermissionLib.MultiTargetPermission({
             permissionId: SimpleGaugeVoter(_plugin).UPGRADE_PLUGIN_PERMISSION_ID(),
-            where: _curve,
+            where: _plugin,
             who: _dao,
             operation: _grantOrRevoke,
             condition: PermissionLib.NO_CONDITION
@@ -280,6 +280,29 @@ contract SimpleGaugeVoterSetup is PluginSetup {
             condition: PermissionLib.NO_CONDITION
         });
 
+        permissions[7] = PermissionLib.MultiTargetPermission({
+            permissionId: VotingEscrow(_escrow).PAUSER_ROLE(),
+            where: _escrow,
+            who: _dao,
+            operation: _grantOrRevoke,
+            condition: PermissionLib.NO_CONDITION
+        });
+
+        permissions[8] = PermissionLib.MultiTargetPermission({
+            permissionId: VotingEscrow(_escrow).SWEEPER_ROLE(),
+            where: _escrow,
+            who: _dao,
+            operation: _grantOrRevoke,
+            condition: PermissionLib.NO_CONDITION
+        });
+
+        permissions[9] = PermissionLib.MultiTargetPermission({
+            permissionId: ExitQueue(_queue).WITHDRAW_ROLE(),
+            where: _queue,
+            who: _dao,
+            operation: _grantOrRevoke,
+            condition: PermissionLib.NO_CONDITION
+        });
         return permissions;
     }
 
