@@ -24,6 +24,12 @@ contract ExitQueue is IExitQueue, IClockUser, DaoAuthorizable, UUPSUpgradeable {
     /// @notice role required to withdraw tokens from the escrow contract
     bytes32 public constant WITHDRAW_ROLE = keccak256("WITHDRAW_ROLE");
 
+    /// @dev 10_000 = 100%
+    uint16 private constant MAX_FEE_PERCENT = 10_000;
+
+    /// @notice the fee percent charged on withdrawals
+    uint256 public feePercent;
+
     /// @notice address of the escrow contract
     address public escrow;
 
@@ -32,10 +38,6 @@ contract ExitQueue is IExitQueue, IClockUser, DaoAuthorizable, UUPSUpgradeable {
 
     /// @notice time in seconds between exit and withdrawal
     uint256 public cooldown;
-
-    /// @notice the fee percent charged on withdrawals
-    /// @dev 1e18 = 100%
-    uint256 public feePercent;
 
     /// @notice minimum time from the original lock date before one can enter the queue
     uint256 public minLock;
@@ -100,7 +102,7 @@ contract ExitQueue is IExitQueue, IClockUser, DaoAuthorizable, UUPSUpgradeable {
     }
 
     function _setFeePercent(uint256 _feePercent) internal {
-        if (_feePercent > 1e18) revert FeeTooHigh();
+        if (_feePercent > MAX_FEE_PERCENT) revert FeeTooHigh(MAX_FEE_PERCENT);
         feePercent = _feePercent;
         emit FeePercentSet(_feePercent);
     }
@@ -180,7 +182,7 @@ contract ExitQueue is IExitQueue, IClockUser, DaoAuthorizable, UUPSUpgradeable {
         if (feePercent == 0) return 0;
         uint underlyingBalance = IVotingEscrow(escrow).locked(_tokenId).amount;
         if (underlyingBalance == 0) revert NoLockBalance();
-        return (underlyingBalance * feePercent) / 1e18;
+        return (underlyingBalance * feePercent) / MAX_FEE_PERCENT;
     }
 
     /*//////////////////////////////////////////////////////////////
