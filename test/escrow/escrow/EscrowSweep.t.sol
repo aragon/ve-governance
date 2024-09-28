@@ -110,7 +110,7 @@ contract TestSweep is EscrowBase, IEscrowCurveUserStorage, IGaugeVote {
         uint tokenId = escrow.createLock(1000);
 
         // warp to the min lock
-        vm.warp(1 weeks);
+        vm.warp(1 weeks + 1);
 
         nftLock.approve(address(escrow), tokenId);
         escrow.beginWithdrawal(tokenId);
