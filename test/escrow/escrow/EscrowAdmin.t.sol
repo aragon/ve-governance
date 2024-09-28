@@ -146,4 +146,11 @@ contract TestEscrowAdmin is EscrowBase {
         vm.expectRevert(err);
         nftLock.upgradeTo(newImpl);
     }
+
+    // hal-16 should not be possible to unwhitelist the escrow
+    function testUnwhitelistEscrow() public {
+        address escrowAddr = nftLock.escrow();
+        vm.expectRevert(ForbiddenWhitelistAddress.selector);
+        nftLock.setWhitelisted(escrowAddr, false);
+    }
 }

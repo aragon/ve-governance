@@ -72,6 +72,7 @@ contract Lock is ILock, ERC721Enumerable, UUPSUpgradeable, DaoAuthorizable, Reen
 
     /// @notice Transfers disabled by default, only whitelisted addresses can receive transfers
     function setWhitelisted(address _account, bool _isWhitelisted) external auth(LOCK_ADMIN_ROLE) {
+        if (_account == escrow) revert ForbiddenWhitelistAddress();
         whitelisted[_account] = _isWhitelisted;
         emit WhitelistSet(_account, _isWhitelisted);
     }
