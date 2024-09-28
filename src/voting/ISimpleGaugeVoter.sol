@@ -2,10 +2,11 @@
 pragma solidity ^0.8.0;
 
 interface IGauge {
+    /// @param metadataURI URI for the metadata of the gauge
     struct Gauge {
         bool active;
         uint256 created; // timestamp or epoch
-        bytes32 metadata;
+        string metadataURI;
         // more space for data as this is a struct in a mapping
     }
 }
@@ -36,10 +37,10 @@ interface IGaugeVote {
 //////////////////////////////////////////////////////////////*/
 
 interface IGaugeManagerEvents {
-    event GaugeCreated(address indexed gauge, address indexed creator, string metadata);
+    event GaugeCreated(address indexed gauge, address indexed creator, string metadataURI);
     event GaugeDeactivated(address indexed gauge);
     event GaugeActivated(address indexed gauge);
-    event GaugeMetadataUpdated(address indexed gauge, string metadata);
+    event GaugeMetadataUpdated(address indexed gauge, string metadataURI);
 }
 
 interface IGaugeManagerErrors {
