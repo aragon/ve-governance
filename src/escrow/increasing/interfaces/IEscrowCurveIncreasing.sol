@@ -66,6 +66,7 @@ interface IEscrowCurveUser is IEscrowCurveUserStorage {
 
 interface IEscrowCurveErrorsAndEvents {
     error InvalidTokenId();
+    error InvalidCheckpoint();
 }
 
 interface IEscrowCurveCore is IEscrowCurveErrorsAndEvents {
