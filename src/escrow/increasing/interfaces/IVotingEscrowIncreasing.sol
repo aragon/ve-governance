@@ -23,6 +23,7 @@ interface IVotingEscrowCoreErrors {
     error SameAddress();
     error LockNFTAlreadySet();
     error MustBe18Decimals();
+    error TransferBalanceIncorrect();
 }
 
 interface IVotingEscrowCoreEvents {

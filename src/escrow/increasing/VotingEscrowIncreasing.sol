@@ -63,6 +63,7 @@ contract VotingEscrow is
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Address of the underying ERC20 token.
+    /// @dev Only tokens with 18 decimals and no transfer fees are supported
     address public token;
 
     /// @notice Address of the gauge voting contract.
@@ -248,10 +249,17 @@ contract VotingEscrow is
         // we don't allow edits in this implementation, so only the new lock is used
         _checkpoint(newTokenId, lock);
 
+
+        uint256 balanceBefore = IERC20(token).balanceOf(address(this));
+
         // transfer the tokens into the contract
         IERC20(token).safeTransferFrom(_msgSender(), address(this), _value);
 
-        // mint the NFT to complete the deposit
+        // we currently don't support tokens that adjust balances on transfer
+        if (IERC20(token).balanceOf(address(this)) != balanceBefore + _value)
+            revert TransferBalanceIncorrect();
+
+        // mint the NFT before and emit the event to complete the lock
         IERC721EMB(lockNFT).mint(_to, newTokenId);
         emit Deposit(_to, newTokenId, startTime, _value, totalLocked);
 
