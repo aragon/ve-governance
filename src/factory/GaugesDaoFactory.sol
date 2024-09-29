@@ -3,7 +3,7 @@ pragma solidity ^0.8.17;
 
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {DAOFactory} from "@aragon/osx/framework/dao/DAOFactory.sol";
-import {IEscrowCurveUserStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
+import {IEscrowCurveTokenStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
 import {IWithdrawalQueueErrors} from "src/escrow/increasing/interfaces/IVotingEscrowIncreasing.sol";
 import {IGaugeVote} from "src/voting/ISimpleGaugeVoter.sol";
 import {VotingEscrow, Clock, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams} from "src/voting/SimpleGaugeVoterSetup.sol";
@@ -40,11 +40,12 @@ struct DeploymentParameters {
     address[] multisigMembers;
     // Gauge Voter
     TokenParameters[] tokenParameters;
-    uint256 feePercent;
-    uint64 warmupPeriod;
-    uint64 cooldownPeriod;
-    uint64 minLockDuration;
+    uint16 feePercent;
+    uint48 warmupPeriod;
+    uint48 cooldownPeriod;
+    uint48 minLockDuration;
     bool votingPaused;
+    uint256 minDeposit;
     // Voter plugin setup and ENS
     PluginRepo multisigPluginRepo;
     uint8 multisigPluginRelease;
@@ -105,6 +106,7 @@ contract GaugesDaoFactory {
             }
         }
 
+        parameters.minDeposit = _parameters.minDeposit;
         parameters.feePercent = _parameters.feePercent;
         parameters.warmupPeriod = _parameters.warmupPeriod;
         parameters.cooldownPeriod = _parameters.cooldownPeriod;
@@ -293,7 +295,8 @@ contract GaugesDaoFactory {
                 feePercent: parameters.feePercent,
                 warmup: parameters.warmupPeriod,
                 cooldown: parameters.cooldownPeriod,
-                minLock: parameters.minLockDuration
+                minLock: parameters.minLockDuration,
+                minDeposit: parameters.minDeposit
             })
         );
 

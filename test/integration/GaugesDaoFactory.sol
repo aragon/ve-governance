@@ -58,10 +58,11 @@ contract GaugesDaoFactoryTest is Test {
             multisigMembers: multisigMembers,
             // Gauge Voter
             tokenParameters: tokenParameters,
-            feePercent: 0.5 ether,
+            feePercent: 50, // 0.5%
             warmupPeriod: 1234,
             cooldownPeriod: 2345,
             minLockDuration: 3456,
+            minDeposit: 1,
             votingPaused: false,
             // Standard multisig repo
             multisigPluginRepo: PluginRepo(address(5555)),
@@ -223,10 +224,11 @@ contract GaugesDaoFactoryTest is Test {
             multisigMembers: multisigMembers,
             // Gauge Voter
             tokenParameters: tokenParameters,
-            feePercent: 0.1 ether,
+            feePercent: 100, // 100/10k = 1%
             warmupPeriod: 7654,
             cooldownPeriod: 6543,
             minLockDuration: 5432,
+            minDeposit: 1 ether,
             votingPaused: true,
             // Standard multisig repo
             multisigPluginRepo: PluginRepo(address(3333)),
@@ -408,10 +410,11 @@ contract GaugesDaoFactoryTest is Test {
             multisigMembers: multisigMembers,
             // Gauge Voter
             tokenParameters: tokenParameters,
-            feePercent: 0.5 ether,
+            feePercent: 500,
             warmupPeriod: 1234,
             cooldownPeriod: 2345,
             minLockDuration: 3456,
+            minDeposit: 1,
             votingPaused: false,
             // Standard multisig repo
             multisigPluginRepo: multisigPluginRepo,
@@ -540,7 +543,7 @@ contract GaugesDaoFactoryTest is Test {
         );
         assertEq(
             deployment.gaugeVoterPluginSets[0].exitQueue.feePercent(),
-            0.5 ether,
+            500,
             "Incorrect feePercent"
         );
         assertEq(
@@ -548,7 +551,14 @@ contract GaugesDaoFactoryTest is Test {
             2345,
             "Incorrect cooldown"
         );
+
         assertEq(deployment.gaugeVoterPluginSets[0].exitQueue.minLock(), 3456, "Incorrect minLock");
+
+        assertEq(
+            deployment.gaugeVoterPluginSets[0].votingEscrow.minDeposit(),
+            1,
+            "Incorrect minDeposit"
+        );
         assertNotEq(
             address(deployment.gaugeVoterPluginSets[0].votingEscrow),
             address(0),
@@ -630,7 +640,7 @@ contract GaugesDaoFactoryTest is Test {
         );
         assertEq(
             deployment.gaugeVoterPluginSets[1].exitQueue.feePercent(),
-            0.5 ether,
+            500, 
             "Incorrect feePercent"
         );
         assertEq(
@@ -791,10 +801,11 @@ contract GaugesDaoFactoryTest is Test {
             multisigMembers: multisigMembers,
             // Gauge Voter
             tokenParameters: tokenParameters,
-            feePercent: 0.2 ether,
+            feePercent: 20, // 20/10k = 0.2%
             warmupPeriod: 5678,
             cooldownPeriod: 6789,
             minLockDuration: 7890,
+            minDeposit: 0.1 ether,
             votingPaused: true,
             // Standard multisig repo
             multisigPluginRepo: multisigPluginRepo,
@@ -923,9 +934,16 @@ contract GaugesDaoFactoryTest is Test {
         );
         assertEq(
             deployment.gaugeVoterPluginSets[0].exitQueue.feePercent(),
-            0.2 ether,
+            20,
             "Incorrect feePercent"
         );
+
+        assertEq(
+            deployment.gaugeVoterPluginSets[0].votingEscrow.minDeposit(),
+            0.1 ether,
+            "Incorrect minDeposit"
+        );
+
         assertEq(
             deployment.gaugeVoterPluginSets[0].exitQueue.cooldown(),
             6789,
@@ -1013,9 +1031,16 @@ contract GaugesDaoFactoryTest is Test {
         );
         assertEq(
             deployment.gaugeVoterPluginSets[1].exitQueue.feePercent(),
-            0.2 ether,
+            20,
             "Incorrect feePercent"
         );
+
+        assertEq(
+            deployment.gaugeVoterPluginSets[1].votingEscrow.minDeposit(),
+            0.1 ether,
+            "Incorrect minDeposit"
+        );
+
         assertEq(
             deployment.gaugeVoterPluginSets[1].exitQueue.cooldown(),
             6789,
@@ -1103,9 +1128,15 @@ contract GaugesDaoFactoryTest is Test {
         );
         assertEq(
             deployment.gaugeVoterPluginSets[2].exitQueue.feePercent(),
-            0.2 ether,
+            20,
             "Incorrect feePercent"
         );
+        assertEq(
+            deployment.gaugeVoterPluginSets[2].votingEscrow.minDeposit(),
+            0.1 ether,
+            "Incorrect minDeposit"
+        );
+
         assertEq(
             deployment.gaugeVoterPluginSets[2].exitQueue.cooldown(),
             6789,
@@ -1264,10 +1295,11 @@ contract GaugesDaoFactoryTest is Test {
             multisigMembers: multisigMembers,
             // Gauge Voter
             tokenParameters: tokenParameters,
-            feePercent: 0.5 ether,
+            feePercent: 500, // 500/10k = 5%
             warmupPeriod: 1234,
             cooldownPeriod: 2345,
             minLockDuration: 3456,
+            minDeposit: 10 ether,
             votingPaused: false,
             // Standard multisig repo
             multisigPluginRepo: multisigPluginRepo,

@@ -10,8 +10,11 @@ import {PluginRepo} from "@aragon/osx/framework/plugin/repo/PluginRepo.sol";
 import {PluginRepoFactory} from "@aragon/osx/framework/plugin/repo/PluginRepoFactory.sol";
 import {PluginSetupProcessor} from "@aragon/osx/framework/plugin/setup/PluginSetupProcessor.sol";
 import {MockERC20} from "@mocks/MockERC20.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 contract Deploy is Script {
+    using SafeCast for uint256;
+
     SimpleGaugeVoterSetup simpleGaugeVoterSetup;
 
     /// @dev Thrown when attempting to deploy a multisig with no members
@@ -54,19 +57,20 @@ contract Deploy is Script {
 
         parameters = DeploymentParameters({
             // Multisig settings
-            minApprovals: uint8(vm.envUint("MIN_APPROVALS")),
+            minApprovals: vm.envUint("MIN_APPROVALS").toUint8(),
             multisigMembers: multisigMembers,
             // Gauge Voter
             tokenParameters: tokenParameters,
-            feePercent: vm.envUint("FEE_PERCENT_WEI"),
-            warmupPeriod: uint64(vm.envUint("WARMUP_PERIOD")),
-            cooldownPeriod: uint64(vm.envUint("COOLDOWN_PERIOD")),
-            minLockDuration: uint64(vm.envUint("MIN_LOCK_DURATION")),
+            feePercent: vm.envUint("FEE_PERCENT").toUint16(),
+            warmupPeriod: vm.envUint("WARMUP_PERIOD").toUint48(),
+            cooldownPeriod: vm.envUint("COOLDOWN_PERIOD").toUint48(),
+            minLockDuration: vm.envUint("MIN_LOCK_DURATION").toUint48(),
             votingPaused: vm.envBool("VOTING_PAUSED"),
+            minDeposit: vm.envUint("MIN_DEPOSIT"),
             // Standard multisig repo
             multisigPluginRepo: PluginRepo(vm.envAddress("MULTISIG_PLUGIN_REPO_ADDRESS")),
-            multisigPluginRelease: uint8(vm.envUint("MULTISIG_PLUGIN_RELEASE")),
-            multisigPluginBuild: uint16(vm.envUint("MULTISIG_PLUGIN_BUILD")),
+            multisigPluginRelease: vm.envUint("MULTISIG_PLUGIN_RELEASE").toUint8(),
+            multisigPluginBuild: vm.envUint("MULTISIG_PLUGIN_BUILD").toUint16(),
             // Voter plugin setup and ENS
             voterPluginSetup: gaugeVoterPluginSetup,
             voterEnsSubdomain: vm.envString("SIMPLE_GAUGE_VOTER_REPO_ENS_SUBDOMAIN"),
