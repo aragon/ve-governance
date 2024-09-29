@@ -163,7 +163,7 @@ contract ExitQueue is IExitQueue, IClockUser, DaoAuthorizable, UUPSUpgradeable {
         uint cooldownExpiry = block.timestamp + cooldown;
 
         // if the next cp is after the cooldown, return the next cp
-        return nextCP >= cooldownExpiry ? nextCP : cooldownExpiry;
+        return nextCP > cooldownExpiry ? nextCP : cooldownExpiry;
     }
 
     /// @notice Exits the queue for that tokenID.
@@ -196,7 +196,7 @@ contract ExitQueue is IExitQueue, IClockUser, DaoAuthorizable, UUPSUpgradeable {
     function canExit(uint256 _tokenId) public view returns (bool) {
         Ticket memory ticket = _queue[_tokenId];
         if (ticket.holder == address(0)) return false;
-        return block.timestamp >= ticket.exitDate;
+        return block.timestamp > ticket.exitDate;
     }
 
     /// @return holder of a ticket for a given tokenId

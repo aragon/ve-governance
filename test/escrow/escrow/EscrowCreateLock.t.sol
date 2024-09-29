@@ -23,8 +23,7 @@ contract TestCreateLock is EscrowBase, IEscrowCurveUserStorage {
     }
 
     function _expTime(uint256 _time) internal pure returns (uint256) {
-        if (_time % 1 weeks == 0) return _time;
-        else return uint(_time) + 1 weeks - (_time % 1 weeks);
+        return uint(_time) + 1 weeks - (_time % 1 weeks);
     }
 
     function testCannotCreateLockWithZeroValue() public {
@@ -276,11 +275,11 @@ contract TestCreateLock is EscrowBase, IEscrowCurveUserStorage {
             expectedNextDeposit,
             "shane's lock should snap to the upcoming deposit date"
         );
-        // matt  is an edge case, they should also snap to the nearest deposit date (+0 seconds)
+        // matt  is an edge case, they should also snap to the next deposit date (+1 week)
         assertEq(
             escrow.locked(2).start,
-            expectedNextDeposit,
-            "matt's lock should snap to the upcoming deposit date"
+            expectedNextDeposit + clock.checkpointInterval(),
+            "matt's lock should snap to the next deposit date"
         );
         // phil should snap to the next deposit date (+1 week)
         assertEq(

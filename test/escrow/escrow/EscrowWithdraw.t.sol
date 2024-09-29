@@ -79,7 +79,7 @@ contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote, ITicke
         nftLock.approve(_who, tokenId);
 
         // must wait till end of queue
-        vm.warp(3 weeks - 1);
+        vm.warp(3 weeks);
         vm.expectRevert(CannotExit.selector);
         vm.prank(_who);
         escrow.withdraw(tokenId);
@@ -87,7 +87,7 @@ contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote, ITicke
         uint fee = queue.calculateFee(tokenId);
 
         // withdraw
-        vm.warp(3 weeks);
+        vm.warp(3 weeks + 1);
         vm.prank(_who);
         vm.expectEmit(true, true, false, true);
         emit Withdraw(_who, tokenId, _dep - fee, block.timestamp, 0);
@@ -174,7 +174,10 @@ contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote, ITicke
         address _who = address(1);
         uint128 _dep = 100e18;
 
-        vm.warp(2 weeks + 1);
+        // voting window is ea. 2 weeks + 1 hour
+        vm.warp(2 weeks + 1 hours + 1);
+
+        assertTrue(voter.votingActive());
 
         token.mint(_who, _dep);
         uint tokenId;
@@ -184,20 +187,23 @@ contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote, ITicke
             tokenId = escrow.createLock(_dep);
 
             // voting active after cooldown
-            vm.warp(block.timestamp + 3 weeks - queue.cooldown() + 1);
+            // +1 week: voting ends
+            // +2 weeks: next voting period opens
+            vm.warp(block.timestamp + 2 weeks);
 
             // make a vote
             voter.vote(tokenId, votes);
+
+            // warp so cooldown crosses the week boundary
+            vm.warp(block.timestamp + clock.checkpointInterval() - queue.cooldown() + 1);
 
             nftLock.approve(address(escrow), tokenId);
             escrow.resetVotesAndBeginWithdrawal(tokenId);
         }
         vm.stopPrank();
 
-        uint _now = block.timestamp;
-
-        // must wait till end of cooldown
-        vm.warp(3 weeks);
+        // must wait till after end of cooldown
+        vm.warp(block.timestamp + queue.cooldown());
         vm.expectRevert(CannotExit.selector);
         vm.prank(_who);
         escrow.withdraw(tokenId);
@@ -205,7 +211,7 @@ contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote, ITicke
         uint fee = queue.calculateFee(tokenId);
 
         // withdraw
-        vm.warp(_now + queue.cooldown());
+        vm.warp(block.timestamp + 1);
         vm.prank(_who);
         vm.expectEmit(true, true, false, true);
         emit Withdraw(_who, tokenId, _dep - fee, block.timestamp, 0);
@@ -250,7 +256,7 @@ contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote, ITicke
             escrow.beginWithdrawal(tokenId);
 
             Ticket memory ticket = queue.queue(tokenId);
-            vm.warp(ticket.exitDate);
+            vm.warp(ticket.exitDate + 1);
 
             escrow.withdraw(tokenId);
             token.approve(address(escrow), 100);
@@ -265,7 +271,6 @@ contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote, ITicke
         assertEq(escrow.lastLockId(), 3);
     }
 
-    error MinLockNotReached(uint256 tokenId, uint48 minLock, uint48 earliestExitDate);
 
     function testCantDepositAndWithdrawInTheSameBlock() public {
         // this is a timing
@@ -282,7 +287,7 @@ contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote, ITicke
 
         uint tokenId;
 
-        bytes memory data = abi.encodeWithSelector(MinLockNotReached.selector, 1, 1, 1 weeks + 1);
+        bytes memory data = abi.encodeWithSelector(CannotExit.selector);
         // start the deposit
         vm.startPrank(address(1));
         {

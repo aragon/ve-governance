@@ -193,7 +193,7 @@ contract QuadraticIncreasingEscrow is
     }
 
     function _isWarm(UserPoint memory _point) public view returns (bool) {
-        return block.timestamp >= _point.writtenTs + warmupPeriod;
+        return block.timestamp > _point.writtenTs + warmupPeriod;
     }
 
     /*//////////////////////////////////////////////////////////////

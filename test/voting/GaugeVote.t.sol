@@ -30,11 +30,19 @@ contract TestGaugeVote is GaugeVotingBase {
     uint256 tokenId;
     address gauge = address(0x777);
 
+    uint time;
+
+    function _increaseTime(uint _by) internal {
+        time += _by;
+        vm.warp(time);
+    }
+
     function setUp() public override {
         super.setUp();
 
         // reset clock
         vm.warp(0);
+        time = block.timestamp;
 
         // means we have voting power
         curve.setWarmupPeriod(0);
@@ -48,8 +56,9 @@ contract TestGaugeVote is GaugeVotingBase {
         }
         vm.stopPrank();
 
-        // warp to an active window
-        vm.warp(1 hours);
+        // activate cp & warp to an active window
+        _increaseTime(2 weeks + 1 hours + 1);
+
         assertGt(escrow.votingPower(tokenId), 0);
         assertTrue(voter.votingActive(), "voting should be active");
 

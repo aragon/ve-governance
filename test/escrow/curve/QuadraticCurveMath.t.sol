@@ -96,7 +96,7 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
         assertEq(curve.isWarm(tokenIdFirst), false, "Not warming up");
 
         // wait for warmup
-        vm.warp(block.timestamp + curve.warmupPeriod() - 1);
+        vm.warp(block.timestamp + curve.warmupPeriod());
         assertEq(curve.votingPowerAt(tokenIdFirst, 0), 0, "Balance after deposit before warmup");
         assertEq(curve.isWarm(tokenIdFirst), false, "Not warming up");
         assertEq(curve.isWarm(tokenIdSecond), false, "Not warming up II");
@@ -104,24 +104,20 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
         // warmup complete
         vm.warp(block.timestamp + 1);
 
-        // excel:               449.206158900000000000
-        // solmate:             449.206133622001394300
-        // python:              449.206158892128337920
-        // solmate (xmulx):     449.206133622001394304
+        // python:              449.206279554928541696
+        // solmate (optimized): 449.206254284606635135
         assertEq(
             curve.votingPowerAt(tokenIdFirst, block.timestamp),
-            449206133622001394304,
+            449206254284606635135,
             "Balance incorrect after warmup"
         );
         assertEq(curve.isWarm(tokenIdFirst), true, "Still warming up");
 
-        // excel:     1_067_784_257_000000000000000000
-        // solmate:   1_067_784_196_491481599990798396
-        // python:    1_067_784_256_559766801878089728
-        // solmate2:  1_067_784_196_491481600000000000
+        // python:    1067784543380942056100724736
+        // solmate:   1067784483312193385000000000
         assertEq(
             curve.votingPowerAt(tokenIdSecond, block.timestamp),
-            1067784196491481600000000000,
+            1067784483312193385000000000,
             "Balance incorrect after warmup II"
         );
 

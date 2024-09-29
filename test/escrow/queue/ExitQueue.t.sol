@@ -190,27 +190,33 @@ contract TestExitQueue is ExitQueueBase, ITicket {
 
         // this will trigger a 0,0 locked balance
         uint256 tokenId = 420;
-        uint time = block.timestamp;
 
         vm.prank(address(escrow));
         queue.queueExit(tokenId, address(this));
 
         assertFalse(queue.canExit(tokenId));
 
-        vm.warp(queue.nextExitDate() - 1);
+        vm.warp(queue.nextExitDate());
         assertFalse(queue.canExit(tokenId));
 
-        vm.warp(queue.nextExitDate());
+        vm.warp(queue.nextExitDate() + 1);
         assertTrue(queue.canExit(tokenId));
     }
 
     // test that changing the cooldown doesn't affect the current ticket holders
     function testChangingCooldownDoesntAffectCurrentHolders() public {
-        // warp to 1 week exactly to allow unlock
+        // set the lock to start at 1 week
+        escrow.setMockLockedBalance(100e18, 1 weeks);
+
+        // warp to first week - this is the min lock period as the lock starts week aligned
         vm.warp(1 weeks);
 
         // set a cooldown to 3 days
         queue.setCooldown(3 days);
+
+        // warp to almost the end of the upcoming week - this means we wont snap to the next week
+        // but we can actually test the cooldown
+        vm.warp(1 weeks + 6 days);
 
         // queue a ticket
         vm.prank(address(escrow));
@@ -219,25 +225,30 @@ contract TestExitQueue is ExitQueueBase, ITicket {
         // check the ticket
         Ticket memory ticket = queue.queue(1);
         // ticket should be in 3 days from now
-        assertEq(ticket.exitDate, 1 weeks + 3 days);
+        assertEq(ticket.exitDate, 2 weeks + 2 days);
 
         // change the cooldown to 1 day
         queue.setCooldown(1 weeks + 1 days);
 
-        // warp to 2 days
-        vm.warp(1 weeks + 2 days);
+        // warp to total of 2 days in the future
+        vm.warp(block.timestamp + 2 days);
 
         // should still not be able to exit
         assertFalse(queue.canExit(1));
 
         // warp to 3 days
-        vm.warp(1 weeks + 3 days);
+        vm.warp(block.timestamp + 1 days);
 
-        // should be able to exit
+        // should not be able to exit
+        assertFalse(queue.canExit(1));
+
+        // warp to 3d + 1
+        vm.warp(block.timestamp + 1);
+
         assertTrue(queue.canExit(1));
 
         // change the cooldown to 5 days
-        queue.setCooldown(1 weeks + 5 days);
+        queue.setCooldown(5 days);
 
         // should still be able to exit
         assertTrue(queue.canExit(1));
@@ -249,6 +260,12 @@ contract TestExitQueue is ExitQueueBase, ITicket {
         vm.warp(1 weeks);
 
         uint time = block.timestamp;
+        // set the lock to start at 1 week
+        escrow.setMockLockedBalance(100e18, 1 weeks);
+
+        // warp to almost the end of the upcoming week - this means we wont snap to the next week
+        // but we can actually test the cooldown
+        vm.warp(2 weeks - 1);
 
         queue.setCooldown(100);
 
@@ -257,13 +274,13 @@ contract TestExitQueue is ExitQueueBase, ITicket {
         vm.prank(address(escrow));
         queue.queueExit(_tokenId, _holder);
 
-        vm.warp(time + 99);
+        vm.warp(2 weeks + 99);
 
         vm.expectRevert(CannotExit.selector);
         vm.prank(address(escrow));
         queue.exit(_tokenId);
 
-        vm.warp(time + 100);
+        vm.warp(2 weeks + 100);
 
         vm.expectEmit(true, false, false, true);
         emit Exit(_tokenId, 0);

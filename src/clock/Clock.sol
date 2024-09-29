@@ -196,9 +196,8 @@ contract Clock is IClock, DaoAuthorizable, UUPSUpgradeable {
         unchecked {
             uint256 elapsed = resolveElapsedInEpoch(timestamp);
             // elapsed > deposit interval, then subtract the interval
-            if (elapsed > CHECKPOINT_INTERVAL) elapsed -= CHECKPOINT_INTERVAL;
-            if (elapsed == 0) return 0;
-            else return CHECKPOINT_INTERVAL - elapsed;
+            if (elapsed >= CHECKPOINT_INTERVAL) elapsed -= CHECKPOINT_INTERVAL;
+            return CHECKPOINT_INTERVAL - elapsed;
         }
     }
 
