@@ -6,6 +6,7 @@ bytecode_hash = "none"
 cbor_metadata = false
 fuzz = { runs = 256 }
 gas_reports = ["*"]
+fs_permissions = [{ access = "read", path = "./script" }]
 libs = ["lib"]
 optimizer = true
 optimizer_runs = 10_000
