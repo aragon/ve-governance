@@ -1,14 +1,18 @@
-Audit scope is all files in the src folder. The `ProxyLib.sol` is a pre-audited contract unchanged from Aragon OSx and we do not require any further reviews.
- 
-## Curve conventions
+# Aragon Ve Governance Audit
 
-QuadraticIncreasingEscrow attempts to follow a generalised structure that can work for both increasing curves and decreasing curves. Because of this, certain functions have limited use in the current, increasing case:
+Aragon's first version of ve governance underwent 2 audits by Halborn and Blocksec, as well as an internal review by senior engineering in Aragon. The findings, changelog and associated PRs are included in the document below.
 
-- It's not possible to increase a lock qty, hence `oldLocked` is not used
-- Binary searching through user points is somewhat redundant given the low number of possible locks
-- We assume that the calling contract aligns checkpoints with the checkpoint epoch
+1. [Summary of Changes](#summary-of-changes)
+2. [Notes from the Halborn Audit](#notes-from-the-halborn-audit)
+   - [Critical and High Severity Issues](#critical-and-high-severity)
+   - [Other Severity Issues](#other-severity)
+   - [HAL-06 Issue](#hal-06)
+3. [Notes from the BlocSec Audit](#notes-from-the-blocsec-audit)
+4. [Notes from Aragon Internal Audit](#notes-from-aragon-internal-audit)
 
 # Summary of changes
+
+Audit scope is all files in the src folder. The `ProxyLib.sol` is a pre-audited contract unchanged from Aragon OSx and we do not require any further reviews.
 
 Changes have been added into a rollup commit https://github.com/aragon/ve-governance/pull/30
 
