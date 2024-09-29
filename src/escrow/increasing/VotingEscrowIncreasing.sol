@@ -47,11 +47,11 @@ contract VotingEscrow is
                               NFT Data
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Minimum deposit amount
-    uint256 public minDeposit;
-
     /// @notice Decimals of the voting power
     uint8 public constant decimals = 18;
+
+    /// @notice Minimum deposit amount
+    uint256 public minDeposit;
 
     /// @notice Auto-incrementing ID for the most recently created lock, does not decrease on withdrawal
     uint256 public lastLockId;
@@ -266,7 +266,6 @@ contract VotingEscrow is
         // we don't allow edits in this implementation, so only the new lock is used
         _checkpoint(newTokenId, lock);
 
-
         uint256 balanceBefore = IERC20(token).balanceOf(address(this));
 
         // transfer the tokens into the contract
@@ -409,5 +408,5 @@ contract VotingEscrow is
     function _authorizeUpgrade(address) internal virtual override auth(ESCROW_ADMIN_ROLE) {}
 
     /// @dev Reserved storage space to allow for layout changes in the future.
-    uint256[42] private __gap;
+    uint256[39] private __gap;
 }

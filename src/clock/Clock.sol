@@ -222,5 +222,5 @@ contract Clock is IClock, DaoAuthorizable, UUPSUpgradeable {
         return _getImplementation();
     }
 
-    uint256[49] private __gap;
+    uint256[50] private __gap;
 }

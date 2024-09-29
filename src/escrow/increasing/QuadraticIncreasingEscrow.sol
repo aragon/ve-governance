@@ -347,5 +347,5 @@ contract QuadraticIncreasingEscrow is
     function _authorizeUpgrade(address) internal virtual override auth(CURVE_ADMIN_ROLE) {}
 
     /// @dev gap for upgradeable contract
-    uint256[44] private __gap;
+    uint256[45] private __gap;
 }
