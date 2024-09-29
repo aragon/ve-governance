@@ -24,9 +24,12 @@ interface IVotingEscrowCoreErrors {
     error LockNFTAlreadySet();
     error MustBe18Decimals();
     error TransferBalanceIncorrect();
+    error AmountTooSmall();
 }
 
 interface IVotingEscrowCoreEvents {
+    event MinDepositSet(uint256 minDeposit);
+
     event Deposit(
         address indexed depositor,
         uint256 indexed tokenId,
@@ -175,9 +178,7 @@ interface IDynamicVoter is IDynamicVoterErrors {
                         INCREASED ESCROW
 //////////////////////////////////////////////////////////////*/
 
-interface IVotingEscrowIncreasing is IVotingEscrowCore, IDynamicVoter, IWithdrawalQueue, ISweeper {
-
-}
+interface IVotingEscrowIncreasing is IVotingEscrowCore, IDynamicVoter, IWithdrawalQueue, ISweeper {}
 
 /// @dev useful for testing
 interface IVotingEscrowEventsStorageErrorsEvents is
@@ -188,6 +189,4 @@ interface IVotingEscrowEventsStorageErrorsEvents is
     ILockedBalanceIncreasing,
     ISweeperEvents,
     ISweeperErrors
-{
-
-}
+{}

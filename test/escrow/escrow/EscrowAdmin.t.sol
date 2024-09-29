@@ -33,6 +33,18 @@ contract TestEscrowAdmin is EscrowBase {
         escrow.setCurve(address(0));
     }
 
+    function testSetMinDeposit(uint256 _newMinDeposit) public {
+        vm.expectEmit(false, false, false, true);
+        emit MinDepositSet(_newMinDeposit);
+        escrow.setMinDeposit(_newMinDeposit);
+        assertEq(escrow.minDeposit(), _newMinDeposit);
+
+        bytes memory err = _authErr(attacker, address(escrow), escrow.ESCROW_ADMIN_ROLE());
+        vm.prank(attacker);
+        vm.expectRevert(err);
+        escrow.setMinDeposit(_newMinDeposit);
+    }
+
     function testSetVoter(address _newVoter) public {
         escrow.setVoter(_newVoter);
         assertEq(escrow.voter(), _newVoter);

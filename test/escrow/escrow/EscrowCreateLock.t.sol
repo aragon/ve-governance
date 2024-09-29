@@ -33,12 +33,32 @@ contract TestCreateLock is EscrowBase, IEscrowCurveUserStorage {
     }
 
     function testCantMintToZeroAddress() public {
-        token.mint(address(this), 1);
-        token.approve(address(escrow), 1);
+        token.mint(address(this), 1e18);
+        token.approve(address(escrow), 1e18);
 
         vm.expectRevert("ERC721: mint to the zero address");
 
-        escrow.createLockFor(1, address(0));
+        escrow.createLockFor(1e18, address(0));
+    }
+
+    function testCantMintBelowMinDeposit(uint256 _minDeposit) public {
+        vm.assume(_minDeposit > 1);
+        escrow.setMinDeposit(_minDeposit);
+
+        token.mint(address(123), _minDeposit);
+        vm.startPrank(address(123));
+        {
+            token.approve(address(escrow), _minDeposit);
+            vm.expectRevert(AmountTooSmall.selector);
+            escrow.createLock(_minDeposit - 1);
+        }
+        vm.stopPrank();
+
+        // should not revert
+        escrow.setMinDeposit(1);
+
+        vm.prank(address(123));
+        escrow.createLock(1);
     }
 
     /// @param _value is positive, we check this in a previous test. It needs to fit inside an int256
@@ -48,6 +68,9 @@ contract TestCreateLock is EscrowBase, IEscrowCurveUserStorage {
     function testFuzz_createLock(uint128 _value, address _depositor, uint32 _time) public {
         vm.assume(_value > 0);
         vm.assume(_depositor != address(0) && address(_depositor).code.length == 0);
+
+        // set the min deposit to _value
+        escrow.setMinDeposit(_value);
 
         // set zero warmup for this test
         curve.setWarmupPeriod(0);
@@ -269,6 +292,7 @@ contract TestCreateLock is EscrowBase, IEscrowCurveUserStorage {
 
     function testFuzz_createLockFor(uint128 _value) public {
         vm.assume(_value > 0);
+        escrow.setMinDeposit(_value);
         vm.warp(1);
 
         // try with regular user
@@ -296,7 +320,7 @@ contract TestCreateLock is EscrowBase, IEscrowCurveUserStorage {
         // deploy a janky token
         TaxERC20 janky = new TaxERC20();
 
-        escrow = _deployEscrow(address(janky), address(dao), address(clock));
+        escrow = _deployEscrow(address(janky), address(dao), address(clock), 1);
         curve = _deployCurve(address(escrow), address(dao), 3 days, address(clock));
         nftLock = _deployLock(address(escrow), name, symbol, address(dao));
 
