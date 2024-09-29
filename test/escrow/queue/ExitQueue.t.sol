@@ -155,17 +155,10 @@ contract TestExitQueue is ExitQueueBase, ITicket {
         vm.assume(_ticketHolder != address(0));
         vm.assume(_warp > 0); // any time other than genesis
         vm.warp(_warp);
-
         // if there are less than cooldown seconds left, exit date is end of the
         // week, else it's now + cooldown
-
         uint expectedExitDate;
         uint remainingSecondsBeforeNextCP = 1 weeks - (block.timestamp % 1 weeks);
-
-        // TODO: is this 100% what we want if the cooldown is 0?
-        if (remainingSecondsBeforeNextCP == 1 weeks) {
-            remainingSecondsBeforeNextCP = 0;
-        }
 
         if (queue.cooldown() < remainingSecondsBeforeNextCP) {
             expectedExitDate = block.timestamp + remainingSecondsBeforeNextCP;
