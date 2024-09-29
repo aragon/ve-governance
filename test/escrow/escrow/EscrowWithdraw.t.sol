@@ -263,7 +263,7 @@ contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote, ITicke
         assertEq(escrow.lastLockId(), 3);
     }
 
-    error MinLockNotReached(uint256 tokenId, uint256 minLock, uint256 earliestExitDate);
+    error MinLockNotReached(uint256 tokenId, uint48 minLock, uint48 earliestExitDate);
 
     function testCantDepositAndWithdrawInTheSameBlock() public {
         // this is a timing
