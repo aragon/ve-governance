@@ -71,8 +71,8 @@ https://docs.google.com/document/d/1bLOIahrZjzf7DrraT42F9mBiLwpn4b9_Npn3GJlK93M/
 
 Aragon Audits were conducted by various team members.
 
-- @novaknole provided a [gist](https://gist.github.com/novaknole/53d1478a724ab707b2c39ad41f05a636)
-- @brickpop @xavikh @carlosgj94 all contributed on an [internal audit document that you may not have access to](https://www.notion.so/aragonorg/ve-Internal-Review-641d2e99c53e4f2391821e6d3ef0673a)
+- @novaknole provided a [gist](https://gist.github.com/novaknole/53d1478a724ab707b2c39ad41f05a636) with *findings*
+- @brickpop @xavikh @carlosgj94 all contributed on an [internal audit document that you may not have access to](https://www.notion.so/aragonorg/ve-Internal-Review-641d2e99c53e4f2391821e6d3ef0673a) but which have been added as *Internal Review* notes below.
 
 | Severity | Issue                                                                                     | Status       | Comment or PR                                                                                                                       |
 | -------- | ----------------------------------------------------------------------------------------- | ------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
