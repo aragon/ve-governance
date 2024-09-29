@@ -9,13 +9,13 @@ import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
-import {IEscrowCurveUserStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
+import {IEscrowCurveTokenStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
 import {VotingEscrow} from "@escrow/VotingEscrowIncreasing.sol";
 
 import {SimpleGaugeVoter, SimpleGaugeVoterSetup} from "src/voting/SimpleGaugeVoterSetup.sol";
 import {IGaugeVote} from "src/voting/ISimpleGaugeVoter.sol";
 
-contract TestSweep is EscrowBase, IEscrowCurveUserStorage, IGaugeVote {
+contract TestSweep is EscrowBase, IEscrowCurveTokenStorage, IGaugeVote {
     function setUp() public override {
         super.setUp();
 

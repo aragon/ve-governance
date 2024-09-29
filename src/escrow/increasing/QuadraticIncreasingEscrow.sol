@@ -43,16 +43,16 @@ contract QuadraticIncreasingEscrow is
     /// @notice The Clock contract address
     address public clock;
 
-    /// @notice tokenId => point epoch: incremented on a per-user basis
-    mapping(uint256 => uint256) public userPointEpoch;
+    /// @notice tokenId => point epoch: incremented on a per-tokenId basis
+    mapping(uint256 => uint256) public tokenPointIntervals;
 
     /// @notice The warmup period for the curve
     uint48 public warmupPeriod;
 
-    /// @dev tokenId => userPointEpoch => UserPoint
+    /// @dev tokenId => tokenPointIntervals => TokenPoint
     /// @dev The Array is fixed so we can write to it in the future
     /// This implementation means that very short intervals may be challenging
-    mapping(uint256 => UserPoint[1_000_000_000]) internal _userPointHistory;
+    mapping(uint256 => TokenPoint[1_000_000_000]) internal _tokenPointHistory;
 
     /*//////////////////////////////////////////////////////////////
                                 MATH
@@ -186,13 +186,13 @@ contract QuadraticIncreasingEscrow is
 
     /// @notice Returns whether the NFT is warm
     function isWarm(uint256 tokenId) public view returns (bool) {
-        uint256 _epoch = _getPastUserPointIndex(tokenId, block.timestamp);
-        UserPoint memory point = _userPointHistory[tokenId][_epoch];
+        uint256 interval = _getPastTokenPointInterval(tokenId, block.timestamp);
+        TokenPoint memory point = _tokenPointHistory[tokenId][interval];
         if (point.bias == 0) return false;
         else return _isWarm(point);
     }
 
-    function _isWarm(UserPoint memory _point) public view returns (bool) {
+    function _isWarm(TokenPoint memory _point) public view returns (bool) {
         return block.timestamp > _point.writtenTs + warmupPeriod;
     }
 
@@ -200,41 +200,42 @@ contract QuadraticIncreasingEscrow is
                               BALANCE
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Returns the UserPoint at the passed epoch
-    /// @param _tokenId The NFT to return the UserPoint for
-    /// @param _userEpoch The epoch to return the UserPoint at
-    function userPointHistory(
+    /// @notice Returns the TokenPoint at the passed interval
+    /// @param _tokenId The NFT to return the TokenPoint for
+    /// @param _tokenInterval The epoch to return the TokenPoint at
+    function tokenPointHistory(
         uint256 _tokenId,
-        uint256 _userEpoch
-    ) external view returns (UserPoint memory) {
-        return _userPointHistory[_tokenId][_userEpoch];
+        uint256 _tokenInterval
+    ) external view returns (TokenPoint memory) {
+        return _tokenPointHistory[_tokenId][_tokenInterval];
     }
 
-    /// @notice Binary search to get the user point index for a token id at or prior to a given timestamp
+    /// @notice Binary search to get the token point interval for a token id at or prior to a given timestamp
     /// Once we have the point, we can apply the bias calculation to get the voting power.
-    /// @dev If a user point does not exist prior to the timestamp, this will return 0.
-    function _getPastUserPointIndex(
+    /// @dev If a token point does not exist prior to the timestamp, this will return 0.
+    function _getPastTokenPointInterval(
         uint256 _tokenId,
         uint256 _timestamp
     ) internal view returns (uint256) {
-        uint256 _userEpoch = userPointEpoch[_tokenId];
-        if (_userEpoch == 0) return 0;
+        uint256 tokenInterval = tokenPointIntervals[_tokenId];
+        if (tokenInterval == 0) return 0;
 
         // if the most recent point is before the timestamp, return it
-        if (_userPointHistory[_tokenId][_userEpoch].checkpointTs <= _timestamp) return (_userEpoch);
+        if (_tokenPointHistory[_tokenId][tokenInterval].checkpointTs <= _timestamp)
+            return (tokenInterval);
 
         // Check if the first balance is after the timestamp
         // this means that the first epoch has yet to start
-        if (_userPointHistory[_tokenId][1].checkpointTs > _timestamp) return 0;
+        if (_tokenPointHistory[_tokenId][1].checkpointTs > _timestamp) return 0;
 
         uint256 lower = 0;
-        uint256 upper = _userEpoch;
+        uint256 upper = tokenInterval;
         while (upper > lower) {
             uint256 center = upper - (upper - lower) / 2; // ceil, avoiding overflow
-            UserPoint storage userPoint = _userPointHistory[_tokenId][center];
-            if (userPoint.checkpointTs == _timestamp) {
+            TokenPoint storage tokenPoint = _tokenPointHistory[_tokenId][center];
+            if (tokenPoint.checkpointTs == _timestamp) {
                 return center;
-            } else if (userPoint.checkpointTs < _timestamp) {
+            } else if (tokenPoint.checkpointTs < _timestamp) {
                 lower = center;
             } else {
                 upper = center - 1;
@@ -244,11 +245,11 @@ contract QuadraticIncreasingEscrow is
     }
 
     function votingPowerAt(uint256 _tokenId, uint256 _t) external view returns (uint256) {
-        uint256 _epoch = _getPastUserPointIndex(_tokenId, _t);
+        uint256 interval = _getPastTokenPointInterval(_tokenId, _t);
 
         // epoch 0 is an empty point
-        if (_epoch == 0) return 0;
-        UserPoint memory lastPoint = _userPointHistory[_tokenId][_epoch];
+        if (interval == 0) return 0;
+        TokenPoint memory lastPoint = _tokenPointHistory[_tokenId][interval];
 
         if (!_isWarm(lastPoint)) return 0;
         uint256 timeElapsed = _t - lastPoint.checkpointTs;
@@ -278,7 +279,7 @@ contract QuadraticIncreasingEscrow is
 
     /// @notice Record gper-user data to checkpoints. Used by VotingEscrow system.
     /// @dev Curve finance style but just for users at this stage
-    /// @param _tokenId NFT token ID. No user checkpoint if 0
+    /// @param _tokenId NFT token ID.
     /// @param _newLocked New locked amount / end lock time for the user
     function _checkpoint(
         uint256 _tokenId,
@@ -288,8 +289,8 @@ contract QuadraticIncreasingEscrow is
         // this implementation doesn't yet support manual checkpointing
         if (_tokenId == 0) revert InvalidTokenId();
 
-        // instantiate a new, empty user point
-        UserPoint memory uNew;
+        // instantiate a new, empty token point
+        TokenPoint memory uNew;
         uint amount = _newLocked.amount;
         bool isExiting = amount == 0;
 
@@ -309,28 +310,28 @@ contract QuadraticIncreasingEscrow is
         // log the written ts - this can be used to compute warmups and burn downs
         uNew.writtenTs = block.timestamp.toUint128();
 
-        // check to see if we have an existing epoch for this token
-        uint256 userEpoch = userPointEpoch[_tokenId];
+        // check to see if we have an existing interval for this token
+        uint256 tokenInterval = tokenPointIntervals[_tokenId];
 
-        // if we don't have a point, we can write to the first epoch
-        if (userEpoch == 0) {
-            userPointEpoch[_tokenId] = ++userEpoch;
+        // if we don't have a point, we can write to the first interval
+        if (tokenInterval == 0) {
+            tokenPointIntervals[_tokenId] = ++tokenInterval;
         }
         // else we need to check the last point
         else {
-            UserPoint memory lastPoint = _userPointHistory[_tokenId][userEpoch];
+            TokenPoint memory lastPoint = _tokenPointHistory[_tokenId][tokenInterval];
 
             // can't do this: we can only write to same point or future
             if (lastPoint.checkpointTs > uNew.checkpointTs) revert InvalidCheckpoint();
 
-            // if we're writing to a new point, increment the epoch
+            // if we're writing to a new point, increment the interval
             if (lastPoint.checkpointTs != uNew.checkpointTs) {
-                userPointEpoch[_tokenId] = ++userEpoch;
+                tokenPointIntervals[_tokenId] = ++tokenInterval;
             }
         }
 
         // Record the new point
-        _userPointHistory[_tokenId][userEpoch] = uNew;
+        _tokenPointHistory[_tokenId][tokenInterval] = uNew;
     }
 
     /*///////////////////////////////////////////////////////////////

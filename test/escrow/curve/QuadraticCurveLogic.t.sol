@@ -38,8 +38,8 @@ contract TestQuadraticIncreasingCurveLogic is QuadraticCurveBase {
         escrow.checkpoint(1, LockedBalance(0, 0), first);
         escrow.checkpoint(1, first, second);
 
-        // check we have only 1 user epoch
-        assertEq(curve.userPointEpoch(1), 1);
-        assertEq(curve.userPointHistory(1, 1).bias, 200);
+        // check we have only 1 token interval
+        assertEq(curve.tokenPointIntervals(1), 1);
+        assertEq(curve.tokenPointHistory(1, 1).bias, 200);
     }
 }

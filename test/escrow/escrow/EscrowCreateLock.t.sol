@@ -10,12 +10,12 @@ import {MockERC20} from "@mocks/MockERC20.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
-import {IEscrowCurveUserStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
+import {IEscrowCurveTokenStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
 import {VotingEscrow} from "@escrow/VotingEscrowIncreasing.sol";
 
 import {SimpleGaugeVoter, SimpleGaugeVoterSetup} from "src/voting/SimpleGaugeVoterSetup.sol";
 
-contract TestCreateLock is EscrowBase, IEscrowCurveUserStorage {
+contract TestCreateLock is EscrowBase, IEscrowCurveTokenStorage {
     function setUp() public override {
         super.setUp();
 
@@ -137,8 +137,8 @@ contract TestCreateLock is EscrowBase, IEscrowCurveUserStorage {
         }
         // Check the checkpoint was created
         {
-            uint256 epoch = curve.userPointEpoch(tokenId);
-            UserPoint memory checkpoint = curve.userPointHistory(tokenId, epoch);
+            uint256 epoch = curve.tokenPointIntervals(tokenId);
+            TokenPoint memory checkpoint = curve.tokenPointHistory(tokenId, epoch);
             assertEq(checkpoint.bias, _value);
             assertEq(checkpoint.checkpointTs, expectedTime);
         }

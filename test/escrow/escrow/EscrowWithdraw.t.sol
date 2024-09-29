@@ -9,14 +9,14 @@ import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
-import {IEscrowCurveUserStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
+import {IEscrowCurveTokenStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
 import {VotingEscrow} from "@escrow/VotingEscrowIncreasing.sol";
 
 import {SimpleGaugeVoter, SimpleGaugeVoterSetup} from "@voting/SimpleGaugeVoterSetup.sol";
 import {IGaugeVote} from "@voting/ISimpleGaugeVoter.sol";
 import {ITicket} from "@escrow-interfaces/IExitQueue.sol";
 
-contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote, ITicket {
+contract TestWithdraw is EscrowBase, IEscrowCurveTokenStorage, IGaugeVote, ITicket {
     address gauge = address(1);
 
     GaugeVote[] votes;
@@ -155,8 +155,8 @@ contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote, ITicke
         // voting power should still be there as the cp is still active
         assertGt(escrow.votingPower(tokenId), 0);
 
-        // but we should have written a user point in the future
-        UserPoint memory up = curve.userPointHistory(tokenId, 2);
+        // but we should have written a token point in the future
+        TokenPoint memory up = curve.tokenPointHistory(tokenId, 2);
         assertEq(up.bias, 0);
         assertEq(up.writtenTs, block.timestamp);
         assertEq(up.checkpointTs, 3 weeks);
@@ -270,7 +270,6 @@ contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote, ITicke
         assertEq(nftLock.totalSupply(), 2);
         assertEq(escrow.lastLockId(), 3);
     }
-
 
     function testCantDepositAndWithdrawInTheSameBlock() public {
         // this is a timing
