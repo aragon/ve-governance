@@ -46,7 +46,7 @@ contract Deploy is Script {
 
     function getDeploymentParameters(
         bool isProduction
-    ) internal returns (DeploymentParameters memory parameters) {
+    ) public returns (DeploymentParameters memory parameters) {
         address[] memory multisigMembers = readMultisigMembers();
         TokenParameters[] memory tokenParameters = getTokenParameters(isProduction);
 
@@ -81,7 +81,7 @@ contract Deploy is Script {
         });
     }
 
-    function readMultisigMembers() internal view returns (address[] memory result) {
+    function readMultisigMembers() public view returns (address[] memory result) {
         // JSON list of members
         string memory membersFilePath = vm.envString("MULTISIG_MEMBERS_JSON_FILE_NAME");
         string memory path = string.concat(vm.projectRoot(), membersFilePath);
