@@ -59,7 +59,7 @@ https://www.halborn.com/portal/reports/ve-governance-hub
 
 ![image](https://github.com/user-attachments/assets/b211c368-2e14-4d80-a7f4-de7d1b83fbfb)
 
-# Notes from the BlocSec Audit
+# Notes from the BlockSec Audit
 
 https://docs.google.com/document/d/1bLOIahrZjzf7DrraT42F9mBiLwpn4b9_Npn3GJlK93M/
 
