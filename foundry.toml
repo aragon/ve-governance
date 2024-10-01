@@ -32,3 +32,8 @@ mainnet = "https://mainnet.infura.io/v3/${API_KEY_INFURA}"
 optimism = "https://optimism-mainnet.infura.io/v3/${API_KEY_INFURA}"
 polygon = "https://polygon-mainnet.infura.io/v3/${API_KEY_INFURA}"
 sepolia = "https://sepolia.infura.io/v3/${API_KEY_INFURA}"
+
+
+[profile.mode_sepolia_test]
+rpc_url = "https://sepolia.mode.network"
+fork_block_number = 19911297

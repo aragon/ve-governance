@@ -30,3 +30,8 @@ deploy-mode-sepolia :; forge script script/Deploy.s.sol:Deploy \
 	--verifier-url https://sepolia.explorer.mode.network/api\? \
 	-vvvvv
 
+# Fork testing
+ft-mode-sepolia-fork :; forge test --match-contract TestE2EV2 \
+	--rpc-url https://sepolia.mode.network \
+	--fork-block-number 19911297 \
+	-vv
