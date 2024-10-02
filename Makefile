@@ -55,7 +55,13 @@ ft-mode-sepolia-fork-nocache :; forge test --match-contract TestE2EV2 \
 	--no-cache \
 	-vv
 
-ft-mode-fork :;  forge test --match-test testLifeCycle \
+ft-mode-fork :;  forge test --match-contract TestE2EV2 \
+	--rpc-url https://mainnet.mode.network/ \
+	--fork-block-number 13848964 \
+	-vvvvv
+
+
+ft-holesky-fork :; forge test --match-test testLifeCycle \
 	--rpc-url https://mainnet.mode.network/ \
 	--fork-block-number 13848964 \
 	-vvvvv
