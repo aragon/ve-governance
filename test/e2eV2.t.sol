@@ -286,22 +286,152 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
         }
     }
 
-    // test we can add a new address to do all the admin functions
-
-    // test we can activate transfers of the nft - we should potentially test this in the user flow
-
-    // test we can update the system parameters
-    function testUpdateSystemParameters() public {
-        // on the escrow, we can update the minDeposit and the auxilliary contracts
-        // on the lock, it's about whitelisting
-        // on the curve - it's setting the warmup period
-        // on the queue it's minlock cooldown and fee percentk
-    }
-
-    // test we can add gauges, change metadata etc etc
-    // voter - creating removing updating gauges - in the test below
-
     // test the DAO setup - it should be root on itself and the factory should not be root
+    // the multisig should have execute on the DAO
+    function testDAOSetup() public view {
+        assertTrue(
+            dao.isGranted({
+                _who: address(dao),
+                _where: address(dao),
+                _permissionId: dao.ROOT_PERMISSION_ID(),
+                _data: bytes("")
+            })
+        );
+
+        assertFalse(
+            dao.isGranted({
+                _who: address(factory),
+                _where: address(dao),
+                _permissionId: dao.ROOT_PERMISSION_ID(),
+                _data: bytes("")
+            })
+        );
+
+        assertTrue(
+            dao.hasPermission({
+                _who: address(multisig),
+                _where: address(dao),
+                _permissionId: dao.EXECUTE_PERMISSION_ID(),
+                _data: bytes("")
+            })
+        );
+
+        // all the multisig signers should be on the multisig
+        for (uint i = 0; i < signers.length; i++) {
+            assertTrue(multisig.isMember(signers[i]));
+        }
+
+        // check the Dao has the critical roles in all the contracts
+
+        // escrow
+        assertTrue(
+            dao.isGranted({
+                _who: address(dao),
+                _where: address(escrow),
+                _permissionId: escrow.ESCROW_ADMIN_ROLE(),
+                _data: bytes("")
+            }),
+            "DAO should have escrow admin role"
+        );
+
+        assertTrue(
+            dao.isGranted({
+                _who: address(dao),
+                _where: address(escrow),
+                _permissionId: escrow.PAUSER_ROLE(),
+                _data: bytes("")
+            }),
+            "DAO should have escrow pauser role"
+        );
+
+        assertTrue(
+            dao.isGranted({
+                _who: address(dao),
+                _where: address(escrow),
+                _permissionId: escrow.SWEEPER_ROLE(),
+                _data: bytes("")
+            }),
+            "DAO should have escrow sweeper role"
+        );
+
+        // voter
+
+        assertTrue(
+            dao.isGranted({
+                _who: address(dao),
+                _where: address(voter),
+                _permissionId: voter.GAUGE_ADMIN_ROLE(),
+                _data: bytes("")
+            }),
+            "DAO should have voter gauge admin role"
+        );
+
+        assertTrue(
+            dao.isGranted({
+                _who: address(dao),
+                _where: address(voter),
+                _permissionId: voter.UPGRADE_PLUGIN_PERMISSION_ID(),
+                _data: bytes("")
+            }),
+            "DAO should have voter upgrade plugin role"
+        );
+
+        // lock
+
+        assertTrue(
+            dao.isGranted({
+                _who: address(dao),
+                _where: address(lock),
+                _permissionId: lock.LOCK_ADMIN_ROLE(),
+                _data: bytes("")
+            }),
+            "DAO should have lock admin role"
+        );
+
+        // queue
+        assertTrue(
+            dao.isGranted({
+                _who: address(dao),
+                _where: address(queue),
+                _permissionId: queue.QUEUE_ADMIN_ROLE(),
+                _data: bytes("")
+            }),
+            "DAO should have queue admin role"
+        );
+
+        assertTrue(
+            dao.isGranted({
+                _who: address(dao),
+                _where: address(queue),
+                _permissionId: queue.WITHDRAW_ROLE(),
+                _data: bytes("")
+            }),
+            "DAO should have queue withdraw role"
+        );
+
+        // clock
+
+        assertTrue(
+            dao.isGranted({
+                _who: address(dao),
+                _where: address(clock),
+                _permissionId: clock.CLOCK_ADMIN_ROLE(),
+                _data: bytes("")
+            }),
+            "DAO should have clock admin role"
+        );
+
+        // curve
+        assertTrue(
+            dao.isGranted({
+                _who: address(dao),
+                _where: address(curve),
+                _permissionId: curve.CURVE_ADMIN_ROLE(),
+                _data: bytes("")
+            }),
+            "DAO should have curve admin role"
+        );
+    }
 
     /*///////////////////////////////////////////////////////////////
                           User/Lifecycle Tests
@@ -1124,25 +1254,21 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
                 escrow.withdraw(4);
             }
             vm.stopPrank();
-
-          
         }
 
         // we check the end state of the contracts
         {
-        // no votes
-        assertEq(voter.totalVotingPowerCast(), 0, "Voter should have no votes");
-        assertEq(voter.gaugeVotes(gauge0), 0, "Gauge 0 should have no votes");
-        assertEq(voter.gaugeVotes(gauge1), 0, "Gauge 1 should have no votes");
+            // no votes
+            assertEq(voter.totalVotingPowerCast(), 0, "Voter should have no votes");
+            assertEq(voter.gaugeVotes(gauge0), 0, "Gauge 0 should have no votes");
+            assertEq(voter.gaugeVotes(gauge1), 0, "Gauge 1 should have no votes");
 
+            // no tokens
+            assertEq(token.balanceOf(address(escrow)), 0, "Escrow should have no tokens");
+            assertEq(escrow.totalLocked(), 0, "Escrow should have no locked tokens");
 
-        // no tokens
-        assertEq(token.balanceOf(address(escrow)), 0, "Escrow should have no tokens");  
-        assertEq(escrow.totalLocked(), 0, "Escrow should have no locked tokens");
-
-        // no locks
-        assertEq(lock.totalSupply(), 0, "Lock should have no tokens");
-
+            // no locks
+            assertEq(lock.totalSupply(), 0, "Lock should have no tokens");
         }
     }
 
