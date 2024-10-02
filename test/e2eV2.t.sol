@@ -63,6 +63,9 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
     address gauge0 = address(0xc0ffee);
     address gauge1 = address(0x1bad1dea);
 
+    // consistent distributor in fork tests
+    address distributor = address(0x1337);
+
     // although these exist on the factory a bit easier to access here
     // these only reference the FIRST set of contracts, if deploying multiple
     // fetch from the factory
@@ -81,8 +84,12 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
     address[] signers;
 
     enum TestMode {
+        /// @dev Not yet supported
         Local,
-        Fork
+        /// @dev use the factory to deploy the contracts
+        ForkDeploy,
+        /// @dev do not deploy the contracts, use the existing ones
+        ForkExisting
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -91,7 +98,8 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
 
     /// The test here will run in 2 modes:
     /// 1. Local Mode (Not yet supported): we deploy the OSx contracts locally using mocks to expedite testing
-    /// 2. Fork Mode (Supported): we pass in the real contracts and test against a forked network
+    /// 2. Fork Mode: Deploy (Supported): we pass in the real OSx contracts and deploy via the factory
+    /// 3. Fork Mode: Existing (Supported): we don't deploy via the factory, we use the existing contract for everything
     function setUp() public {
         // deploy the deploy script
         Deploy deploy = new Deploy();
@@ -111,19 +119,32 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
             // write the addresses
         }
 
-        // random ens domain
-        deploymentParameters.voterEnsSubdomain = _hToS(
-            keccak256(abi.encodePacked("gauges", block.timestamp))
-        );
+        // deploy the contracts via the factory
+        if (_getTestMode() == TestMode.ForkDeploy) {
+            // random ens domain
+            deploymentParameters.voterEnsSubdomain = _hToS(
+                keccak256(abi.encodePacked("gauges", block.timestamp))
+            );
 
-        // deploy the factory
-        factory = new GaugesDaoFactory(deploymentParameters);
+            // deploy the factory
+            factory = new GaugesDaoFactory(deploymentParameters);
 
-        // execute the deployment - doing it here caches it
-        factory.deployOnce();
+            // execute the deployment - doing at setup caches it
+            factory.deployOnce();
+        }
+        // connect to the existing factory to fetch the contract addresses
+        else if (_getTestMode() == TestMode.ForkExisting) {
+            address factoryAddress = vm.envAddress("FACTORY");
+            if (factoryAddress == address(0)) {
+                revert("Factory address not set");
+            }
+            factory = GaugesDaoFactory(factoryAddress);
+        }
 
         // set our contracts
         Deployment memory deployment = factory.getDeployment();
+
+        // if deploying multiple tokens, you can adjust the index here
         GaugePluginSet memory pluginSet = deployment.gaugeVoterPluginSets[0];
 
         voter = SimpleGaugeVoter(pluginSet.plugin);
@@ -136,8 +157,11 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
         dao = DAO(deployment.dao);
         token = IERC20Mint(escrow.token());
 
+        require(_resolveMintTokens(), "Failed to mint tokens");
+
         // increment the block by 1 to ensure we have a new block
         // A new multisig requires this after changing settings
+
         vm.roll(block.number + 1);
     }
 
@@ -452,13 +476,13 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
     address javi = address(0x7af1);
     address jordi = address(0x707d1);
 
-    uint balanceCarlos = 1_000_000 ether;
+    uint balanceCarlos = 1000 ether;
     uint balanceJavi = 0 ether;
-    uint balanceJordi = 1_234_567_890 ether;
+    uint balanceJordi = 1_234 ether;
 
-    uint depositCarlos0 = 250_000 ether;
-    uint depositCarlos1 = 500_000 ether;
-    uint depositCarlosJavi = 250_000 ether;
+    uint depositCarlos0 = 250 ether;
+    uint depositCarlos1 = 500 ether;
+    uint depositCarlosJavi = 250 ether;
 
     // 1 attacker
     address jordan = address(0x707da);
@@ -486,8 +510,12 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
 
         // first we give the guys each some tokens of the underlying
         {
-            token.mint(carlos, balanceCarlos);
-            token.mint(jordi, balanceJordi);
+            vm.startPrank(distributor);
+            {
+                token.transfer(carlos, balanceCarlos);
+                token.transfer(jordi, balanceJordi);
+            }
+            vm.stopPrank();
         }
 
         // carlos goes first and makes the first deposit, it's at the start of the
@@ -510,7 +538,7 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
             }
             vm.stopPrank();
 
-            // check carlos has token 1, javi has token 2
+            // check carlos has token 1, javi has token   2
             assertEq(lock.ownerOf(1), carlos, "Carlos should own token 1");
             assertEq(lock.ownerOf(2), javi, "Javi should own token 2");
 
@@ -1196,7 +1224,8 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
             });
             _buildSignProposal(actions);
 
-            token.mint(jordan, 100 ether);
+            vm.prank(distributor);
+            token.transfer(jordan, 100 ether);
 
             vm.startPrank(jordan);
             {
@@ -1280,18 +1309,22 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
                               Utils
     //////////////////////////////////////////////////////////////*/
 
-    function _getTestMode() public view returns (TestMode) {
+    function _getTestMode() internal view returns (TestMode) {
         string memory mode = vm.envString("TEST_MODE");
-        if (keccak256(abi.encodePacked(mode)) == keccak256(abi.encodePacked("fork"))) {
-            return TestMode.Fork;
+        if (keccak256(abi.encodePacked(mode)) == keccak256(abi.encodePacked("fork-deploy"))) {
+            return TestMode.ForkDeploy;
+        } else if (
+            keccak256(abi.encodePacked(mode)) == keccak256(abi.encodePacked("fork-existing"))
+        ) {
+            return TestMode.ForkExisting;
         } else if (keccak256(abi.encodePacked(mode)) == keccak256(abi.encodePacked("local"))) {
             return TestMode.Local;
         } else {
-            revert("Invalid test mode");
+            revert("Invalid test mode - valid options are fork-deploy, fork-existing, local");
         }
     }
 
-    function _hToS(bytes32 _hash) public pure returns (string memory) {
+    function _hToS(bytes32 _hash) internal pure returns (string memory) {
         bytes memory hexString = new bytes(64);
         bytes memory alphabet = "0123456789abcdef";
 
@@ -1303,7 +1336,9 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
         return string(hexString);
     }
 
-    function _buildMsigProposal(IDAO.Action[] memory actions) public returns (uint256 proposalId) {
+    function _buildMsigProposal(
+        IDAO.Action[] memory actions
+    ) internal returns (uint256 proposalId) {
         // prank the first signer who will create stuff
         vm.startPrank(signers[0]);
         {
@@ -1322,7 +1357,7 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
         return proposalId;
     }
 
-    function _signExecuteMultisigProposal(uint256 _proposalId) public {
+    function _signExecuteMultisigProposal(uint256 _proposalId) internal {
         // load all the proposers into memory other than the first
 
         if (signers.length > 1) {
@@ -1344,10 +1379,46 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
         vm.stopPrank();
     }
 
-    function _buildSignProposal(IDAO.Action[] memory actions) public returns (uint256 proposalId) {
+    function _buildSignProposal(
+        IDAO.Action[] memory actions
+    ) internal returns (uint256 proposalId) {
         proposalId = _buildMsigProposal(actions);
         _signExecuteMultisigProposal(proposalId);
         return proposalId;
+    }
+
+    /// depending on the network, we need different approaches to mint tokens
+    /// on a fork
+    function _resolveMintTokens() internal returns (bool success) {
+        // staticcall to check if open mint
+        (bool success, bytes memory data) = address(token).staticcall(
+            abi.encodeWithSelector(token.mint.selector, address(this), 1 ether)
+        );
+
+        if (success) {
+            token.mint(address(distributor), 3_000 ether);
+            return true;
+        }
+
+        // next check if ownable - we can spoof this
+        (success, data) = address(token).call(abi.encodeWithSignature("owner()"));
+
+        if (success) {
+            address owner = abi.decode(data, (address));
+            vm.prank(owner);
+            token.mint(address(distributor), 3_000 ether);
+            return true;
+        }
+
+        // next we just try a good old fashioned find a whale and rug them in the test
+        address whale = vm.envAddress("TOKEN_TEST_WHALE");
+        if (whale == address(0)) {
+            return false;
+        }
+
+        vm.prank(whale);
+        token.transfer(address(distributor), 3_000 ether);
+        return true;
     }
 }
 

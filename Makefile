@@ -15,7 +15,7 @@ coverage:; ./coverage.sh
 # init the repo
 install :; make allow-scripts && make coverage
 
-
+# deployments
 deploy-preview-mode-sepolia :; forge script script/Deploy.s.sol:Deploy \
   --rpc-url https://sepolia.mode.network \
 	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
@@ -30,8 +30,32 @@ deploy-mode-sepolia :; forge script script/Deploy.s.sol:Deploy \
 	--verifier-url https://sepolia.explorer.mode.network/api\? \
 	-vvvvv
 
+deploy-preview-mode :; forge script script/Deploy.s.sol:Deploy \
+	--rpc-url https://mainnet.mode.network \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	-vvvvv
+
+deploy-mode :; forge script script/Deploy.s.sol:Deploy \
+	--rpc-url https://mainnet.mode.network \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	--broadcast \
+	--verify \
+	--etherscan-api-key $(ETHERSCAN_API_KEY) \
+	-vvv
+
 # Fork testing
 ft-mode-sepolia-fork :; forge test --match-contract TestE2EV2 \
 	--rpc-url https://sepolia.mode.network \
 	--fork-block-number 19911297 \
 	-vv
+
+ft-mode-sepolia-fork-nocache :; forge test --match-contract TestE2EV2 \
+	--rpc-url https://sepolia.mode.network \
+	--fork-block-number 19911297 \
+	--no-cache \
+	-vv
+
+ft-mode-fork :;  forge test --match-test testLifeCycle \
+	--rpc-url https://mainnet.mode.network/ \
+	--fork-block-number 13848964 \
+	-vvvvv
