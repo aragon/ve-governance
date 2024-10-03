@@ -9,12 +9,12 @@ import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
-import {IEscrowCurveUserStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
+import {IEscrowCurveTokenStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
 import {VotingEscrow} from "@escrow/VotingEscrowIncreasing.sol";
 
 import {SimpleGaugeVoter, SimpleGaugeVoterSetup} from "src/voting/SimpleGaugeVoterSetup.sol";
 
-contract TestEscrowTransfers is EscrowBase, IEscrowCurveUserStorage {
+contract TestEscrowTransfers is EscrowBase, IEscrowCurveTokenStorage {
     uint deposit = 100e18;
     uint tokenId;
 
@@ -47,5 +47,14 @@ contract TestEscrowTransfers is EscrowBase, IEscrowCurveUserStorage {
 
         assertEq(nftLock.balanceOf(address(123)), 1);
         assertEq(nftLock.balanceOf(address(this)), 0);
+    }
+
+    function onERC721Received(
+        address,
+        address,
+        uint256,
+        bytes calldata
+    ) external pure returns (bytes4) {
+        return this.onERC721Received.selector;
     }
 }

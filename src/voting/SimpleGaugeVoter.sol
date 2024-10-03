@@ -166,8 +166,9 @@ contract SimpleGaugeVoter is
                 gauge: gauge,
                 epoch: epochId(),
                 tokenId: _tokenId,
-                votingPower: votesForGauge,
-                totalVotingPower: gaugeVotes[gauge],
+                votingPowerCastForGauge: votesForGauge,
+                totalVotingPowerInGauge: gaugeVotes[gauge],
+                totalVotingPowerInContract: totalVotingPowerCast + votingPowerUsed,
                 timestamp: block.timestamp
             });
         }
@@ -188,39 +189,41 @@ contract SimpleGaugeVoter is
     }
 
     function _reset(uint256 _tokenId) internal {
+        // get what we need
         TokenVoteData storage voteData = tokenVoteData[_tokenId];
         address[] storage pastVotes = voteData.gaugesVotedFor;
-        uint256 votingPowerToRemove = 0;
+
+        // reset the global state variables we don't need
+        voteData.usedVotingPower = 0;
+        voteData.lastVoted = 0;
 
         // iterate over all the gauges voted for and reset the votes
+        uint256 votingPowerToRemove = 0;
         for (uint256 i = 0; i < pastVotes.length; i++) {
             address gauge = pastVotes[i];
             uint256 _votes = voteData.votes[gauge];
 
-            if (_votes != 0) {
-                // remove from the total weight and globals
-                gaugeVotes[gauge] -= _votes;
-                votingPowerToRemove += _votes;
+            // remove from the total weight and globals
+            gaugeVotes[gauge] -= _votes;
+            votingPowerToRemove += _votes;
 
-                delete voteData.votes[gauge];
+            delete voteData.votes[gauge];
 
-                emit Reset({
-                    voter: _msgSender(),
-                    gauge: gauge,
-                    epoch: epochId(),
-                    tokenId: _tokenId,
-                    votingPower: _votes,
-                    totalVotingPower: totalVotingPowerCast - _votes,
-                    timestamp: block.timestamp
-                });
-            }
+            emit Reset({
+                voter: _msgSender(),
+                gauge: gauge,
+                epoch: epochId(),
+                tokenId: _tokenId,
+                votingPowerRemovedFromGauge: _votes,
+                totalVotingPowerInGauge: gaugeVotes[gauge],
+                totalVotingPowerInContract: totalVotingPowerCast - votingPowerToRemove,
+                timestamp: block.timestamp
+            });
         }
 
-        // scrub the global state for the token
+        // clear the remaining state
         voteData.gaugesVotedFor = new address[](0);
         totalVotingPowerCast -= votingPowerToRemove;
-        voteData.usedVotingPower = 0;
-        voteData.lastVoted = 0;
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -239,15 +242,15 @@ contract SimpleGaugeVoter is
 
     function createGauge(
         address _gauge,
-        string calldata _metadata
+        string calldata _metadataURI
     ) external auth(GAUGE_ADMIN_ROLE) nonReentrant returns (address gauge) {
         if (_gauge == address(0)) revert ZeroGauge();
         if (gaugeExists(_gauge)) revert GaugeExists();
 
-        gauges[_gauge] = Gauge(true, block.timestamp, bytes32(abi.encode(_metadata)));
+        gauges[_gauge] = Gauge(true, block.timestamp, _metadataURI);
         gaugeList.push(_gauge);
 
-        emit GaugeCreated(_gauge, _msgSender(), _metadata);
+        emit GaugeCreated(_gauge, _msgSender(), _metadataURI);
         return _gauge;
     }
 
@@ -267,11 +270,11 @@ contract SimpleGaugeVoter is
 
     function updateGaugeMetadata(
         address _gauge,
-        string calldata _metadata
+        string calldata _metadataURI
     ) external auth(GAUGE_ADMIN_ROLE) {
         if (!gaugeExists(_gauge)) revert GaugeDoesNotExist(_gauge);
-        gauges[_gauge].metadata = keccak256(abi.encode(_metadata));
-        emit GaugeMetadataUpdated(_gauge, _metadata);
+        gauges[_gauge].metadataURI = _metadataURI;
+        emit GaugeMetadataUpdated(_gauge, _metadataURI);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -306,6 +309,10 @@ contract SimpleGaugeVoter is
     /*///////////////////////////////////////////////////////////////
                             Getters: Mappings
     //////////////////////////////////////////////////////////////*/
+
+    function getGauge(address _gauge) external view returns (Gauge memory) {
+        return gauges[_gauge];
+    }
 
     function getAllGauges() external view returns (address[] memory) {
         return gaugeList;

@@ -32,6 +32,7 @@ contract VotingEscrow is
     UUPSUpgradeable
 {
     using SafeERC20 for IERC20;
+    using SafeCast for uint256;
 
     /// @notice Role required to manage the Escrow curve, this typically will be the DAO
     bytes32 public constant ESCROW_ADMIN_ROLE = keccak256("ESCROW_ADMIN");
@@ -49,6 +50,12 @@ contract VotingEscrow is
     /// @notice Decimals of the voting power
     uint8 public constant decimals = 18;
 
+    /// @notice Minimum deposit amount
+    uint256 public minDeposit;
+
+    /// @notice Auto-incrementing ID for the most recently created lock, does not decrease on withdrawal
+    uint256 public lastLockId;
+
     /// @notice Total supply of underlying tokens deposited in the contract
     uint256 public totalLocked;
 
@@ -60,6 +67,7 @@ contract VotingEscrow is
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Address of the underying ERC20 token.
+    /// @dev Only tokens with 18 decimals and no transfer fees are supported
     address public token;
 
     /// @notice Address of the gauge voting contract.
@@ -78,6 +86,8 @@ contract VotingEscrow is
     /// @notice Address of the NFT contract that is the lock
     address public lockNFT;
 
+    bool private _lockNFTSet;
+
     /*//////////////////////////////////////////////////////////////
                               Initialization
     //////////////////////////////////////////////////////////////*/
@@ -86,7 +96,12 @@ contract VotingEscrow is
         _disableInitializers();
     }
 
-    function initialize(address _token, address _dao, address _clock) external initializer {
+    function initialize(
+        address _token,
+        address _dao,
+        address _clock,
+        uint256 _initialMinDeposit
+    ) external initializer {
         __DaoAuthorizableUpgradeable_init(IDAO(_dao));
         __ReentrancyGuard_init();
         __Pausable_init();
@@ -94,6 +109,8 @@ contract VotingEscrow is
         if (IERC20Metadata(_token).decimals() != 18) revert MustBe18Decimals();
         token = _token;
         clock = _clock;
+        minDeposit = _initialMinDeposit;
+        emit MinDepositSet(_initialMinDeposit);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -120,8 +137,13 @@ contract VotingEscrow is
         clock = _clock;
     }
 
+    /// @notice Sets the NFT contract that is the lock
+    /// @dev By default this can only be set once due to the high risk of changing the lock
+    /// and having the ability to steal user funds.
     function setLockNFT(address _nft) external auth(ESCROW_ADMIN_ROLE) {
+        if (_lockNFTSet) revert LockNFTAlreadySet();
         lockNFT = _nft;
+        _lockNFTSet = true;
     }
 
     function pause() external auth(PAUSER_ROLE) {
@@ -130,6 +152,11 @@ contract VotingEscrow is
 
     function unpause() external auth(PAUSER_ROLE) {
         _unpause();
+    }
+
+    function setMinDeposit(uint256 _minDeposit) external auth(ESCROW_ADMIN_ROLE) {
+        minDeposit = _minDeposit;
+        emit MinDepositSet(_minDeposit);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -223,25 +250,32 @@ contract VotingEscrow is
     /// @param _to Address to deposit
     function _createLockFor(uint256 _value, address _to) internal returns (uint256) {
         if (_value == 0) revert ZeroAmount();
+        if (_value < minDeposit) revert AmountTooSmall();
 
         // query the duration lib to get the next time we can deposit
         uint256 startTime = IClock(clock).epochNextCheckpointTs();
 
         // increment the total locked supply and get the new tokenId
         totalLocked += _value;
-        uint256 newTokenId = IERC721EMB(lockNFT).totalSupply() + 1;
+        uint256 newTokenId = ++lastLockId;
 
         // write the lock and checkpoint the voting power
-        LockedBalance memory lock = LockedBalance(_value, startTime);
+        LockedBalance memory lock = LockedBalance(_value.toUint208(), startTime.toUint48());
         _locked[newTokenId] = lock;
 
         // we don't allow edits in this implementation, so only the new lock is used
         _checkpoint(newTokenId, lock);
 
+        uint256 balanceBefore = IERC20(token).balanceOf(address(this));
+
         // transfer the tokens into the contract
         IERC20(token).safeTransferFrom(_msgSender(), address(this), _value);
 
-        // mint the NFT to complete the deposit
+        // we currently don't support tokens that adjust balances on transfer
+        if (IERC20(token).balanceOf(address(this)) != balanceBefore + _value)
+            revert TransferBalanceIncorrect();
+
+        // mint the NFT before and emit the event to complete the lock
         IERC721EMB(lockNFT).mint(_to, newTokenId);
         emit Deposit(_to, newTokenId, startTime, _value, totalLocked);
 
@@ -264,7 +298,7 @@ contract VotingEscrow is
         IEscrowCurve(curve).checkpoint(
             _tokenId,
             LockedBalance(0, 0),
-            LockedBalance(0, checkpointClearTime)
+            LockedBalance(0, checkpointClearTime.toUint48())
         );
     }
 
@@ -285,6 +319,10 @@ contract VotingEscrow is
     function beginWithdrawal(uint256 _tokenId) public nonReentrant whenNotPaused {
         // can't exit if you have votes pending
         if (isVoting(_tokenId)) revert CannotExit();
+
+        // in the event of an increasing curve, 0 voting power means voting isn't active
+        if (votingPower(_tokenId) == 0) revert CannotExit();
+
         address owner = IERC721EMB(lockNFT).ownerOf(_tokenId);
 
         // we can remove the user's voting power as it's no longer locked
@@ -341,6 +379,21 @@ contract VotingEscrow is
         emit Sweep(_msgSender(), excess);
     }
 
+    /// @notice the sweeper can send NFTs mistakenly sent to the contract to a designated address
+    /// @param _tokenId the tokenId to sweep - must be currently in this contract
+    /// @param _to the address to send the NFT to - must be a whitelisted address for transfers
+    /// @dev Cannot sweep NFTs that are in the exit queue for obvious reasons
+    function sweepNFT(uint256 _tokenId, address _to) external nonReentrant auth(SWEEPER_ROLE) {
+        // if the token id is not in the contract, revert
+        if (IERC721EMB(lockNFT).ownerOf(_tokenId) != address(this)) revert NothingToSweep();
+
+        // if the token id is in the queue, we cannot sweep it
+        if (IExitQueue(queue).ticketHolder(_tokenId) != address(0)) revert CannotExit();
+
+        IERC721EMB(lockNFT).transferFrom(address(this), _to, _tokenId);
+        emit SweepNFT(_to, _tokenId);
+    }
+
     /*///////////////////////////////////////////////////////////////
                             UUPS Upgrade
     //////////////////////////////////////////////////////////////*/
@@ -355,5 +408,5 @@ contract VotingEscrow is
     function _authorizeUpgrade(address) internal virtual override auth(ESCROW_ADMIN_ROLE) {}
 
     /// @dev Reserved storage space to allow for layout changes in the future.
-    uint256[42] private __gap;
+    uint256[39] private __gap;
 }

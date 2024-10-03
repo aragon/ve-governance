@@ -3,12 +3,13 @@ pragma solidity ^0.8.17;
 
 import {ILock} from "@escrow-interfaces/ILock.sol";
 import {ERC721EnumerableUpgradeable as ERC721Enumerable} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
+import {ReentrancyGuardUpgradeable as ReentrancyGuard} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 
 /// @title NFT representation of an escrow locking mechanism
-contract Lock is ILock, ERC721Enumerable, UUPSUpgradeable, DaoAuthorizable {
+contract Lock is ILock, ERC721Enumerable, UUPSUpgradeable, DaoAuthorizable, ReentrancyGuard {
     /// @dev enables transfers without whitelisting
     address public constant WHITELIST_ANY_ADDRESS =
         address(uint160(uint256(keccak256("WHITELIST_ANY_ADDRESS"))));
@@ -38,7 +39,7 @@ contract Lock is ILock, ERC721Enumerable, UUPSUpgradeable, DaoAuthorizable {
     function supportsInterface(
         bytes4 _interfaceId
     ) public view override(ERC721Enumerable) returns (bool) {
-        return super.supportsInterface(_interfaceId);
+        return super.supportsInterface(_interfaceId) || _interfaceId == type(ILock).interfaceId;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -57,11 +58,12 @@ contract Lock is ILock, ERC721Enumerable, UUPSUpgradeable, DaoAuthorizable {
     ) external initializer {
         __ERC721_init(_name, _symbol);
         __DaoAuthorizableUpgradeable_init(IDAO(_dao));
+        __ReentrancyGuard_init();
         escrow = _escrow;
 
         // allow sending nfts to the escrow
         whitelisted[escrow] = true;
-        emit WhitelistSet(address(this), true);
+        emit WhitelistSet(address(escrow), true);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -70,6 +72,7 @@ contract Lock is ILock, ERC721Enumerable, UUPSUpgradeable, DaoAuthorizable {
 
     /// @notice Transfers disabled by default, only whitelisted addresses can receive transfers
     function setWhitelisted(address _account, bool _isWhitelisted) external auth(LOCK_ADMIN_ROLE) {
+        if (_account == escrow) revert ForbiddenWhitelistAddress();
         whitelisted[_account] = _isWhitelisted;
         emit WhitelistSet(_account, _isWhitelisted);
     }
@@ -97,12 +100,13 @@ contract Lock is ILock, ERC721Enumerable, UUPSUpgradeable, DaoAuthorizable {
     }
 
     /// @notice Minting and burning functions that can only be called by the escrow contract
-    function mint(address _to, uint256 _tokenId) external onlyEscrow {
-        _mint(_to, _tokenId);
+    /// @dev Safe mint ensures contract addresses are ERC721 Receiver contracts
+    function mint(address _to, uint256 _tokenId) external onlyEscrow nonReentrant {
+        _safeMint(_to, _tokenId);
     }
 
     /// @notice Minting and burning functions that can only be called by the escrow contract
-    function burn(uint256 _tokenId) external onlyEscrow {
+    function burn(uint256 _tokenId) external onlyEscrow nonReentrant {
         _burn(_tokenId);
     }
 
@@ -118,4 +122,6 @@ contract Lock is ILock, ERC721Enumerable, UUPSUpgradeable, DaoAuthorizable {
 
     /// @notice Internal method authorizing the upgrade of the contract via the [upgradeability mechanism for UUPS proxies](https://docs.openzeppelin.com/contracts/4.x/api/proxy#UUPSUpgradeable) (see [ERC-1822](https://eips.ethereum.org/EIPS/eip-1822)).
     function _authorizeUpgrade(address) internal virtual override auth(LOCK_ADMIN_ROLE) {}
+
+    uint256[48] private __gap;
 }

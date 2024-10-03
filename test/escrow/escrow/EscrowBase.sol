@@ -62,13 +62,13 @@ contract EscrowBase is
         token = new MockERC20();
         clock = _deployClock(address(dao));
 
-        escrow = _deployEscrow(address(token), address(dao), address(clock));
+        escrow = _deployEscrow(address(token), address(dao), address(clock), 1);
         curve = _deployCurve(address(escrow), address(dao), 3 days, address(clock));
         nftLock = _deployLock(address(escrow), name, symbol, address(dao));
 
         // to be added as proxies
         voter = _deployVoter(address(dao), address(escrow), false, address(clock));
-        queue = _deployExitQueue(address(escrow), 3 days, address(dao), 0, address(clock), 0);
+        queue = _deployExitQueue(address(escrow), 3 days, address(dao), 0, address(clock), 1);
 
         // grant this contract admin privileges
         dao.grant({
@@ -134,11 +134,15 @@ contract EscrowBase is
     function _deployEscrow(
         address _token,
         address _dao,
-        address _clock
+        address _clock,
+        uint256 _minDeposit
     ) public returns (VotingEscrow) {
         VotingEscrow impl = new VotingEscrow();
 
-        bytes memory initCalldata = abi.encodeCall(VotingEscrow.initialize, (_token, _dao, _clock));
+        bytes memory initCalldata = abi.encodeCall(
+            VotingEscrow.initialize,
+            (_token, _dao, _clock, _minDeposit)
+        );
         return VotingEscrow(address(impl).deployUUPSProxy(initCalldata));
     }
 
@@ -163,7 +167,7 @@ contract EscrowBase is
     function _deployCurve(
         address _escrow,
         address _dao,
-        uint256 _warmup,
+        uint48 _warmup,
         address _clock
     ) public returns (QuadraticIncreasingEscrow) {
         QuadraticIncreasingEscrow impl = new QuadraticIncreasingEscrow();
@@ -192,11 +196,11 @@ contract EscrowBase is
 
     function _deployExitQueue(
         address _escrow,
-        uint _cooldown,
+        uint48 _cooldown,
         address _dao,
         uint256 _feePercent,
         address _clock,
-        uint256 _minLock
+        uint48 _minLock
     ) public returns (ExitQueue) {
         ExitQueue impl = new ExitQueue();
 

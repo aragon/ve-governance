@@ -6,15 +6,16 @@ import {console2 as console} from "forge-std/console2.sol";
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
+import {MockERC20} from "@mocks/MockERC20.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
-import {IEscrowCurveUserStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
+import {IEscrowCurveTokenStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
 import {VotingEscrow} from "@escrow/VotingEscrowIncreasing.sol";
 
 import {SimpleGaugeVoter, SimpleGaugeVoterSetup} from "src/voting/SimpleGaugeVoterSetup.sol";
 
-contract TestCreateLock is EscrowBase, IEscrowCurveUserStorage {
+contract TestCreateLock is EscrowBase, IEscrowCurveTokenStorage {
     function setUp() public override {
         super.setUp();
 
@@ -22,8 +23,7 @@ contract TestCreateLock is EscrowBase, IEscrowCurveUserStorage {
     }
 
     function _expTime(uint256 _time) internal pure returns (uint256) {
-        if (_time % 1 weeks == 0) return _time;
-        else return uint(_time) + 1 weeks - (_time % 1 weeks);
+        return uint(_time) + 1 weeks - (_time % 1 weeks);
     }
 
     function testCannotCreateLockWithZeroValue() public {
@@ -32,21 +32,44 @@ contract TestCreateLock is EscrowBase, IEscrowCurveUserStorage {
     }
 
     function testCantMintToZeroAddress() public {
-        token.mint(address(this), 1);
-        token.approve(address(escrow), 1);
+        token.mint(address(this), 1e18);
+        token.approve(address(escrow), 1e18);
 
         vm.expectRevert("ERC721: mint to the zero address");
 
-        escrow.createLockFor(1, address(0));
+        escrow.createLockFor(1e18, address(0));
+    }
+
+    function testCantMintBelowMinDeposit(uint256 _minDeposit) public {
+        vm.assume(_minDeposit > 1);
+        escrow.setMinDeposit(_minDeposit);
+
+        token.mint(address(123), _minDeposit);
+        vm.startPrank(address(123));
+        {
+            token.approve(address(escrow), _minDeposit);
+            vm.expectRevert(AmountTooSmall.selector);
+            escrow.createLock(_minDeposit - 1);
+        }
+        vm.stopPrank();
+
+        // should not revert
+        escrow.setMinDeposit(1);
+
+        vm.prank(address(123));
+        escrow.createLock(1);
     }
 
     /// @param _value is positive, we check this in a previous test. It needs to fit inside an int256
     /// so we use the maximum value for a uint128
-    /// @param _depositor is not the zero address, we check this in a previous test
-    /// @param _time is bound to 128 bits to avoid overflow - seems reasonable as is not a user input
-    function testFuzz_createLock(uint128 _value, address _depositor, uint128 _time) public {
+    /// @param _depositor is not the zero address, we check this in a previous test we need to restrict to non contracts in fuzzing as too many revert cases
+    /// @param _time is bound to 32 bits to avoid overflow - seems reasonable as is not a user input
+    function testFuzz_createLock(uint128 _value, address _depositor, uint32 _time) public {
         vm.assume(_value > 0);
-        vm.assume(_depositor != address(0));
+        vm.assume(_depositor != address(0) && address(_depositor).code.length == 0);
+
+        // set the min deposit to _value
+        escrow.setMinDeposit(_value);
 
         // set zero warmup for this test
         curve.setWarmupPeriod(0);
@@ -114,10 +137,10 @@ contract TestCreateLock is EscrowBase, IEscrowCurveUserStorage {
         }
         // Check the checkpoint was created
         {
-            uint256 epoch = curve.userPointEpoch(tokenId);
-            UserPoint memory checkpoint = curve.userPointHistory(tokenId, epoch);
+            uint256 epoch = curve.tokenPointIntervals(tokenId);
+            TokenPoint memory checkpoint = curve.tokenPointHistory(tokenId, epoch);
             assertEq(checkpoint.bias, _value);
-            assertEq(checkpoint.ts, expectedTime);
+            assertEq(checkpoint.checkpointTs, expectedTime);
         }
     }
 
@@ -252,11 +275,11 @@ contract TestCreateLock is EscrowBase, IEscrowCurveUserStorage {
             expectedNextDeposit,
             "shane's lock should snap to the upcoming deposit date"
         );
-        // matt  is an edge case, they should also snap to the nearest deposit date (+0 seconds)
+        // matt  is an edge case, they should also snap to the next deposit date (+1 week)
         assertEq(
             escrow.locked(2).start,
-            expectedNextDeposit,
-            "matt's lock should snap to the upcoming deposit date"
+            expectedNextDeposit + clock.checkpointInterval(),
+            "matt's lock should snap to the next deposit date"
         );
         // phil should snap to the next deposit date (+1 week)
         assertEq(
@@ -266,10 +289,13 @@ contract TestCreateLock is EscrowBase, IEscrowCurveUserStorage {
         );
     }
 
-    function testFuzz_createLockFor(address _who, uint128 _value) public {
-        vm.assume(_who != address(0));
+    function testFuzz_createLockFor(uint128 _value) public {
         vm.assume(_value > 0);
+        escrow.setMinDeposit(_value);
         vm.warp(1);
+
+        // try with regular user
+        address _who = address(0x1);
 
         token.mint(address(this), _value);
         token.approve(address(escrow), _value);
@@ -277,6 +303,70 @@ contract TestCreateLock is EscrowBase, IEscrowCurveUserStorage {
         vm.expectEmit(true, true, true, true);
         emit Deposit(_who, 1, 1 weeks, _value, _value);
         escrow.createLockFor(_value, _who);
+
+        // try with a contract
+        address _contract = address(new ERC721Receiver());
+
+        token.mint(address(this), _value);
+        token.approve(address(escrow), _value);
+
+        vm.expectEmit(true, true, true, true);
+        emit Deposit(_contract, 2, 1 weeks, _value, 2 * uint(_value));
+        escrow.createLockFor(_value, _contract);
+    }
+
+    function testCannotUseAJankyERC20() public {
+        // deploy a janky token
+        TaxERC20 janky = new TaxERC20();
+
+        escrow = _deployEscrow(address(janky), address(dao), address(clock), 1);
+        curve = _deployCurve(address(escrow), address(dao), 3 days, address(clock));
+        nftLock = _deployLock(address(escrow), name, symbol, address(dao));
+
+        // grant this contract admin privileges
+        dao.grant({
+            _who: address(this),
+            _where: address(escrow),
+            _permissionId: escrow.ESCROW_ADMIN_ROLE()
+        });
+
+        escrow.setLockNFT(address(nftLock));
+        escrow.setCurve(address(curve));
+
+        // mint some tokens
+        janky.mint(address(this), 1 ether);
+        janky.approve(address(escrow), 1 ether);
+
+        // create a lock
+        vm.expectRevert(TransferBalanceIncorrect.selector);
+        escrow.createLock(1 ether);
+    }
+}
+
+contract ERC721Receiver {
+    function onERC721Received(
+        address,
+        address,
+        uint256,
+        bytes memory
+    ) public pure returns (bytes4) {
+        return this.onERC721Received.selector;
+    }
+}
+
+contract TaxERC20 is MockERC20 {
+    function _transfer(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) internal virtual override {
+        require(amount >= 1, "Transfer amount must be at least 1 wei");
+
+        uint256 burnAmount = 1; // Amount to burn on every transfer
+        uint256 sendAmount = amount - burnAmount; // Amount to send to recipient
+
+        super._burn(sender, burnAmount); // Burn 1 wei from sender's balance
+        super._transfer(sender, recipient, sendAmount); // Transfer remaining amount to recipient
     }
 }
 

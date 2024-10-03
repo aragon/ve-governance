@@ -7,8 +7,8 @@ pragma solidity ^0.8.0;
 
 interface ILockedBalanceIncreasing {
     struct LockedBalance {
-        uint256 amount;
-        uint256 start;
+        uint208 amount;
+        uint48 start; // mirrors oz ERC20 timestamp clocks
     }
 }
 
@@ -21,10 +21,15 @@ interface IVotingEscrowCoreErrors {
     error ZeroAmount();
     error ZeroBalance();
     error SameAddress();
+    error LockNFTAlreadySet();
     error MustBe18Decimals();
+    error TransferBalanceIncorrect();
+    error AmountTooSmall();
 }
 
 interface IVotingEscrowCoreEvents {
+    event MinDepositSet(uint256 minDeposit);
+
     event Deposit(
         address indexed depositor,
         uint256 indexed tokenId,
@@ -103,6 +108,7 @@ interface IWithdrawalQueue is IWithdrawalQueueErrors, IWithdrawalQueueEvents {
 
 interface ISweeperEvents {
     event Sweep(address indexed to, uint256 amount);
+    event SweepNFT(address indexed to, uint256 tokenId);
 }
 
 interface ISweeperErrors {
@@ -112,6 +118,8 @@ interface ISweeperErrors {
 interface ISweeper is ISweeperEvents, ISweeperErrors {
     /// @notice sweeps excess tokens from the contract to a designated address
     function sweep() external;
+
+    function sweepNFT(uint256 _tokenId, address _to) external;
 }
 
 /*///////////////////////////////////////////////////////////////
@@ -170,9 +178,7 @@ interface IDynamicVoter is IDynamicVoterErrors {
                         INCREASED ESCROW
 //////////////////////////////////////////////////////////////*/
 
-interface IVotingEscrowIncreasing is IVotingEscrowCore, IDynamicVoter, IWithdrawalQueue, ISweeper {
-
-}
+interface IVotingEscrowIncreasing is IVotingEscrowCore, IDynamicVoter, IWithdrawalQueue, ISweeper {}
 
 /// @dev useful for testing
 interface IVotingEscrowEventsStorageErrorsEvents is
@@ -183,6 +189,4 @@ interface IVotingEscrowEventsStorageErrorsEvents is
     ILockedBalanceIncreasing,
     ISweeperEvents,
     ISweeperErrors
-{
-
-}
+{}

@@ -10,6 +10,7 @@ interface IWhitelistEvents {
 
 interface IWhitelistErrors {
     error NotWhitelisted();
+    error ForbiddenWhitelistAddress();
 }
 
 interface IWhitelist is IWhitelistEvents, IWhitelistErrors {

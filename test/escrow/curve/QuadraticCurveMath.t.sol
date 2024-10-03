@@ -20,55 +20,49 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
          */
         uint256 amount = 100e18;
 
-        int256[4] memory coefficients = curve.getCoefficients(100e18);
+        int256[3] memory coefficients = curve.getCoefficients(100e18);
 
         uint256 const = uint256(coefficients[0]);
         uint256 linear = uint256(coefficients[1]);
         uint256 quadratic = uint256(coefficients[2]);
-        uint256 cubic = uint256(coefficients[3]);
 
         assertEq(const, amount);
-        assertEq(cubic, 0);
 
         console.log("Coefficients: %st^2 + %st + %s", quadratic, linear, const);
 
-        // for (uint i; i <= 6; i++) {
-        //     uint period = 2 weeks * i;
-        //     console.log(
-        //         "Period: %d Voting Power      : %s",
-        //         i,
-        //         curve.getBiasUnbound(period, 100e18) / 1e18
-        //     );
-        //     console.log(
-        //         "Period: %d Voting Power Bound: %s",
-        //         i,
-        //         curve.getBias(period, 100e18) / 1e18
-        //     );
-        //     console.log(
-        //         "Period: %d Voting Power Raw: %s\n",
-        //         i,
-        //         curve.getBiasUnbound(period, 100e18)
-        //     );
-        // }
-        //
-        // uncomment to see the full curve
-        for (uint i; i <= 14 * 6; i++) {
-            uint day = i * 1 days;
-            uint week = day / 7 days;
-            uint period = day / 2 weeks;
-
-            console.log("[Day: %d | Week %d | Period %d]", i, week, period);
-            console.log("Voting Power        : %s", curve.getBias(day, 100e18) / 1e18);
-            console.log("Voting Power (raw): %s\n", curve.getBias(day, 100e18));
+        for (uint i; i <= 6; i++) {
+            uint period = 2 weeks * i;
+            console.log(
+                "Period: %d Voting Power      : %s",
+                i,
+                curve.getBias(period, 100e18) / 1e18
+            );
+            console.log(
+                "Period: %d Voting Power Bound: %s",
+                i,
+                curve.getBias(period, 100e18) / 1e18
+            );
+            console.log("Period: %d Voting Power Raw: %s\n", i, curve.getBias(period, 100e18));
         }
+
+        // uncomment to see the full curve
+        // for (uint i; i <= 14 * 6; i++) {
+        //     uint day = i * 1 days;
+        //     uint week = day / 7 days;
+        //     uint period = day / 2 weeks;
+
+        //     console.log("[Day: %d | Week %d | Period %d]", i, week, period);
+        //     console.log("Voting Power        : %s", curve.getBias(day, 100e18) / 1e18);
+        //     console.log("Voting Power (raw): %s\n", curve.getBias(day, 100e18));
+        // }
     }
 
     // write a new checkpoint
     function testWritesCheckpoint() public {
         uint tokenIdFirst = 1;
         uint tokenIdSecond = 2;
-        uint depositFirst = 420.69e18;
-        uint depositSecond = 1_000_000_000e18;
+        uint208 depositFirst = 420.69e18;
+        uint208 depositSecond = 1_000_000_000e18;
         uint start = 52 weeks;
 
         // initial conditions, no balance
@@ -83,25 +77,26 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
         escrow.checkpoint(
             tokenIdFirst,
             LockedBalance(0, 0),
-            LockedBalance(depositFirst, block.timestamp)
+            LockedBalance(depositFirst, uint48(block.timestamp))
         );
         escrow.checkpoint(
             tokenIdSecond,
             LockedBalance(0, 0),
-            LockedBalance(depositSecond, block.timestamp)
+            LockedBalance(depositSecond, uint48(block.timestamp))
         );
 
-        // check the user point is registered
-        IEscrowCurve.UserPoint memory userPoint = curve.userPointHistory(tokenIdFirst, 1);
-        assertEq(userPoint.bias, depositFirst, "Bias is incorrect");
-        assertEq(userPoint.ts, block.timestamp, "Timestamp is incorrect");
+        // check the token point is registered
+        IEscrowCurve.TokenPoint memory tokenPoint = curve.tokenPointHistory(tokenIdFirst, 1);
+        assertEq(tokenPoint.bias, depositFirst, "Bias is incorrect");
+        assertEq(tokenPoint.checkpointTs, block.timestamp, "CP Timestamp is incorrect");
+        assertEq(tokenPoint.writtenTs, block.timestamp, "Written Timestamp is incorrect");
 
         // balance now is zero but Warm up
         assertEq(curve.votingPowerAt(tokenIdFirst, 0), 0, "Balance after deposit before warmup");
         assertEq(curve.isWarm(tokenIdFirst), false, "Not warming up");
 
         // wait for warmup
-        vm.warp(block.timestamp + curve.warmupPeriod() - 1);
+        vm.warp(block.timestamp + curve.warmupPeriod());
         assertEq(curve.votingPowerAt(tokenIdFirst, 0), 0, "Balance after deposit before warmup");
         assertEq(curve.isWarm(tokenIdFirst), false, "Not warming up");
         assertEq(curve.isWarm(tokenIdSecond), false, "Not warming up II");
@@ -109,21 +104,20 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
         // warmup complete
         vm.warp(block.timestamp + 1);
 
-        // excel:               449.206158900000000000
-        // solmate:             449.206133622001394300
-        // solmate (optimized): 449.06723257244469756
+        // python:              449.206279554928541696
+        // solmate (optimized): 449.206254284606635135
         assertEq(
             curve.votingPowerAt(tokenIdFirst, block.timestamp),
-            449206133622001394300,
+            449206254284606635135,
             "Balance incorrect after warmup"
         );
         assertEq(curve.isWarm(tokenIdFirst), true, "Still warming up");
 
-        // excel:     1_067_784_257_000000000000000000
-        // solmate:   1_067_784_196_491481599990798396
+        // python:    1067784543380942056100724736
+        // solmate:   1067784483312193385000000000
         assertEq(
             curve.votingPowerAt(tokenIdSecond, block.timestamp),
-            1067784196491481599990798396,
+            1067784483312193385000000000,
             "Balance incorrect after warmup II"
         );
 
@@ -132,14 +126,16 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
         // excel:     600.985714300000000000
         // PRB:       600.985163959347100568
         // solmate:   600.985163959347101852
+        // python :   600.985714285714341888
+        // solmate2:  600.985163959347101952
         assertEq(
             curve.votingPowerAt(tokenIdFirst, block.timestamp),
-            600985163959347101852,
+            600985163959347101952,
             "Balance incorrect after p1"
         );
 
-        uint256 expectedMaxI = 2524126241845405204467;
-        uint256 expectedMaxII = 5999967296216703996928705792;
+        uint256 expectedMaxI = 2524126241845405205760;
+        uint256 expectedMaxII = 5999967296216704000000000000;
 
         // warp to the final period
         // TECHNICALLY, this should finish at exactly 5 periodd and 6 * voting power

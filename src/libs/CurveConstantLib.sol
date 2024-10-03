@@ -11,6 +11,7 @@ pragma solidity ^0.8.0;
 /// where t = timestamp / 2_weeks (2 weeks is one period)
 /// Below are the shared coefficients for the linear and quadratic terms
 library CurveConstantLib {
+    int256 internal constant SHARED_CONSTANT_COEFFICIENT = 1e18;
     /// @dev 2 / (7 * 2_weeks) - expressed in fixed point
     int256 internal constant SHARED_LINEAR_COEFFICIENT = 236205593348;
     /// @dev 1 / (7 * (2_weeks)^2) - expressed in fixed point

@@ -17,6 +17,11 @@ import {SimpleGaugeVoter, SimpleGaugeVoterSetup} from "src/voting/SimpleGaugeVot
 contract TestEscrowAdmin is EscrowBase {
     address attacker = address(1);
 
+    function testCannotResetLockNFT() public {
+        vm.expectRevert(LockNFTAlreadySet.selector);
+        escrow.setLockNFT(address(0));
+    }
+
     function testSetCurve(address _newCurve) public {
         escrow.setCurve(_newCurve);
         assertEq(escrow.curve(), _newCurve);
@@ -26,6 +31,18 @@ contract TestEscrowAdmin is EscrowBase {
         vm.expectRevert(err);
         escrow.setCurve(_newCurve);
         escrow.setCurve(address(0));
+    }
+
+    function testSetMinDeposit(uint256 _newMinDeposit) public {
+        vm.expectEmit(false, false, false, true);
+        emit MinDepositSet(_newMinDeposit);
+        escrow.setMinDeposit(_newMinDeposit);
+        assertEq(escrow.minDeposit(), _newMinDeposit);
+
+        bytes memory err = _authErr(attacker, address(escrow), escrow.ESCROW_ADMIN_ROLE());
+        vm.prank(attacker);
+        vm.expectRevert(err);
+        escrow.setMinDeposit(_newMinDeposit);
     }
 
     function testSetVoter(address _newVoter) public {
@@ -145,5 +162,12 @@ contract TestEscrowAdmin is EscrowBase {
         vm.prank(attacker);
         vm.expectRevert(err);
         nftLock.upgradeTo(newImpl);
+    }
+
+    // hal-16 should not be possible to unwhitelist the escrow
+    function testUnwhitelistEscrow() public {
+        address escrowAddr = nftLock.escrow();
+        vm.expectRevert(ForbiddenWhitelistAddress.selector);
+        nftLock.setWhitelisted(escrowAddr, false);
     }
 }
