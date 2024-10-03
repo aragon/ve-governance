@@ -1389,19 +1389,13 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
 
     /// depending on the network, we need different approaches to mint tokens
     /// on a fork
-    function _resolveMintTokens() internal returns (bool success) {
-        // staticcall to check if open mint
-        (bool success, bytes memory data) = address(token).staticcall(
-            abi.encodeWithSelector(token.mint.selector, address(this), 1 ether)
-        );
-
-        if (success) {
-            token.mint(address(distributor), 3_000 ether);
+    function _resolveMintTokens() internal returns (bool) {
+        try token.mint(address(distributor), 3_000 ether) {
             return true;
-        }
+        } catch {}
 
         // next check if ownable - we can spoof this
-        (success, data) = address(token).call(abi.encodeWithSignature("owner()"));
+        (bool success, bytes memory data) = address(token).call(abi.encodeWithSignature("owner()"));
 
         if (success) {
             address owner = abi.decode(data, (address));
