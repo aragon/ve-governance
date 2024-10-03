@@ -27,3 +27,7 @@ delegation/*
 
 report/*
 lcov*
+
+# multisig addresses
+script/multisig-*.json
+^script/multisig-members.json
