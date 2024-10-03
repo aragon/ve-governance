@@ -1,19 +1,14 @@
 /// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {IERC165, IERC721, IERC721Metadata} from "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
-import {IERC6372} from "@openzeppelin/contracts/interfaces/IERC6372.sol";
-import {IERC4906} from "@openzeppelin/contracts/interfaces/IERC4906.sol";
-import {IVotes} from "./IVotes.sol";
-
 /*///////////////////////////////////////////////////////////////
                         CORE FUNCTIONALITY
 //////////////////////////////////////////////////////////////*/
 
 interface ILockedBalanceIncreasing {
     struct LockedBalance {
-        uint256 amount;
-        uint256 start;
+        uint208 amount;
+        uint48 start; // mirrors oz ERC20 timestamp clocks
     }
 }
 
@@ -26,10 +21,15 @@ interface IVotingEscrowCoreErrors {
     error ZeroAmount();
     error ZeroBalance();
     error SameAddress();
+    error LockNFTAlreadySet();
     error MustBe18Decimals();
+    error TransferBalanceIncorrect();
+    error AmountTooSmall();
 }
 
 interface IVotingEscrowCoreEvents {
+    event MinDepositSet(uint256 minDeposit);
+
     event Deposit(
         address indexed depositor,
         uint256 indexed tokenId,
@@ -54,6 +54,9 @@ interface IVotingEscrowCore is
     /// @notice Address of the underying ERC20 token.
     function token() external view returns (address);
 
+    /// @notice Address of the lock receipt NFT.
+    function lockNFT() external view returns (address);
+
     /// @notice Total underlying tokens deposited in the contract
     function totalLocked() external view returns (uint256);
 
@@ -76,25 +79,6 @@ interface IVotingEscrowCore is
 
     /// @notice helper utility for NFT checks
     function isApprovedOrOwner(address spender, uint256 tokenId) external view returns (bool);
-}
-
-/*///////////////////////////////////////////////////////////////
-                        WHITELIST ESCROW
-//////////////////////////////////////////////////////////////*/
-interface IWhitelistEvents {
-    event WhitelistSet(address indexed account, bool status);
-}
-
-interface IWhitelistErrors {
-    error NotWhitelisted();
-}
-
-interface IWhitelist is IWhitelistEvents, IWhitelistErrors {
-    /// @notice Set whitelist status for an address
-    function setWhitelisted(address addr, bool isWhitelisted) external;
-
-    /// @notice Check if an address is whitelisted
-    function whitelisted(address addr) external view returns (bool);
 }
 
 /*///////////////////////////////////////////////////////////////
@@ -124,6 +108,7 @@ interface IWithdrawalQueue is IWithdrawalQueueErrors, IWithdrawalQueueEvents {
 
 interface ISweeperEvents {
     event Sweep(address indexed to, uint256 amount);
+    event SweepNFT(address indexed to, uint256 tokenId);
 }
 
 interface ISweeperErrors {
@@ -133,6 +118,8 @@ interface ISweeperErrors {
 interface ISweeper is ISweeperEvents, ISweeperErrors {
     /// @notice sweeps excess tokens from the contract to a designated address
     function sweep() external;
+
+    function sweepNFT(uint256 _tokenId, address _to) external;
 }
 
 /*///////////////////////////////////////////////////////////////
@@ -191,27 +178,15 @@ interface IDynamicVoter is IDynamicVoterErrors {
                         INCREASED ESCROW
 //////////////////////////////////////////////////////////////*/
 
-interface IVotingEscrowIncreasing is
-    IVotingEscrowCore,
-    IDynamicVoter,
-    IWithdrawalQueue,
-    IWhitelist,
-    ISweeper
-{
-
-}
+interface IVotingEscrowIncreasing is IVotingEscrowCore, IDynamicVoter, IWithdrawalQueue, ISweeper {}
 
 /// @dev useful for testing
 interface IVotingEscrowEventsStorageErrorsEvents is
     IVotingEscrowCoreErrors,
     IVotingEscrowCoreEvents,
-    IWhitelistEvents,
     IWithdrawalQueueErrors,
     IWithdrawalQueueEvents,
     ILockedBalanceIncreasing,
-    IWhitelistErrors,
     ISweeperEvents,
     ISweeperErrors
-{
-
-}
+{}

@@ -9,13 +9,14 @@ import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
-import {IEscrowCurveUserStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
+import {IEscrowCurveTokenStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
 import {VotingEscrow} from "@escrow/VotingEscrowIncreasing.sol";
 
-import {SimpleGaugeVoter, SimpleGaugeVoterSetup} from "src/voting/SimpleGaugeVoterSetup.sol";
-import {IGaugeVote} from "src/voting/ISimpleGaugeVoter.sol";
+import {SimpleGaugeVoter, SimpleGaugeVoterSetup} from "@voting/SimpleGaugeVoterSetup.sol";
+import {IGaugeVote} from "@voting/ISimpleGaugeVoter.sol";
+import {ITicket} from "@escrow-interfaces/IExitQueue.sol";
 
-contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote {
+contract TestWithdraw is EscrowBase, IEscrowCurveTokenStorage, IGaugeVote, ITicket {
     address gauge = address(1);
 
     GaugeVote[] votes;
@@ -28,14 +29,16 @@ contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote {
         // make a voting gauge
         voter.createGauge(gauge, "metadata");
         votes.push(GaugeVote({gauge: gauge, weight: 1}));
+
+        escrow.setMinDeposit(0);
     }
 
     // setup a fee withdrawal
     function testFuzz_feeWithdrawal(uint64 _fee, uint128 _dep, address _who) public {
-        vm.assume(_who != address(0) && _who != address(queue) && _who != address(escrow));
+        vm.assume(_who != address(0) && address(_who).code.length == 0);
         vm.assume(_dep > 0);
 
-        if (_fee > 1e18) _fee = 1e18;
+        if (_fee > 10_000) _fee = 10_000;
 
         queue.setFeePercent(_fee);
 
@@ -61,7 +64,7 @@ contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote {
         // enter a withdrawal
         vm.startPrank(_who);
         {
-            escrow.approve(address(escrow), tokenId);
+            nftLock.approve(address(escrow), tokenId);
             escrow.resetVotesAndBeginWithdrawal(tokenId);
         }
         vm.stopPrank();
@@ -73,10 +76,10 @@ contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote {
         // can't force approve
         vm.expectRevert("ERC721: approve caller is not token owner or approved for all");
         vm.prank(_who);
-        escrow.approve(_who, tokenId);
+        nftLock.approve(_who, tokenId);
 
         // must wait till end of queue
-        vm.warp(3 weeks - 1);
+        vm.warp(3 weeks);
         vm.expectRevert(CannotExit.selector);
         vm.prank(_who);
         escrow.withdraw(tokenId);
@@ -84,7 +87,7 @@ contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote {
         uint fee = queue.calculateFee(tokenId);
 
         // withdraw
-        vm.warp(3 weeks);
+        vm.warp(3 weeks + 1);
         vm.prank(_who);
         vm.expectEmit(true, true, false, true);
         emit Withdraw(_who, tokenId, _dep - fee, block.timestamp, 0);
@@ -96,7 +99,7 @@ contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote {
         // remainder sent to user
         assertEq(token.balanceOf(_who), _dep - fee);
 
-        bool feeDepTooSmall = uint(_fee) * uint(_dep) < 1e18;
+        bool feeDepTooSmall = uint(_fee) * uint(_dep) < 10_000;
 
         if (_fee == 0 || feeDepTooSmall) {
             assertEq(token.balanceOf(_who), _dep);
@@ -106,15 +109,15 @@ contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote {
         }
 
         // nft is burned
-        assertEq(escrow.balanceOf(_who), 0);
-        assertEq(escrow.balanceOf(address(escrow)), 0);
+        assertEq(nftLock.balanceOf(_who), 0);
+        assertEq(nftLock.balanceOf(address(escrow)), 0);
         assertEq(escrow.totalLocked(), 0);
 
         assertEq(escrow.votingPowerForAccount(_who), 0);
     }
 
     function testFuzz_enterWithdrawal(uint128 _dep, address _who) public {
-        vm.assume(_who != address(0) && _who != address(queue) && _who != address(escrow));
+        vm.assume(_who != address(0) && address(_who).code.length == 0);
         vm.assume(_dep > 0);
 
         // make a deposit
@@ -140,22 +143,23 @@ contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote {
         // enter a withdrawal
         vm.startPrank(_who);
         {
-            escrow.approve(address(escrow), tokenId);
+            nftLock.approve(address(escrow), tokenId);
             escrow.resetVotesAndBeginWithdrawal(tokenId);
         }
         vm.stopPrank();
 
         // should now have the nft in the escrow
-        assertEq(escrow.balanceOf(_who), 0);
-        assertEq(escrow.balanceOf(address(escrow)), 1);
+        assertEq(nftLock.balanceOf(_who), 0);
+        assertEq(nftLock.balanceOf(address(escrow)), 1);
 
         // voting power should still be there as the cp is still active
         assertGt(escrow.votingPower(tokenId), 0);
 
-        // but we should have written a user point in the future
-        UserPoint memory up = curve.userPointHistory(tokenId, 2);
+        // but we should have written a token point in the future
+        TokenPoint memory up = curve.tokenPointHistory(tokenId, 2);
         assertEq(up.bias, 0);
-        assertEq(up.ts, 3 weeks);
+        assertEq(up.writtenTs, block.timestamp);
+        assertEq(up.checkpointTs, 3 weeks);
 
         // should have a ticket expiring in a few days
         assertEq(queue.canExit(tokenId), false);
@@ -170,7 +174,10 @@ contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote {
         address _who = address(1);
         uint128 _dep = 100e18;
 
-        vm.warp(2 weeks + 1);
+        // voting window is ea. 2 weeks + 1 hour
+        vm.warp(2 weeks + 1 hours + 1);
+
+        assertTrue(voter.votingActive());
 
         token.mint(_who, _dep);
         uint tokenId;
@@ -180,20 +187,23 @@ contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote {
             tokenId = escrow.createLock(_dep);
 
             // voting active after cooldown
-            vm.warp(block.timestamp + 3 weeks - queue.cooldown() + 1);
+            // +1 week: voting ends
+            // +2 weeks: next voting period opens
+            vm.warp(block.timestamp + 2 weeks);
 
             // make a vote
             voter.vote(tokenId, votes);
 
-            escrow.approve(address(escrow), tokenId);
+            // warp so cooldown crosses the week boundary
+            vm.warp(block.timestamp + clock.checkpointInterval() - queue.cooldown() + 1);
+
+            nftLock.approve(address(escrow), tokenId);
             escrow.resetVotesAndBeginWithdrawal(tokenId);
         }
         vm.stopPrank();
 
-        uint _now = block.timestamp;
-
-        // must wait till end of cooldown
-        vm.warp(3 weeks);
+        // must wait till after end of cooldown
+        vm.warp(block.timestamp + queue.cooldown());
         vm.expectRevert(CannotExit.selector);
         vm.prank(_who);
         escrow.withdraw(tokenId);
@@ -201,7 +211,7 @@ contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote {
         uint fee = queue.calculateFee(tokenId);
 
         // withdraw
-        vm.warp(_now + queue.cooldown());
+        vm.warp(block.timestamp + 1);
         vm.prank(_who);
         vm.expectEmit(true, true, false, true);
         emit Withdraw(_who, tokenId, _dep - fee, block.timestamp, 0);
@@ -210,8 +220,120 @@ contract TestWithdraw is EscrowBase, IEscrowCurveUserStorage, IGaugeVote {
         // asserts
         assertEq(token.balanceOf(address(queue)), fee);
         assertEq(token.balanceOf(_who), _dep - fee);
-        assertEq(escrow.balanceOf(_who), 0);
-        assertEq(escrow.balanceOf(address(escrow)), 0);
+        assertEq(nftLock.balanceOf(_who), 0);
+        assertEq(nftLock.balanceOf(address(escrow)), 0);
         assertEq(escrow.totalLocked(), 0);
+    }
+    // HAL-13: locks are re-used causing reverts and duplications
+    function testCanCreateLockAfterBurning() public {
+        address USER1 = address(1);
+        address USER2 = address(2);
+
+        // mint
+        token.mint(USER1, 100);
+        token.mint(USER2, 100);
+
+        vm.prank(USER1);
+        token.approve(address(escrow), 100);
+
+        vm.prank(USER2);
+        token.approve(address(escrow), 100);
+
+        vm.prank(USER1);
+        uint256 tokenId = escrow.createLockFor(100, USER1); // Token ID 1
+
+        vm.prank(USER2);
+        uint256 tokenId2 = escrow.createLockFor(100, USER2); // Token ID 2
+
+        // approve
+        uint256 tokenId3;
+        vm.startPrank(USER1);
+        {
+            nftLock.approve(address(escrow), tokenId);
+
+            vm.warp(1 weeks + 1 days);
+
+            escrow.beginWithdrawal(tokenId);
+
+            Ticket memory ticket = queue.queue(tokenId);
+            vm.warp(ticket.exitDate + 1);
+
+            escrow.withdraw(tokenId);
+            token.approve(address(escrow), 100);
+            tokenId3 = escrow.createLockFor(100, USER1); // Token ID 2 - Duplicated - Reescrowrt
+        }
+        vm.stopPrank();
+
+        // assert that the lock Id is incremented
+        assertEq(tokenId3, 3);
+        assertNotEq(tokenId2, tokenId3);
+        assertEq(nftLock.totalSupply(), 2);
+        assertEq(escrow.lastLockId(), 3);
+    }
+
+    function testCantDepositAndWithdrawInTheSameBlock() public {
+        // this is a timing
+        // deposit falls exactly on the week boundary, so that we start immediately
+        // then we try to withdraw in the same block
+        // we also need a zero warmup period or we will error with a zero voting power
+        curve.setWarmupPeriod(0);
+
+        // warp to a week boundary
+        vm.warp(1 weeks);
+
+        // deposit
+        token.mint(address(1), 100e18);
+
+        uint tokenId;
+
+        bytes memory data = abi.encodeWithSelector(CannotExit.selector);
+        // start the deposit
+        vm.startPrank(address(1));
+        {
+            // create
+            token.approve(address(escrow), 100e18);
+            tokenId = escrow.createLock(100e18);
+
+            // withdraw
+            nftLock.approve(address(escrow), tokenId);
+            vm.expectRevert(data);
+            escrow.beginWithdrawal(tokenId);
+        }
+        vm.stopPrank();
+    }
+
+    function testCannotExitDuringWarmupIfWarmupIsLong() public {
+        // warp to genesis
+        vm.warp(1);
+
+        // set a long warmup that crosses an epoch boundary
+        curve.setWarmupPeriod(4 weeks);
+
+        // make a deposit
+        token.mint(address(1), 100e18);
+
+        uint tokenId;
+
+        vm.startPrank(address(1));
+        {
+            token.approve(address(escrow), 100e18);
+            tokenId = escrow.createLock(100e18);
+        }
+        vm.stopPrank();
+
+        // check the start date
+        uint start = escrow.locked(tokenId).start;
+        assertEq(start, 1 weeks);
+
+        vm.warp(1 weeks);
+
+        // should not be able to exit
+        vm.startPrank(address(1));
+        {
+            nftLock.approve(address(escrow), tokenId);
+            vm.expectRevert(CannotExit.selector);
+            escrow.beginWithdrawal(tokenId);
+        }
+        vm.stopPrank();
     }
 }

@@ -14,7 +14,7 @@ import {MockERC20} from "@mocks/MockERC20.sol";
 
 import "@helpers/OSxHelpers.sol";
 
-import {IEscrowCurveUserStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
+import {IEscrowCurveTokenStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
 import {IWithdrawalQueueErrors} from "src/escrow/increasing/interfaces/IVotingEscrowIncreasing.sol";
 import {IGaugeVote} from "src/voting/ISimpleGaugeVoter.sol";
 import {VotingEscrow, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams} from "src/voting/SimpleGaugeVoterSetup.sol";
@@ -28,13 +28,21 @@ contract TestGaugeVote is GaugeVotingBase {
     address owner = address(0x420);
     uint256 lockDeposit = 1000 ether;
     uint256 tokenId;
-    address gauge = address(0x420);
+    address gauge = address(0x777);
+
+    uint time;
+
+    function _increaseTime(uint _by) internal {
+        time += _by;
+        vm.warp(time);
+    }
 
     function setUp() public override {
         super.setUp();
 
         // reset clock
         vm.warp(0);
+        time = block.timestamp;
 
         // means we have voting power
         curve.setWarmupPeriod(0);
@@ -48,8 +56,9 @@ contract TestGaugeVote is GaugeVotingBase {
         }
         vm.stopPrank();
 
-        // warp to an active window
-        vm.warp(1 hours);
+        // activate cp & warp to an active window
+        _increaseTime(2 weeks + 1 hours + 1);
+
         assertGt(escrow.votingPower(tokenId), 0);
         assertTrue(voter.votingActive(), "voting should be active");
 
@@ -208,8 +217,9 @@ contract TestGaugeVote is GaugeVotingBase {
                 gauge: gauge,
                 epoch: voter.epochId(),
                 tokenId: tokenId,
-                votingPower: votingPower,
-                totalVotingPower: votingPower,
+                votingPowerCastForGauge: votingPower,
+                totalVotingPowerInGauge: votingPower,
+                totalVotingPowerInContract: votingPower,
                 timestamp: block.timestamp
             });
             voter.vote(tokenId, votes);
@@ -292,8 +302,9 @@ contract TestGaugeVote is GaugeVotingBase {
                 gauge: gauge,
                 epoch: voter.epochId(),
                 tokenId: tokenId,
-                votingPower: votingPower,
-                totalVotingPower: 0,
+                votingPowerRemovedFromGauge: votingPower,
+                totalVotingPowerInGauge: 0,
+                totalVotingPowerInContract: 0,
                 timestamp: block.timestamp
             });
             voter.reset(tokenId);
@@ -377,7 +388,7 @@ contract TestGaugeVote is GaugeVotingBase {
         uint256[] memory tokens = escrow.ownedTokens(owner);
 
         vm.prank(owner);
-        escrow.setApprovalForAll(address(voter), true);
+        nftLock.setApprovalForAll(address(voter), true);
 
         uint vp0 = escrow.votingPower(tokens[0]);
         uint vp1 = escrow.votingPower(tokens[1]);
@@ -405,5 +416,122 @@ contract TestGaugeVote is GaugeVotingBase {
         assertEq(voter.gaugesVotedFor(tokenId)[1], gauge2);
         assertEq(voter.votes(tokenId, gauge), expectedVotesForGauge);
         assertEq(voter.votes(tokenIdNew, gauge2), expectedVotesForGauge2);
+    }
+
+    // test the event logs: person A votes, person B votes => B's event correctly distinguishes between the two
+    // then A resets, leaving B's vote in place from the logs
+    function test2PeopleVoteEvents() public {
+        address personA = address(0xc0ffee);
+        address personB = address(0xbabe);
+
+        address gauge2 = address(0x69);
+        voter.createGauge(gauge2, "metadata");
+
+        votes.push(GaugeVote(25, gauge));
+        votes.push(GaugeVote(75, gauge2));
+
+        // create lock for A
+        token.mint(personA, 1000 ether);
+        uint tokenIdA;
+        vm.startPrank(personA);
+        {
+            token.approve(address(escrow), 1000 ether);
+            tokenIdA = escrow.createLock(1000 ether);
+        }
+        vm.stopPrank();
+
+        // create lock for B
+        token.mint(personB, 1000 ether);
+        uint tokenIdB;
+        vm.startPrank(personB);
+        {
+            token.approve(address(escrow), 1000 ether);
+            tokenIdB = escrow.createLock(1000 ether);
+        }
+        vm.stopPrank();
+
+        // jump 2 weeks so that we have voting power
+        vm.warp(block.timestamp + 2 weeks);
+
+        assertGt(escrow.votingPower(tokenIdA), 0);
+        assertGt(escrow.votingPower(tokenIdB), 0);
+
+        // vote for A then vote for B
+        vm.prank(personA);
+        voter.vote(tokenIdA, votes);
+
+        uint256 expectedBVotingPowerGauge0 = (75 * escrow.votingPower(tokenIdB)) / 100;
+        uint256 expectedAVotingPowerGauge0 = (25 * escrow.votingPower(tokenIdA)) / 100;
+        uint256 expectedBVotingPowerGauge1 = (25 * escrow.votingPower(tokenIdB)) / 100;
+        uint256 expectedAVotingPowerGauge1 = (75 * escrow.votingPower(tokenIdA)) / 100;
+
+        // flip the votes
+        votes[0] = GaugeVote(75, gauge);
+        votes[1] = GaugeVote(25, gauge2);
+
+        uint aVotingPower = escrow.votingPower(tokenIdA);
+        uint bVotingPower = escrow.votingPower(tokenIdB);
+
+        uint epoch = voter.epochId();
+        // same vote for b
+        vm.startPrank(personB);
+        {
+            vm.expectEmit(true, true, true, true);
+            emit Voted({
+                voter: personB,
+                gauge: gauge,
+                epoch: epoch,
+                tokenId: tokenIdB,
+                votingPowerCastForGauge: expectedBVotingPowerGauge0,
+                totalVotingPowerInGauge: expectedBVotingPowerGauge0 + expectedAVotingPowerGauge0,
+                totalVotingPowerInContract: expectedBVotingPowerGauge0 + aVotingPower,
+                timestamp: block.timestamp
+            });
+            vm.expectEmit(true, true, true, true);
+            emit Voted({
+                voter: personB,
+                gauge: gauge2,
+                epoch: epoch,
+                tokenId: tokenIdB,
+                votingPowerCastForGauge: expectedBVotingPowerGauge1,
+                totalVotingPowerInGauge: expectedBVotingPowerGauge1 + expectedAVotingPowerGauge1,
+                totalVotingPowerInContract: bVotingPower + aVotingPower,
+                timestamp: block.timestamp
+            });
+
+            voter.vote(tokenIdB, votes);
+        }
+        vm.stopPrank();
+
+        // go back and reset A to check
+        vm.startPrank(personA);
+        {
+            vm.expectEmit(true, true, true, true);
+            emit Reset({
+                voter: personA,
+                gauge: gauge,
+                epoch: epoch,
+                tokenId: tokenIdA,
+                votingPowerRemovedFromGauge: expectedAVotingPowerGauge0,
+                totalVotingPowerInGauge: expectedBVotingPowerGauge0,
+                totalVotingPowerInContract: bVotingPower + expectedAVotingPowerGauge1,
+                timestamp: block.timestamp
+            });
+
+            vm.expectEmit(true, true, true, true);
+            emit Reset({
+                voter: personA,
+                gauge: gauge2,
+                epoch: epoch,
+                tokenId: tokenIdA,
+                votingPowerRemovedFromGauge: expectedAVotingPowerGauge1,
+                totalVotingPowerInGauge: expectedBVotingPowerGauge1,
+                totalVotingPowerInContract: bVotingPower,
+                timestamp: block.timestamp
+            });
+
+            voter.reset(tokenIdA);
+        }
+        vm.stopPrank();
     }
 }

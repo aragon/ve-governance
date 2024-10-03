@@ -23,7 +23,7 @@ contract Clock is IClock, DaoAuthorizable, UUPSUpgradeable {
     uint256 internal constant VOTE_DURATION = 1 weeks;
 
     /// @dev Opens and closes the voting window slightly early to avoid timing attacks
-    uint256 internal constant VOTE_WINDOW_OFFSET = 1 hours;
+    uint256 internal constant VOTE_WINDOW_BUFFER = 1 hours;
 
     /*///////////////////////////////////////////////////////////////
                             Initialization
@@ -54,8 +54,8 @@ contract Clock is IClock, DaoAuthorizable, UUPSUpgradeable {
         return VOTE_DURATION;
     }
 
-    function voteWindowOffset() external pure returns (uint256) {
-        return VOTE_WINDOW_OFFSET;
+    function voteWindowBuffer() external pure returns (uint256) {
+        return VOTE_WINDOW_BUFFER;
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -87,6 +87,7 @@ contract Clock is IClock, DaoAuthorizable, UUPSUpgradeable {
     }
 
     /// @notice Number of seconds until the start of the next epoch (relative)
+    /// @dev If exactly at the start of the epoch, returns 0
     function resolveEpochStartsIn(uint256 timestamp) public pure returns (uint256) {
         unchecked {
             uint256 elapsed = resolveElapsedInEpoch(timestamp);
@@ -130,15 +131,15 @@ contract Clock is IClock, DaoAuthorizable, UUPSUpgradeable {
             uint256 elapsed = resolveElapsedInEpoch(timestamp);
 
             // if less than the offset has past, return the time until the offset
-            if (elapsed < VOTE_WINDOW_OFFSET) {
-                return VOTE_WINDOW_OFFSET - elapsed;
+            if (elapsed < VOTE_WINDOW_BUFFER) {
+                return VOTE_WINDOW_BUFFER - elapsed;
             }
             // if voting is active (we are in the voting period) return 0
-            else if (elapsed < VOTE_DURATION - VOTE_WINDOW_OFFSET) {
+            else if (elapsed < VOTE_DURATION - VOTE_WINDOW_BUFFER) {
                 return 0;
             }
             // else return the time until the next epoch + the offset
-            else return resolveEpochStartsIn(timestamp) + VOTE_WINDOW_OFFSET;
+            else return resolveEpochStartsIn(timestamp) + VOTE_WINDOW_BUFFER;
         }
     }
 
@@ -162,7 +163,7 @@ contract Clock is IClock, DaoAuthorizable, UUPSUpgradeable {
     function resolveEpochVoteEndsIn(uint256 timestamp) public pure returns (uint256) {
         unchecked {
             uint256 elapsed = resolveElapsedInEpoch(timestamp);
-            uint VOTING_WINDOW = VOTE_DURATION - VOTE_WINDOW_OFFSET;
+            uint VOTING_WINDOW = VOTE_DURATION - VOTE_WINDOW_BUFFER;
             // if we are outside the voting period, return 0
             if (elapsed >= VOTING_WINDOW) return 0;
             // if we are in the voting period, return the remaining time
@@ -175,7 +176,7 @@ contract Clock is IClock, DaoAuthorizable, UUPSUpgradeable {
     }
 
     /// @notice Timestamp of the end of the current voting period (absolute)
-    function resolveEpochVoteEndTs(uint256 timestamp) internal pure returns (uint256) {
+    function resolveEpochVoteEndTs(uint256 timestamp) public pure returns (uint256) {
         unchecked {
             return timestamp + resolveEpochVoteEndsIn(timestamp);
         }
@@ -190,13 +191,13 @@ contract Clock is IClock, DaoAuthorizable, UUPSUpgradeable {
     }
 
     /// @notice Number of seconds until the next checkpoint interval (relative)
-    function resolveEpochNextCheckpointIn(uint256 timestamp) internal pure returns (uint256) {
+    /// @dev If exactly at the start of the checkpoint interval, returns 0
+    function resolveEpochNextCheckpointIn(uint256 timestamp) public pure returns (uint256) {
         unchecked {
             uint256 elapsed = resolveElapsedInEpoch(timestamp);
             // elapsed > deposit interval, then subtract the interval
-            if (elapsed > CHECKPOINT_INTERVAL) elapsed -= CHECKPOINT_INTERVAL;
-            if (elapsed == 0) return 0;
-            else return CHECKPOINT_INTERVAL - elapsed;
+            if (elapsed >= CHECKPOINT_INTERVAL) elapsed -= CHECKPOINT_INTERVAL;
+            return CHECKPOINT_INTERVAL - elapsed;
         }
     }
 
@@ -205,7 +206,7 @@ contract Clock is IClock, DaoAuthorizable, UUPSUpgradeable {
     }
 
     /// @notice Timestamp of the next deposit interval (absolute)
-    function resolveEpochNextCheckpointTs(uint256 timestamp) internal pure returns (uint256) {
+    function resolveEpochNextCheckpointTs(uint256 timestamp) public pure returns (uint256) {
         unchecked {
             return timestamp + resolveEpochNextCheckpointIn(timestamp);
         }
@@ -221,5 +222,5 @@ contract Clock is IClock, DaoAuthorizable, UUPSUpgradeable {
         return _getImplementation();
     }
 
-    uint256[49] private __gap;
+    uint256[50] private __gap;
 }

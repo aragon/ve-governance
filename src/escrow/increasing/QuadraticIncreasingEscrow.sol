@@ -43,21 +43,16 @@ contract QuadraticIncreasingEscrow is
     /// @notice The Clock contract address
     address public clock;
 
-    /// @notice tokenId => point epoch: incremented on a per-user basis
-    mapping(uint256 => uint256) public userPointEpoch;
+    /// @notice tokenId => point epoch: incremented on a per-tokenId basis
+    mapping(uint256 => uint256) public tokenPointIntervals;
 
     /// @notice The warmup period for the curve
-    uint256 public warmupPeriod;
+    uint48 public warmupPeriod;
 
-    /// @dev tokenId => userPointEpoch => warmup
-    /// UX improvement: warmup should start from point of writing, even if
-    /// start date is in the future
-    mapping(uint256 => mapping(uint256 => uint256)) internal _userPointWarmup;
-
-    /// @dev tokenId => userPointEpoch => UserPoint
+    /// @dev tokenId => tokenPointIntervals => TokenPoint
     /// @dev The Array is fixed so we can write to it in the future
     /// This implementation means that very short intervals may be challenging
-    mapping(uint256 => UserPoint[1_000_000_000]) internal _userPointHistory;
+    mapping(uint256 => TokenPoint[1_000_000_000]) internal _tokenPointHistory;
 
     /*//////////////////////////////////////////////////////////////
                                 MATH
@@ -68,6 +63,9 @@ contract QuadraticIncreasingEscrow is
         CurveConstantLib.SHARED_QUADRATIC_COEFFICIENT;
 
     int256 private constant SHARED_LINEAR_COEFFICIENT = CurveConstantLib.SHARED_LINEAR_COEFFICIENT;
+
+    int256 private constant SHARED_CONSTANT_COEFFICIENT =
+        CurveConstantLib.SHARED_CONSTANT_COEFFICIENT;
 
     uint256 private constant MAX_EPOCHS = CurveConstantLib.MAX_EPOCHS;
 
@@ -83,7 +81,7 @@ contract QuadraticIncreasingEscrow is
     function initialize(
         address _escrow,
         address _dao,
-        uint256 _warmupPeriod,
+        uint48 _warmupPeriod,
         address _clock
     ) external initializer {
         escrow = _escrow;
@@ -102,20 +100,18 @@ contract QuadraticIncreasingEscrow is
 
     /// @return The coefficient for the quadratic term of the quadratic curve, for the given amount
     function _getQuadraticCoeff(uint256 amount) internal pure returns (int256) {
-        // 1 / (7 * 2 weeks^2)
         return (SignedFixedPointMath.toFP(amount.toInt256()).mul(SHARED_QUADRATIC_COEFFICIENT));
     }
 
     /// @return The coefficient for the linear term of the quadratic curve, for the given amount
     function _getLinearCoeff(uint256 amount) internal pure returns (int256) {
-        // 2 / 7 * 2 weeks
         return (SignedFixedPointMath.toFP(amount.toInt256())).mul(SHARED_LINEAR_COEFFICIENT);
     }
 
     /// @return The constant coefficient of the quadratic curve, for the given amount
     /// @dev In this case, the constant term is 1 so we just case the amount
     function _getConstantCoeff(uint256 amount) public pure returns (int256) {
-        return (SignedFixedPointMath.toFP(amount.toInt256()));
+        return (SignedFixedPointMath.toFP(amount.toInt256())).mul(SHARED_CONSTANT_COEFFICIENT);
     }
 
     /// @return The coefficients of the quadratic curve, for the given amount
@@ -125,16 +121,15 @@ contract QuadraticIncreasingEscrow is
     }
 
     /// @return The coefficients of the quadratic curve, for the given amount
-    /// @dev The coefficients are returned in the order [constant, linear, quadratic, cubic]
+    /// @dev The coefficients are returned in the order [constant, linear, quadratic]
     /// and are converted to regular 256-bit signed integers instead of their fixed-point representation
-    function getCoefficients(uint256 amount) public pure returns (int256[4] memory) {
+    function getCoefficients(uint256 amount) public pure returns (int256[3] memory) {
         int256[3] memory coefficients = _getCoefficients(amount);
 
         return [
             SignedFixedPointMath.fromFP(coefficients[0]),
             SignedFixedPointMath.fromFP(coefficients[1]),
-            SignedFixedPointMath.fromFP(coefficients[2]),
-            0
+            SignedFixedPointMath.fromFP(coefficients[2])
         ];
     }
 
@@ -164,7 +159,8 @@ contract QuadraticIncreasingEscrow is
         int256 t = SignedFixedPointMath.toFP(timeElapsed.toInt256());
 
         // bias = a.t^2 + b.t + c
-        int256 bias = quadratic.mul(t.pow(2e18)).add(linear.mul(t)).add(const);
+        int256 tSquared = t.mul(t); // t*t much more gas efficient than t.pow(SD2)
+        int256 bias = quadratic.mul(tSquared).add(linear.mul(t)).add(const);
 
         // never return negative values
         // in the increasing case, this should never happen
@@ -183,62 +179,63 @@ contract QuadraticIncreasingEscrow is
                               Warmup
     //////////////////////////////////////////////////////////////*/
 
-    function setWarmupPeriod(uint256 _warmupPeriod) external auth(CURVE_ADMIN_ROLE) {
+    function setWarmupPeriod(uint48 _warmupPeriod) external auth(CURVE_ADMIN_ROLE) {
         warmupPeriod = _warmupPeriod;
         emit WarmupSet(_warmupPeriod);
     }
 
     /// @notice Returns whether the NFT is warm
     function isWarm(uint256 tokenId) public view returns (bool) {
-        uint256 _epoch = _getPastUserPointIndex(tokenId, block.timestamp);
-        UserPoint memory point = _userPointHistory[tokenId][_epoch];
+        uint256 interval = _getPastTokenPointInterval(tokenId, block.timestamp);
+        TokenPoint memory point = _tokenPointHistory[tokenId][interval];
         if (point.bias == 0) return false;
-        else return _isWarm(tokenId, _epoch, block.timestamp);
+        else return _isWarm(point);
     }
 
-    function _isWarm(uint256 _tokenId, uint256 _userEpoch, uint256 t) public view returns (bool) {
-        return t >= _userPointWarmup[_tokenId][_userEpoch];
+    function _isWarm(TokenPoint memory _point) public view returns (bool) {
+        return block.timestamp > _point.writtenTs + warmupPeriod;
     }
 
     /*//////////////////////////////////////////////////////////////
                               BALANCE
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Returns the UserPoint at the passed epoch
-    /// @param _tokenId The NFT to return the UserPoint for
-    /// @param _userEpoch The epoch to return the UserPoint at
-    function userPointHistory(
+    /// @notice Returns the TokenPoint at the passed interval
+    /// @param _tokenId The NFT to return the TokenPoint for
+    /// @param _tokenInterval The epoch to return the TokenPoint at
+    function tokenPointHistory(
         uint256 _tokenId,
-        uint256 _userEpoch
-    ) external view returns (UserPoint memory) {
-        return _userPointHistory[_tokenId][_userEpoch];
+        uint256 _tokenInterval
+    ) external view returns (TokenPoint memory) {
+        return _tokenPointHistory[_tokenId][_tokenInterval];
     }
 
-    /// @notice Binary search to get the user point index for a token id at or prior to a given timestamp
+    /// @notice Binary search to get the token point interval for a token id at or prior to a given timestamp
     /// Once we have the point, we can apply the bias calculation to get the voting power.
-    /// @dev If a user point does not exist prior to the timestamp, this will return 0.
-    function _getPastUserPointIndex(
+    /// @dev If a token point does not exist prior to the timestamp, this will return 0.
+    function _getPastTokenPointInterval(
         uint256 _tokenId,
         uint256 _timestamp
     ) internal view returns (uint256) {
-        uint256 _userEpoch = userPointEpoch[_tokenId];
-        if (_userEpoch == 0) return 0;
+        uint256 tokenInterval = tokenPointIntervals[_tokenId];
+        if (tokenInterval == 0) return 0;
 
         // if the most recent point is before the timestamp, return it
-        if (_userPointHistory[_tokenId][_userEpoch].ts <= _timestamp) return (_userEpoch);
+        if (_tokenPointHistory[_tokenId][tokenInterval].checkpointTs <= _timestamp)
+            return (tokenInterval);
 
         // Check if the first balance is after the timestamp
         // this means that the first epoch has yet to start
-        if (_userPointHistory[_tokenId][1].ts > _timestamp) return 0;
+        if (_tokenPointHistory[_tokenId][1].checkpointTs > _timestamp) return 0;
 
         uint256 lower = 0;
-        uint256 upper = _userEpoch;
+        uint256 upper = tokenInterval;
         while (upper > lower) {
             uint256 center = upper - (upper - lower) / 2; // ceil, avoiding overflow
-            UserPoint storage userPoint = _userPointHistory[_tokenId][center];
-            if (userPoint.ts == _timestamp) {
+            TokenPoint storage tokenPoint = _tokenPointHistory[_tokenId][center];
+            if (tokenPoint.checkpointTs == _timestamp) {
                 return center;
-            } else if (userPoint.ts < _timestamp) {
+            } else if (tokenPoint.checkpointTs < _timestamp) {
                 lower = center;
             } else {
                 upper = center - 1;
@@ -248,18 +245,16 @@ contract QuadraticIncreasingEscrow is
     }
 
     function votingPowerAt(uint256 _tokenId, uint256 _t) external view returns (uint256) {
-        uint256 _epoch = _getPastUserPointIndex(_tokenId, _t);
+        uint256 interval = _getPastTokenPointInterval(_tokenId, _t);
 
         // epoch 0 is an empty point
-        if (_epoch == 0) return 0;
-        UserPoint memory lastPoint = _userPointHistory[_tokenId][_epoch];
+        if (interval == 0) return 0;
+        TokenPoint memory lastPoint = _tokenPointHistory[_tokenId][interval];
 
-        if (!_isWarm(_tokenId, _epoch, _t)) return 0;
-        uint256 timeElapsed = _t - lastPoint.ts;
+        if (!_isWarm(lastPoint)) return 0;
+        uint256 timeElapsed = _t - lastPoint.checkpointTs;
 
-        // in the increasing case, we don't allow changes to locks, so the ts and blk are
-        // equivalent to the start time of the lock
-        return getBias(timeElapsed, lastPoint.bias);
+        return _getBias(timeElapsed, lastPoint.coefficients);
     }
 
     /// @notice [NOT IMPLEMENTED] Calculate total voting power at some point in the past
@@ -284,7 +279,7 @@ contract QuadraticIncreasingEscrow is
 
     /// @notice Record gper-user data to checkpoints. Used by VotingEscrow system.
     /// @dev Curve finance style but just for users at this stage
-    /// @param _tokenId NFT token ID. No user checkpoint if 0
+    /// @param _tokenId NFT token ID.
     /// @param _newLocked New locked amount / end lock time for the user
     function _checkpoint(
         uint256 _tokenId,
@@ -294,37 +289,49 @@ contract QuadraticIncreasingEscrow is
         // this implementation doesn't yet support manual checkpointing
         if (_tokenId == 0) revert InvalidTokenId();
 
-        // instantiate a new, empty user point
-        UserPoint memory uNew;
+        // instantiate a new, empty token point
+        TokenPoint memory uNew;
         uint amount = _newLocked.amount;
         bool isExiting = amount == 0;
 
         if (!isExiting) {
-            uNew.coefficients = getCoefficients(amount);
+            int256[3] memory coefficients = _getCoefficients(amount);
             // for a new lock, write the base bias (elapsed == 0)
-            uNew.bias = getBias(0, amount);
+            uNew.coefficients = coefficients;
+            uNew.bias = _getBias(0, coefficients);
         }
         // write the new timestamp - in the case of an increasing curve
         // we align the checkpoint to the start of the upcoming deposit interval
         // to ensure global slope changes can be scheduled
         // NOTE: the above global functionality is not implemented in this version of the contracts
-        uNew.ts = _newLocked.start;
+        // safe to cast as .start is 48 bit unsigned
+        uNew.checkpointTs = uint128(_newLocked.start);
 
-        // check to see if we have an existing epoch for this token
-        uint256 userEpoch = userPointEpoch[_tokenId];
+        // log the written ts - this can be used to compute warmups and burn downs
+        uNew.writtenTs = block.timestamp.toUint128();
 
-        // If this is a new timestamp, increment the epoch
-        if (userEpoch == 0 || _userPointHistory[_tokenId][userEpoch].ts != uNew.ts) {
-            userPointEpoch[_tokenId] = ++userEpoch;
+        // check to see if we have an existing interval for this token
+        uint256 tokenInterval = tokenPointIntervals[_tokenId];
+
+        // if we don't have a point, we can write to the first interval
+        if (tokenInterval == 0) {
+            tokenPointIntervals[_tokenId] = ++tokenInterval;
+        }
+        // else we need to check the last point
+        else {
+            TokenPoint memory lastPoint = _tokenPointHistory[_tokenId][tokenInterval];
+
+            // can't do this: we can only write to same point or future
+            if (lastPoint.checkpointTs > uNew.checkpointTs) revert InvalidCheckpoint();
+
+            // if we're writing to a new point, increment the interval
+            if (lastPoint.checkpointTs != uNew.checkpointTs) {
+                tokenPointIntervals[_tokenId] = ++tokenInterval;
+            }
         }
 
-        // Record the new point and warmup period
-        _userPointHistory[_tokenId][userEpoch] = uNew;
-
-        // if the user is exiting, we don't need to set the warmup period
-        if (!isExiting) {
-            _userPointWarmup[_tokenId][userEpoch] = block.timestamp + warmupPeriod;
-        }
+        // Record the new point
+        _tokenPointHistory[_tokenId][tokenInterval] = uNew;
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -341,5 +348,5 @@ contract QuadraticIncreasingEscrow is
     function _authorizeUpgrade(address) internal virtual override auth(CURVE_ADMIN_ROLE) {}
 
     /// @dev gap for upgradeable contract
-    uint256[44] private __gap;
+    uint256[45] private __gap;
 }

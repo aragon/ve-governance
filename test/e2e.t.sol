@@ -15,10 +15,10 @@ import {MockERC20} from "@mocks/MockERC20.sol";
 import "./helpers/OSxHelpers.sol";
 
 import {Clock} from "@clock/Clock.sol";
-import {IEscrowCurveUserStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
+import {IEscrowCurveTokenStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
 import {IWithdrawalQueueErrors} from "src/escrow/increasing/interfaces/IVotingEscrowIncreasing.sol";
 import {IGaugeVote} from "src/voting/ISimpleGaugeVoter.sol";
-import {VotingEscrow, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams} from "src/voting/SimpleGaugeVoterSetup.sol";
+import {VotingEscrow, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams} from "src/voting/SimpleGaugeVoterSetup.sol";
 
 /**
  * This is going to be a simple E2E test that will build the contracts on Aragon and run a deposit / withdraw flow.
@@ -35,7 +35,7 @@ import {VotingEscrow, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, Si
  * - Queue a withdraw
  * - Withdraw
  */
-contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserStorage {
+contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveTokenStorage {
     MultisigSetup multisigSetup;
     SimpleGaugeVoterSetup voterSetup;
 
@@ -47,6 +47,7 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
     MockERC20 token;
 
     VotingEscrow ve;
+    Lock nftLock;
     QuadraticIncreasingEscrow curve;
     SimpleGaugeVoter voter;
     ExitQueue queue;
@@ -69,7 +70,7 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
 
     uint depositTime;
 
-    error MinLockNotReached(uint256 minLock, uint256 expected, uint256 actual);
+    error MinLockNotReached(uint256 tokenId, uint48 expected, uint48 actual);
 
     function testE2E() public {
         // clock reset
@@ -117,9 +118,12 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
             // reset votes to clear
             voter.reset(tokenId);
 
+            // approve the withdrawal
+            nftLock.approve(address(ve), tokenId);
+
             // can't queue because the min lock is not reached
             uint256 minLock = queue.timeToMinLock(tokenId);
-            uint256 expectedTime = 20 weeks - depositTime;
+            uint256 expectedTime = depositTime + 20 weeks;
             assertEq(minLock, expectedTime, "Min lock time incorrect");
 
             bytes memory err = abi.encodeWithSelector(
@@ -137,8 +141,8 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
             ve.beginWithdrawal(tokenId);
 
             // enter the queue
-            assertEq(ve.balanceOf(user), 0, "User should have no tokens");
-            assertEq(ve.balanceOf(address(ve)), 1, "VE should have the NFT");
+            assertEq(nftLock.balanceOf(user), 0, "User should have no tokens");
+            assertEq(nftLock.balanceOf(address(ve)), 1, "VE should have the NFT");
 
             // readjust the cached time
             atm = block.timestamp;
@@ -161,8 +165,8 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
             vm.warp(atm + 1 weeks);
             ve.withdraw(tokenId);
 
-            assertEq(ve.balanceOf(user), 0, "User not should have the token");
-            assertEq(ve.balanceOf(address(ve)), 0, "VE should not have the NFT");
+            assertEq(nftLock.balanceOf(user), 0, "User not should have the token");
+            assertEq(nftLock.balanceOf(address(ve)), 0, "VE should not have the NFT");
             assertEq(token.balanceOf(user), DEPOSIT, "User should have the tokens");
         }
         vm.stopPrank();
@@ -240,7 +244,7 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
 
         assertEq(voter.votingActive(), false, "Voting should not be active");
 
-        vm.warp(block.timestamp + 1 hours + 1);
+        vm.warp(block.timestamp + 1 weeks + 1 hours + 1);
 
         assertEq(voter.votingActive(), true, "Voting should be active");
     }
@@ -253,9 +257,9 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
         {
             token.approve(address(ve), DEPOSIT);
 
-            // warp to exactly the next epoch so that warmup math is easier
+            // warp to exactly 1 sec before the next epoch so that warmup math is easier
             uint expectedStart = clock.epochNextCheckpointTs();
-            vm.warp(expectedStart);
+            vm.warp(expectedStart - 1);
 
             // create the lock
             tokenId = ve.createLock(DEPOSIT);
@@ -266,8 +270,8 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
 
             // check the user owns the nft
             assertEq(tokenId, 1, "Token ID should be 1");
-            assertEq(ve.balanceOf(user), 1, "User should have 1 token");
-            assertEq(ve.ownerOf(tokenId), user, "User should own the token");
+            assertEq(nftLock.balanceOf(user), 1, "User should have 1 token");
+            assertEq(nftLock.ownerOf(tokenId), user, "User should own the token");
             assertEq(token.balanceOf(address(ve)), DEPOSIT, "VE should have the tokens");
             assertEq(token.balanceOf(user), 0, "User should have no tokens");
         }
@@ -275,23 +279,23 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
     }
 
     function _checkBalanceOverTime() internal {
-        uint start = block.timestamp;
+        uint start = block.timestamp + 1;
         // balance now is zero but Warm up
         assertEq(curve.votingPowerAt(tokenId, 0), 0, "Balance after deposit before warmup");
         assertEq(curve.isWarm(tokenId), false, "Should not be warm after 0 seconds");
 
-        // wait for warmup
-        vm.warp(block.timestamp + curve.warmupPeriod() - 1);
+        // wait for warmup - should be warm 1 second after
+        vm.warp(block.timestamp + curve.warmupPeriod());
         assertEq(curve.votingPowerAt(tokenId, 0), 0, "Balance after deposit before warmup");
         assertEq(curve.isWarm(tokenId), false, "Should not be warm yet");
 
-        // warmup complete
+        // warmup complete + 1
         vm.warp(block.timestamp + 1);
-        // python:    1067.784256559766831104
-        // solmate:   1067.784196491481599990
+        // solmate:   1067.784483312193384992
+        // python:    1067.784543380942056100
         assertEq(
             curve.votingPowerAt(tokenId, block.timestamp),
-            1067784196491481599990,
+            1067784196491481600000,
             "Balance incorrect after warmup"
         );
         assertEq(curve.isWarm(tokenId), true, "Still warming up");
@@ -300,9 +304,10 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
         vm.warp(start + clock.epochDuration());
         // python:     1428.571428571428683776
         // solmate:    1428.570120419660799763
+        // solmate(2): 1428.570120419660800000
         assertEq(
             curve.votingPowerAt(tokenId, block.timestamp),
-            1428570120419660799763,
+            1428570120419660800000,
             "Balance incorrect after p1"
         );
 
@@ -312,7 +317,7 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
         vm.warp(start + clock.epochDuration() * 5 + 30);
         assertEq(
             curve.votingPowerAt(tokenId, block.timestamp),
-            5999967296216703996928,
+            5999967296216704000000,
             "Balance incorrect after p6"
         );
     }
@@ -352,7 +357,8 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
             address(new QuadraticIncreasingEscrow()),
             address(new ExitQueue()),
             address(new VotingEscrow()),
-            address(new Clock())
+            address(new Clock()),
+            address(new Lock())
         );
 
         // push to the PSP
@@ -368,7 +374,8 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
                 warmup: 3 days,
                 cooldown: 3 days,
                 feePercent: 0,
-                minLock: 20 weeks
+                minLock: 20 weeks,
+                minDeposit: 1 ether
             })
         );
         (address pluginAddress, IPluginSetup.PreparedSetupData memory preparedSetupData) = psp
@@ -381,6 +388,7 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
         queue = ExitQueue(helpers[1]);
         ve = VotingEscrow(helpers[2]);
         clock = Clock(helpers[3]);
+        nftLock = Lock(helpers[4]);
 
         // set the permissions
         for (uint i = 0; i < preparedSetupData.permissions.length; i++) {
@@ -389,7 +397,7 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
     }
 
     function _actions() internal view returns (IDAO.Action[] memory) {
-        IDAO.Action[] memory actions = new IDAO.Action[](4);
+        IDAO.Action[] memory actions = new IDAO.Action[](5);
 
         // action 0: apply the ve installation
         actions[0] = IDAO.Action({
@@ -420,6 +428,12 @@ contract TestE2E is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveUserSt
             to: address(ve),
             value: 0,
             data: abi.encodeWithSelector(ve.setVoter.selector, address(voter))
+        });
+
+        actions[4] = IDAO.Action({
+            to: address(ve),
+            value: 0,
+            data: abi.encodeWithSelector(ve.setLockNFT.selector, address(nftLock))
         });
 
         return wrapGrantRevokeRoot(DAO(payable(address(dao))), address(psp), actions);

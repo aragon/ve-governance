@@ -18,15 +18,15 @@ import "@helpers/OSxHelpers.sol";
 
 import {Clock} from "@clock/Clock.sol";
 import {ISimpleGaugeVoterStorageEventsErrors} from "src/voting/ISimpleGaugeVoter.sol";
-import {IEscrowCurveUserStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
+import {IEscrowCurveTokenStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
 import {IWithdrawalQueueErrors} from "src/escrow/increasing/interfaces/IVotingEscrowIncreasing.sol";
 import {IGaugeVote} from "src/voting/ISimpleGaugeVoter.sol";
-import {VotingEscrow, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams} from "src/voting/SimpleGaugeVoterSetup.sol";
+import {VotingEscrow, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams} from "src/voting/SimpleGaugeVoterSetup.sol";
 
 contract GaugeVotingBase is
     Test,
     IGaugeVote,
-    IEscrowCurveUserStorage,
+    IEscrowCurveTokenStorage,
     ISimpleGaugeVoterStorageEventsErrors
 {
     using ProxyLib for address;
@@ -41,6 +41,7 @@ contract GaugeVotingBase is
     MockDAOFactory daoFactory;
     MockERC20 token;
 
+    Lock nftLock;
     VotingEscrow escrow;
     QuadraticIncreasingEscrow curve;
     SimpleGaugeVoter voter;
@@ -113,7 +114,8 @@ contract GaugeVotingBase is
             address(new QuadraticIncreasingEscrow()),
             address(new ExitQueue()),
             address(new VotingEscrow()),
-            address(new Clock())
+            address(new Clock()),
+            address(new Lock())
         );
 
         // push to the PSP
@@ -129,7 +131,8 @@ contract GaugeVotingBase is
                 warmup: 3 days,
                 cooldown: 3 days,
                 feePercent: 0,
-                minLock: 0
+                minLock: 1,
+                minDeposit: 1 wei
             })
         );
         (address pluginAddress, IPluginSetup.PreparedSetupData memory preparedSetupData) = psp
@@ -142,6 +145,7 @@ contract GaugeVotingBase is
         queue = ExitQueue(helpers[1]);
         escrow = VotingEscrow(helpers[2]);
         clock = Clock(helpers[3]);
+        nftLock = Lock(helpers[4]);
 
         // set the permissions
         for (uint i = 0; i < preparedSetupData.permissions.length; i++) {
@@ -150,7 +154,7 @@ contract GaugeVotingBase is
     }
 
     function _actions() internal view returns (IDAO.Action[] memory) {
-        IDAO.Action[] memory actions = new IDAO.Action[](8);
+        IDAO.Action[] memory actions = new IDAO.Action[](9);
 
         // action 0: apply the ve installation
         actions[0] = IDAO.Action({
@@ -183,8 +187,15 @@ contract GaugeVotingBase is
             data: abi.encodeWithSelector(escrow.setVoter.selector, address(voter))
         });
 
-        // for testing, give this contract the admin roles on all the periphery contracts
+        // action 5: set the nft lock
         actions[4] = IDAO.Action({
+            to: address(escrow),
+            value: 0,
+            data: abi.encodeWithSelector(escrow.setLockNFT.selector, address(nftLock))
+        });
+
+        // for testing, give this contract the admin roles on all the periphery contracts
+        actions[5] = IDAO.Action({
             to: address(dao),
             value: 0,
             data: abi.encodeCall(
@@ -193,7 +204,7 @@ contract GaugeVotingBase is
             )
         });
 
-        actions[5] = IDAO.Action({
+        actions[6] = IDAO.Action({
             to: address(dao),
             value: 0,
             data: abi.encodeCall(
@@ -202,7 +213,7 @@ contract GaugeVotingBase is
             )
         });
 
-        actions[6] = IDAO.Action({
+        actions[7] = IDAO.Action({
             to: address(dao),
             value: 0,
             data: abi.encodeCall(
@@ -211,7 +222,7 @@ contract GaugeVotingBase is
             )
         });
 
-        actions[7] = IDAO.Action({
+        actions[8] = IDAO.Action({
             to: address(dao),
             value: 0,
             data: abi.encodeCall(

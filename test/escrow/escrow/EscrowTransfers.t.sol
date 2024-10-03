@@ -9,12 +9,12 @@ import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
-import {IEscrowCurveUserStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
+import {IEscrowCurveTokenStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
 import {VotingEscrow} from "@escrow/VotingEscrowIncreasing.sol";
 
 import {SimpleGaugeVoter, SimpleGaugeVoterSetup} from "src/voting/SimpleGaugeVoterSetup.sol";
 
-contract TestEscrowTransfers is EscrowBase, IEscrowCurveUserStorage {
+contract TestEscrowTransfers is EscrowBase, IEscrowCurveTokenStorage {
     uint deposit = 100e18;
     uint tokenId;
 
@@ -26,28 +26,35 @@ contract TestEscrowTransfers is EscrowBase, IEscrowCurveUserStorage {
         token.approve(address(escrow), deposit);
         tokenId = escrow.createLock(deposit);
 
-        assertEq(escrow.balanceOf(address(this)), 1);
+        assertEq(nftLock.balanceOf(address(this)), 1);
     }
 
     function testCannotTransferByDefault() public {
         vm.expectRevert(NotWhitelisted.selector);
-        escrow.transferFrom(address(this), address(123), tokenId);
+        nftLock.transferFrom(address(this), address(123), tokenId);
 
         vm.expectRevert(NotWhitelisted.selector);
-        escrow.safeTransferFrom(address(this), address(123), tokenId);
+        nftLock.safeTransferFrom(address(this), address(123), tokenId);
     }
 
     function testCanTransferIfWhitelisted() public {
-        escrow.setWhitelisted(address(123), true);
+        nftLock.setWhitelisted(address(123), true);
 
-        assertEq(escrow.balanceOf(address(123)), 0);
-        assertEq(escrow.balanceOf(address(this)), 1);
+        assertEq(nftLock.balanceOf(address(123)), 0);
+        assertEq(nftLock.balanceOf(address(this)), 1);
 
-        escrow.transferFrom(address(this), address(123), tokenId);
+        nftLock.transferFrom(address(this), address(123), tokenId);
 
-        assertEq(escrow.balanceOf(address(123)), 1);
-        assertEq(escrow.balanceOf(address(this)), 0);
+        assertEq(nftLock.balanceOf(address(123)), 1);
+        assertEq(nftLock.balanceOf(address(this)), 0);
+    }
 
-        // todo - reset the voting power
+    function onERC721Received(
+        address,
+        address,
+        uint256,
+        bytes calldata
+    ) external pure returns (bytes4) {
+        return this.onERC721Received.selector;
     }
 }

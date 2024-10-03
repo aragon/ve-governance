@@ -24,6 +24,12 @@ contract ExitQueue is IExitQueue, IClockUser, DaoAuthorizable, UUPSUpgradeable {
     /// @notice role required to withdraw tokens from the escrow contract
     bytes32 public constant WITHDRAW_ROLE = keccak256("WITHDRAW_ROLE");
 
+    /// @dev 10_000 = 100%
+    uint16 private constant MAX_FEE_PERCENT = 10_000;
+
+    /// @notice the fee percent charged on withdrawals
+    uint256 public feePercent;
+
     /// @notice address of the escrow contract
     address public escrow;
 
@@ -31,14 +37,10 @@ contract ExitQueue is IExitQueue, IClockUser, DaoAuthorizable, UUPSUpgradeable {
     address public clock;
 
     /// @notice time in seconds between exit and withdrawal
-    uint256 public cooldown;
-
-    /// @notice the fee percent charged on withdrawals
-    /// @dev 1e18 = 100%
-    uint256 public feePercent;
+    uint48 public cooldown;
 
     /// @notice minimum time from the original lock date before one can enter the queue
-    uint256 public minLock;
+    uint48 public minLock;
 
     /// @notice tokenId => Ticket
     mapping(uint256 => Ticket) internal _queue;
@@ -55,11 +57,11 @@ contract ExitQueue is IExitQueue, IClockUser, DaoAuthorizable, UUPSUpgradeable {
     /// @param _dao address of the DAO that will be able to set the queue
     function initialize(
         address _escrow,
-        uint256 _cooldown,
+        uint48 _cooldown,
         address _dao,
         uint256 _feePercent,
         address _clock,
-        uint256 _minLock
+        uint48 _minLock
     ) external initializer {
         __DaoAuthorizableUpgradeable_init(IDAO(_dao));
         escrow = _escrow;
@@ -84,11 +86,11 @@ contract ExitQueue is IExitQueue, IClockUser, DaoAuthorizable, UUPSUpgradeable {
 
     /// @notice The exit queue manager can set the cooldown period
     /// @param _cooldown time in seconds between exit and withdrawal
-    function setCooldown(uint256 _cooldown) external auth(QUEUE_ADMIN_ROLE) {
+    function setCooldown(uint48 _cooldown) external auth(QUEUE_ADMIN_ROLE) {
         _setCooldown(_cooldown);
     }
 
-    function _setCooldown(uint256 _cooldown) internal {
+    function _setCooldown(uint48 _cooldown) internal {
         cooldown = _cooldown;
         emit CooldownSet(_cooldown);
     }
@@ -100,18 +102,20 @@ contract ExitQueue is IExitQueue, IClockUser, DaoAuthorizable, UUPSUpgradeable {
     }
 
     function _setFeePercent(uint256 _feePercent) internal {
-        if (_feePercent > 1e18) revert FeeTooHigh();
+        if (_feePercent > MAX_FEE_PERCENT) revert FeeTooHigh(MAX_FEE_PERCENT);
         feePercent = _feePercent;
         emit FeePercentSet(_feePercent);
     }
 
     /// @notice The exit queue manager can set the minimum lock time
     /// @param _minLock the minimum time from the original lock date before one can enter the queue
-    function setMinLock(uint256 _minLock) external auth(QUEUE_ADMIN_ROLE) {
+    /// @dev Min 1 second to prevent single block deposit-withdrawal attacks
+    function setMinLock(uint48 _minLock) external auth(QUEUE_ADMIN_ROLE) {
         _setMinLock(_minLock);
     }
 
-    function _setMinLock(uint256 _minLock) internal {
+    function _setMinLock(uint48 _minLock) internal {
+        if (_minLock == 0) revert MinLockOutOfBounds();
         minLock = _minLock;
         emit MinLockSet(_minLock);
     }
@@ -142,7 +146,7 @@ contract ExitQueue is IExitQueue, IClockUser, DaoAuthorizable, UUPSUpgradeable {
         if (_queue[_tokenId].holder != address(0)) revert AlreadyQueued();
 
         // get time to min lock and revert if it hasn't been reached
-        uint minLockTime = timeToMinLock(_tokenId);
+        uint48 minLockTime = timeToMinLock(_tokenId);
         if (minLockTime > block.timestamp) revert MinLockNotReached(_tokenId, minLock, minLockTime);
 
         uint exitDate = nextExitDate();
@@ -159,7 +163,7 @@ contract ExitQueue is IExitQueue, IClockUser, DaoAuthorizable, UUPSUpgradeable {
         uint cooldownExpiry = block.timestamp + cooldown;
 
         // if the next cp is after the cooldown, return the next cp
-        return nextCP >= cooldownExpiry ? nextCP : cooldownExpiry;
+        return nextCP > cooldownExpiry ? nextCP : cooldownExpiry;
     }
 
     /// @notice Exits the queue for that tokenID.
@@ -180,7 +184,7 @@ contract ExitQueue is IExitQueue, IClockUser, DaoAuthorizable, UUPSUpgradeable {
         if (feePercent == 0) return 0;
         uint underlyingBalance = IVotingEscrow(escrow).locked(_tokenId).amount;
         if (underlyingBalance == 0) revert NoLockBalance();
-        return (underlyingBalance * feePercent) / 1e18;
+        return (underlyingBalance * feePercent) / MAX_FEE_PERCENT;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -192,7 +196,7 @@ contract ExitQueue is IExitQueue, IClockUser, DaoAuthorizable, UUPSUpgradeable {
     function canExit(uint256 _tokenId) public view returns (bool) {
         Ticket memory ticket = _queue[_tokenId];
         if (ticket.holder == address(0)) return false;
-        return block.timestamp >= ticket.exitDate;
+        return block.timestamp > ticket.exitDate;
     }
 
     /// @return holder of a ticket for a given tokenId
@@ -204,8 +208,8 @@ contract ExitQueue is IExitQueue, IClockUser, DaoAuthorizable, UUPSUpgradeable {
         return _queue[_tokenId];
     }
 
-    function timeToMinLock(uint256 _tokenId) public view returns (uint256) {
-        uint256 lockStart = IVotingEscrow(escrow).locked(_tokenId).start;
+    function timeToMinLock(uint256 _tokenId) public view returns (uint48) {
+        uint48 lockStart = IVotingEscrow(escrow).locked(_tokenId).start;
         return lockStart + minLock;
     }
 
@@ -222,5 +226,5 @@ contract ExitQueue is IExitQueue, IClockUser, DaoAuthorizable, UUPSUpgradeable {
     /// @notice Internal method authorizing the upgrade of the contract via the [upgradeability mechanism for UUPS proxies](https://docs.openzeppelin.com/contracts/4.x/api/proxy#UUPSUpgradeable) (see [ERC-1822](https://eips.ethereum.org/EIPS/eip-1822)).
     function _authorizeUpgrade(address) internal virtual override auth(QUEUE_ADMIN_ROLE) {}
 
-    uint256[44] private __gap;
+    uint256[46] private __gap;
 }

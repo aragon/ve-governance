@@ -14,7 +14,7 @@ import {MockERC20} from "@mocks/MockERC20.sol";
 
 import "@helpers/OSxHelpers.sol";
 
-import {IEscrowCurveUserStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
+import {IEscrowCurveTokenStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
 import {IWithdrawalQueueErrors} from "src/escrow/increasing/interfaces/IVotingEscrowIncreasing.sol";
 import {IGaugeVote} from "src/voting/ISimpleGaugeVoter.sol";
 import {VotingEscrow, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams} from "src/voting/SimpleGaugeVoterSetup.sol";
@@ -166,6 +166,18 @@ contract TestGaugeManage is GaugeVotingBase {
         vm.expectEmit(true, false, false, true);
         emit GaugeMetadataUpdated(_gauge, newMetadata);
         voter.updateGaugeMetadata(_gauge, newMetadata);
+    }
+
+    function testFuzz_canUpdateGaugeMetadata(address _gauge, string calldata metadata) public {
+        vm.assume(_gauge != address(0));
+        voter.createGauge(_gauge, metadata);
+
+        assertEq(voter.getGauge(_gauge).metadataURI, metadata);
+
+        string memory newMetadata = "new metadata";
+        voter.updateGaugeMetadata(_gauge, newMetadata);
+
+        assertEq(voter.getGauge(_gauge).metadataURI, newMetadata);
     }
 
     // can pause votes and resets

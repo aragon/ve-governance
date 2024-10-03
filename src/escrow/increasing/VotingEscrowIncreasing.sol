@@ -4,16 +4,15 @@ pragma solidity ^0.8.17;
 // token interfaces
 import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import {IERC20MetadataUpgradeable as IERC20Metadata} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
-import {ERC721Upgradeable as ERC721} from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
-import {ERC721EnumerableUpgradeable as ERC721Enumerable} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
+import {IERC721EnumerableMintableBurnable as IERC721EMB} from "./interfaces/IERC721EMB.sol";
 
 // veGovernance
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {ISimpleGaugeVoter} from "@voting/ISimpleGaugeVoter.sol";
-import {IClockUser, IClock} from "@clock/IClock.sol";
+import {IClock} from "@clock/IClock.sol";
 import {IEscrowCurveIncreasing as IEscrowCurve} from "./interfaces/IEscrowCurveIncreasing.sol";
 import {IExitQueue} from "./interfaces/IExitQueue.sol";
-import {IVotingEscrowIncreasing as IVotingEscrow, ILockedBalanceIncreasing, IVotingEscrowCore, IDynamicVoter} from "./interfaces/IVotingEscrowIncreasing.sol";
+import {IVotingEscrowIncreasing as IVotingEscrow} from "./interfaces/IVotingEscrowIncreasing.sol";
 
 // libraries
 import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
@@ -27,11 +26,9 @@ import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/pl
 
 contract VotingEscrow is
     IVotingEscrow,
-    IClockUser,
     ReentrancyGuard,
     Pausable,
     DaoAuthorizable,
-    ERC721Enumerable,
     UUPSUpgradeable
 {
     using SafeERC20 for IERC20;
@@ -46,10 +43,6 @@ contract VotingEscrow is
     /// @notice Role required to withdraw underlying tokens from the contract
     bytes32 public constant SWEEPER_ROLE = keccak256("SWEEPER");
 
-    /// @dev enables transfers without whitelisting
-    address public constant WHITELIST_ANY_ADDRESS =
-        address(uint160(uint256(keccak256("WHITELIST_ANY_ADDRESS"))));
-
     /*//////////////////////////////////////////////////////////////
                               NFT Data
     //////////////////////////////////////////////////////////////*/
@@ -57,14 +50,24 @@ contract VotingEscrow is
     /// @notice Decimals of the voting power
     uint8 public constant decimals = 18;
 
+    /// @notice Minimum deposit amount
+    uint256 public minDeposit;
+
+    /// @notice Auto-incrementing ID for the most recently created lock, does not decrease on withdrawal
+    uint256 public lastLockId;
+
     /// @notice Total supply of underlying tokens deposited in the contract
     uint256 public totalLocked;
+
+    /// @dev tracks the locked balance of each NFT
+    mapping(uint256 => LockedBalance) private _locked;
 
     /*//////////////////////////////////////////////////////////////
                               Helper Contracts
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Address of the underying ERC20 token.
+    /// @dev Only tokens with 18 decimals and no transfer fees are supported
     address public token;
 
     /// @notice Address of the gauge voting contract.
@@ -80,25 +83,10 @@ contract VotingEscrow is
     /// @notice Address of the clock contract that manages epoch and voting periods
     address public clock;
 
-    /*//////////////////////////////////////////////////////////////
-                              Mappings
-    //////////////////////////////////////////////////////////////*/
+    /// @notice Address of the NFT contract that is the lock
+    address public lockNFT;
 
-    /// @notice Whitelisted contracts that are allowed to transfer
-    mapping(address => bool) public whitelisted;
-
-    /// @dev tracks the locked balance of each NFT
-    mapping(uint256 => LockedBalance) internal _locked;
-
-    /*//////////////////////////////////////////////////////////////
-                              ERC165
-    //////////////////////////////////////////////////////////////*/
-
-    function supportsInterface(
-        bytes4 _interfaceId
-    ) public view override(ERC721Enumerable) returns (bool) {
-        return super.supportsInterface(_interfaceId);
-    }
+    bool private _lockNFTSet;
 
     /*//////////////////////////////////////////////////////////////
                               Initialization
@@ -111,41 +99,23 @@ contract VotingEscrow is
     function initialize(
         address _token,
         address _dao,
-        string memory _name,
-        string memory _symbol,
-        address _clock
+        address _clock,
+        uint256 _initialMinDeposit
     ) external initializer {
         __DaoAuthorizableUpgradeable_init(IDAO(_dao));
         __ReentrancyGuard_init();
         __Pausable_init();
-        __ERC721_init(_name, _symbol);
 
         if (IERC20Metadata(_token).decimals() != 18) revert MustBe18Decimals();
         token = _token;
         clock = _clock;
-
-        // allow sending tokens to this contract
-        whitelisted[address(this)] = true;
-        emit WhitelistSet(address(this), true);
+        minDeposit = _initialMinDeposit;
+        emit MinDepositSet(_initialMinDeposit);
     }
 
     /*//////////////////////////////////////////////////////////////
                               Admin Setters
     //////////////////////////////////////////////////////////////*/
-
-    /// @notice Transfers disabled by default, only whitelisted addresses can receive transfers
-    function setWhitelisted(
-        address _account,
-        bool _isWhitelisted
-    ) external auth(ESCROW_ADMIN_ROLE) {
-        whitelisted[_account] = _isWhitelisted;
-        emit WhitelistSet(_account, _isWhitelisted);
-    }
-
-    function enableTransfers() external auth(ESCROW_ADMIN_ROLE) {
-        whitelisted[WHITELIST_ANY_ADDRESS] = true;
-        emit WhitelistSet(WHITELIST_ANY_ADDRESS, true);
-    }
 
     /// @notice Sets the curve contract that calculates the voting power
     function setCurve(address _curve) external auth(ESCROW_ADMIN_ROLE) {
@@ -167,6 +137,15 @@ contract VotingEscrow is
         clock = _clock;
     }
 
+    /// @notice Sets the NFT contract that is the lock
+    /// @dev By default this can only be set once due to the high risk of changing the lock
+    /// and having the ability to steal user funds.
+    function setLockNFT(address _nft) external auth(ESCROW_ADMIN_ROLE) {
+        if (_lockNFTSet) revert LockNFTAlreadySet();
+        lockNFT = _nft;
+        _lockNFTSet = true;
+    }
+
     function pause() external auth(PAUSER_ROLE) {
         _pause();
     }
@@ -175,22 +154,28 @@ contract VotingEscrow is
         _unpause();
     }
 
+    function setMinDeposit(uint256 _minDeposit) external auth(ESCROW_ADMIN_ROLE) {
+        minDeposit = _minDeposit;
+        emit MinDepositSet(_minDeposit);
+    }
+
     /*//////////////////////////////////////////////////////////////
                       Getters: ERC721 Functions
     //////////////////////////////////////////////////////////////*/
 
     function isApprovedOrOwner(address _spender, uint256 _tokenId) external view returns (bool) {
-        return _isApprovedOrOwner(_spender, _tokenId);
+        return IERC721EMB(lockNFT).isApprovedOrOwner(_spender, _tokenId);
     }
 
     /// @notice Fetch all NFTs owned by an address by leveraging the ERC721Enumerable interface
     /// @param _owner Address to query
     /// @return tokenIds Array of token IDs owned by the address
     function ownedTokens(address _owner) public view returns (uint256[] memory tokenIds) {
-        uint256 balance = balanceOf(_owner);
+        IERC721EMB enumerable = IERC721EMB(lockNFT);
+        uint256 balance = enumerable.balanceOf(_owner);
         uint256[] memory tokens = new uint256[](balance);
         for (uint256 i = 0; i < balance; i++) {
-            tokens[i] = tokenOfOwnerByIndex(_owner, i);
+            tokens[i] = enumerable.tokenOfOwnerByIndex(_owner, i);
         }
         return tokens;
     }
@@ -245,18 +230,6 @@ contract VotingEscrow is
     }
 
     /*//////////////////////////////////////////////////////////////
-                              ERC721 LOGIC
-    //////////////////////////////////////////////////////////////*/
-
-    /// @dev Override the transfer to check if the recipient is whitelisted
-    /// This avoids needing to check for mint/burn but is less idomatic than beforeTokenTransfer
-    function _transfer(address _from, address _to, uint256 _tokenId) internal override {
-        if (whitelisted[WHITELIST_ANY_ADDRESS] || whitelisted[_to]) {
-            super._transfer(_from, _to, _tokenId);
-        } else revert NotWhitelisted();
-    }
-
-    /*//////////////////////////////////////////////////////////////
                               ESCROW LOGIC
     //////////////////////////////////////////////////////////////*/
 
@@ -277,26 +250,33 @@ contract VotingEscrow is
     /// @param _to Address to deposit
     function _createLockFor(uint256 _value, address _to) internal returns (uint256) {
         if (_value == 0) revert ZeroAmount();
+        if (_value < minDeposit) revert AmountTooSmall();
 
         // query the duration lib to get the next time we can deposit
         uint256 startTime = IClock(clock).epochNextCheckpointTs();
 
         // increment the total locked supply and get the new tokenId
         totalLocked += _value;
-        uint256 newTokenId = totalSupply() + 1;
+        uint256 newTokenId = ++lastLockId;
 
         // write the lock and checkpoint the voting power
-        LockedBalance memory lock = LockedBalance(_value, startTime);
+        LockedBalance memory lock = LockedBalance(_value.toUint208(), startTime.toUint48());
         _locked[newTokenId] = lock;
 
         // we don't allow edits in this implementation, so only the new lock is used
         _checkpoint(newTokenId, lock);
 
+        uint256 balanceBefore = IERC20(token).balanceOf(address(this));
+
         // transfer the tokens into the contract
         IERC20(token).safeTransferFrom(_msgSender(), address(this), _value);
 
-        // mint the NFT to complete the deposit
-        _mint(_to, newTokenId);
+        // we currently don't support tokens that adjust balances on transfer
+        if (IERC20(token).balanceOf(address(this)) != balanceBefore + _value)
+            revert TransferBalanceIncorrect();
+
+        // mint the NFT before and emit the event to complete the lock
+        IERC721EMB(lockNFT).mint(_to, newTokenId);
         emit Deposit(_to, newTokenId, startTime, _value, totalLocked);
 
         return newTokenId;
@@ -318,7 +298,7 @@ contract VotingEscrow is
         IEscrowCurve(curve).checkpoint(
             _tokenId,
             LockedBalance(0, 0),
-            LockedBalance(0, checkpointClearTime)
+            LockedBalance(0, checkpointClearTime.toUint48())
         );
     }
 
@@ -339,13 +319,17 @@ contract VotingEscrow is
     function beginWithdrawal(uint256 _tokenId) public nonReentrant whenNotPaused {
         // can't exit if you have votes pending
         if (isVoting(_tokenId)) revert CannotExit();
-        address owner = _ownerOf(_tokenId);
+
+        // in the event of an increasing curve, 0 voting power means voting isn't active
+        if (votingPower(_tokenId) == 0) revert CannotExit();
+
+        address owner = IERC721EMB(lockNFT).ownerOf(_tokenId);
 
         // we can remove the user's voting power as it's no longer locked
         _checkpointClear(_tokenId);
 
-        // transfer NFT to the queue and queue the exit
-        _transfer(_msgSender(), address(this), _tokenId);
+        // transfer NFT to this and queue the exit
+        IERC721EMB(lockNFT).transferFrom(_msgSender(), address(this), _tokenId);
         IExitQueue(queue).queueExit(_tokenId, owner);
     }
 
@@ -374,7 +358,7 @@ contract VotingEscrow is
         totalLocked -= value;
 
         // Burn the NFT and transfer the tokens to the user
-        _burn(_tokenId);
+        IERC721EMB(lockNFT).burn(_tokenId);
         IERC20(token).safeTransfer(sender, value - fee);
 
         emit Withdraw(sender, _tokenId, value - fee, block.timestamp, totalLocked);
@@ -395,6 +379,21 @@ contract VotingEscrow is
         emit Sweep(_msgSender(), excess);
     }
 
+    /// @notice the sweeper can send NFTs mistakenly sent to the contract to a designated address
+    /// @param _tokenId the tokenId to sweep - must be currently in this contract
+    /// @param _to the address to send the NFT to - must be a whitelisted address for transfers
+    /// @dev Cannot sweep NFTs that are in the exit queue for obvious reasons
+    function sweepNFT(uint256 _tokenId, address _to) external nonReentrant auth(SWEEPER_ROLE) {
+        // if the token id is not in the contract, revert
+        if (IERC721EMB(lockNFT).ownerOf(_tokenId) != address(this)) revert NothingToSweep();
+
+        // if the token id is in the queue, we cannot sweep it
+        if (IExitQueue(queue).ticketHolder(_tokenId) != address(0)) revert CannotExit();
+
+        IERC721EMB(lockNFT).transferFrom(address(this), _to, _tokenId);
+        emit SweepNFT(_to, _tokenId);
+    }
+
     /*///////////////////////////////////////////////////////////////
                             UUPS Upgrade
     //////////////////////////////////////////////////////////////*/
@@ -409,5 +408,5 @@ contract VotingEscrow is
     function _authorizeUpgrade(address) internal virtual override auth(ESCROW_ADMIN_ROLE) {}
 
     /// @dev Reserved storage space to allow for layout changes in the future.
-    uint256[42] private __gap;
+    uint256[39] private __gap;
 }
