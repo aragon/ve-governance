@@ -519,9 +519,9 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
         }
 
         // carlos goes first and makes the first deposit, it's at the start of the
-        // week, so we would expect him to be warm by the end of the week if using <6 day
+        // week, so we would expect him to be warm after 1 week
         // we wait a couple of days and he makes a deposit for javi
-        // we expect his warmup to carryover to the next week
+        // we expect his warmup to carryover also to the next week
         // we expect both of their locks to start accruing voting power on the same day
         {
             goToEpochStartPlus(1 days);
@@ -611,11 +611,34 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
             // fast forward to the checkpoint interval carlos is warm and has voting power, javi is not
             goToEpochStartPlus(clock.checkpointInterval());
 
-            assertEq(escrow.votingPower(1), depositCarlos0, "Carlos should have voting power");
-            assertTrue(curve.isWarm(1), "Carlos should not be warm");
+            assertEq(escrow.votingPower(1), 0, "Carlos should not yet have voting power");
+            assertFalse(curve.isWarm(1), "Carlos should not be warm");
 
             assertEq(escrow.votingPower(2), 0, "Javi should not have the correct voting power");
             assertFalse(curve.isWarm(2), "Javi should not be warm");
+
+            // if we move to 1 week after carlos' deposit he should have the correct voting power
+            goToEpochStartPlus(1 weeks + 1 days);
+
+            assertEq(
+                escrow.votingPower(1),
+                0,
+                "Carlos should still be waiting after exactly 7 days"
+            );
+            assertFalse(curve.isWarm(1), "Carlos should not be warm after exactly 1 week");
+
+            // add 1 second
+            goToEpochStartPlus(1 weeks + 1 days + 1);
+
+            // check the voting power
+            // he's been accruing 1d + 1s
+            assertEq(
+                escrow.votingPower(1),
+                curve.getBias(1 days + 1, depositCarlos0),
+                "Carlos should have the correct voting power after 1 week + 1s"
+            );
+
+            assertTrue(curve.isWarm(1), "Carlos should be warm after 1 week + 1s");
         }
 
         // we fast forward 4 weeks and check the expected balances
@@ -676,6 +699,7 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
         }
         // we then fast forward 1 week and check that his voting power has increased as expected with the new lock
         {
+            // because of the 7d warmup we still will be 1s from warmth
             goToEpochStartPlus(5 weeks);
 
             // calculate elapsed time since we made the first lock
@@ -685,8 +709,21 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
             // elased time is zero so should be exactly equal to the bias
             assertEq(
                 escrow.votingPowerForAccount(carlos),
-                curve.getBias(timeElapsedSinceFirstLock, depositCarlos0) + depositCarlos1,
-                "Carlos should now have the correct aggregate voting power"
+                curve.getBias(timeElapsedSinceFirstLock, depositCarlos0),
+                "Carlos should still not have extra voting power"
+            );
+
+            // fast forward 1 second
+            goToEpochStartPlus(5 weeks + 1);
+
+            timeElapsedSinceFirstLock++;
+
+            // check the voting power
+            assertEq(
+                escrow.votingPowerForAccount(carlos),
+                curve.getBias(timeElapsedSinceFirstLock, depositCarlos0) +
+                    curve.getBias(1, depositCarlos1),
+                "Carlos should have the correct voting power after 5 weeks + 1s"
             );
         }
 
@@ -1027,7 +1064,7 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
             // exit date should be the next checkpoint
             assertEq(
                 queue.queue(1).exitDate,
-                epochStartTime + 8 weeks + clock.checkpointInterval(),
+                epochStartTime + 8 weeks + clock.checkpointInterval() + queue.cooldown(),
                 "Carlos should be able to exit at the next checkpoint"
             );
 
