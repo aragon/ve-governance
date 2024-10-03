@@ -61,7 +61,7 @@ ft-mode-fork :;  forge test --match-contract TestE2EV2 \
 	-vvvvv
 
 
-ft-holesky-fork :; forge test --match-test testLifeCycle \
-	--rpc-url https://mainnet.mode.network/ \
-	--fork-block-number 13848964 \
+ft-holesky-fork :; forge test --match-contract TestE2EV2 \
+	--rpc-url https://holesky.drpc.org \
+	--fork-block-number 2459459 \
 	-vvvvv
