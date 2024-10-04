@@ -64,4 +64,4 @@ ft-mode-fork :;  forge test --match-contract TestE2EV2 \
 ft-holesky-fork :; forge test --match-contract TestE2EV2 \
 	--rpc-url https://holesky.drpc.org \
 	--fork-block-number 2459459 \
-	-vvvvv
+	-vvv

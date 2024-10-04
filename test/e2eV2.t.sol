@@ -53,10 +53,14 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
     error VotingInactive();
     error OnlyEscrow();
     error GaugeDoesNotExist(address _pool);
+    error AmountTooSmall();
     error NotApprovedOrOwner();
     error NoVotingPower();
     error NotWhitelisted();
     error NothingToSweep();
+    error MinLockNotReached(uint256 tokenId, uint48 minLock, uint48 earliestExitDate);
+
+    uint constant MONTH = 2592000;
 
     GaugesDaoFactory factory;
 
@@ -530,6 +534,10 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
             {
                 token.approve(address(escrow), balanceCarlos);
 
+                // we also check he can't create too small a lock
+                vm.expectRevert(AmountTooSmall.selector);
+                escrow.createLock(100 ether - 1);
+
                 escrow.createLock(depositCarlos0);
 
                 goToEpochStartPlus(6 days);
@@ -552,7 +560,7 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
             assertEq(
                 tp1_1.checkpointTs,
                 epochStartTime + clock.checkpointInterval(),
-                "Carlos point should have the correct checkpoint"
+                "carlos point should have the correct checkpoint"
             );
             assertEq(
                 tp2_1.checkpointTs,
@@ -611,34 +619,33 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
             // fast forward to the checkpoint interval carlos is warm and has voting power, javi is not
             goToEpochStartPlus(clock.checkpointInterval());
 
-            assertEq(escrow.votingPower(1), 0, "Carlos should not yet have voting power");
-            assertFalse(curve.isWarm(1), "Carlos should not be warm");
+            assertEq(
+                escrow.votingPower(1),
+                curve.getBias(0, depositCarlos0),
+                "Carlos should not yet have voting power"
+            );
+            assertTrue(curve.isWarm(1), "Carlos should not be warm");
 
             assertEq(escrow.votingPower(2), 0, "Javi should not have the correct voting power");
             assertFalse(curve.isWarm(2), "Javi should not be warm");
+        }
 
-            // if we move to 1 week after carlos' deposit he should have the correct voting power
-            goToEpochStartPlus(1 weeks + 1 days);
+        // carlos can't even begin an exit because of the min lock
+        {
+            vm.startPrank(carlos);
+            {
+                lock.approve(address(escrow), 1);
 
-            assertEq(
-                escrow.votingPower(1),
-                0,
-                "Carlos should still be waiting after exactly 7 days"
-            );
-            assertFalse(curve.isWarm(1), "Carlos should not be warm after exactly 1 week");
+                TokenPoint memory tp1_1 = curve.tokenPointHistory(1, 1);
 
-            // add 1 second
-            goToEpochStartPlus(1 weeks + 1 days + 1);
+                uint expectedMinLock = tp1_1.checkpointTs + MONTH;
 
-            // check the voting power
-            // he's been accruing 1d + 1s
-            assertEq(
-                escrow.votingPower(1),
-                curve.getBias(1 days + 1, depositCarlos0),
-                "Carlos should have the correct voting power after 1 week + 1s"
-            );
-
-            assertTrue(curve.isWarm(1), "Carlos should be warm after 1 week + 1s");
+                vm.expectRevert(
+                    abi.encodeWithSelector(MinLockNotReached.selector, 1, MONTH, expectedMinLock)
+                );
+                escrow.beginWithdrawal(1);
+            }
+            vm.stopPrank();
         }
 
         // we fast forward 4 weeks and check the expected balances
@@ -699,7 +706,6 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
         }
         // we then fast forward 1 week and check that his voting power has increased as expected with the new lock
         {
-            // because of the 7d warmup we still will be 1s from warmth
             goToEpochStartPlus(5 weeks);
 
             // calculate elapsed time since we made the first lock
@@ -709,21 +715,8 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
             // elased time is zero so should be exactly equal to the bias
             assertEq(
                 escrow.votingPowerForAccount(carlos),
-                curve.getBias(timeElapsedSinceFirstLock, depositCarlos0),
-                "Carlos should still not have extra voting power"
-            );
-
-            // fast forward 1 second
-            goToEpochStartPlus(5 weeks + 1);
-
-            timeElapsedSinceFirstLock++;
-
-            // check the voting power
-            assertEq(
-                escrow.votingPowerForAccount(carlos),
-                curve.getBias(timeElapsedSinceFirstLock, depositCarlos0) +
-                    curve.getBias(1, depositCarlos1),
-                "Carlos should have the correct voting power after 5 weeks + 1s"
+                curve.getBias(timeElapsedSinceFirstLock, depositCarlos0) + depositCarlos1,
+                "Carlos should have extra voting power"
             );
         }
 
@@ -736,7 +729,13 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
                     vm.expectRevert(OnlyEscrow.selector);
                     queue.queueExit(i, jordan);
 
-                    vm.expectRevert(erc721ownererr);
+                    // lingering permissions from carlos' approval
+                    if (i == 1) {
+                        vm.expectRevert(bytes("ERC721: transfer from incorrect owner"));
+                    } else {
+                        vm.expectRevert(erc721ownererr);
+                    }
+
                     escrow.beginWithdrawal(i);
                 }
             }
@@ -1061,10 +1060,11 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
             assertEq(lock.ownerOf(1), address(escrow), "Carlos should not own the nft");
             assertEq(queue.queue(1).holder, carlos, "Carlos should be in the queue");
 
-            // exit date should be the next checkpoint
+            // expected exit date is:
+            // now + cooldown given that it crosses the cp boundary
             assertEq(
                 queue.queue(1).exitDate,
-                epochStartTime + 8 weeks + clock.checkpointInterval() + queue.cooldown(),
+                epochStartTime + 8 weeks + 1 hours + queue.cooldown(),
                 "Carlos should be able to exit at the next checkpoint"
             );
 
@@ -1089,16 +1089,15 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
                 vm.expectRevert(CannotExit.selector);
                 escrow.withdraw(1);
 
-                // he waits till the end of the week to exit
-                goToEpochStartPlus(9 weeks);
+                // go to cooldown end
+                goToEpochStartPlus(8 weeks + 1 hours + MONTH);
 
                 // can't exit yet
                 vm.expectRevert(CannotExit.selector);
                 escrow.withdraw(1);
 
-                // + 1s he can
-
-                goToEpochStartPlus(9 weeks + 1);
+                // + 1s he can (1738616401)
+                goToEpochStartPlus(8 weeks + 1 hours + MONTH + 1);
 
                 escrow.withdraw(1);
             }
@@ -1117,6 +1116,9 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
                 depositCarlos1 + depositCarlosJavi + balanceJordi,
                 "Total locked should be the sum of the two deposits"
             );
+
+            // there are no fees in our contract
+            assertEq(token.balanceOf(address(queue)), 0, "Queue should have no fees");
         }
 
         // governance changes some params: warmup is now one day, cooldown is a week
@@ -1283,8 +1285,8 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
 
         // we get all the guys to exit and unwind their positions
         {
-            // warp to a voting window
-            goToEpochStartPlus(12 weeks + 2 hours);
+            // warp to a voting window - must pass the min lock
+            goToEpochStartPlus(16 weeks + 2 hours);
 
             vm.startPrank(carlos);
             {
@@ -1303,8 +1305,8 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
             }
             vm.stopPrank();
 
-            // fast forward like 5 weeks
-            goToEpochStartPlus(16 weeks);
+            // fast forward a month
+            goToEpochStartPlus(16 weeks + 2 hours + MONTH);
 
             // carlos exits
             vm.startPrank(carlos);
