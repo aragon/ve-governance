@@ -43,6 +43,20 @@ deploy-mode :; forge script script/Deploy.s.sol:Deploy \
 	--etherscan-api-key $(ETHERSCAN_API_KEY) \
 	-vvv
 
+deploy-preview-holesky :; forge script script/Deploy.s.sol:Deploy \
+	--rpc-url https://holesky.drpc.org \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	-vvvvv
+
+
+deploy-holesky :; forge script script/Deploy.s.sol:Deploy \
+	--rpc-url https://holesky.drpc.org \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	--broadcast \
+	--verify \
+	--etherscan-api-key $(ETHERSCAN_API_KEY) \
+	-vvv
+
 # Fork testing
 ft-mode-sepolia-fork :; forge test --match-contract TestE2EV2 \
 	--rpc-url https://sepolia.mode.network \
@@ -63,7 +77,7 @@ ft-mode-fork :;  forge test --match-contract TestE2EV2 \
 
 ft-holesky-fork :; forge test --match-contract TestE2EV2 \
 	--rpc-url https://holesky.drpc.org \
-	--fork-block-number 2459459 \
+	--fork-block-number 2464835 \
 	-vvvvv
 
 ft-mainnet-fork :; forge test --match-contract TestE2EV2 \
