@@ -57,6 +57,20 @@ deploy-holesky :; forge script script/Deploy.s.sol:Deploy \
 	--etherscan-api-key $(ETHERSCAN_API_KEY) \
 	-vvv
 
+deploy-preview-sepolia :; forge script script/Deploy.s.sol:Deploy \
+	--rpc-url https://1rpc.io/sepolia \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	-vvvvv
+
+
+deploy-sepolia :; forge script script/Deploy.s.sol:Deploy \
+	--rpc-url https://1rpc.io/sepolia \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	--broadcast \
+	--verify \
+	--etherscan-api-key $(ETHERSCAN_API_KEY) \
+	-vvvvv
+
 # Fork testing
 ft-mode-sepolia-fork :; forge test --match-contract TestE2EV2 \
 	--rpc-url https://sepolia.mode.network \
