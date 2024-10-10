@@ -15,6 +15,12 @@ coverage:; ./coverage.sh
 # init the repo
 install :; make allow-scripts && make coverage
 
+# tests
+
+test-unit :; forge test --no-match-contract "TestE2EV2" -w 
+tu :; make test-unit
+
+
 # deployments
 deploy-preview-mode-sepolia :; forge script script/Deploy.s.sol:Deploy \
   --rpc-url https://sepolia.mode.network \
