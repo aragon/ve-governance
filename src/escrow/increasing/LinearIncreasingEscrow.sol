@@ -5,7 +5,7 @@ pragma solidity ^0.8.17;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {IVotingEscrowIncreasing as IVotingEscrow} from "@escrow-interfaces/IVotingEscrowIncreasing.sol";
-import {IEscrowCurveIncreasing as IEscrowCurve} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
+import {IEscrowCurveIncreasingGlobal as IEscrowCurve} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
 import {IClockUser, IClock} from "@clock/IClock.sol";
 
 // libraries
@@ -18,6 +18,8 @@ import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {ReentrancyGuardUpgradeable as ReentrancyGuard} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
+
+import {console2 as console} from "forge-std/console2.sol";
 
 /// @title Linear Increasing Escrow
 contract LinearIncreasingEscrow is

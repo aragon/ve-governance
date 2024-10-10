@@ -143,6 +143,7 @@ interface IEscrowCurveIncreasing is
     IEscrowCurveCore,
     IEscrowCurveMath,
     IEscrowCurveToken,
-    IWarmup,
-    IEscrowCurveGlobal
+    IWarmup
 {}
+
+interface IEscrowCurveIncreasingGlobal is IEscrowCurveIncreasing, IEscrowCurveGlobal {}

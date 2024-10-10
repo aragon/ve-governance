@@ -54,18 +54,6 @@ contract QuadraticIncreasingEscrow is
     /// This implementation means that very short intervals may be challenging
     mapping(uint256 => TokenPoint[1_000_000_000]) internal _tokenPointHistory;
 
-    /// ADDED v0.1.1
-
-    mapping(uint => GlobalPoint) private _pointHistory;
-
-    uint256 private _latestPointIndex;
-
-    mapping(uint48 => int256[3]) private _scheduledCurveChanges;
-
-    function pointHistory(uint256 _loc) external view returns (GlobalPoint memory) {
-        return _pointHistory[_loc];
-    }
-
     /*//////////////////////////////////////////////////////////////
                                 MATH
     //////////////////////////////////////////////////////////////*/
@@ -255,6 +243,7 @@ contract QuadraticIncreasingEscrow is
         }
         return lower;
     }
+
     function votingPowerAt(uint256 _tokenId, uint256 _t) external view returns (uint256) {
         uint256 interval = _getPastTokenPointInterval(_tokenId, _t);
 
@@ -288,59 +277,21 @@ contract QuadraticIncreasingEscrow is
         _checkpoint(_tokenId, _oldLocked, _newLocked);
     }
 
-    function _checkpoint(
-        uint256 _tokenId,
-        IVotingEscrow.LockedBalance memory _oldLocked,
-        IVotingEscrow.LockedBalance memory _newLocked
-    ) internal {
-        if (_tokenId == 0) revert InvalidTokenId();
-        bool isIncreasing = _newLocked.amount > _oldLocked.amount && _oldLocked.amount != 0;
-        if (isIncreasing) revert IncreaseNotSupported();
-        if (_newLocked.amount == _oldLocked.amount) revert SameDepositsNotSupported();
-
-        // write the token checkpoint
-        (TokenPoint memory oldTokenPoint, TokenPoint memory newTokenPoint) = _tokenCheckpoint(
-            _tokenId,
-            _oldLocked,
-            _newLocked
-        );
-
-        // update our schedules
-        _scheduleCurveChanges(oldTokenPoint, newTokenPoint, _oldLocked, _newLocked);
-
-        // backpop the history
-        (GlobalPoint memory latestPoint, uint256 latestIndex) = _populateHistory();
-
-        // update with the latest token point
-        // this only should happen with a decrease because we don't currently support increases
-        // if we wrote into the future, we don't need to update the current state as hasn't taken place yet
-        if (newTokenPoint.checkpointTs == latestPoint.ts) {
-            latestPoint = _applyTokenUpdateToGlobal(
-                oldTokenPoint,
-                newTokenPoint,
-                latestPoint,
-                isIncreasing
-            );
-            // write the new global point
-            _writeNewGlobalPoint(latestPoint, latestIndex);
-        }
-    }
-
     /// @notice Record gper-user data to checkpoints. Used by VotingEscrow system.
     /// @dev Curve finance style but just for users at this stage
     /// @param _tokenId NFT token ID.
     /// @param _newLocked New locked amount / end lock time for the user
-    function _tokenCheckpoint(
+    function _checkpoint(
         uint256 _tokenId,
-        IVotingEscrow.LockedBalance memory _oldLocked,
+        IVotingEscrow.LockedBalance memory /* _oldLocked */,
         IVotingEscrow.LockedBalance memory _newLocked
-    ) internal returns (TokenPoint memory oldPoint, TokenPoint memory newPoint) {
+    ) internal {
+        // this implementation doesn't yet support manual checkpointing
+        if (_tokenId == 0) revert InvalidTokenId();
+
         // instantiate a new, empty token point
         TokenPoint memory uNew;
-
         uint amount = _newLocked.amount;
-
-        // while the escrow has no way to decrease, we should adjust this
         bool isExiting = amount == 0;
 
         if (!isExiting) {
@@ -349,48 +300,27 @@ contract QuadraticIncreasingEscrow is
             uNew.coefficients = coefficients;
             uNew.bias = _getBias(0, coefficients);
         }
-
-        // check to see if we have an existing interval for this token
-        uint256 tokenInterval = tokenPointIntervals[_tokenId];
-
-        // if we don't have a point, we can write to the first interval
-        TokenPoint memory lastPoint;
-        if (tokenInterval == 0) {
-            tokenPointIntervals[_tokenId] = ++tokenInterval;
-        } else {
-            lastPoint = _tokenPointHistory[_tokenId][tokenInterval];
-        }
-
-        // This needs careful thought and testing
-        // we would need to evaluate the slope and bias based on the change and recompute
-        // based on the elapsed time
-        // but we need to be hyper-aware as to whether we are reducing NOW
-        // or in the futre
-        bool isReducing = !isExiting && _newLocked.amount < _oldLocked.amount;
-        if (isReducing) {
-            // our challenge here is writing a new point if the start date is in the future.
-            // say we do a reduction
-            if (_newLocked.start > block.timestamp) revert("scheduled reductions unsupported");
-
-            // get the elapsed time
-            uint48 elapsed = _newLocked.start - _oldLocked.start;
-            int256[3] memory coefficients = _getCoefficients(amount);
-            // eval the bias vs the old lock and start the new one
-            uNew.coefficients = coefficients;
-            uNew.bias = _getBias(elapsed, lastPoint.coefficients);
-        }
-
         // write the new timestamp - in the case of an increasing curve
         // we align the checkpoint to the start of the upcoming deposit interval
         // to ensure global slope changes can be scheduled
+        // NOTE: the above global functionality is not implemented in this version of the contracts
         // safe to cast as .start is 48 bit unsigned
         uNew.checkpointTs = uint128(_newLocked.start);
 
         // log the written ts - this can be used to compute warmups and burn downs
         uNew.writtenTs = block.timestamp.toUint128();
 
-        // else we need to check the last point
+        // check to see if we have an existing interval for this token
+        uint256 tokenInterval = tokenPointIntervals[_tokenId];
+
+        // if we don't have a point, we can write to the first interval
         if (tokenInterval == 0) {
+            tokenPointIntervals[_tokenId] = ++tokenInterval;
+        }
+        // else we need to check the last point
+        else {
+            TokenPoint memory lastPoint = _tokenPointHistory[_tokenId][tokenInterval];
+
             // can't do this: we can only write to same point or future
             if (lastPoint.checkpointTs > uNew.checkpointTs) revert InvalidCheckpoint();
 
@@ -400,193 +330,8 @@ contract QuadraticIncreasingEscrow is
             }
         }
 
-        // Record the new point (or overwrite the old one)
+        // Record the new point
         _tokenPointHistory[_tokenId][tokenInterval] = uNew;
-
-        return (lastPoint, uNew);
-    }
-
-    // there are 2 cases here:
-    // 1. we are increasing or creating a new deposit - in the increasing case this mandates waiting for the next checkpoint so that
-    // we can't game the system. The lock starts at the next cp and the scheduled change is written to the max duration
-    // 2. we are decreasing or exiting a deposit - in this case we can write the change immediately and fetch the associated scheduled change
-    // based on the start of the lock
-    // TODO this only works given certain assumptions
-    // 1. new deposits cleanly snap to checkpoints in the future
-    // 2. if oldLocked.amount < newLockedAmount, we are removing tokens
-    // in the event they are the same, this is currently undefined
-    function _scheduleCurveChanges(
-        TokenPoint memory _oldPoint,
-        TokenPoint memory _newPoint,
-        IVotingEscrow.LockedBalance memory _oldLocked,
-        IVotingEscrow.LockedBalance memory _newLocked
-    ) internal {
-        if (_newLocked.amount == _oldLocked.amount) revert("same deposits not supported");
-        // only fresh meat
-        if (_newLocked.amount > _oldLocked.amount && _oldLocked.amount != 0)
-            revert("increase not supported");
-
-        // step 1: we need to know if we are increasing or decreasing
-        bool isExiting = _newLocked.amount == 0;
-        bool isRemoving = isExiting || _newLocked.amount < _oldLocked.amount;
-
-        if (isRemoving) {
-            // fetch the original lock start and the max time
-            uint48 originalStart = _oldLocked.start;
-            uint48 scheduledMax = _newLocked.start + _maxTime().toUint48();
-
-            // if we are past the max time, there's no further curve adjustements as they've already happened
-            if (scheduledMax < block.timestamp) {
-                return;
-            }
-
-            // the scheduled curve change at the max is a decrease
-            _scheduledCurveChanges[scheduledMax][1] += _oldPoint.coefficients[1];
-
-            // if the new locked is not zero then we need to make the new adjustment here
-            if (!isExiting) {
-                _scheduledCurveChanges[scheduledMax][1] -= _newPoint.coefficients[1];
-            }
-
-            // if the start date has happened, we are all accounted for
-            if (originalStart < block.timestamp) {
-                return;
-            }
-
-            // else remove the scheduled curve changes and biases
-            _scheduledCurveChanges[originalStart][0] -= _oldPoint.coefficients[0]; // this was an increase
-            _scheduledCurveChanges[originalStart][1] -= _oldPoint.coefficients[1]; // this was an increase
-
-            // replace with the adjustment
-            if (!isExiting) {
-                _scheduledCurveChanges[originalStart][0] += _newPoint.coefficients[0];
-                _scheduledCurveChanges[originalStart][1] += _newPoint.coefficients[1];
-            }
-        }
-        // this is a new deposit so needs to be scheduled
-        else {
-            // new locks start in the future, so we schedule the diffs here
-            _scheduledCurveChanges[_newLocked.start][0] += _newPoint.coefficients[0];
-            _scheduledCurveChanges[_newLocked.start][1] += _newPoint.coefficients[1];
-
-            // write the scheduled coeff reduction at the max duration
-            uint48 scheduledMax = _newLocked.start + _maxTime().toUint48();
-            _scheduledCurveChanges[scheduledMax][1] -= _newPoint.coefficients[1];
-        }
-    }
-
-    // fetch our latest global point
-    // in the base case initialise from zero but set the timestamp to the current block time
-    function getLatestGlobalPoint() public view returns (GlobalPoint memory latestPoint) {
-        if (_latestPointIndex == 0) {
-            latestPoint.ts = uint48(block.timestamp);
-            return latestPoint;
-        } else {
-            return _pointHistory[_latestPointIndex];
-        }
-    }
-    /// @dev iterates over the interval and looks for scheduled changes that have elapsed
-    ///
-    function _populateHistory() internal returns (GlobalPoint memory, uint256 latestIndex) {
-        GlobalPoint memory latestPoint = getLatestGlobalPoint();
-
-        uint48 interval = uint48(IClock(clock).checkpointInterval());
-        uint48 latestCheckpoint = uint48(latestPoint.ts);
-        uint currentIndex = _latestPointIndex;
-
-        {
-            // step 1: round down to floor of interval
-            uint48 t_i = (latestCheckpoint / interval) * interval;
-            for (uint256 i = 0; i < 255; ++i) {
-                // step 2: the first interval is always the next one after the last checkpoint
-                t_i += interval;
-
-                // bound to at least the present
-                if (t_i > block.timestamp) t_i = uint48(block.timestamp);
-
-                // we create a new "curve" by defining the coefficients starting from time t_i
-
-                // our constant is the y intercept at t_i and is found by evalutating the curve between the last point and t_i
-                // todo: this aint really a coefficient is it?
-                // it's just the bias
-                // todo safe casting
-                latestPoint.coefficients[0] =
-                    // evaluate the bias between the latest point and t_i
-                    int256(_getBias(t_i - latestPoint.ts, latestPoint.coefficients)) +
-                    // add net scheduled increases
-                    _scheduledCurveChanges[t_i][0];
-
-                // here we add the net result of the coefficient changes to the slope
-                // this can be positive or negative depending on if new deposits outweigh tapering effects + withdrawals
-                latestPoint.coefficients[1] += _scheduledCurveChanges[t_i][1];
-
-                // we create a new "curve" by defining the coefficients starting from time t_i
-                latestPoint.ts = t_i;
-
-                // optimise: quadratics are not supported so this needs to go
-                if (SHARED_QUADRATIC_COEFFICIENT != 0) {
-                    revert("Quadratics not supported for global points");
-                }
-
-                // write the point to storage if it's in the past
-                // otherwise we haven't reached an interval and so can just return the point
-                currentIndex++;
-                if (t_i == block.timestamp) break;
-                else _pointHistory[currentIndex] = latestPoint;
-            }
-        }
-
-        return (latestPoint, currentIndex);
-    }
-
-    function _applyTokenUpdateToGlobal(
-        TokenPoint memory _oldPoint,
-        TokenPoint memory _newPoint,
-        GlobalPoint memory _latestPoint,
-        bool isIncreasing
-    ) internal view returns (GlobalPoint memory) {
-        // here we are changing the voting power immediately.
-        // in the schedulling function, we have already diffed the scheduled changes
-
-        // we don't support increasing
-        if (isIncreasing) revert("Increasing unsupported");
-
-        // should never happen that the checkpoint is in the future
-        // this should be handled by scheulling function
-        if (_newPoint.checkpointTs > block.timestamp) revert("removing in the future");
-
-        // meaning we just, now need to write the update
-
-        // 1. The curve should be backfilled up to the present
-        if (_latestPoint.ts != block.timestamp) revert("point not up to date");
-
-        // we remove the bias from the constant term. The bias was evaluated in the newPoint
-        // TODO Safecast
-        _latestPoint.coefficients[0] -= int256(_newPoint.bias);
-
-        // the immediate reduction is slope requires removing the old and adding the new
-        _latestPoint.coefficients[1] -= _oldPoint.coefficients[1];
-        _latestPoint.coefficients[1] += _newPoint.coefficients[1];
-
-        return _latestPoint;
-    }
-
-    function _writeNewGlobalPoint(GlobalPoint memory _latestPoint, uint256 _index) internal {
-        // If timestamp of latest global point is the same, overwrite the latest global point
-        // Else record the new global point into history
-        // Exclude index 0 (note: _index is always >= 1, see above)
-        // Two possible outcomes:
-        // Missing global checkpoints in prior weeks. In this case, _index = index + x, where x > 1
-        // No missing global checkpoints, but timestamp != block.timestamp. Create new checkpoint.
-        // No missing global checkpoints, but timestamp == block.timestamp. Overwrite _latest checkpoint.
-        if (_index != 1 && _pointHistory[_index - 1].ts == block.timestamp) {
-            // _index = index + 1, so we do not increment index
-            _pointHistory[_index - 1] = _latestPoint;
-        } else {
-            // more than one global point may have been written, so we update index
-            _latestPointIndex = _index;
-            _pointHistory[_index] = _latestPoint;
-        }
     }
 
     /*///////////////////////////////////////////////////////////////
