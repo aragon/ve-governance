@@ -16,6 +16,7 @@ solc = "0.8.17"
 src = "src"
 test = "test"
 verbosity = 3
+evm_version = "shanghai"
 
 [profile.ci]
 fuzz = { runs = 10_000 }
@@ -34,6 +35,3 @@ polygon = "https://polygon-mainnet.infura.io/v3/${API_KEY_INFURA}"
 sepolia = "https://sepolia.infura.io/v3/${API_KEY_INFURA}"
 
 
-[profile.mode_sepolia_test]
-rpc_url = "https://sepolia.mode.network"
-fork_block_number = 19911297
