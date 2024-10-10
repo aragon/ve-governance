@@ -6,6 +6,7 @@ bytecode_hash = "none"
 cbor_metadata = false
 fuzz = { runs = 256 }
 gas_reports = ["*"]
+fs_permissions = [{ access = "read", path = "./script" }]
 libs = ["lib"]
 optimizer = true
 optimizer_runs = 10_000
@@ -15,6 +16,7 @@ solc = "0.8.17"
 src = "src"
 test = "test"
 verbosity = 3
+evm_version = "shanghai"
 
 [profile.ci]
 fuzz = { runs = 10_000 }
@@ -31,3 +33,5 @@ mainnet = "https://mainnet.infura.io/v3/${API_KEY_INFURA}"
 optimism = "https://optimism-mainnet.infura.io/v3/${API_KEY_INFURA}"
 polygon = "https://polygon-mainnet.infura.io/v3/${API_KEY_INFURA}"
 sepolia = "https://sepolia.infura.io/v3/${API_KEY_INFURA}"
+
+
