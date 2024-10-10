@@ -67,9 +67,19 @@ interface IEscrowCurveToken is IEscrowCurveTokenStorage {
 interface IEscrowCurveErrorsAndEvents {
     error InvalidTokenId();
     error InvalidCheckpoint();
+    error IncreaseNotSupported();
+    error SameDepositsNotSupported();
 }
 
-interface IEscrowCurveCore is IEscrowCurveErrorsAndEvents {
+interface IEscrowCurveIndex {
+    enum Coefficient {
+        Constant,
+        Linear,
+        Quadratic
+    }
+}
+
+interface IEscrowCurveCore is IEscrowCurveIndex, IEscrowCurveErrorsAndEvents {
     /// @notice Get the current voting power for `_tokenId`
     /// @dev Adheres to the ERC20 `balanceOf` interface for Aragon compatibility
     ///      Fetches last token point prior to a certain timestamp, then walks forward to timestamp.
@@ -133,5 +143,6 @@ interface IEscrowCurveIncreasing is
     IEscrowCurveCore,
     IEscrowCurveMath,
     IEscrowCurveToken,
-    IWarmup
+    IWarmup,
+    IEscrowCurveGlobal
 {}
