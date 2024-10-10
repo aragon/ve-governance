@@ -105,11 +105,6 @@ contract LinearIncreasingEscrow is
                               CURVE COEFFICIENTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @return The coefficient for the quadratic term of the quadratic curve, for the given amount
-    function _getQuadraticCoeff(uint256 amount) internal pure returns (int256) {
-        return (SignedFixedPointMath.toFP(amount.toInt256()).mul(SHARED_QUADRATIC_COEFFICIENT));
-    }
-
     /// @return The coefficient for the linear term of the quadratic curve, for the given amount
     function _getLinearCoeff(uint256 amount) internal pure returns (int256) {
         return (SignedFixedPointMath.toFP(amount.toInt256())).mul(SHARED_LINEAR_COEFFICIENT);
@@ -552,7 +547,7 @@ contract LinearIncreasingEscrow is
         // User is reducing, not exiting
         if (_newPoint.bias > 0) {
             // Add the new user's bias back to the global bias
-            _latestPoint.coefficients[0] += _newPoint.bias;
+            _latestPoint.coefficients[0] += int256(_newPoint.bias);
         }
 
         // the immediate reduction is slope requires removing the old and adding the new
