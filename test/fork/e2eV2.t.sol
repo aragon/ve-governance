@@ -9,7 +9,7 @@ import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
 import {UUPSUpgradeable as UUPS} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
-import "./helpers/OSxHelpers.sol";
+import "../helpers/OSxHelpers.sol";
 
 import {Clock} from "@clock/Clock.sol";
 import {IEscrowCurveTokenStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
@@ -1310,7 +1310,7 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
     //////////////////////////////////////////////////////////////*/
 
     function _getTestMode() internal view returns (TestMode) {
-        string memory mode = vm.envString("TEST_MODE");
+        string memory mode = vm.envString("FORK_TEST_MODE");
         if (keccak256(abi.encodePacked(mode)) == keccak256(abi.encodePacked("fork-deploy"))) {
             return TestMode.ForkDeploy;
         } else if (
@@ -1318,7 +1318,7 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
         ) {
             return TestMode.ForkExisting;
         } else if (keccak256(abi.encodePacked(mode)) == keccak256(abi.encodePacked("local"))) {
-            return TestMode.Local;
+            revert("Local mode not yet supported");
         } else {
             revert("Invalid test mode - valid options are fork-deploy, fork-existing, local");
         }
@@ -1388,21 +1388,11 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
     }
 
     /// depending on the network, we need different approaches to mint tokens
-    /// on a fork
     function _resolveMintTokens() internal returns (bool) {
+        // if deploying a mock, mint will be open
         try token.mint(address(distributor), 3_000 ether) {
             return true;
         } catch {}
-
-        // next check if ownable - we can spoof this
-        (bool success, bytes memory data) = address(token).call(abi.encodeWithSignature("owner()"));
-
-        if (success) {
-            address owner = abi.decode(data, (address));
-            vm.prank(owner);
-            token.mint(address(distributor), 3_000 ether);
-            return true;
-        }
 
         // next we just try a good old fashioned find a whale and rug them in the test
         address whale = vm.envAddress("TOKEN_TEST_WHALE");
