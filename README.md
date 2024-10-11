@@ -2,6 +2,8 @@
 
 Welcome to Aragon's veGovernance Plugin - a flexible, modular and secure system which can be used to create custom DAOs that foster a strong alignment between token holders and capital flows.
 
+The mainnet deployment addresses can be found [here](./DEPLOYMENT_ADDRESSES.md).
+
 ## Setup
 
 To get started, ensure that [Foundry](https://getfoundry.sh/) is installed on your computer, then copy `.env.example` into `.env` and define the parameters
@@ -71,19 +73,22 @@ Check the `Makefile` for examples of deployments on different networks.
 
 ### Deployment Checklist
 
-- [] I have reviewed the parameters for the veDAO I want to deploy
-- [] I have reviewed the multisig file for the correct addresses
-  - [] I have ensured all multisig members have undergone a proper security review and are aware of the security implications of being on said multisig
-- [] I have updated the `.env` with these parameters
-- [] I have updated the `CurveConstantLib` and `Clock` with any new constants.
-- [] All my unit tests pass
-- [] I have run a fork test in `fork-deploy` mode against the OSx contracts on my target testnet
-- [] I have deployed my contracts successfully to a target testnet
+- [x] I have reviewed the parameters for the veDAO I want to deploy
+- [x] I have reviewed the multisig file for the correct addresses
+  - [x] I have ensured all multisig members have undergone a proper security review and are aware of the security implications of being on said multisig
+- [x] I have updated the `.env` with these parameters
+- [x] I have updated the `CurveConstantLib` and `Clock` with any new constants.
+- [x] All my unit tests pass
+- [x] I have run a fork test in `fork-deploy` mode against the OSx contracts on my target testnet
+- [x] I have deployed my contracts successfully to a target testnet
+- [x] I have previewed my deploy
+- [x] My deployer address is a fresh wallet or setup for repeat production deploys in a safe manner.
+- [x] My wallet has sufficient native token for gas
 - [] I have confirmed my tests still work in `fork-existing` mode with the live tokens and the factory.
-- [] I have run the same workflow against the mainnet I wish to deploy on
-- [] I have previewed my deploy
-- [] My deployer address is a fresh wallet or setup for repeat production deploys in a safe manner.
-- [] My wallet has sufficient native token for gas
+
+**Puffer Only**
+
+- [] I have deployed the Router contract
 
 ### Manual from the command line
 

@@ -37,7 +37,30 @@ ft-sepolia-fork :; forge test --match-contract TestE2EV2 \
 	--rpc-url https://sepolia.drpc.org \
 	-vvvvv
 
+# Fork testing - mainnet
+ft-mainnet-fork :; forge test --match-contract TestE2EV2 \
+	--rpc-url https://eth-mainnet.g.alchemy.com/v2/$(ALCHEMY_API_KEY) \
+	-vvvvv
+
 #### Deployments ####
+
+deploy-preview-mainnet :; forge script script/Deploy.s.sol:Deploy \
+	--rpc-url https://eth-mainnet.g.alchemy.com/v2/$(ALCHEMY_API_KEY) \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	-vvvvv
+
+deploy-mainnet :; forge script script/Deploy.s.sol:Deploy \
+	--rpc-url https://eth-mainnet.g.alchemy.com/v2/$(ALCHEMY_API_KEY) \
+	--slow \
+	--resume \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	--verify \
+	--etherscan-api-key $(ETHERSCAN_API_KEY) \
+	-vvvvv
+
+log-mainnet :; forge script Logger \
+	--rpc-url https://eth-mainnet.g.alchemy.com/v2/$(ALCHEMY_API_KEY) \
+	-vvvvv
 
 deploy-preview-mode-sepolia :; forge script script/Deploy.s.sol:Deploy \
   --rpc-url https://sepolia.mode.network \
@@ -65,4 +88,43 @@ deploy-mode :; forge script script/Deploy.s.sol:Deploy \
 	--verify \
 	--etherscan-api-key $(ETHERSCAN_API_KEY) \
 	-vvv
+
+deploy-preview-holesky :; forge script script/Deploy.s.sol:Deploy \
+	--rpc-url https://holesky.drpc.org \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	-vvvvv
+
+deploy-holesky :; forge script script/Deploy.s.sol:Deploy \
+	--rpc-url https://holesky.drpc.org \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	--broadcast \
+	--verify \
+	--etherscan-api-key $(ETHERSCAN_API_KEY) \
+	-vvv
+
+deploy-preview-sepolia :; forge script script/Deploy.s.sol:Deploy \
+	--rpc-url https://1rpc.io/sepolia \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	-vvvvv
+
+router-preview-sepolia :; forge script DeployRouter \
+	--rpc-url https://1rpc.io/sepolia \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	-vvvvv
+
+router-sepolia :; forge script DeployRouter \
+	--rpc-url https://1rpc.io/sepolia \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	--broadcast \
+	--verify \
+	--etherscan-api-key $(ETHERSCAN_API_KEY) \
+	-vvvvv
+
+deploy-sepolia :; forge script script/Deploy.s.sol:Deploy \
+	--rpc-url https://1rpc.io/sepolia \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	--broadcast \
+	--verify \
+	--etherscan-api-key $(ETHERSCAN_API_KEY) \
+	-vvvvv
 
