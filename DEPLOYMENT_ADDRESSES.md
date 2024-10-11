@@ -22,3 +22,5 @@
   - Multisig plugin repository (existing): 0x8c278e37D0817210E18A7958524b7D0a1fAA6F7b
   - Gauge voter plugin repository: 0xa10192700F6c3A0ee0deAA2EE72A91916a4CBb70
 ```
+
+The deployment addresses can also be verified [on the factory contract via Etherscan](https://etherscan.io/address/0xfbf3b5fa2380c77a6ac255a8e19a142490601767#readContract)
