@@ -27,3 +27,5 @@
 
 
 ```
+
+The deployment addresses can also be verified [on the factory contract via Etherscan](https://etherscan.io/address/0xfbf3b5fa2380c77a6ac255a8e19a142490601767#readContract)

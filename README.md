@@ -2,6 +2,8 @@
 
 Welcome to Aragon's veGovernance Plugin - a flexible, modular and secure system which can be used to create custom DAOs that foster a strong alignment between token holders and capital flows.
 
+The mainnet deployment addresses can be found [here](./DEPLOYMENT_ADDRESSES.md).
+
 ## Setup
 
 To get started, ensure that [Foundry](https://getfoundry.sh/) is installed on your computer, then copy `.env.example` into `.env` and define the parameters
