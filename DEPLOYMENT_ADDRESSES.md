@@ -21,4 +21,9 @@
   Plugin repositories
   - Multisig plugin repository (existing): 0x8c278e37D0817210E18A7958524b7D0a1fAA6F7b
   - Gauge voter plugin repository: 0xa10192700F6c3A0ee0deAA2EE72A91916a4CBb70
+
+  Router
+  - 0xD33340fb9C8c2aEBC6922552bf3bC268a3682696
+
+
 ```
