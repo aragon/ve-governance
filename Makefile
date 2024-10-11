@@ -39,11 +39,28 @@ ft-sepolia-fork :; forge test --match-contract TestE2EV2 \
 
 # Fork testing - mainnet
 ft-mainnet-fork :; forge test --match-contract TestE2EV2 \
-	--rpc-url https://eth.llamarpc.com \
-	--fork-block-number 20890902 \
+	--rpc-url https://eth-mainnet.g.alchemy.com/v2/$(ALCHEMY_API_KEY) \
 	-vvvvv
 
 #### Deployments ####
+
+deploy-preview-mainnet :; forge script script/Deploy.s.sol:Deploy \
+	--rpc-url https://eth-mainnet.g.alchemy.com/v2/$(ALCHEMY_API_KEY) \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	-vvvvv
+
+deploy-mainnet :; forge script script/Deploy.s.sol:Deploy \
+	--rpc-url https://eth-mainnet.g.alchemy.com/v2/$(ALCHEMY_API_KEY) \
+	--slow \
+	--resume \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	--verify \
+	--etherscan-api-key $(ETHERSCAN_API_KEY) \
+	-vvvvv
+
+log-mainnet :; forge script Logger \
+	--rpc-url https://eth-mainnet.g.alchemy.com/v2/$(ALCHEMY_API_KEY) \
+	-vvvvv
 
 deploy-preview-mode-sepolia :; forge script script/Deploy.s.sol:Deploy \
   --rpc-url https://sepolia.mode.network \
