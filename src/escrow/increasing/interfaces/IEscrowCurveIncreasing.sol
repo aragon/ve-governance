@@ -69,6 +69,9 @@ interface IEscrowCurveErrorsAndEvents {
     error InvalidCheckpoint();
     error IncreaseNotSupported();
     error SameDepositsNotSupported();
+    error ScheduledAdjustmentsNotSupported();
+    error WriteToPastNotSupported();
+    error ZeroDepositsNotSupported();
 }
 
 interface IEscrowCurveIndex {
@@ -147,3 +150,9 @@ interface IEscrowCurveIncreasing is
 {}
 
 interface IEscrowCurveIncreasingGlobal is IEscrowCurveIncreasing, IEscrowCurveGlobal {}
+
+interface IEscrowCurveEventsErrorsStorage is
+    IEscrowCurveErrorsAndEvents,
+    IEscrowCurveTokenStorage,
+    IEscrowCurveGlobalStorage
+{}

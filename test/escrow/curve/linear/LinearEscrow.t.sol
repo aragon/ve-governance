@@ -8,6 +8,110 @@ import {IVotingEscrowIncreasing, ILockedBalanceIncreasing} from "src/escrow/incr
 
 import {LinearCurveBase} from "./LinearBase.sol";
 contract TestLinearIncreasingCurve is LinearCurveBase {
+    /// checkpoint
+
+    // check the token id must be passed
+
+    // check we can't support and inreasing curve
+
+    // check we can't support same deposits
+
+    /// token checkpoint
+
+    // writing a new point has the correct params and adds to the correct state
+
+    // can schedule a new point to be creted
+
+    // cannot schedule a reduction (TBC)
+
+    // a reduction can be passed if at block timestamp
+
+    // can overwrite with a point made at the same time
+
+    // can write an exit point
+
+    // cannot write before the last point
+
+    /// scheduling changes
+
+    //// increase
+
+    // scheduling a first point correctly writes an increase in the bias and slope, and a decrease in the future
+
+    // the second point correctly aggregates
+
+    //// decrease
+
+    // reverts if trying to decrease when there's nothing in the old lock or if new lock > old lock
+
+    // does nothing if past the original max
+
+    // has no impact if the deposits are the same (might revert)
+
+    // if the start date has passed, we only schedule a reduction
+
+    // if the start date is in the future, we schedule a reduction and an increase
+
+    // multiple reductions aggregate correctly
+
+    // a. expired, expired
+
+    // b. expired, started
+
+    // c. started, started
+
+    // d. schedulled, started
+
+    // e. schedulled, expired
+
+    // f. schedulled, schedulled
+
+    /// fetching global point
+
+    // fetches the latest point if the index is there
+
+    // else creates a new point w. timestamp
+
+    /// Populating history
+
+    // in the case of no history, should simply return the empty point and an index of 1
+
+    // correctly writes a single backfilled point with no scheduled curve changes
+
+    // correctly writes a single backfilled point with a scheduled curve change
+
+    // works if the schedulled change is negative
+
+    // works if the schedulled change is positive
+
+    // works exactly on the interval as expected
+
+    // works a complex case of 2 weeks of history + 2 weeks of future and correctly aggregates
+
+    /// updating the global history with the token
+
+    // reverts when increasing is true (this sucks)
+
+    // cannot apply an update if the point hasn't happened yet
+
+    // the last point must be caught up
+
+    // correctly removes the tokens accrued voting power to the global point at the correct time
+
+    // if the user is reducing, this reduction is added back in
+
+    // same with the slope
+
+    /// writing the point
+
+    // overwrites the last point if the timestamp is the same
+
+    // correctly writes a new point if the timestamp is different
+
+    /// putting it together
+
+    // complex state with a couple of user points written over time - check that supply can be checked
+
     function test_votingPowerComputesCorrect() public view {
         uint256 amount = 100e18;
 
