@@ -58,14 +58,22 @@ contract LinearIncreasingEscrow is
 
     /// ADDED v0.1.1
 
-    mapping(uint => GlobalPoint) private _pointHistory;
+    mapping(uint => GlobalPoint) internal _pointHistory;
 
     uint256 private _latestPointIndex;
 
-    mapping(uint48 => int256[3]) private _scheduledCurveChanges;
+    mapping(uint48 => int256[3]) internal _scheduledCurveChanges;
 
     function pointHistory(uint256 _loc) external view returns (GlobalPoint memory) {
         return _pointHistory[_loc];
+    }
+
+    function scheduledCurveChanges(uint48 _at) external view returns (int256[3] memory) {
+        return _scheduledCurveChanges[_at];
+    }
+
+    function maxTime() external view returns (uint48) {
+        return _maxTime().toUint48();
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -195,6 +203,7 @@ contract LinearIncreasingEscrow is
     }
 
     function _isWarm(TokenPoint memory _point) public view returns (bool) {
+        // BUG: should only be for the first point unless that's expected behaviour
         return block.timestamp > _point.writtenTs + warmupPeriod;
     }
 
@@ -233,7 +242,7 @@ contract LinearIncreasingEscrow is
         uint256 lower = 0;
         uint256 upper = tokenInterval;
         while (upper > lower) {
-            uint256 center = upper - (upper - lower) / 2; // ceil, avoiding overflow
+            uint256 center = upper - (upper - lower) / 2;
             TokenPoint storage tokenPoint = _tokenPointHistory[_tokenId][center];
             if (tokenPoint.checkpointTs == _timestamp) {
                 return center;
@@ -327,6 +336,11 @@ contract LinearIncreasingEscrow is
         if (_oldLocked.amount == 0 && _newLocked.start < block.timestamp) {
             revert("No front running");
         }
+        // revert if at exactly the cp boundary
+        // strictly speaking not neccessary but adviseable so that supply changes + schedulling changes
+        // are less prone to manipulation
+        if (IClock(clock).elapsedInEpoch() == 0) revert("Wait 1 second");
+
         return true;
     }
 
@@ -379,72 +393,66 @@ contract LinearIncreasingEscrow is
         return (oldPoint, newPoint);
     }
 
-    // there are 2 cases here:
-    // 1. we are increasing or creating a new deposit - in the increasing case this mandates waiting for the next checkpoint so that
-    // we can't game the system. The lock starts at the next cp and the scheduled change is written to the max duration
-    // 2. we are decreasing or exiting a deposit - in this case we can write the change immediately and fetch the associated scheduled change
-    // based on the start of the lock
-    // TODO this only works given certain assumptions
-    // 1. new deposits cleanly snap to checkpoints in the future
-    // 2. if oldLocked.amount < newLockedAmount, we are removing tokens
-    // in the event they are the same, this is currently undefined
     function _scheduleCurveChanges(
         TokenPoint memory _oldPoint,
         TokenPoint memory _newPoint,
         IVotingEscrow.LockedBalance memory _oldLocked,
         IVotingEscrow.LockedBalance memory _newLocked
     ) internal {
-        if (_newLocked.amount == _oldLocked.amount) revert("same deposits not supported");
-        // only fresh meat
-        if (_newLocked.amount > _oldLocked.amount && _oldLocked.amount != 0)
-            revert("increase not supported");
+        // check if there is any old schedule
+        bool existingLock = _oldLocked.amount > 0;
 
-        // step 1: we need to know if we are increasing or decreasing
-        bool isExiting = _newLocked.amount == 0;
-        bool isRemoving = isExiting || _newLocked.amount < _oldLocked.amount;
+        // max time is set during contract deploy, if its > uint48 someone didn't test properly
+        uint48 max = uint48(_maxTime());
 
-        if (isRemoving) {
-            // fetch the original lock start and the max time
+        // if so we have to remove it
+        if (existingLock) {
+            // cannot change the start date of an exiting lock once it's passed
+            if (_oldLocked.start != _newLocked.start && block.timestamp >= _oldLocked.start) {
+                revert RetroactiveStartChange();
+            }
+
+            // TODO: being extra safe we could check the old point has data
+            // but that should never happen.
+
+            // first determine where we are relative to the old lock
             uint48 originalStart = _oldLocked.start;
-            uint48 scheduledMax = _newLocked.start + _maxTime().toUint48();
+            uint48 originalMax = originalStart + max;
 
-            // if we are past the max time, there's no further curve adjustements as they've already happened
-            if (scheduledMax < block.timestamp) {
-                return;
+            // if before the start we need to remove the scheduled slope increase
+            // and the scheduled bias increase
+            // strict equality is crucial as we will apply any immediate changes
+            // directly to the global point in later functions
+            if (block.timestamp < originalStart) {
+                _scheduledCurveChanges[originalStart][0] -= _oldPoint.coefficients[0];
+                _scheduledCurveChanges[originalStart][1] -= _oldPoint.coefficients[1];
             }
 
-            // the scheduled curve change at the max is a decrease
-            _scheduledCurveChanges[scheduledMax][1] += _oldPoint.coefficients[1];
-
-            // if the new locked is not zero then we need to make the new adjustment here
-            if (!isExiting) {
-                _scheduledCurveChanges[scheduledMax][1] -= _newPoint.coefficients[1];
-            }
-
-            // if the start date has happened, we are all accounted for
-            if (originalStart < block.timestamp) {
-                return;
-            }
-
-            // else remove the scheduled curve changes and biases
-            _scheduledCurveChanges[originalStart][0] -= _oldPoint.coefficients[0]; // this was an increase
-            _scheduledCurveChanges[originalStart][1] -= _oldPoint.coefficients[1]; // this was an increase
-
-            // replace with the adjustment
-            if (!isExiting) {
-                _scheduledCurveChanges[originalStart][0] += _newPoint.coefficients[0];
-                _scheduledCurveChanges[originalStart][1] += _newPoint.coefficients[1];
+            // If we're not yet at max, also remove the scheduled decrease
+            // (i.e. increase the slope)
+            if (block.timestamp < originalMax) {
+                _scheduledCurveChanges[originalMax][1] += _oldPoint.coefficients[1];
             }
         }
-        // this is a new deposit so needs to be scheduled
-        else {
-            // new locks start in the future, so we schedule the diffs here
-            _scheduledCurveChanges[_newLocked.start][0] += _newPoint.coefficients[0];
-            _scheduledCurveChanges[_newLocked.start][1] += _newPoint.coefficients[1];
 
-            // write the scheduled coeff reduction at the max duration
-            uint48 scheduledMax = _newLocked.start + _maxTime().toUint48();
-            _scheduledCurveChanges[scheduledMax][1] -= _newPoint.coefficients[1];
+        // next we apply the scheduling changes - same process in reverse
+        uint48 newStart = _newLocked.start;
+        uint48 newMax = newStart + max;
+
+        // if before the start we need to add the scheduled slope increase
+        // and the scheduled bias increase
+        // strict equality is crucial as we will apply any immediate changes
+        // directly to the global point in later functions
+        if (block.timestamp < newStart) {
+            // directly to the global point in later functions if (block.timestamp < newStart) {
+            _scheduledCurveChanges[newStart][0] += _newPoint.coefficients[0];
+            _scheduledCurveChanges[newStart][1] += _newPoint.coefficients[1];
+        }
+
+        // If we're not yet at max, also add the scheduled decrease
+        // (i.e. decrease the slope)
+        if (block.timestamp < newMax) {
+            _scheduledCurveChanges[newMax][1] -= _newPoint.coefficients[1];
         }
     }
 

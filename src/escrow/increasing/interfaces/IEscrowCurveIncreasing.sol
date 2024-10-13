@@ -72,6 +72,7 @@ interface IEscrowCurveErrorsAndEvents {
     error ScheduledAdjustmentsNotSupported();
     error WriteToPastNotSupported();
     error ZeroDepositsNotSupported();
+    error RetroactiveStartChange();
 }
 
 interface IEscrowCurveIndex {

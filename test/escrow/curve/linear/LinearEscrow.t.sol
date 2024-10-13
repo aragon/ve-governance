@@ -16,62 +16,6 @@ contract TestLinearIncreasingCurve is LinearCurveBase {
 
     // check we can't support same deposits
 
-    /// token checkpoint
-
-    // writing a new point has the correct params and adds to the correct state
-
-    // can schedule a new point to be creted
-
-    // cannot schedule a reduction (TBC)
-
-    // a reduction can be passed if at block timestamp
-
-    // can overwrite with a point made at the same time
-
-    // can write an exit point
-
-    // cannot write before the last point
-
-    /// scheduling changes
-
-    //// increase
-
-    // scheduling a first point correctly writes an increase in the bias and slope, and a decrease in the future
-
-    // the second point correctly aggregates
-
-    //// decrease
-
-    // reverts if trying to decrease when there's nothing in the old lock or if new lock > old lock
-
-    // does nothing if past the original max
-
-    // has no impact if the deposits are the same (might revert)
-
-    // if the start date has passed, we only schedule a reduction
-
-    // if the start date is in the future, we schedule a reduction and an increase
-
-    // multiple reductions aggregate correctly
-
-    // a. expired, expired
-
-    // b. expired, started
-
-    // c. started, started
-
-    // d. schedulled, started
-
-    // e. schedulled, expired
-
-    // f. schedulled, schedulled
-
-    /// fetching global point
-
-    // fetches the latest point if the index is there
-
-    // else creates a new point w. timestamp
-
     /// Populating history
 
     // in the case of no history, should simply return the empty point and an index of 1
