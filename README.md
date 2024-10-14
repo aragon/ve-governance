@@ -16,38 +16,6 @@ The env.example file contains descriptions for all the initial settings. You don
 
 The `Makefile` functions as a script runner for common tasks. It's recommended to start there. Ensure you have the required tools installed to run the `make` command on your system:
 
-```sh
-# debian
-sudo apt install build-essential
-
-# arch
-sudo pacman -S base-devel
-
-# nix
-nix-env -iA nixpkgs.gnumake
-
-# macOS
-brew install make
-```
-
-Then run the commands as needed
-
-```sh
-# Setup the repo
-make install
-
-# run unit tests
-make unit-test
-
-# generate coverage report in the `report` directory
-# requires lcov and genhtml
-# serve the report/index.html in browser to view
-make coverage
-
-# the .env.example is set to work with sepolia
-make ft-sepolia-fork
-```
-
 ## Deployment
 
 Deployments are done using the deployment factory. This is a singleton contract that will:
