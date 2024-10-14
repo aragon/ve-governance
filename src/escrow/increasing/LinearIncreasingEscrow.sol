@@ -407,7 +407,7 @@ contract LinearIncreasingEscrow is
 
         // if so we have to remove it
         if (existingLock) {
-            // cannot change the start date of an exiting lock once it's passed
+            // cannot change the start date of an existing lock once it's passed
             if (_oldLocked.start != _newLocked.start && block.timestamp >= _oldLocked.start) {
                 revert RetroactiveStartChange();
             }
@@ -469,7 +469,7 @@ contract LinearIncreasingEscrow is
 
     /// @dev iterates over the interval and looks for scheduled changes that have elapsed
     ///
-    function _populateHistory() internal returns (GlobalPoint memory, uint256 latestIndex) {
+    function _populateHistory() internal returns (GlobalPoint memory, uint256) {
         GlobalPoint memory latestPoint = getLatestGlobalPoint();
 
         uint48 interval = uint48(IClock(clock).checkpointInterval());
@@ -479,37 +479,62 @@ contract LinearIncreasingEscrow is
         {
             // step 1: round down to floor of interval
             uint48 t_i = (latestCheckpoint / interval) * interval;
+
+            console.log("t_i", t_i);
+
             for (uint256 i = 0; i < 255; ++i) {
                 // step 2: the first interval is always the next one after the last checkpoint
                 t_i += interval;
 
+                console.log("t_i + interval", t_i);
+
                 // bound to at least the present
                 if (t_i > block.timestamp) t_i = uint48(block.timestamp);
 
-                // we create a new "curve" by defining the coefficients starting from time t_i
+                console.log("bound t_i", t_i);
 
+                // fetch the changes for this interval
+                int biasChange = _scheduledCurveChanges[t_i][0];
+                int slopeChange = _scheduledCurveChanges[t_i][1];
+
+                console.log("biasChange", biasChange);
+                console.log("slopeChange", slopeChange);
+
+                // we create a new "curve" by defining the coefficients starting from time t_i
                 // our constant is the y intercept at t_i and is found by evalutating the curve between the last point and t_i
-                // todo: this aint really a coefficient is it?
-                // it's just the bias
                 // todo safe casting
                 latestPoint.coefficients[0] =
-                    // evaluate the bias between the latest point and t_i
                     int256(_getBias(t_i - latestPoint.ts, latestPoint.coefficients)) +
-                    // add net scheduled increases
-                    _scheduledCurveChanges[t_i][0];
+                    biasChange;
 
                 // here we add the net result of the coefficient changes to the slope
+                // which can be applied for the ensuring period
                 // this can be positive or negative depending on if new deposits outweigh tapering effects + withdrawals
-                latestPoint.coefficients[1] += _scheduledCurveChanges[t_i][1];
+                latestPoint.coefficients[1] += slopeChange;
 
-                // we create a new "curve" by defining the coefficients starting from time t_i
+                // the slope itself can't be < 0 so we bound it
+                if (latestPoint.coefficients[1] < 0) {
+                    latestPoint.coefficients[1] = 0;
+                    revert("ahhhh sheeeet");
+                }
+
+                // if the bias is negativo we also should bound it
+                if (latestPoint.coefficients[0] < 0) {
+                    // think this is redundant as bias checks for this
+                    latestPoint.coefficients[0] = 0;
+                }
+
+                // update the timestamp ahead of either breaking or the next iteration
                 latestPoint.ts = t_i;
-
-                // write the point to storage if it's in the past
-                // otherwise we haven't reached an interval and so can just return the point
                 currentIndex++;
+
+                bool hasScheduledChange = (biasChange != 0 || slopeChange != 0);
+
+                // write the point to storage if there are changes, otherwise continue
+                // interpolating in memory and can write to storage at the end
+                // otherwise we haven't reached an interval and so can just return the point
                 if (t_i == block.timestamp) break;
-                else _pointHistory[currentIndex] = latestPoint;
+                else if (hasScheduledChange) _pointHistory[currentIndex] = latestPoint;
             }
         }
 
@@ -552,19 +577,20 @@ contract LinearIncreasingEscrow is
         return _latestPoint;
     }
 
+    /// @dev Writes or overwrites the latest global point into storage at the index
+    /// @param _latestPoint The latest global point to write.
+    /// @param _index The returned index following the history backpop loop.
+    /// @dev Begins at 1 as corresponds to length of the pseudo-array.
     function _writeNewGlobalPoint(GlobalPoint memory _latestPoint, uint256 _index) internal {
-        // If timestamp of latest global point is the same, overwrite the latest global point
-        // Else record the new global point into history
-        // Exclude index 0 (note: _index is always >= 1, see above)
-        // Two possible outcomes:
         // Missing global checkpoints in prior weeks. In this case, _index = index + x, where x > 1
+        // TODO: doesn't look like that's the case here
         // No missing global checkpoints, but timestamp != block.timestamp. Create new checkpoint.
         // No missing global checkpoints, but timestamp == block.timestamp. Overwrite _latest checkpoint.
         if (_index != 1 && _pointHistory[_index - 1].ts == block.timestamp) {
-            // _index = index + 1, so we do not increment index
+            // overwrite the current index, given that the passed one will be the i+1
             _pointHistory[_index - 1] = _latestPoint;
         } else {
-            // more than one global point may have been written, so we update index
+            // first point or a new point
             _latestPointIndex = _index;
             _pointHistory[_index] = _latestPoint;
         }

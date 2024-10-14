@@ -15,7 +15,7 @@ contract TestHelpers is Test {
     using ProxyLib for address;
 
     DAO dao;
-    Clock clock;
+    Clock public clock;
 
     address constant OSX_ANY_ADDR = address(type(uint160).max);
 

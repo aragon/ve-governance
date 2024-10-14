@@ -16,36 +16,6 @@ contract TestLinearIncreasingCurve is LinearCurveBase {
 
     // check we can't support same deposits
 
-    /// Populating history
-
-    // in the case of no history, should simply return the empty point and an index of 1
-
-    // correctly writes a single backfilled point with no scheduled curve changes
-
-    // correctly writes a single backfilled point with a scheduled curve change
-
-    // works if the schedulled change is negative
-
-    // works if the schedulled change is positive
-
-    // works exactly on the interval as expected
-
-    // works a complex case of 2 weeks of history + 2 weeks of future and correctly aggregates
-
-    /// updating the global history with the token
-
-    // reverts when increasing is true (this sucks)
-
-    // cannot apply an update if the point hasn't happened yet
-
-    // the last point must be caught up
-
-    // correctly removes the tokens accrued voting power to the global point at the correct time
-
-    // if the user is reducing, this reduction is added back in
-
-    // same with the slope
-
     /// writing the point
 
     // overwrites the last point if the timestamp is the same

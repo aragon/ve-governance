@@ -55,6 +55,14 @@ contract MockLinearIncreasingEscrow is LinearIncreasingEscrow {
     function writeSchedule(uint48 _at, int256[3] memory _change) external {
         _scheduledCurveChanges[_at] = _change;
     }
+
+    function populateHistory() external returns (GlobalPoint memory, uint) {
+        return _populateHistory();
+    }
+
+    function writeNewGlobalPoint(GlobalPoint memory _latestPoint, uint256 _index) external {
+        _writeNewGlobalPoint(_latestPoint, _index);
+    }
 }
 
 contract LinearCurveBase is TestHelpers, ILockedBalanceIncreasing, IEscrowCurveEventsErrorsStorage {
