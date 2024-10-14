@@ -480,25 +480,16 @@ contract LinearIncreasingEscrow is
             // step 1: round down to floor of interval
             uint48 t_i = (latestCheckpoint / interval) * interval;
 
-            console.log("t_i", t_i);
-
             for (uint256 i = 0; i < 255; ++i) {
                 // step 2: the first interval is always the next one after the last checkpoint
                 t_i += interval;
 
-                console.log("t_i + interval", t_i);
-
                 // bound to at least the present
                 if (t_i > block.timestamp) t_i = uint48(block.timestamp);
-
-                console.log("bound t_i", t_i);
 
                 // fetch the changes for this interval
                 int biasChange = _scheduledCurveChanges[t_i][0];
                 int slopeChange = _scheduledCurveChanges[t_i][1];
-
-                console.log("biasChange", biasChange);
-                console.log("slopeChange", slopeChange);
 
                 // we create a new "curve" by defining the coefficients starting from time t_i
                 // our constant is the y intercept at t_i and is found by evalutating the curve between the last point and t_i
@@ -526,15 +517,18 @@ contract LinearIncreasingEscrow is
 
                 // update the timestamp ahead of either breaking or the next iteration
                 latestPoint.ts = t_i;
+
                 currentIndex++;
-
                 bool hasScheduledChange = (biasChange != 0 || slopeChange != 0);
-
                 // write the point to storage if there are changes, otherwise continue
                 // interpolating in memory and can write to storage at the end
-                // otherwise we haven't reached an interval and so can just return the point
+                // otherwise we are as far as we can go so we break
                 if (t_i == block.timestamp) break;
-                else if (hasScheduledChange) _pointHistory[currentIndex] = latestPoint;
+                // note: if we are exactly on the boundary we don't write yet
+                // this means we can add the token-contribution later
+                else if (hasScheduledChange) {
+                    _pointHistory[currentIndex] = latestPoint;
+                }
             }
         }
 
@@ -582,10 +576,9 @@ contract LinearIncreasingEscrow is
     /// @param _index The returned index following the history backpop loop.
     /// @dev Begins at 1 as corresponds to length of the pseudo-array.
     function _writeNewGlobalPoint(GlobalPoint memory _latestPoint, uint256 _index) internal {
-        // Missing global checkpoints in prior weeks. In this case, _index = index + x, where x > 1
-        // TODO: doesn't look like that's the case here
-        // No missing global checkpoints, but timestamp != block.timestamp. Create new checkpoint.
-        // No missing global checkpoints, but timestamp == block.timestamp. Overwrite _latest checkpoint.
+        if (_index == 0) revert("Index 0");
+        if (_index <= _latestPointIndex) revert("index must increase");
+        // can't write to index 0
         if (_index != 1 && _pointHistory[_index - 1].ts == block.timestamp) {
             // overwrite the current index, given that the passed one will be the i+1
             _pointHistory[_index - 1] = _latestPoint;
