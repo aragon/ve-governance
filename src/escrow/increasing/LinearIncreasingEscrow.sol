@@ -572,6 +572,7 @@ contract LinearIncreasingEscrow is
     }
 
     /// @dev Writes or overwrites the latest global point into storage at the index
+    /// @dev Will overwrite the last point if the ts of the prev block is now
     /// @param _latestPoint The latest global point to write.
     /// @param _index The returned index following the history backpop loop.
     /// @dev Begins at 1 as corresponds to length of the pseudo-array.
