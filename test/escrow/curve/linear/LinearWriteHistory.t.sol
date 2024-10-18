@@ -66,33 +66,6 @@ contract TestLinearIncreasingPopulateHistory is LinearCurveBase {
         }
     }
 
-    function testWritePointIndex1(GlobalPoint memory point) public {
-        vm.assume(point.coefficients[0] > 0);
-        // will always write a new point and overwrite the index:
-
-        // write the first time
-        curve.writeNewGlobalPoint(point, 1);
-
-        // expect the point to be written
-        assertEq(curve.pointHistory(1).coefficients[0], point.coefficients[0]);
-        assertEq(curve.pointHistory(1).coefficients[1], point.coefficients[1]);
-        assertEq(curve.pointHistory(1).ts, point.ts);
-
-        // // write the second time but keep the ts
-        // int oldCoeff = point.coefficients[0];
-        // point.coefficients[0] = oldCoeff - 1;
-        //
-        // curve.writeNewGlobalPoint(point, 1);
-        //
-        // expect the point to be overwritten
-        // assertEq(curve.pointHistory(1).coefficients[0], oldCoeff - 1);
-    }
-
-    // this is undefined behavior - maybe we should revert
-    function testWritePointIndex0(GlobalPoint memory point) public {
-        vm.expectRevert("Index 0");
-        curve.writeNewGlobalPoint(point, 0);
-    }
     //
     // function testFuzz_writeSameIdxDiffTs(GlobalPoint memory point, uint idx) public {
     //     vm.assume(idx > 0);
@@ -112,33 +85,7 @@ contract TestLinearIncreasingPopulateHistory is LinearCurveBase {
     //     assertEq(curve.pointHistory(idx).ts, oldTs + 1);
     // }
 
-    function testFuzz_writeDiffIdxSameTs(GlobalPoint memory point, uint idx) public {
-        vm.assume(idx > 0);
-        vm.assume(idx < type(uint).max);
-        vm.assume(point.coefficients[0] > 0);
-
-        // write an existing point
-        curve.writeNewGlobalPoint(point, idx);
-
-        // vary the idx but keep the ts
-        uint oldIdx = idx;
-        idx = oldIdx + 1;
-
-        // change the param on the coeff to check
-
-        int oldCoeff = point.coefficients[0];
-        point.coefficients[0] = oldCoeff - 1;
-
-        // write the new point
-        curve.writeNewGlobalPoint(point, idx);
-
-        // expected - the point is overwritten
-        assertEq(curve.pointHistory(idx - 1).ts, point.ts);
-        assertEq(curve.pointHistory(idx).ts, 0);
-    }
-
     function testOverwritePoint() public {}
-
     // correctly writes a single backfilled point with a scheduled curve change
     function testHistorySingleSchedule() public {
         //
@@ -169,4 +116,14 @@ contract TestLinearIncreasingPopulateHistory is LinearCurveBase {
     // if the user is reducing, this reduction is added back in
 
     // same with the slope
+
+    // fetches latest point
+    // if not hte last point, the last point is at block.timetamp
+    // if point is empty, returns empty point at interval 0
+    // if no changes, returns the current index
+    // if no changes and has a last point, returns it
+    // it will happen if:
+    // -- scheduled, not current increase (new deposit)
+    // -- no scheduled changes have occured meaning the glboalPoint is empty
+    // this is equivalent to
 }

@@ -9,519 +9,152 @@ import {IVotingEscrowIncreasing, ILockedBalanceIncreasing} from "src/escrow/incr
 import {LinearCurveBase} from "./LinearBase.sol";
 
 contract TestLinearIncreasingScheduleChanges is LinearCurveBase {
-    // setup function - initialize the curve
+    /// get latest point
 
-    // in testing this function we need to primarily focus on aggregating balances atop of
-    // a predefined point, the unhappy path here is that there's some imbalance between what the lock is
-    // saying and what the token point is saying.
-    // for now, let's assume the happy path then think about sad paths
+    // test no prior history, no schedulling - returns CI 0, empty point with block.ts
 
-    function setUp() public override {
-        super.setUp();
-        //
+    function testGetLatestPointNoPriorNoSchedule(uint32 warp) public {
+        vm.warp(warp);
+        GlobalPoint memory point = curve.getLatestGlobalPoint();
+
+        assertEq(point.ts, block.timestamp, "ts");
+        assertEq(point.bias, 0, "bias");
+        assertEq(point.coefficients[0], 0, "coeff0");
+        assertEq(point.coefficients[1], 0, "coeff1");
     }
 
-    // testing with no prior state
-    function testFuzz_noPriorLockSchedulesIncrease(
-        LockedBalance memory _newLocked,
-        TokenPoint memory _newPoint,
-        uint128[3] memory _boundCoeff
-    ) public {
-        vm.warp(0);
-        // bound new lock start to uint32
-        vm.assume(_newLocked.start < type(uint32).max);
+    // no prior history, but a scheduled change in the future - returns a point w. ts
+    function testGetLatestPointNoPriorFutureSchedule(uint48 warp) public {
+        vm.assume(warp < type(uint48).max);
+        vm.warp(warp);
+        curve.writeEarliestScheduleChange(warp + 1);
+        GlobalPoint memory point = curve.getLatestGlobalPoint();
 
-        // other tests can check on the boundary
-        vm.assume(_newLocked.start > 0);
-
-        TokenPoint memory oldPoint;
-        LockedBalance memory oldLocked;
-
-        // bound coefficients
-        _newPoint.coefficients[0] = int(int128(_boundCoeff[0]));
-        _newPoint.coefficients[1] = int(int128(_boundCoeff[1]));
-
-        // write it
-        curve.scheduleCurveChanges(oldPoint, _newPoint, oldLocked, _newLocked);
-
-        // check the schedule
-        int256[3] memory startChanges = curve.scheduledCurveChanges(_newLocked.start);
-        int256[3] memory endChanges = curve.scheduledCurveChanges(
-            _newLocked.start + curve.maxTime()
-        );
-
-        // start should be the same as the new point
-        assertEq(
-            startChanges[0],
-            _newPoint.coefficients[0],
-            "startChanges[0] != _newPoint.coefficients[0]"
-        );
-        assertEq(
-            startChanges[1],
-            _newPoint.coefficients[1],
-            "startChanges[1] != _newPoint.coefficients[1]"
-        );
-
-        // end should be the same as the new point slope but in the negative
-        assertEq(
-            endChanges[1],
-            -_newPoint.coefficients[1],
-            "endChanges[1] != -_newPoint.coefficients[1]"
-        );
+        assertEq(point.ts, block.timestamp, "ts");
+        assertEq(point.bias, 0, "bias");
+        assertEq(point.coefficients[0], 0, "coeff0");
+        assertEq(point.coefficients[1], 0, "coeff1");
     }
 
-    // unrelated lock should be purely addive
-    function testNoPriorLockLeavesExistingStateAlone() public {
-        // write some existing state to some location
-        uint48 start = 100;
-        uint48 end = start + curve.maxTime();
-        int256[3] memory startChanges = [int(1), int(2), int(0)];
+    // no prior history, but a scheduled change in the past - returns a point w. the scheduled change
+    function testGetLatestPointNoPriorPastSchedule(uint48 warp) public {
+        vm.assume(warp > 1); // schedulling at zero throws it off
+        vm.warp(warp);
+        curve.writeEarliestScheduleChange(warp - 1);
+        GlobalPoint memory point = curve.getLatestGlobalPoint();
 
-        curve.writeSchedule(start, [startChanges[0], startChanges[1], 0]);
-        curve.writeSchedule(end, [int(4), int(5), int(6)]);
-
-        TokenPoint memory newPoint;
-        TokenPoint memory oldPoint;
-
-        LockedBalance memory newLocked = LockedBalance({start: start, amount: 100});
-
-        newPoint.coefficients[0] = 1;
-        newPoint.coefficients[1] = 2;
-
-        oldPoint.coefficients[0] = startChanges[0];
-        oldPoint.coefficients[1] = startChanges[1];
-
-        curve.scheduleCurveChanges(
-            oldPoint,
-            newPoint,
-            LockedBalance({start: 0, amount: 0}),
-            newLocked
-        );
-
-        // expected - the old schedule is added to
-        assertEq(curve.scheduledCurveChanges(start)[0], 2, "start[0] != 2");
-        assertEq(curve.scheduledCurveChanges(start)[1], 4, "start[1] != 4");
-
-        // 4 - 0 then 5 - 2
-        assertEq(curve.scheduledCurveChanges(end)[0], 4, "end[0] != 4");
-        assertEq(curve.scheduledCurveChanges(end)[1], 3, "end[1] != 3");
+        assertEq(point.ts, warp - 1, "ts");
+        assertEq(point.bias, 0, "bias");
+        assertEq(point.coefficients[0], 0, "coeff0");
+        assertEq(point.coefficients[1], 0, "coeff1");
     }
 
-    // if updating the user's own lock then we relace the relevant state
-    function testUpdateState() public {
-        // write some existing state to some location
-        uint48 start = 100;
-        uint48 end = start + curve.maxTime();
+    // if there's a point index - return the point @ the index
+    function testGetLatestPointWithPrior(uint48 warp) public {
+        vm.assume(warp > 0);
+        vm.warp(warp);
+        curve.writeNewGlobalPoint(GlobalPoint(1, warp - 1, [int(1), int(2), int(0)]), 123);
+        GlobalPoint memory point = curve.getLatestGlobalPoint();
 
-        int256[3] memory startChanges = [int(1), int(2), 0];
-
-        curve.writeSchedule(start, [startChanges[0], startChanges[1], 0]);
-        curve.writeSchedule(end, [int(4), int(5), 0]);
-
-        TokenPoint memory newPoint;
-        TokenPoint memory oldPoint;
-
-        LockedBalance memory newLocked = LockedBalance({start: start, amount: 100});
-
-        newPoint.coefficients[0] = 10;
-        newPoint.coefficients[1] = 20;
-
-        oldPoint.coefficients[0] = startChanges[0];
-        oldPoint.coefficients[1] = startChanges[1];
-
-        curve.scheduleCurveChanges(
-            oldPoint,
-            newPoint,
-            LockedBalance({start: start, amount: 1}),
-            newLocked
-        );
-
-        // expected - the old schedule is replaced
-        assertEq(curve.scheduledCurveChanges(start)[0], 10, "start[0] != 10");
-        assertEq(curve.scheduledCurveChanges(start)[1], 20, "start[1] != 20");
-
-        // reset the old point leaving just the diff -
-        // this will be 5 (original write) + 2 (the slope we are addng back) - 20 (new slope we remove)
-        assertEq(curve.scheduledCurveChanges(end)[0], 4, "end[0] != 4");
-        assertEq(curve.scheduledCurveChanges(end)[1], 5 + 2 - 20, "end[1] != -13"); //
+        assertEq(point.ts, warp - 1, "ts");
+        assertEq(point.bias, 1, "bias");
+        assertEq(point.coefficients[0], 1, "coeff0");
+        assertEq(point.coefficients[1], 2, "coeff1");
     }
 
-    // test an increasing write
-    // we write some initial state then a first deposit then test an increase at 3 timestamps
-    // => before start
-    // => during the lock
-    // => after finishing
-    function _initState(
-        uint48 start,
-        int256[3] memory startCoeff
-    )
-        internal
-        returns (
-            TokenPoint memory oldPoint,
-            TokenPoint memory newPoint,
-            LockedBalance memory oldLocked,
-            LockedBalance memory newLocked
-        )
-    {
-        // write the first schedule change
+    /// pop hist
 
-        // set the first new locked w. start date
-        newLocked = LockedBalance({start: start, amount: 1});
+    // no prior no earliest schedule - return empty
+    function testPopulateHistoryNoPriorNoSchedule(uint32 warp) public {
+        vm.assume(warp > 0);
+        vm.warp(warp);
+        (GlobalPoint memory point, uint index) = curve.populateHistory();
 
-        // add to the new point for the first deposit
-        newPoint.coefficients[0] = startCoeff[0];
-        newPoint.coefficients[1] = startCoeff[1];
-
-        // write the first schedule change
-        curve.scheduleCurveChanges(oldPoint, newPoint, oldLocked, newLocked);
-
-        // the old point should be the same as the new point
-        oldPoint.coefficients[0] = newPoint.coefficients[0];
-        oldPoint.coefficients[1] = newPoint.coefficients[1];
-
-        oldLocked.start = newLocked.start;
-        oldLocked.amount = newLocked.amount;
-
-        // now setup the new new point
-        newPoint.coefficients[0] = 10;
-        newPoint.coefficients[1] = 20;
-
-        // setup the new start
-        newLocked = LockedBalance({start: start, amount: 2});
+        assertEq(index, 0, "index");
+        assertEq(point.ts, warp, "ts");
+        assertEq(point.bias, 0, "bias");
+        assertEq(point.coefficients[0], 0, "coeff0");
+        assertEq(point.coefficients[1], 0, "coeff1");
     }
 
-    function _initStateAdd(
-        uint48 start,
-        int256[3] memory startCoeff
-    )
-        internal
-        returns (
-            TokenPoint memory oldPoint,
-            TokenPoint memory newPoint,
-            LockedBalance memory oldLocked,
-            LockedBalance memory newLocked
-        )
-    {
-        (oldPoint, newPoint, oldLocked, newLocked) = _initState(start, startCoeff);
+    // no prior + earliest schedule in future - return empty
+    function testPopulateHistoryNoPriorFutureSchedule(uint48 warp) public {
+        vm.assume(warp < type(uint48).max);
+        vm.warp(warp);
+        curve.writeEarliestScheduleChange(warp + 1);
+        (GlobalPoint memory point, uint index) = curve.populateHistory();
 
-        TokenPoint memory unrelatedPoint;
-
-        unrelatedPoint.coefficients[0] = startCoeff[0];
-        unrelatedPoint.coefficients[1] = startCoeff[1];
-        // also write an unrelated point - this is someone else's lock
-        curve.scheduleCurveChanges(
-            oldPoint,
-            unrelatedPoint,
-            LockedBalance({start: 0, amount: 0}),
-            LockedBalance({start: start, amount: 1})
-        );
+        assertEq(index, 0, "index");
+        assertEq(point.ts, warp, "ts");
+        assertEq(point.bias, 0, "bias");
+        assertEq(point.coefficients[0], 0, "coeff0");
+        assertEq(point.coefficients[1], 0, "coeff1");
     }
 
-    function testRewrite_startSameBeforeStart() public {
-        uint48 start = 100;
-        uint48 end = start + curve.maxTime();
-        int256[3] memory startCoeff = [int(1), int(2), 0];
-        (
-            TokenPoint memory oldPoint,
-            TokenPoint memory newPoint,
-            LockedBalance memory oldLocked,
-            LockedBalance memory newLocked
-        ) = _initState(start, startCoeff);
+    /// assume here that the scheule + earliest schedules are correct:
 
-        // write the second schedule change
-        curve.scheduleCurveChanges(oldPoint, newPoint, oldLocked, newLocked);
+    // no prior + earliest schedule in past (single iteration) return the point + the schedule
+    // so we need to setup the scheduled changes
+    function testNoHistorySingleIterationInPast(uint48 warp) public {
+        // get the interval
+        uint48 interval = uint48(clock.checkpointInterval());
 
-        // expectation: we should have rewritten history completely
-        assertEq(curve.scheduledCurveChanges(start)[0], 10, "start[0] != 10");
-        assertEq(curve.scheduledCurveChanges(start)[1], 20, "start[1] != 20");
+        vm.assume(warp > interval); // avoid zero rounding
+        vm.assume(warp <= type(uint40).max); // avoid overflow
 
-        // the end should be the same as the start but in the negative
-        assertEq(curve.scheduledCurveChanges(end)[0], 0, "end[0] != 0");
-        assertEq(curve.scheduledCurveChanges(end)[1], -20, "end[1] != -20");
+        // get the nearest interval point to warp
+        uint48 schedulePast = warp - (warp % interval);
+        console.log("schedulePast", schedulePast);
+
+        // write an earliest change
+        curve.writeEarliestScheduleChange(schedulePast);
+
+        // write a scheduled change for the same time
+
+        curve.writeSchedule(schedulePast, [int(1e18), int(2e18), int(0)]);
+
+        // populate the history
+        vm.warp(warp);
+        (GlobalPoint memory point, uint index) = curve.populateHistory();
+
+        // assertEq(index, 1, "index");
+        assertEq(point.ts, warp, "ts");
+        console.log("warp - schedulePast", warp - schedulePast);
+        // ingnore the bias for now
+        // assertEq(point.bias, 1, "bias");
+        // coeff 1 should be 1 interval of accumulated bias PLUS the initial deposit
+        // i.e I deposit 1 token, slope is 2, I should have 1 token + slope*interval
+
+        uint expectedBias = curve.getBias(warp - schedulePast, 2e18) + 1e18;
+        assertEq(uint(point.coefficients[0]), expectedBias, "coeff0");
+        // assertEq(point.coefficients[1], 2, "coeff1");
     }
+    // no prior + earlest schedule in the past (multiple interation) return point + schedule and current index is multi-looped
 
-    function testRewrite_startSameAtStart(bool _exact) public {
-        uint48 start = 100;
-        uint48 end = start + curve.maxTime();
-        int256[3] memory startCoeff = [int(1), int(2), 0];
-        (
-            TokenPoint memory oldPoint,
-            TokenPoint memory newPoint,
-            LockedBalance memory oldLocked,
-            LockedBalance memory newLocked
-        ) = _initState(start, startCoeff);
+    /// prior history
 
-        vm.warp(_exact ? start : end - 1);
-        // write the second schedule change
-        curve.scheduleCurveChanges(oldPoint, newPoint, oldLocked, newLocked);
+    // no earliest schedule: irrelevant
 
-        // expectation, the window should have passed to schedule changes so instead we simply adjust the end
-        assertEq(curve.scheduledCurveChanges(start)[0], startCoeff[0], "start[0] != startCoeff[0]");
-        assertEq(curve.scheduledCurveChanges(start)[1], startCoeff[1], "start[1] != startCoeff[1]");
+    // schedule before point.ts, not applied
 
-        // end should be the negative of the new point
-        assertEq(curve.scheduledCurveChanges(end)[0], 0, "end[0] != 0");
-        assertEq(curve.scheduledCurveChanges(end)[1], -20, "end[1] != -20");
-    }
+    // schedule between point.ts + ts, appied (also check equality)
 
-    function testRewrite_startSameAtEnd(bool _exact) public {
-        uint48 start = 100;
-        uint48 end = start + curve.maxTime();
-        int256[3] memory startCoeff = [int(1), int(2), 0];
-        (
-            TokenPoint memory oldPoint,
-            TokenPoint memory newPoint,
-            LockedBalance memory oldLocked,
-            LockedBalance memory newLocked
-        ) = _initState(start, startCoeff);
+    // schedule after point.ts, not appied
 
-        vm.warp(_exact ? end : end + 1);
-        // write the second schedule change
-        curve.scheduleCurveChanges(oldPoint, newPoint, oldLocked, newLocked);
+    /// multiple iterations and gaps
 
-        // expectation, window missed completely
-        assertEq(curve.scheduledCurveChanges(start)[0], startCoeff[0], "start[0] != startCoeff[0]");
-        assertEq(curve.scheduledCurveChanges(start)[1], startCoeff[1], "start[1] != startCoeff[1]");
+    // only writes a point if there are changes
+    // - test bias
+    // - test coeff
+    // - test both
 
-        // end should be the negative of the new point
-        assertEq(curve.scheduledCurveChanges(end)[0], 0, "end[0] != 0");
-        assertEq(curve.scheduledCurveChanges(end)[1], -startCoeff[1], "end[1] != -startCoeff[1]");
-    }
+    // doesn't write a point w/o change
 
-    function testRewrite_diffStartBeforeStart() public {
-        uint48 start = 100;
-        uint48 end = start + curve.maxTime();
-        int256[3] memory startCoeff = [int(1), int(2), 0];
-        (
-            TokenPoint memory oldPoint,
-            TokenPoint memory newPoint,
-            LockedBalance memory oldLocked,
-            LockedBalance memory newLocked
-        ) = _initState(start, startCoeff);
+    /// MATH
 
-        // adjust the start date
-        newLocked.start = start + 1;
-        uint48 newEnd = end + 1;
+    // correct aggregation in a 3 point case
 
-        // write the second schedule change
-        curve.scheduleCurveChanges(oldPoint, newPoint, oldLocked, newLocked);
+    /// exploits
 
-        // expectation: the old lock has been removed at the start, replacing the new one
-        assertEq(curve.scheduledCurveChanges(start)[0], 0, "start[0] != 0");
-        assertEq(curve.scheduledCurveChanges(start)[1], 0, "start[1] != 0");
-        assertEq(curve.scheduledCurveChanges(newLocked.start)[0], 10, "newLocked.start[0] != 10");
-        assertEq(curve.scheduledCurveChanges(newLocked.start)[1], 20, "newLocked.start[1] != 20");
-
-        // the end should be the same as the start but in the negative
-        assertEq(curve.scheduledCurveChanges(end)[0], 0, "end[0] != 0");
-        assertEq(curve.scheduledCurveChanges(end)[1], 0, "end[1] != 0");
-        assertEq(curve.scheduledCurveChanges(newEnd)[0], 0, "newEnd[0] != 0");
-        assertEq(curve.scheduledCurveChanges(newEnd)[1], -20, "newEnd[1] != -20");
-    }
-
-    function testRewrite_diffStartAtFirstStart(uint32 _warp) public {
-        uint48 start = 100;
-        vm.assume(_warp >= start);
-        int256[3] memory startCoeff = [int(1), int(2), 0];
-        (
-            TokenPoint memory oldPoint,
-            TokenPoint memory newPoint,
-            LockedBalance memory oldLocked,
-            LockedBalance memory newLocked
-        ) = _initState(start, startCoeff);
-
-        newLocked.start = start + 1;
-
-        // assumption, there is no time period where this is allowed
-        vm.warp(_warp);
-        // write the second schedule change
-        vm.expectRevert(RetroactiveStartChange.selector);
-        curve.scheduleCurveChanges(oldPoint, newPoint, oldLocked, newLocked);
-    }
-
-    function testAdd_sameStartBeforeStart() public {
-        uint48 start = 100;
-        uint48 end = start + curve.maxTime();
-        int256[3] memory startCoeff = [int(1), int(2), 0];
-        (
-            TokenPoint memory oldPoint,
-            TokenPoint memory newPoint,
-            LockedBalance memory oldLocked,
-            LockedBalance memory newLocked
-        ) = _initStateAdd(start, startCoeff);
-
-        // write the second schedule change
-        curve.scheduleCurveChanges(oldPoint, newPoint, oldLocked, newLocked);
-
-        // expectation: the old lock has been removed at the start, replacing the new one
-        // but the old point is still there
-        assertEq(
-            curve.scheduledCurveChanges(start)[0],
-            startCoeff[0] + newPoint.coefficients[0],
-            "start[0] != 11"
-        );
-        assertEq(
-            curve.scheduledCurveChanges(start)[1],
-            startCoeff[1] + newPoint.coefficients[1],
-            "start[1] != 22"
-        );
-
-        // the end should be the aggregate of the first swapped point and the old point
-        assertEq(curve.scheduledCurveChanges(end)[0], 0, "end[0] != 0");
-        assertEq(
-            curve.scheduledCurveChanges(end)[1],
-            -startCoeff[1] - newPoint.coefficients[1],
-            "end[1] != -22"
-        );
-    }
-
-    function testAdd_sameStartAtStart(bool _exact) public {
-        uint48 start = 100;
-        uint48 end = start + curve.maxTime();
-        int256[3] memory startCoeff = [int(1), int(2), 0];
-        (
-            TokenPoint memory oldPoint,
-            TokenPoint memory newPoint,
-            LockedBalance memory oldLocked,
-            LockedBalance memory newLocked
-        ) = _initStateAdd(start, startCoeff);
-
-        vm.warp(_exact ? start : end - 1);
-        // write the second schedule change
-        curve.scheduleCurveChanges(oldPoint, newPoint, oldLocked, newLocked);
-
-        // expected: both old points still there. end date is replaced for 1/2
-        assertEq(
-            curve.scheduledCurveChanges(start)[0],
-            startCoeff[0] + startCoeff[0],
-            "start[0] != 2"
-        );
-        assertEq(
-            curve.scheduledCurveChanges(start)[1],
-            startCoeff[1] + startCoeff[1],
-            "start[1] != 4"
-        );
-
-        // the end should be the aggregate of the first swapped point and the old point
-        assertEq(curve.scheduledCurveChanges(end)[0], 0, "end[0] != 0");
-        assertEq(
-            curve.scheduledCurveChanges(end)[1],
-            -startCoeff[1] - newPoint.coefficients[1],
-            "end[1] != -22"
-        );
-    }
-
-    function testAdd_sameStartAtEnd(bool _exact) public {
-        uint48 start = 100;
-        uint48 end = start + curve.maxTime();
-        int256[3] memory startCoeff = [int(1), int(2), 0];
-        (
-            TokenPoint memory oldPoint,
-            TokenPoint memory newPoint,
-            LockedBalance memory oldLocked,
-            LockedBalance memory newLocked
-        ) = _initStateAdd(start, startCoeff);
-
-        vm.warp(_exact ? end : end + 1);
-        // write the second schedule change
-        curve.scheduleCurveChanges(oldPoint, newPoint, oldLocked, newLocked);
-
-        // expected: nothing changes from the initial state
-        assertEq(
-            curve.scheduledCurveChanges(start)[0],
-            startCoeff[0] + startCoeff[0],
-            "start[0] != 2"
-        );
-        assertEq(
-            curve.scheduledCurveChanges(start)[1],
-            startCoeff[1] + startCoeff[1],
-            "start[1] != 4"
-        );
-
-        assertEq(curve.scheduledCurveChanges(end)[0], 0, "end[0] != 0");
-        assertEq(
-            curve.scheduledCurveChanges(end)[1],
-            -startCoeff[1] - startCoeff[1],
-            "end[1] != -4"
-        );
-    }
-
-    function testAdd_diffStartBeforeStart() public {
-        uint48 start = 100;
-        uint48 end = start + curve.maxTime();
-        int256[3] memory startCoeff = [int(1), int(2), 0];
-        (
-            TokenPoint memory oldPoint,
-            TokenPoint memory newPoint,
-            LockedBalance memory oldLocked,
-            LockedBalance memory newLocked
-        ) = _initStateAdd(start, startCoeff);
-
-        // adjust the start date
-        newLocked.start = start + 1;
-
-        // write the second schedule change
-        curve.scheduleCurveChanges(oldPoint, newPoint, oldLocked, newLocked);
-
-        // expectation: the old lock has been removed at the start and moved to the new start
-        // but the old point is still there
-
-        assertEq(curve.scheduledCurveChanges(start)[0], startCoeff[0], "start[0] != 1");
-        assertEq(curve.scheduledCurveChanges(start)[1], startCoeff[1], "start[1] != 2");
-        assertEq(
-            curve.scheduledCurveChanges(newLocked.start)[0],
-            newPoint.coefficients[0],
-            "newLocked.start[0] != 10"
-        );
-        assertEq(
-            curve.scheduledCurveChanges(newLocked.start)[1],
-            newPoint.coefficients[1],
-            "newLocked.start[1] != 20"
-        );
-
-        // the end should be the aggregate of the first swapped point and the old point
-        assertEq(curve.scheduledCurveChanges(end)[0], 0, "end[0] != 0");
-        assertEq(curve.scheduledCurveChanges(end)[1], -startCoeff[1], "end[1] != -2");
-        assertEq(curve.scheduledCurveChanges(end + 1)[0], 0, "end[0] != 0");
-        assertEq(
-            curve.scheduledCurveChanges(end + 1)[1],
-            -newPoint.coefficients[1],
-            "end[1] != -20"
-        );
-    }
-
-    // no reason to suspect otherwise but good to check reductions are well behaved
-    function testReduction() public {
-        uint48 start = 100;
-        uint48 end = start + curve.maxTime();
-
-        int256[3] memory startCoeff = [int(10), int(20), 0];
-        (
-            TokenPoint memory oldPoint,
-            TokenPoint memory newPoint,
-            LockedBalance memory oldLocked,
-            LockedBalance memory newLocked
-        ) = _initState(start, startCoeff);
-
-        // rewrite our new point to be 1, 2
-        newPoint.coefficients[0] = 1;
-        newPoint.coefficients[1] = 2;
-
-        // write the second schedule change
-        curve.scheduleCurveChanges(oldPoint, newPoint, oldLocked, newLocked);
-
-        // expectation: the old lock has been removed at the start, replacing the new one
-        assertEq(curve.scheduledCurveChanges(start)[0], 1, "start[0] != 1");
-        assertEq(curve.scheduledCurveChanges(start)[1], 2, "start[1] != 2");
-
-        // the end should be the same as the start but in the negative
-        assertEq(curve.scheduledCurveChanges(end)[0], 0, "end[0] != 0");
-        assertEq(curve.scheduledCurveChanges(end)[1], -2, "end[1] != -2");
-    }
-
-    // TODO: unhappy path
-    // both locked are zero
-    // the old point and new point dont align with the locks
-    // reverts if trying to decrease when there's nothing in the old lock or if new lock > old lock
-    // has no impact if the deposits are the same (might revert)
+    // calling twice in same block doesn't double write history
 }

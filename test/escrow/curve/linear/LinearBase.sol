@@ -61,7 +61,16 @@ contract MockLinearIncreasingEscrow is LinearIncreasingEscrow {
     }
 
     function writeNewGlobalPoint(GlobalPoint memory _latestPoint, uint256 _index) external {
-        _writeNewGlobalPoint(_latestPoint, _index);
+        _latestPointIndex = _index;
+        _pointHistory[_index] = _latestPoint;
+    }
+
+    function earliestScheduledChange() external view returns (uint48) {
+        return _earliestScheduledChange;
+    }
+
+    function writeEarliestScheduleChange(uint48 _at) external {
+        _earliestScheduledChange = _at;
     }
 }
 

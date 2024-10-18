@@ -60,9 +60,11 @@ contract LinearIncreasingEscrow is
 
     mapping(uint => GlobalPoint) internal _pointHistory;
 
-    uint256 private _latestPointIndex;
+    uint256 internal _latestPointIndex;
 
     mapping(uint48 => int256[3]) internal _scheduledCurveChanges;
+
+    uint48 internal _earliestScheduledChange;
 
     function pointHistory(uint256 _loc) external view returns (GlobalPoint memory) {
         return _pointHistory[_loc];
@@ -167,10 +169,21 @@ contract LinearIncreasingEscrow is
         uint256 MAX_TIME = _maxTime();
         timeElapsed = timeElapsed > MAX_TIME ? MAX_TIME : timeElapsed;
 
+        console.log("timeElapsed", timeElapsed);
+        console.log("MAX_TIME", MAX_TIME);
+
         // convert the time to fixed point
         int256 t = SignedFixedPointMath.toFP(timeElapsed.toInt256());
 
+        console.log("t", t);
+
         int256 bias = linear.mul(t).add(const);
+
+        console.log("bias", bias);
+        console.log("linear", linear);
+        console.log("const", const);
+
+        console.log("From FP bias", SignedFixedPointMath.fromFP(bias));
 
         // never return negative values
         // in the increasing case, this should never happen
@@ -308,16 +321,22 @@ contract LinearIncreasingEscrow is
         // update our schedules
         _scheduleCurveChanges(oldTokenPoint, newTokenPoint, _oldLocked, _newLocked);
 
-        // backpop the history
-        (GlobalPoint memory latestPoint, uint256 latestIndex) = _populateHistory();
+        // if we need to: update the global state
+        (GlobalPoint memory latestPoint, uint256 currentIndex) = _populateHistory();
 
-        // update with the latest token point
-        // this only should happen with a decrease because we don't currently support increases
-        // if we wrote into the future, we don't need to update the current state as hasn't taken place yet
-        if (newTokenPoint.checkpointTs == latestPoint.ts) {
+        // update the global with the latest token point
+        // if we wrote into the future, we don't need to update the global state as hasn't taken place yet
+        bool tokenHasUpdateNow = newTokenPoint.checkpointTs == latestPoint.ts;
+        if (tokenHasUpdateNow) {
             latestPoint = _applyTokenUpdateToGlobal(oldTokenPoint, newTokenPoint, latestPoint);
-            // write the new global point
-            _writeNewGlobalPoint(latestPoint, latestIndex);
+        }
+
+        // if the currentIndex is unchanged, this means no state has been written globally
+        // so no need to write if there are no changes from token + schedule
+        if (currentIndex != _latestPointIndex || tokenHasUpdateNow) {
+            // index starts at 1 - so if there is an update we need to add it
+            _latestPointIndex = currentIndex == 0 ? 1 : currentIndex;
+            _pointHistory[currentIndex] = latestPoint;
         }
     }
 
@@ -447,6 +466,14 @@ contract LinearIncreasingEscrow is
             // directly to the global point in later functions if (block.timestamp < newStart) {
             _scheduledCurveChanges[newStart][0] += _newPoint.coefficients[0];
             _scheduledCurveChanges[newStart][1] += _newPoint.coefficients[1];
+
+            // write the point where the populate history function should start tracking data from
+            // technically speaking we should check if the old point needs to be moved forward
+            // if all the coefficients are zero. In practice this is unlikely to make much of a difference.
+            // unless someone is able to grief by locking very early then removing to much later.
+            if (_earliestScheduledChange == 0 || newStart < _earliestScheduledChange) {
+                _earliestScheduledChange = newStart;
+            }
         }
 
         // If we're not yet at max, also add the scheduled decrease
@@ -456,32 +483,68 @@ contract LinearIncreasingEscrow is
         }
     }
 
-    // fetch our latest global point
-    // in the base case initialise from zero but set the timestamp to the current block time
+    /// @notice TODO - better naming or make internal
     function getLatestGlobalPoint() public view returns (GlobalPoint memory latestPoint) {
+        // no data - must check the schedule to see how far back we need to go
+        // if there's nothing yet to schedule, take the ts
         if (_latestPointIndex == 0) {
-            latestPoint.ts = uint48(block.timestamp);
+            if (_earliestScheduledChange == 0 || _earliestScheduledChange > block.timestamp) {
+                latestPoint.ts = block.timestamp;
+            } else {
+                latestPoint.ts = _earliestScheduledChange;
+            }
             return latestPoint;
         } else {
             return _pointHistory[_latestPointIndex];
         }
     }
 
+    function _writeFirstPoint(
+        GlobalPoint memory latestPoint
+    ) internal returns (GlobalPoint memory) {
+        uint48 t = _earliestScheduledChange;
+        latestPoint.ts = t;
+        latestPoint.coefficients[0] = _scheduledCurveChanges[t][0];
+        latestPoint.coefficients[1] = _scheduledCurveChanges[t][1];
+
+        return latestPoint;
+    }
+
     /// @dev iterates over the interval and looks for scheduled changes that have elapsed
-    ///
-    function _populateHistory() internal returns (GlobalPoint memory, uint256) {
-        GlobalPoint memory latestPoint = getLatestGlobalPoint();
+    /// @return latestPoint The most recent global state checkpoint
+    /// @return currentIndex Latest index + intervals iterated over since last state write
+    /// @dev if the currentIndex is zero, then no state exists yet
+    function _populateHistory()
+        internal
+        returns (GlobalPoint memory latestPoint, uint256 currentIndex)
+    {
+        currentIndex = _latestPointIndex;
+        latestPoint = getLatestGlobalPoint();
 
-        uint48 interval = uint48(IClock(clock).checkpointInterval());
         uint48 latestCheckpoint = uint48(latestPoint.ts);
-        uint currentIndex = _latestPointIndex;
+        uint48 interval = uint48(IClock(clock).checkpointInterval());
 
-        {
-            // step 1: round down to floor of interval
+        // if we are at the block timestamp with the latest point, history has already been written
+        bool latestPointUpToDate = latestPoint.ts == block.timestamp;
+
+        bool firstScheduledWrite = currentIndex == 0 &&
+            _earliestScheduledChange <= block.timestamp &&
+            _earliestScheduledChange > 0;
+
+        // can move this earlier
+        if (firstScheduledWrite) {
+            latestPoint = _writeFirstPoint(latestPoint);
+        }
+
+        if (!latestPointUpToDate) {
+            // step 1: round down to floor of interval ensures we align with schedulling
             uint48 t_i = (latestCheckpoint / interval) * interval;
 
             for (uint256 i = 0; i < 255; ++i) {
                 // step 2: the first interval is always the next one after the last checkpoint
+                // this is important because if we floored the schedule, there can be intermediate
+                // points, however if there is no history (first point) then we dont do this
+                // if (!firstScheduledWrite)
                 t_i += interval;
 
                 // bound to at least the present
@@ -493,10 +556,24 @@ contract LinearIncreasingEscrow is
 
                 // we create a new "curve" by defining the coefficients starting from time t_i
                 // our constant is the y intercept at t_i and is found by evalutating the curve between the last point and t_i
-                // todo safe casting
+                console.log("biasChange", biasChange);
+                console.log("slopeChange", slopeChange);
+                console.log("latestPoint.ts", latestPoint.ts);
+                console.log("latestPoint.coefficients[0]", latestPoint.coefficients[0]);
+                console.log("latestPoint.coefficients[1]", latestPoint.coefficients[1]);
+                console.log("t_i", t_i);
+                console.log("interval", interval);
+
+                console.log("t_i - latestPoint.ts", t_i - latestPoint.ts);
+                console.log("% of interval", (((t_i - latestPoint.ts) * 100) / interval));
+
+                console.log("Bias", _getBias(t_i - latestPoint.ts, latestPoint.coefficients));
+
                 latestPoint.coefficients[0] =
-                    int256(_getBias(t_i - latestPoint.ts, latestPoint.coefficients)) +
+                    _getBias(t_i - latestPoint.ts, latestPoint.coefficients).toInt256() +
                     biasChange;
+
+                console.log("coeff", latestPoint.coefficients[0]);
 
                 // here we add the net result of the coefficient changes to the slope
                 // which can be applied for the ensuring period
@@ -517,16 +594,21 @@ contract LinearIncreasingEscrow is
 
                 // update the timestamp ahead of either breaking or the next iteration
                 latestPoint.ts = t_i;
+                // if (firstScheduledWrite) firstScheduledWrite = false;
 
                 currentIndex++;
                 bool hasScheduledChange = (biasChange != 0 || slopeChange != 0);
                 // write the point to storage if there are changes, otherwise continue
                 // interpolating in memory and can write to storage at the end
                 // otherwise we are as far as we can go so we break
-                if (t_i == block.timestamp) break;
+                if (t_i == block.timestamp) {
+                    console.log("Gon break");
+                    break;
+                }
                 // note: if we are exactly on the boundary we don't write yet
                 // this means we can add the token-contribution later
                 else if (hasScheduledChange) {
+                    console.log("no break");
                     _pointHistory[currentIndex] = latestPoint;
                 }
             }
@@ -569,25 +651,6 @@ contract LinearIncreasingEscrow is
         _latestPoint.coefficients[1] += _newPoint.coefficients[1];
 
         return _latestPoint;
-    }
-
-    /// @dev Writes or overwrites the latest global point into storage at the index
-    /// @dev Will overwrite the last point if the ts of the prev block is now
-    /// @param _latestPoint The latest global point to write.
-    /// @param _index The returned index following the history backpop loop.
-    /// @dev Begins at 1 as corresponds to length of the pseudo-array.
-    function _writeNewGlobalPoint(GlobalPoint memory _latestPoint, uint256 _index) internal {
-        if (_index == 0) revert("Index 0");
-        if (_index <= _latestPointIndex) revert("index must increase");
-        // can't write to index 0
-        if (_index != 1 && _pointHistory[_index - 1].ts == block.timestamp) {
-            // overwrite the current index, given that the passed one will be the i+1
-            _pointHistory[_index - 1] = _latestPoint;
-        } else {
-            // first point or a new point
-            _latestPointIndex = _index;
-            _pointHistory[_index] = _latestPoint;
-        }
     }
 
     /*///////////////////////////////////////////////////////////////
