@@ -9,508 +9,519 @@ import {IVotingEscrowIncreasing, ILockedBalanceIncreasing} from "src/escrow/incr
 import {LinearCurveBase} from "./LinearBase.sol";
 
 contract TestLinearIncreasingScheduleChanges is LinearCurveBase {
-    /// get or write latest point
+    // setup function - initialize the curve
 
-    // test no prior history, no schedulling - returns CI 0, empty point with block.ts
-    function testGetLatestPointNoPriorNoSchedule(uint32 warp) public {
-        vm.warp(warp);
-        GlobalPoint memory point = curve.getLatestGlobalPointOrWriteFirstPoint();
+    // in testing this function we need to primarily focus on aggregating balances atop of
+    // a predefined point, the unhappy path here is that there's some imbalance between what the lock is
+    // saying and what the token point is saying.
+    // for now, let's assume the happy path then think about sad paths
 
-        assertEq(point.ts, block.timestamp, "ts");
-        assertEq(point.bias, 0, "bias");
-        assertEq(point.coefficients[0], 0, "coeff0");
-        assertEq(point.coefficients[1], 0, "coeff1");
-
-        // check nothing written
-        assertEq(curve.pointHistory(1).ts, 0, "ts");
+    function setUp() public override {
+        super.setUp();
+        //
     }
 
-    // no prior history, but a scheduled change in the future - returns a point w. ts
-    function testGetLatestPointNoPriorFutureSchedule(uint48 warp) public {
-        vm.assume(warp < type(uint48).max);
-        vm.warp(warp);
-        curve.writeEarliestScheduleChange(warp + 1);
-        GlobalPoint memory point = curve.getLatestGlobalPointOrWriteFirstPoint();
+    // testing with no prior state
+    function testFuzz_noPriorLockSchedulesIncrease(
+        LockedBalance memory _newLocked,
+        TokenPoint memory _newPoint,
+        uint128[3] memory _boundCoeff
+    ) public {
+        vm.warp(0);
+        // bound new lock start to uint32
+        vm.assume(_newLocked.start < type(uint32).max);
 
-        assertEq(point.ts, block.timestamp, "ts");
-        assertEq(point.bias, 0, "bias");
-        assertEq(point.coefficients[0], 0, "coeff0");
-        assertEq(point.coefficients[1], 0, "coeff1");
+        // other tests can check on the boundary
+        vm.assume(_newLocked.start > 0);
 
-        // check nothing written
-        assertEq(curve.pointHistory(1).ts, 0, "ts");
-    }
+        TokenPoint memory oldPoint;
+        LockedBalance memory oldLocked;
 
-    // no prior history, but a scheduled change in the past - returns a point w. the scheduled change
-    // and writes the point
-    function testGetLatestPointNoPriorPastSchedule(uint48 warp) public {
-        vm.assume(warp > 1); // schedulling at zero throws it off
-        vm.warp(warp);
-        curve.writeEarliestScheduleChange(warp - 1);
-        curve.writeSchedule(warp - 1, [int(1), int(2), int(0)]);
-        GlobalPoint memory point = curve.getLatestGlobalPointOrWriteFirstPoint();
+        // bound coefficients
+        _newPoint.coefficients[0] = int(int128(_boundCoeff[0]));
+        _newPoint.coefficients[1] = int(int128(_boundCoeff[1]));
 
-        assertEq(point.ts, warp - 1, "ts");
-        assertEq(point.bias, 0, "bias"); // TODO
-        assertEq(point.coefficients[0], 1, "coeff0");
-        assertEq(point.coefficients[1], 2, "coeff1");
+        // write it
+        curve.scheduleCurveChanges(oldPoint, _newPoint, oldLocked, _newLocked);
 
-        // check we have written
-        GlobalPoint memory pointFromHistory = curve.pointHistory(1);
-
-        assertEq(pointFromHistory.ts, warp - 1, "ts");
-        assertEq(pointFromHistory.bias, 0, "bias"); // TODO
-        assertEq(pointFromHistory.coefficients[0], 1, "coeff0");
-        assertEq(pointFromHistory.coefficients[1], 2, "coeff1");
-    }
-
-    // if there's a point index - return the point @ the index
-    function testGetLatestPointWithPrior(uint48 warp) public {
-        vm.assume(warp > 0);
-        vm.warp(warp);
-        curve.writeNewGlobalPoint(GlobalPoint(1, warp - 1, [int(1), int(2), int(0)]), 123);
-        GlobalPoint memory point = curve.getLatestGlobalPointOrWriteFirstPoint();
-
-        assertEq(point.ts, warp - 1, "ts");
-        assertEq(point.bias, 1, "bias");
-        assertEq(point.coefficients[0], 1, "coeff0");
-        assertEq(point.coefficients[1], 2, "coeff1");
-    }
-
-    /// pop hist
-
-    // no prior no earliest schedule - return empty
-    function testPopulateHistoryNoPriorNoSchedule(uint32 warp) public {
-        vm.assume(warp > 0);
-        vm.warp(warp);
-        (GlobalPoint memory point, uint index) = curve.populateHistory();
-
-        assertEq(index, 0, "index");
-        assertEq(point.ts, warp, "ts");
-        assertEq(point.bias, 0, "bias");
-        assertEq(point.coefficients[0], 0, "coeff0");
-        assertEq(point.coefficients[1], 0, "coeff1");
-    }
-
-    // no prior + earliest schedule in future - return empty
-    function testPopulateHistoryNoPriorFutureSchedule(uint48 warp) public {
-        vm.assume(warp < type(uint48).max);
-        vm.warp(warp);
-        curve.writeEarliestScheduleChange(warp + 1);
-        (GlobalPoint memory point, uint index) = curve.populateHistory();
-
-        assertEq(index, 0, "index");
-        assertEq(point.ts, warp, "ts");
-        assertEq(point.bias, 0, "bias");
-        assertEq(point.coefficients[0], 0, "coeff0");
-        assertEq(point.coefficients[1], 0, "coeff1");
-    }
-
-    /// assume here that the scheule + earliest schedules are correct:
-
-    // no prior + earliest schedule in past (single iteration) return the point + the schedule
-    // so we need to setup the scheduled changes
-    function testNoHistorySingleIterationInPast() public {
-        // hardcode a warp, should be lets say 1 week + 1 day
-        uint48 warp = 1 weeks + 1 days;
-        // get the interval
-        uint48 interval = uint48(clock.checkpointInterval());
-
-        vm.assume(warp > interval); // avoid zero rounding
-        vm.assume(warp <= type(uint40).max); // avoid overflow
-        TokenPoint memory tokenPointPreview = curve.previewPoint(1e18);
-
-        // get the nearest interval point to warp
-        uint48 schedulePast = warp - (warp % interval);
-
-        // write an earliest change
-        curve.writeEarliestScheduleChange(schedulePast);
-
-        // write a scheduled change for the same time
-        curve.writeSchedule(
-            schedulePast,
-            [tokenPointPreview.coefficients[0], tokenPointPreview.coefficients[1], int(0)]
+        // check the schedule
+        int256[3] memory startChanges = curve.scheduledCurveChanges(_newLocked.start);
+        int256[3] memory endChanges = curve.scheduledCurveChanges(
+            _newLocked.start + curve.maxTime()
         );
 
-        // populate the history
-        vm.warp(warp);
-        (GlobalPoint memory point, uint index) = curve.populateHistory();
-
-        // assertEq(index, 1, "index");
-        assertEq(point.ts, warp, "ts");
-
-        // ingnore the bias for now
-        // assertEq(point.bias, 1, "bias");
-        uint expectedBias = curve.getBias(warp - schedulePast, 1e18);
-        assertEq(uint(point.coefficients[0]) / 1e18, expectedBias, "coeff0");
-        assertEq(point.coefficients[1], tokenPointPreview.coefficients[1], "coeff1");
-        // should have the first index + another loop
-        assertEq(index, 2);
-    }
-    // no prior + earlest schedule in the past (multiple interation) return point + schedule and current index is multi-looped
-    function testNoHistoryMultipleIterationInPast() public {
-        // hardcode a warp, should be lets say 1 week + 1 day
-        uint48 warp = 3 weeks + 1 days;
-        // get the interval
-        uint48 interval = uint48(clock.checkpointInterval());
-
-        vm.assume(warp > interval); // avoid zero rounding
-        vm.assume(warp <= type(uint40).max); // avoid overflow
-        TokenPoint memory tokenPointPreview = curve.previewPoint(1e18);
-
-        // check the values of the point
-        console.log("preview bias", tokenPointPreview.bias);
-        console.log("preview c0", tokenPointPreview.coefficients[0]);
-        console.log("preview c1", tokenPointPreview.coefficients[1]);
-
-        // get the nearest interval point to warp
-        uint48 schedulePast = 1 weeks;
-        console.log("schedulePast", schedulePast);
-
-        // write an earliest change
-        curve.writeEarliestScheduleChange(schedulePast);
-
-        // write a scheduled change for the same time
-        curve.writeSchedule(
-            schedulePast,
-            [tokenPointPreview.coefficients[0], tokenPointPreview.coefficients[1], int(0)]
-        );
-
-        // populate the history
-        vm.warp(warp);
-        (GlobalPoint memory point, uint index) = curve.populateHistory();
-
-        // assertEq(index, 1, "index");
-        assertEq(point.ts, warp, "ts");
-
-        console.log("warp - schedulePast", warp - schedulePast);
-        // ingnore the bias for now
-        // assertEq(point.bias, 1, "bias");
-
-        uint expectedBias = curve.getBias(warp - schedulePast, 1e18);
-        assertEq(uint(point.coefficients[0] / 1e18), expectedBias, "coeff0");
-        assertEq(point.coefficients[1], tokenPointPreview.coefficients[1], "coeff1");
-        // 1 at week 1
-        // 2 at week 2
-        // 3 at week 3
-        // 4 at week 3 + 1 day
-        assertEq(index, 4);
-    }
-    /// prior history
-
-    // no earliest schedule but a point will skip the schedule
-    // case 1: point.ts == now
-    function testPriorHistoryIgnoresEarliestSchedulePresent() public {
-        vm.warp(1 weeks + 1 days);
-        // write a global point at now
-        curve.writeNewGlobalPoint(GlobalPoint(1, block.timestamp, [int(1), int(2), int(0)]), 1);
-
-        // write a schedule
-        curve.writeSchedule(1 weeks, [int(9), int(3), int(0)]);
-        curve.writeEarliestScheduleChange(1 weeks);
-
-        // fetch the history from populate
-        (GlobalPoint memory point, uint index) = curve.populateHistory();
-
-        // we expect to return 1 and ignore the schedule
-        assertEq(index, 1);
-        assertEq(point.ts, block.timestamp);
-        assertEq(point.coefficients[0], 1);
-        assertEq(point.coefficients[1], 2);
-    }
-
-    // case 2: point.ts < now
-    function testPriorHistoryIgnoresEarliestSchedulePast() public {
-        vm.warp(1 weeks + 1 days);
-        // write a global point at now
-        curve.writeNewGlobalPoint(GlobalPoint(1, block.timestamp - 1, [int(1), int(2), int(0)]), 1);
-
-        // write a schedule
-        curve.writeSchedule(1 weeks, [int(9), int(3), int(0)]);
-        curve.writeEarliestScheduleChange(1 weeks);
-
-        // fetch the history from populate
-        (GlobalPoint memory point, uint index) = curve.populateHistory();
-
-        // we expect to return 2 and ignore the schedule
-        assertEq(index, 2);
-        assertEq(point.ts, block.timestamp);
-        // skip [0] as not checking that here
-        assertEq(point.coefficients[1], 2);
-    }
-
-    // here we test the application of scheduling changes
-
-    // schedule before point.ts, not applied
-    function testPriorHistoryIgnoresScheduleBeforeLatestPoint() public {
-        vm.warp(1 weeks + 1 days);
-        // write a global point at now
-        curve.writeNewGlobalPoint(GlobalPoint(1, block.timestamp - 1, [int(1), int(2), int(0)]), 1);
-
-        // write a schedule
-        curve.writeSchedule(1 weeks, [int(9), int(3), int(0)]);
-
-        // fetch the history from populate
-        (GlobalPoint memory point, uint index) = curve.populateHistory();
-
-        // we expect to return 2 and ignore the schedule
-        assertEq(index, 2);
-        assertEq(point.ts, block.timestamp);
-        // skip [0] as not checking that here
-        assertEq(point.coefficients[1], 2);
-    }
-
-    // schedule between point.ts + ts, appied (also check equality)
-    function testPriorHistoryIncludesScheduleBetweenLatestPointAndNow() public {
-        // get a first tokenPoint
-        TokenPoint memory globalPrev = curve.previewPoint(10e18);
-
-        // write a global point at w1
-        curve.writeNewGlobalPoint(
-            GlobalPoint(
-                0, // bias
-                1 weeks, // ts
-                [globalPrev.coefficients[0], globalPrev.coefficients[1], int(0)]
-            ),
-            1 // index
-        );
-
-        // get a token point to be schedulled
-        TokenPoint memory tokenPointPreview = curve.previewPoint(1e18);
-
-        // write a scheduled change at the next week
-        curve.writeSchedule(
-            2 weeks,
-            [tokenPointPreview.coefficients[0], tokenPointPreview.coefficients[1], int(0)]
-        );
-
-        // warp after
-        vm.warp(2 weeks + 1 days);
-
-        // fetch the history from populate
-        (GlobalPoint memory point, uint index) = curve.populateHistory();
-
-        // we expect to return 3 and include the schedule
-        assertEq(index, 3);
-        assertEq(point.ts, block.timestamp);
-
-        // check point 2 is included
-        GlobalPoint memory p1 = curve.pointHistory(1);
-        GlobalPoint memory p2 = curve.pointHistory(2);
-        GlobalPoint memory p3 = curve.pointHistory(3);
-
-        // point 1 should just be the first global point we wrote
-        assertEq(p1.ts, 1 weeks);
-        assertEq(p1.coefficients[0], globalPrev.coefficients[0]);
-        assertEq(p1.coefficients[1], globalPrev.coefficients[1]);
-
-        // point 2 should be at 2 weeks, the coeff 0 is p1 evaluated for 1 week
-        assertEq(p2.ts, 2 weeks);
-
-        uint expectedCoeff0p2 = curve.getBias(1 weeks, 10e18) + 1e18; // add the deposit amount from the scheduled change
-        assertEq(uint(p2.coefficients[0]) / 1e18, expectedCoeff0p2);
-
-        // the slope will be the addition of both coefficient[1]
+        // start should be the same as the new point
         assertEq(
-            p2.coefficients[1],
-            globalPrev.coefficients[1] + tokenPointPreview.coefficients[1]
-        );
-
-        // point 3 should not have been written yet
-        assertEq(p3.ts, 0);
-
-        // latest point should be @ ts, same coeff 1, gt coeff 0
-        assertEq(point.ts, block.timestamp);
-        assertGt(point.coefficients[0], p2.coefficients[0]);
-        assertEq(point.coefficients[1], p2.coefficients[1]);
-    }
-
-    // schedule after point.ts, not appied
-    function testPriorHistoryDoesntIncludeScheduleAfterLatestPoint() public {
-        // get a first tokenPoint
-        TokenPoint memory globalPrev = curve.previewPoint(10e18);
-
-        // write a global point at w1
-        curve.writeNewGlobalPoint(
-            GlobalPoint(
-                0, // bias
-                1 weeks, // ts
-                [globalPrev.coefficients[0], globalPrev.coefficients[1], int(0)]
-            ),
-            1 // index
-        );
-
-        // get a token point to be schedulled
-        TokenPoint memory tokenPointPreview = curve.previewPoint(1e18);
-
-        // write a scheduled change at the next week
-        curve.writeSchedule(
-            2 weeks,
-            [tokenPointPreview.coefficients[0], tokenPointPreview.coefficients[1], int(0)]
-        );
-
-        // warp between
-        vm.warp(1 weeks + 1 days);
-
-        // fetch the history from populate
-        (GlobalPoint memory point, uint index) = curve.populateHistory();
-
-        // we expect to return 2 and not include the schedule
-        assertEq(index, 2);
-        assertEq(point.ts, block.timestamp);
-
-        // check point 2 is included
-        GlobalPoint memory p1 = curve.pointHistory(1);
-        GlobalPoint memory p2 = curve.pointHistory(2);
-
-        // point 1 should just be the first global point we wrote
-        assertEq(p1.ts, 1 weeks);
-        assertEq(p1.coefficients[0], globalPrev.coefficients[0]);
-        assertEq(p1.coefficients[1], globalPrev.coefficients[1]);
-
-        // point 2 should not have been written yet
-        assertEq(p2.ts, 0);
-
-        // latest point should be @ ts, same coeff 1, gt coeff 0
-        assertEq(point.ts, block.timestamp);
-        assertGt(point.coefficients[0], p1.coefficients[0]);
-        assertEq(point.coefficients[1], p1.coefficients[1]);
-    }
-
-    /// multiple iterations and gaps
-    function testMultipleIterationsOnlyWritesIfChanges() public {
-        // get a first tokenPoint
-        TokenPoint memory globalPrev = curve.previewPoint(10e18);
-
-        // write a global point at w1
-        curve.writeNewGlobalPoint(
-            GlobalPoint(
-                0, // bias
-                1 weeks, // ts
-                [globalPrev.coefficients[0], globalPrev.coefficients[1], int(0)]
-            ),
-            1 // index
-        );
-
-        // get a token point to be schedulled
-        TokenPoint memory tokenPointPreview = curve.previewPoint(1e18);
-
-        // write a scheduled change after a few weeks
-        curve.writeSchedule(
-            5 weeks,
-            [tokenPointPreview.coefficients[0], tokenPointPreview.coefficients[1], int(0)]
-        );
-
-        // warp between
-        vm.warp(5 weeks + 1);
-
-        // fetch the history from populate
-        (GlobalPoint memory point, uint index) = curve.populateHistory();
-
-        // we expect to return index 5
-        assertEq(index, 6, "index != 6");
-        assertEq(point.ts, 5 weeks + 1, "ts !> 5 weeks");
-
-        // check point 2 is included
-        GlobalPoint memory p1 = curve.pointHistory(1);
-        GlobalPoint memory p5 = curve.pointHistory(5);
-        GlobalPoint memory p6 = curve.pointHistory(6);
-
-        // point 1 should just be the first global point we wrote
-        assertEq(p1.ts, 1 weeks);
-        assertEq(p1.coefficients[0], globalPrev.coefficients[0]);
-        assertEq(p1.coefficients[1], globalPrev.coefficients[1]);
-
-        // point 2 - 4 not written
-        for (uint i = 2; i < 5; i++) {
-            GlobalPoint memory p = curve.pointHistory(i);
-            assertEq(p.ts, 0);
-        }
-
-        // point 6 not written
-        assertEq(p6.ts, 0);
-
-        // latest point should be @ ts, should be written
-        assertEq(p5.ts, 5 weeks, "p5.ts != 5 weeks");
-
-        uint expectedBias = curve.getBias(5 weeks - 1 weeks, 10e18) + 1e18; // add the deposit amount from the scheduled change
-        assertEq(
-            uint(p5.coefficients[0]) / 1e18,
-            expectedBias,
-            "p5.coefficients[0] != expectedBias"
+            startChanges[0],
+            _newPoint.coefficients[0],
+            "startChanges[0] != _newPoint.coefficients[0]"
         );
         assertEq(
-            p5.coefficients[1],
-            p1.coefficients[1] + tokenPointPreview.coefficients[1],
-            "p5.slope != expected"
-        );
-    }
-
-    // calling twice in same block doesn't double write history
-    function testCallingTwiceInSameBlockDoesntDoubleWrite() public {
-        // get a first tokenPoint
-        TokenPoint memory globalPrev = curve.previewPoint(10e18);
-
-        // write a global point at w1
-        curve.writeNewGlobalPoint(
-            GlobalPoint(
-                0, // bias
-                1 weeks, // ts
-                [globalPrev.coefficients[0], globalPrev.coefficients[1], int(0)]
-            ),
-            1 // index
+            startChanges[1],
+            _newPoint.coefficients[1],
+            "startChanges[1] != _newPoint.coefficients[1]"
         );
 
-        // get a token point to be schedulled
-        TokenPoint memory tokenPointPreview = curve.previewPoint(1e18);
-
-        // write a scheduled change at the next week
-        curve.writeSchedule(
-            2 weeks,
-            [tokenPointPreview.coefficients[0], tokenPointPreview.coefficients[1], int(0)]
-        );
-
-        // warp after
-        vm.warp(2 weeks + 1 days);
-
-        // double populate
-        curve.populateHistory();
-        (GlobalPoint memory point, uint index) = curve.populateHistory();
-
-        // rest is same as the previous test above
-
-        // we expect to return 3 and include the schedule
-        assertEq(index, 3);
-        assertEq(point.ts, block.timestamp);
-
-        // check point 2 is included
-        GlobalPoint memory p1 = curve.pointHistory(1);
-        GlobalPoint memory p2 = curve.pointHistory(2);
-        GlobalPoint memory p3 = curve.pointHistory(3);
-
-        // point 1 should just be the first global point we wrote
-        assertEq(p1.ts, 1 weeks);
-        assertEq(p1.coefficients[0], globalPrev.coefficients[0]);
-        assertEq(p1.coefficients[1], globalPrev.coefficients[1]);
-
-        // point 2 should be at 2 weeks, the coeff 0 is p1 evaluated for 1 week
-        assertEq(p2.ts, 2 weeks);
-
-        uint expectedCoeff0p2 = curve.getBias(1 weeks, 10e18) + 1e18; // add the deposit amount from the scheduled change
-        assertEq(uint(p2.coefficients[0]) / 1e18, expectedCoeff0p2);
-
-        // the slope will be the addition of both coefficient[1]
+        // end should be the same as the new point slope but in the negative
         assertEq(
-            p2.coefficients[1],
-            globalPrev.coefficients[1] + tokenPointPreview.coefficients[1]
+            endChanges[1],
+            -_newPoint.coefficients[1],
+            "endChanges[1] != -_newPoint.coefficients[1]"
+        );
+    }
+
+    // unrelated lock should be purely addive
+    function testNoPriorLockLeavesExistingStateAlone() public {
+        // write some existing state to some location
+        uint48 start = 100;
+        uint48 end = start + curve.maxTime();
+        int256[3] memory startChanges = [int(1), int(2), int(0)];
+
+        curve.writeSchedule(start, [startChanges[0], startChanges[1], 0]);
+        curve.writeSchedule(end, [int(4), int(5), int(6)]);
+
+        TokenPoint memory newPoint;
+        TokenPoint memory oldPoint;
+
+        LockedBalance memory newLocked = LockedBalance({start: start, amount: 100});
+
+        newPoint.coefficients[0] = 1;
+        newPoint.coefficients[1] = 2;
+
+        oldPoint.coefficients[0] = startChanges[0];
+        oldPoint.coefficients[1] = startChanges[1];
+
+        curve.scheduleCurveChanges(
+            oldPoint,
+            newPoint,
+            LockedBalance({start: 0, amount: 0}),
+            newLocked
         );
 
-        // point 3 should not have been written yet
-        assertEq(p3.ts, 0);
+        // expected - the old schedule is added to
+        assertEq(curve.scheduledCurveChanges(start)[0], 2, "start[0] != 2");
+        assertEq(curve.scheduledCurveChanges(start)[1], 4, "start[1] != 4");
 
-        // latest point should be @ ts, same coeff 1, gt coeff 0
-        assertEq(point.ts, block.timestamp);
-        assertGt(point.coefficients[0], p2.coefficients[0]);
-        assertEq(point.coefficients[1], p2.coefficients[1]);
+        // 4 - 0 then 5 - 2
+        assertEq(curve.scheduledCurveChanges(end)[0], 4, "end[0] != 4");
+        assertEq(curve.scheduledCurveChanges(end)[1], 3, "end[1] != 3");
     }
+
+    // if updating the user's own lock then we relace the relevant state
+    function testUpdateState() public {
+        // write some existing state to some location
+        uint48 start = 100;
+        uint48 end = start + curve.maxTime();
+
+        int256[3] memory startChanges = [int(1), int(2), 0];
+
+        curve.writeSchedule(start, [startChanges[0], startChanges[1], 0]);
+        curve.writeSchedule(end, [int(4), int(5), 0]);
+
+        TokenPoint memory newPoint;
+        TokenPoint memory oldPoint;
+
+        LockedBalance memory newLocked = LockedBalance({start: start, amount: 100});
+
+        newPoint.coefficients[0] = 10;
+        newPoint.coefficients[1] = 20;
+
+        oldPoint.coefficients[0] = startChanges[0];
+        oldPoint.coefficients[1] = startChanges[1];
+
+        curve.scheduleCurveChanges(
+            oldPoint,
+            newPoint,
+            LockedBalance({start: start, amount: 1}),
+            newLocked
+        );
+
+        // expected - the old schedule is replaced
+        assertEq(curve.scheduledCurveChanges(start)[0], 10, "start[0] != 10");
+        assertEq(curve.scheduledCurveChanges(start)[1], 20, "start[1] != 20");
+
+        // reset the old point leaving just the diff -
+        // this will be 5 (original write) + 2 (the slope we are addng back) - 20 (new slope we remove)
+        assertEq(curve.scheduledCurveChanges(end)[0], 4, "end[0] != 4");
+        assertEq(curve.scheduledCurveChanges(end)[1], 5 + 2 - 20, "end[1] != -13"); //
+    }
+
+    // test an increasing write
+    // we write some initial state then a first deposit then test an increase at 3 timestamps
+    // => before start
+    // => during the lock
+    // => after finishing
+    function _initState(
+        uint48 start,
+        int256[3] memory startCoeff
+    )
+        internal
+        returns (
+            TokenPoint memory oldPoint,
+            TokenPoint memory newPoint,
+            LockedBalance memory oldLocked,
+            LockedBalance memory newLocked
+        )
+    {
+        // write the first schedule change
+
+        // set the first new locked w. start date
+        newLocked = LockedBalance({start: start, amount: 1});
+
+        // add to the new point for the first deposit
+        newPoint.coefficients[0] = startCoeff[0];
+        newPoint.coefficients[1] = startCoeff[1];
+
+        // write the first schedule change
+        curve.scheduleCurveChanges(oldPoint, newPoint, oldLocked, newLocked);
+
+        // the old point should be the same as the new point
+        oldPoint.coefficients[0] = newPoint.coefficients[0];
+        oldPoint.coefficients[1] = newPoint.coefficients[1];
+
+        oldLocked.start = newLocked.start;
+        oldLocked.amount = newLocked.amount;
+
+        // now setup the new new point
+        newPoint.coefficients[0] = 10;
+        newPoint.coefficients[1] = 20;
+
+        // setup the new start
+        newLocked = LockedBalance({start: start, amount: 2});
+    }
+
+    function _initStateAdd(
+        uint48 start,
+        int256[3] memory startCoeff
+    )
+        internal
+        returns (
+            TokenPoint memory oldPoint,
+            TokenPoint memory newPoint,
+            LockedBalance memory oldLocked,
+            LockedBalance memory newLocked
+        )
+    {
+        (oldPoint, newPoint, oldLocked, newLocked) = _initState(start, startCoeff);
+
+        TokenPoint memory unrelatedPoint;
+
+        unrelatedPoint.coefficients[0] = startCoeff[0];
+        unrelatedPoint.coefficients[1] = startCoeff[1];
+        // also write an unrelated point - this is someone else's lock
+        curve.scheduleCurveChanges(
+            oldPoint,
+            unrelatedPoint,
+            LockedBalance({start: 0, amount: 0}),
+            LockedBalance({start: start, amount: 1})
+        );
+    }
+
+    function testRewrite_startSameBeforeStart() public {
+        uint48 start = 100;
+        uint48 end = start + curve.maxTime();
+        int256[3] memory startCoeff = [int(1), int(2), 0];
+        (
+            TokenPoint memory oldPoint,
+            TokenPoint memory newPoint,
+            LockedBalance memory oldLocked,
+            LockedBalance memory newLocked
+        ) = _initState(start, startCoeff);
+
+        // write the second schedule change
+        curve.scheduleCurveChanges(oldPoint, newPoint, oldLocked, newLocked);
+
+        // expectation: we should have rewritten history completely
+        assertEq(curve.scheduledCurveChanges(start)[0], 10, "start[0] != 10");
+        assertEq(curve.scheduledCurveChanges(start)[1], 20, "start[1] != 20");
+
+        // the end should be the same as the start but in the negative
+        assertEq(curve.scheduledCurveChanges(end)[0], 0, "end[0] != 0");
+        assertEq(curve.scheduledCurveChanges(end)[1], -20, "end[1] != -20");
+    }
+
+    function testRewrite_startSameAtStart(bool _exact) public {
+        uint48 start = 100;
+        uint48 end = start + curve.maxTime();
+        int256[3] memory startCoeff = [int(1), int(2), 0];
+        (
+            TokenPoint memory oldPoint,
+            TokenPoint memory newPoint,
+            LockedBalance memory oldLocked,
+            LockedBalance memory newLocked
+        ) = _initState(start, startCoeff);
+
+        vm.warp(_exact ? start : end - 1);
+        // write the second schedule change
+        curve.scheduleCurveChanges(oldPoint, newPoint, oldLocked, newLocked);
+
+        // expectation, the window should have passed to schedule changes so instead we simply adjust the end
+        assertEq(curve.scheduledCurveChanges(start)[0], startCoeff[0], "start[0] != startCoeff[0]");
+        assertEq(curve.scheduledCurveChanges(start)[1], startCoeff[1], "start[1] != startCoeff[1]");
+
+        // end should be the negative of the new point
+        assertEq(curve.scheduledCurveChanges(end)[0], 0, "end[0] != 0");
+        assertEq(curve.scheduledCurveChanges(end)[1], -20, "end[1] != -20");
+    }
+
+    function testRewrite_startSameAtEnd(bool _exact) public {
+        uint48 start = 100;
+        uint48 end = start + curve.maxTime();
+        int256[3] memory startCoeff = [int(1), int(2), 0];
+        (
+            TokenPoint memory oldPoint,
+            TokenPoint memory newPoint,
+            LockedBalance memory oldLocked,
+            LockedBalance memory newLocked
+        ) = _initState(start, startCoeff);
+
+        vm.warp(_exact ? end : end + 1);
+        // write the second schedule change
+        curve.scheduleCurveChanges(oldPoint, newPoint, oldLocked, newLocked);
+
+        // expectation, window missed completely
+        assertEq(curve.scheduledCurveChanges(start)[0], startCoeff[0], "start[0] != startCoeff[0]");
+        assertEq(curve.scheduledCurveChanges(start)[1], startCoeff[1], "start[1] != startCoeff[1]");
+
+        // end should be the negative of the new point
+        assertEq(curve.scheduledCurveChanges(end)[0], 0, "end[0] != 0");
+        assertEq(curve.scheduledCurveChanges(end)[1], -startCoeff[1], "end[1] != -startCoeff[1]");
+    }
+
+    function testRewrite_diffStartBeforeStart() public {
+        uint48 start = 100;
+        uint48 end = start + curve.maxTime();
+        int256[3] memory startCoeff = [int(1), int(2), 0];
+        (
+            TokenPoint memory oldPoint,
+            TokenPoint memory newPoint,
+            LockedBalance memory oldLocked,
+            LockedBalance memory newLocked
+        ) = _initState(start, startCoeff);
+
+        // adjust the start date
+        newLocked.start = start + 1;
+        uint48 newEnd = end + 1;
+
+        // write the second schedule change
+        curve.scheduleCurveChanges(oldPoint, newPoint, oldLocked, newLocked);
+
+        // expectation: the old lock has been removed at the start, replacing the new one
+        assertEq(curve.scheduledCurveChanges(start)[0], 0, "start[0] != 0");
+        assertEq(curve.scheduledCurveChanges(start)[1], 0, "start[1] != 0");
+        assertEq(curve.scheduledCurveChanges(newLocked.start)[0], 10, "newLocked.start[0] != 10");
+        assertEq(curve.scheduledCurveChanges(newLocked.start)[1], 20, "newLocked.start[1] != 20");
+
+        // the end should be the same as the start but in the negative
+        assertEq(curve.scheduledCurveChanges(end)[0], 0, "end[0] != 0");
+        assertEq(curve.scheduledCurveChanges(end)[1], 0, "end[1] != 0");
+        assertEq(curve.scheduledCurveChanges(newEnd)[0], 0, "newEnd[0] != 0");
+        assertEq(curve.scheduledCurveChanges(newEnd)[1], -20, "newEnd[1] != -20");
+    }
+
+    function testRewrite_diffStartAtFirstStart(uint32 _warp) public {
+        uint48 start = 100;
+        vm.assume(_warp >= start);
+        int256[3] memory startCoeff = [int(1), int(2), 0];
+        (
+            TokenPoint memory oldPoint,
+            TokenPoint memory newPoint,
+            LockedBalance memory oldLocked,
+            LockedBalance memory newLocked
+        ) = _initState(start, startCoeff);
+
+        newLocked.start = start + 1;
+
+        // assumption, there is no time period where this is allowed
+        vm.warp(_warp);
+        // write the second schedule change
+        vm.expectRevert(RetroactiveStartChange.selector);
+        curve.scheduleCurveChanges(oldPoint, newPoint, oldLocked, newLocked);
+    }
+
+    function testAdd_sameStartBeforeStart() public {
+        uint48 start = 100;
+        uint48 end = start + curve.maxTime();
+        int256[3] memory startCoeff = [int(1), int(2), 0];
+        (
+            TokenPoint memory oldPoint,
+            TokenPoint memory newPoint,
+            LockedBalance memory oldLocked,
+            LockedBalance memory newLocked
+        ) = _initStateAdd(start, startCoeff);
+
+        // write the second schedule change
+        curve.scheduleCurveChanges(oldPoint, newPoint, oldLocked, newLocked);
+
+        // expectation: the old lock has been removed at the start, replacing the new one
+        // but the old point is still there
+        assertEq(
+            curve.scheduledCurveChanges(start)[0],
+            startCoeff[0] + newPoint.coefficients[0],
+            "start[0] != 11"
+        );
+        assertEq(
+            curve.scheduledCurveChanges(start)[1],
+            startCoeff[1] + newPoint.coefficients[1],
+            "start[1] != 22"
+        );
+
+        // the end should be the aggregate of the first swapped point and the old point
+        assertEq(curve.scheduledCurveChanges(end)[0], 0, "end[0] != 0");
+        assertEq(
+            curve.scheduledCurveChanges(end)[1],
+            -startCoeff[1] - newPoint.coefficients[1],
+            "end[1] != -22"
+        );
+    }
+
+    function testAdd_sameStartAtStart(bool _exact) public {
+        uint48 start = 100;
+        uint48 end = start + curve.maxTime();
+        int256[3] memory startCoeff = [int(1), int(2), 0];
+        (
+            TokenPoint memory oldPoint,
+            TokenPoint memory newPoint,
+            LockedBalance memory oldLocked,
+            LockedBalance memory newLocked
+        ) = _initStateAdd(start, startCoeff);
+
+        vm.warp(_exact ? start : end - 1);
+        // write the second schedule change
+        curve.scheduleCurveChanges(oldPoint, newPoint, oldLocked, newLocked);
+
+        // expected: both old points still there. end date is replaced for 1/2
+        assertEq(
+            curve.scheduledCurveChanges(start)[0],
+            startCoeff[0] + startCoeff[0],
+            "start[0] != 2"
+        );
+        assertEq(
+            curve.scheduledCurveChanges(start)[1],
+            startCoeff[1] + startCoeff[1],
+            "start[1] != 4"
+        );
+
+        // the end should be the aggregate of the first swapped point and the old point
+        assertEq(curve.scheduledCurveChanges(end)[0], 0, "end[0] != 0");
+        assertEq(
+            curve.scheduledCurveChanges(end)[1],
+            -startCoeff[1] - newPoint.coefficients[1],
+            "end[1] != -22"
+        );
+    }
+
+    function testAdd_sameStartAtEnd(bool _exact) public {
+        uint48 start = 100;
+        uint48 end = start + curve.maxTime();
+        int256[3] memory startCoeff = [int(1), int(2), 0];
+        (
+            TokenPoint memory oldPoint,
+            TokenPoint memory newPoint,
+            LockedBalance memory oldLocked,
+            LockedBalance memory newLocked
+        ) = _initStateAdd(start, startCoeff);
+
+        vm.warp(_exact ? end : end + 1);
+        // write the second schedule change
+        curve.scheduleCurveChanges(oldPoint, newPoint, oldLocked, newLocked);
+
+        // expected: nothing changes from the initial state
+        assertEq(
+            curve.scheduledCurveChanges(start)[0],
+            startCoeff[0] + startCoeff[0],
+            "start[0] != 2"
+        );
+        assertEq(
+            curve.scheduledCurveChanges(start)[1],
+            startCoeff[1] + startCoeff[1],
+            "start[1] != 4"
+        );
+
+        assertEq(curve.scheduledCurveChanges(end)[0], 0, "end[0] != 0");
+        assertEq(
+            curve.scheduledCurveChanges(end)[1],
+            -startCoeff[1] - startCoeff[1],
+            "end[1] != -4"
+        );
+    }
+
+    function testAdd_diffStartBeforeStart() public {
+        uint48 start = 100;
+        uint48 end = start + curve.maxTime();
+        int256[3] memory startCoeff = [int(1), int(2), 0];
+        (
+            TokenPoint memory oldPoint,
+            TokenPoint memory newPoint,
+            LockedBalance memory oldLocked,
+            LockedBalance memory newLocked
+        ) = _initStateAdd(start, startCoeff);
+
+        // adjust the start date
+        newLocked.start = start + 1;
+
+        // write the second schedule change
+        curve.scheduleCurveChanges(oldPoint, newPoint, oldLocked, newLocked);
+
+        // expectation: the old lock has been removed at the start and moved to the new start
+        // but the old point is still there
+
+        assertEq(curve.scheduledCurveChanges(start)[0], startCoeff[0], "start[0] != 1");
+        assertEq(curve.scheduledCurveChanges(start)[1], startCoeff[1], "start[1] != 2");
+        assertEq(
+            curve.scheduledCurveChanges(newLocked.start)[0],
+            newPoint.coefficients[0],
+            "newLocked.start[0] != 10"
+        );
+        assertEq(
+            curve.scheduledCurveChanges(newLocked.start)[1],
+            newPoint.coefficients[1],
+            "newLocked.start[1] != 20"
+        );
+
+        // the end should be the aggregate of the first swapped point and the old point
+        assertEq(curve.scheduledCurveChanges(end)[0], 0, "end[0] != 0");
+        assertEq(curve.scheduledCurveChanges(end)[1], -startCoeff[1], "end[1] != -2");
+        assertEq(curve.scheduledCurveChanges(end + 1)[0], 0, "end[0] != 0");
+        assertEq(
+            curve.scheduledCurveChanges(end + 1)[1],
+            -newPoint.coefficients[1],
+            "end[1] != -20"
+        );
+    }
+
+    // no reason to suspect otherwise but good to check reductions are well behaved
+    function testReduction() public {
+        uint48 start = 100;
+        uint48 end = start + curve.maxTime();
+
+        int256[3] memory startCoeff = [int(10), int(20), 0];
+        (
+            TokenPoint memory oldPoint,
+            TokenPoint memory newPoint,
+            LockedBalance memory oldLocked,
+            LockedBalance memory newLocked
+        ) = _initState(start, startCoeff);
+
+        // rewrite our new point to be 1, 2
+        newPoint.coefficients[0] = 1;
+        newPoint.coefficients[1] = 2;
+
+        // write the second schedule change
+        curve.scheduleCurveChanges(oldPoint, newPoint, oldLocked, newLocked);
+
+        // expectation: the old lock has been removed at the start, replacing the new one
+        assertEq(curve.scheduledCurveChanges(start)[0], 1, "start[0] != 1");
+        assertEq(curve.scheduledCurveChanges(start)[1], 2, "start[1] != 2");
+
+        // the end should be the same as the start but in the negative
+        assertEq(curve.scheduledCurveChanges(end)[0], 0, "end[0] != 0");
+        assertEq(curve.scheduledCurveChanges(end)[1], -2, "end[1] != -2");
+    }
+
+    // TODO: unhappy path
+    // both locked are zero
+    // the old point and new point dont align with the locks
+    // reverts if trying to decrease when there's nothing in the old lock or if new lock > old lock
+    // has no impact if the deposits are the same (might revert)
 }

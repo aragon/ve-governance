@@ -293,6 +293,7 @@ contract LinearIncreasingEscrow is
     //////////////////////////////////////////////////////////////*/
 
     /// @notice A checkpoint can be called by the VotingEscrow contract to snapshot the user's voting power
+    /// @dev We assume the escrow checks the validity of the locked balances before calling this function
     function checkpoint(
         uint256 _tokenId,
         IVotingEscrow.LockedBalance memory _oldLocked,
@@ -302,6 +303,10 @@ contract LinearIncreasingEscrow is
         _checkpoint(_tokenId, _oldLocked, _newLocked);
     }
 
+    /// @dev Main checkpointing function for token and global state
+    /// @param _tokenId The NFT token ID
+    /// @param _oldLocked The previous locked balance and start time
+    /// @param _newLocked The new locked balance and start time
     function _checkpoint(
         uint256 _tokenId,
         IVotingEscrow.LockedBalance memory _oldLocked,
@@ -321,16 +326,23 @@ contract LinearIncreasingEscrow is
         _scheduleCurveChanges(oldTokenPoint, newTokenPoint, _oldLocked, _newLocked);
 
         // if we need to: update the global state
+        // this will also write the first point if the earliest scheduled change has elapsed
         (GlobalPoint memory latestPoint, uint256 currentIndex) = _populateHistory();
 
         // update the global with the latest token point
-        // if we wrote into the future, we don't need to update the global state as hasn't taken place yet
+        // it may be the case that the token is writing a scheduled change in which case there is no
+        // incremental change to the global state
         bool tokenHasUpdateNow = newTokenPoint.checkpointTs == latestPoint.ts;
         if (tokenHasUpdateNow) {
-            latestPoint = _applyTokenUpdateToGlobal(oldTokenPoint, newTokenPoint, latestPoint);
+            latestPoint = _applyTokenUpdateToGlobal(
+                _newLocked.start,
+                oldTokenPoint,
+                newTokenPoint,
+                latestPoint
+            );
         }
 
-        // if the currentIndex is unchanged, this means no state has been written globally
+        // if the currentIndex is unchanged, this means no extra state has been written globally
         // so no need to write if there are no changes from token + schedule
         if (currentIndex != _latestPointIndex || tokenHasUpdateNow) {
             // index starts at 1 - so if there is an update we need to add it
@@ -413,6 +425,12 @@ contract LinearIncreasingEscrow is
         return (oldPoint, newPoint);
     }
 
+    /// @dev Writes future changes to the schedulling system. Old points that have yet to be written are replaced.
+    /// @param _oldPoint The old point to be replaced, if it exists
+    /// @param _newPoint The new point to be written, should always exist
+    /// @param _oldLocked The old locked balance and amount, if it exists
+    /// @param _newLocked The new locked balance and amount
+    /// @dev We assume the calling function has correctly matched and valdated the old and new points and locks
     function _scheduleCurveChanges(
         TokenPoint memory _oldPoint,
         TokenPoint memory _newPoint,
@@ -431,9 +449,6 @@ contract LinearIncreasingEscrow is
             if (_oldLocked.start != _newLocked.start && block.timestamp >= _oldLocked.start) {
                 revert RetroactiveStartChange();
             }
-
-            // TODO: being extra safe we could check the old point has data
-            // but that should never happen.
 
             // first determine where we are relative to the old lock
             uint48 originalStart = _oldLocked.start;
@@ -484,6 +499,9 @@ contract LinearIncreasingEscrow is
         }
     }
 
+    /// @dev Fetches the latest global point from history or writes the first point if the earliest scheduled change has elapsed
+    /// @return latestPoint This will either be the latest point in history, a new, empty point if no scheduled changes have elapsed, or the first scheduled change
+    /// if the earliest scheduled change has elapsed
     function _getLatestGlobalPointOrWriteFirstPoint()
         internal
         returns (GlobalPoint memory latestPoint)
@@ -519,16 +537,15 @@ contract LinearIncreasingEscrow is
         return latestPoint;
     }
 
-    /// @dev iterates over the interval and looks for scheduled changes that have elapsed
-    /// @return latestPoint The most recent global state checkpoint
+    /// @dev Backfills total supply history up to the present based on elapsed scheduled changes
+    /// @dev Will write to storage if there are changes in the past, otherwise will keep the array sparse to save gas
+    /// @return latestPoint The most recent global state checkpoint in memory. This point is not yet written to storage in case of token-level updates
     /// @return currentIndex Latest index + intervals iterated over since last state write
-    /// @dev if the currentIndex is zero, then no state exists yet
     function _populateHistory()
         internal
         returns (GlobalPoint memory latestPoint, uint256 currentIndex)
     {
-        console.log("\nPopulating history");
-
+        // fetch the latest point or write the first one if needed
         latestPoint = _getLatestGlobalPointOrWriteFirstPoint();
 
         // needs to go after writing the point
@@ -544,12 +561,7 @@ contract LinearIncreasingEscrow is
             uint48 t_i = (latestCheckpoint / interval) * interval;
 
             for (uint256 i = 0; i < 255; ++i) {
-                console.log("");
-                console.log("INSIDE LOOP %d", i);
                 // step 2: the first interval is always the next one after the last checkpoint
-                // this is important because if we floored the schedule, there can be intermediate
-                // points, however if there is no history (first point) then we dont do this
-                // if (!firstScheduledWrite)
                 t_i += interval;
 
                 // bound to at least the present
@@ -561,30 +573,9 @@ contract LinearIncreasingEscrow is
 
                 // we create a new "curve" by defining the coefficients starting from time t_i
                 // our constant is the y intercept at t_i and is found by evalutating the curve between the last point and t_i
-                console.log("biasChange", biasChange);
-                console.log("slopeChange", slopeChange);
-                console.log("t_i", t_i);
-                console.log("interval", interval);
-                console.log("currentIndex", currentIndex);
-                console.log("");
-                console.log("latestPoint.ts", latestPoint.ts);
-                console.log("latestPoint.coefficients[0]", latestPoint.coefficients[0]);
-                console.log("latestPoint.coefficients[1]", latestPoint.coefficients[1]);
-                console.log("t_i - latestPoint.ts", t_i - latestPoint.ts);
-                console.log("% of interval", (((t_i - latestPoint.ts) * 100) / interval));
-
-                console.log("");
-                console.log("Bias", _getBias(t_i - latestPoint.ts, latestPoint.coefficients));
-                console.log(
-                    "BiasUnbound",
-                    _getBiasUnbound(t_i - latestPoint.ts, latestPoint.coefficients)
-                );
-
                 latestPoint.coefficients[0] =
                     _getBiasUnbound(t_i - latestPoint.ts, latestPoint.coefficients) +
                     biasChange;
-
-                console.log("coeff", latestPoint.coefficients[0]);
 
                 // here we add the net result of the coefficient changes to the slope
                 // which can be applied for the ensuring period
@@ -594,18 +585,17 @@ contract LinearIncreasingEscrow is
                 // the slope itself can't be < 0 so we bound it
                 if (latestPoint.coefficients[1] < 0) {
                     latestPoint.coefficients[1] = 0;
+                    // TODO test this and below
                     revert("ahhhh sheeeet");
                 }
 
-                // if the bias is negativo we also should bound it
+                // if the bias is negative we also should bound it, although should not happen
                 if (latestPoint.coefficients[0] < 0) {
-                    // think this is redundant as bias checks for this
                     latestPoint.coefficients[0] = 0;
                 }
 
                 // update the timestamp ahead of either breaking or the next iteration
                 latestPoint.ts = t_i;
-                // if (firstScheduledWrite) firstScheduledWrite = false;
 
                 currentIndex++;
                 bool hasScheduledChange = (biasChange != 0 || slopeChange != 0);
@@ -613,13 +603,11 @@ contract LinearIncreasingEscrow is
                 // interpolating in memory and can write to storage at the end
                 // otherwise we are as far as we can go so we break
                 if (t_i == block.timestamp) {
-                    console.log("Gon break\n");
                     break;
                 }
                 // note: if we are exactly on the boundary we don't write yet
                 // this means we can add the token-contribution later
                 else if (hasScheduledChange) {
-                    console.log("no break\n");
                     _pointHistory[currentIndex] = latestPoint;
                 }
             }
@@ -628,40 +616,51 @@ contract LinearIncreasingEscrow is
         return (latestPoint, currentIndex);
     }
 
+    /// @dev Under the assumption that the prior global state is updated up until t == block.timestamp
+    /// then apply the incremental changes from the token point
+    /// @param _oldPoint The old token point in case we are updating
+    /// @param _newPoint The new token point to be written
+    /// @param _latestGlobalPoint The latest global point in memory
+    /// @return The updated global point with the new token point applied
     function _applyTokenUpdateToGlobal(
+        uint lockStart,
         TokenPoint memory _oldPoint,
         TokenPoint memory _newPoint,
-        GlobalPoint memory _latestPoint
+        GlobalPoint memory _latestGlobalPoint
     ) internal view returns (GlobalPoint memory) {
-        // here we are changing the voting power immediately.
-        // in the schedulling function, we have already diffed the scheduled changes
+        // this change should only be applied to the present and the latest point should be up to date
+        if (_newPoint.checkpointTs != block.timestamp) revert("point not up to date");
+        if (_latestGlobalPoint.ts != block.timestamp) revert("point not up to date");
 
-        // should never happen that the checkpoint is in the future
-        // this should be handled by scheulling function
-        if (_newPoint.checkpointTs > block.timestamp) revert("removing in the future");
+        // what do we want to happen here?
 
-        // meaning we just, now need to write the update
-        // The curve should be backfilled up to the present
-        if (_latestPoint.ts != block.timestamp) revert("point not up to date");
+        // 4 cases:
+        // 1. new deposit. In which case we just add the bias and coeff on to the latest point at time t
+        // 2. increasing. The slope and bias are changing. The voting power of the user at time t is the bias evaluated between the last point and now
+        // which then need
+        // 3. decreasing. I think this is the same just in reverse
+        // 4. exit. decreasing taken ad infinitum
 
         // evaluate the old curve up until now
         uint256 timeElapsed = block.timestamp - _oldPoint.checkpointTs;
-        uint256 oldUserBias = _getBias(timeElapsed, _oldPoint.coefficients);
+        // note: this must get maxed out from the original start date
+        // will revert if lt 0
+        uint256 oldUserBias = _getBiasUnbound(timeElapsed, _oldPoint.coefficients).toUint256();
 
         // Subtract the old user's bias from the global bias at this point
-        _latestPoint.coefficients[0] -= int256(oldUserBias);
+        _latestGlobalPoint.coefficients[0] -= int256(oldUserBias);
 
         // User is reducing, not exiting
         if (_newPoint.bias > 0) {
             // Add the new user's bias back to the global bias
-            _latestPoint.coefficients[0] += int256(_newPoint.bias);
+            _latestGlobalPoint.coefficients[0] += int256(_newPoint.bias);
         }
 
         // the immediate reduction is slope requires removing the old and adding the new
-        _latestPoint.coefficients[1] -= _oldPoint.coefficients[1];
-        _latestPoint.coefficients[1] += _newPoint.coefficients[1];
+        _latestGlobalPoint.coefficients[1] -= _oldPoint.coefficients[1];
+        _latestGlobalPoint.coefficients[1] += _newPoint.coefficients[1];
 
-        return _latestPoint;
+        return _latestGlobalPoint;
     }
 
     /*///////////////////////////////////////////////////////////////
