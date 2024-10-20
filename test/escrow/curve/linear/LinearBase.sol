@@ -81,6 +81,38 @@ contract MockLinearIncreasingEscrow is LinearIncreasingEscrow {
         point.coefficients = _getCoefficients(amount);
         point.bias = _getBias(0, point.coefficients);
     }
+
+    function applyTokenUpdateToGlobal(
+        uint lockStart,
+        TokenPoint memory _oldPoint,
+        TokenPoint memory _newPoint,
+        GlobalPoint memory _latestGlobalPoint
+    ) external view returns (GlobalPoint memory) {
+        return _applyTokenUpdateToGlobal(lockStart, _oldPoint, _newPoint, _latestGlobalPoint);
+    }
+
+    function getBiasUnbound(
+        uint elapsed,
+        int[3] memory coefficients
+    ) external view returns (int256) {
+        return _getBiasUnbound(elapsed, coefficients);
+    }
+
+    function getBiasUnbound(uint elapsed, uint amount) external view returns (int256) {
+        return _getBiasUnbound(elapsed, _getCoefficients(amount));
+    }
+
+    function unsafeCheckpoint(
+        uint256 _tokenId,
+        IVotingEscrow.LockedBalance memory _oldLocked,
+        IVotingEscrow.LockedBalance memory _newLocked
+    ) external {
+        return _checkpoint(_tokenId, _oldLocked, _newLocked);
+    }
+
+    function unsafeManualCheckpoint() external {
+        return _checkpoint();
+    }
 }
 
 contract LinearCurveBase is TestHelpers, ILockedBalanceIncreasing, IEscrowCurveEventsErrorsStorage {
