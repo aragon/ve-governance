@@ -298,6 +298,8 @@ contract VotingEscrow is
         IEscrowCurve(curve).checkpoint(
             _tokenId,
             LockedBalance(0, 0),
+            // TODO: advance clear times need to be handled gracefully to ensure state is
+            // correctly managed
             LockedBalance(0, checkpointClearTime.toUint48())
         );
     }

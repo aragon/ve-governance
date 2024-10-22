@@ -83,7 +83,7 @@ contract MockLinearIncreasingEscrow is LinearIncreasingEscrow {
     }
 
     function applyTokenUpdateToGlobal(
-        uint lockStart,
+        uint48 lockStart,
         TokenPoint memory _oldPoint,
         TokenPoint memory _newPoint,
         GlobalPoint memory _latestGlobalPoint

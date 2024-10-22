@@ -176,6 +176,7 @@ contract LinearIncreasingEscrow is
         int256 const = coefficients[0];
 
         // bound the time elapsed to the maximum time
+        // TODO technically redundant if we use the bounding function and pass in time elapsed
         uint256 MAX_TIME = _maxTime();
         timeElapsed = timeElapsed > MAX_TIME ? MAX_TIME : timeElapsed;
 
@@ -183,7 +184,6 @@ contract LinearIncreasingEscrow is
         int256 t = SignedFixedPointMath.toFP(timeElapsed.toInt256());
 
         int256 bias = linear.mul(t).add(const);
-
         return bias;
     }
 
@@ -395,6 +395,31 @@ contract LinearIncreasingEscrow is
         return true;
     }
 
+    /// @dev Ensure that when writing multiple points, we don't violate the invariant that no lock
+    /// can accumulate more than the maxTime amount of voting power.
+    /// @dev We assume Lock start dates cannot be retroactively changed
+    /// @param _lockStartTs The start of the original lock.
+    /// @param _checkpointTs The timestamp of the checkPoint.
+    /// @return boundedElapsed The total time elapsed since the checkpoint,
+    /// accounting for the original start date and the maximum.
+    function _getBoundedElasedSinceLastPoint(
+        uint48 _lockStartTs,
+        uint128 _checkpointTs
+    ) internal view returns (uint48 boundedElapsed) {
+        uint48 ts = uint48(block.timestamp);
+        // if the original lock or the checkpoint haven't started, return 0
+        if (_lockStartTs > ts || _checkpointTs > ts) return 0;
+
+        // calculate the max possible time based on the lock start
+        uint48 maxPossibleTs = _lockStartTs + uint48(_maxTime());
+
+        // bound the elased value to max of this
+        uint48 boundedTs = ts > maxPossibleTs ? maxPossibleTs : ts;
+
+        // return elapsed seconds since then
+        return boundedTs - uint48(_checkpointTs);
+    }
+
     /// @notice Record per-user data to checkpoints. Used by VotingEscrow system.
     /// @dev Curve finance style but just for users at this stage
     /// @param _tokenId NFT token ID.
@@ -411,7 +436,29 @@ contract LinearIncreasingEscrow is
         // to be created at the next checkpoint, this is not enforced in this function
         // the writtenTs is used for warmups, cooldowns and for logging
         // safe to cast as .start is 48 bit unsigned
-        newPoint.checkpointTs = uint128(newStart);
+
+        // there's a problem here with checkpointing when you checkpoint an exit
+        // 1: you cannot pass a lock with a newStart after the old one if the old one has started
+        // -> this is a RetroactiveStartChange and would prevent us from knowing the original start
+        // used for max balance calculations
+        // 2: when you later want to exit, this means the newStart is the oldStart
+        // 3: this means the checkpointTs is back in the past
+        // TODO think this through deeply. This creates a problem for scheduled withdrawals
+        // as the escrow contract will schedule them for the end of the week
+        // this means, if you upgrade, there will be user points written in an undefined state.
+        // moreover there will be potential issues with aggregations
+        // More importantly, it's not a good fix. Because we might want to have scheduled increases
+        // to support increased locks (maybe?) or merges, splits.
+        // we have a few options then:
+        // 1. store the original start somewhere (kinda dumb because we already have it)
+        // 2. not allow changing the start of a lock once it's started (makes a lot of sense)
+        // but then we need to update the way checkpoints are handled.
+        // The below isn't BAD but maybe we should add a way to schedule a change. Need to think about it
+        // I think it also has an impact on semantics:
+        // the lockedStart having to be the old locked start could be misunderstood
+        newPoint.checkpointTs = block.timestamp < newStart
+            ? uint128(newStart)
+            : uint128(block.timestamp);
         newPoint.writtenTs = uint128(block.timestamp);
 
         // get the old point if it exists
@@ -426,13 +473,23 @@ contract LinearIncreasingEscrow is
         if (newAmount > 0) {
             int256[3] memory coefficients = _getCoefficients(newAmount);
 
-            // If the lock hasn't started, we use the base value for the bias
-            uint elapsed = newStart >= block.timestamp ? 0 : block.timestamp - newStart;
+            // fetch the elapsed time since the lock has started
+            // this is predicated on the start date not being changeable if it's passed
+            // i.e. newLocked.start is the oldLocked.start once the lock has started
+            uint elapsed = block.timestamp < newStart ? 0 : block.timestamp - newStart;
+            // todo: understand why we can't use this
+            // uint elapsed = _getBoundedElasedSinceLastPoint(_newLocked.start, newPoint.checkpointTs);
 
-            newPoint.coefficients = coefficients;
+            // problem we have now is that the coefficient[0] is later being used
+            // todo this is janky AF
+            newPoint.coefficients[1] = coefficients[1];
+            // newPoint.bias = _getBias(elapsed, coefficients);
+            // the bug here is that
+            newPoint.coefficients[0] = elapsed == 0
+                ? coefficients[0]
+                : _getBiasUnbound(elapsed, coefficients);
             // this bias is stored having been converted from fixed point
             // be mindful about converting back
-            newPoint.bias = _getBias(elapsed, coefficients);
         }
 
         // if we're writing to a new point, increment the interval
@@ -591,12 +648,6 @@ contract LinearIncreasingEscrow is
                 int biasChange = _scheduledCurveChanges[t_i][0];
                 int slopeChange = _scheduledCurveChanges[t_i][1];
 
-                console.log("biasChange", biasChange / 1e18);
-                console.log("slopeChange", slopeChange / 1e18);
-                console.log("idx number", currentIndex);
-                console.log("prev-coeff", latestPoint.coefficients[0] / 1e36);
-                console.log("prev-slope", latestPoint.coefficients[1] / 1e18);
-
                 // we create a new "curve" by defining the coefficients starting from time t_i
                 // our constant is the y intercept at t_i and is found by evalutating the curve between the last point and t_i
                 latestPoint.coefficients[0] =
@@ -607,11 +658,6 @@ contract LinearIncreasingEscrow is
                 // which can be applied for the ensuring period
                 // this can be positive or negative depending on if new deposits outweigh tapering effects + withdrawals
                 latestPoint.coefficients[1] += slopeChange;
-
-                console.log("new coeff", latestPoint.coefficients[0] / 1e36);
-                console.log("new slope", latestPoint.coefficients[1] / 1e18);
-
-                console.log("");
 
                 // the slope itself can't be < 0 so we bound it
                 if (latestPoint.coefficients[1] < 0) {
@@ -646,7 +692,6 @@ contract LinearIncreasingEscrow is
         // issue here is that this will always return a new index if called mid interval
         // meaning we will always write a new point even if there is no change that couldn't
         // have been interpolated
-        console.log("returning currentIndex", currentIndex);
         return (latestPoint, currentIndex);
     }
 
@@ -657,7 +702,7 @@ contract LinearIncreasingEscrow is
     /// @param _latestGlobalPoint The latest global point in memory
     /// @return The updated global point with the new token point applied
     function _applyTokenUpdateToGlobal(
-        uint lockStart,
+        uint48 lockStart,
         TokenPoint memory _oldPoint,
         TokenPoint memory _newPoint,
         GlobalPoint memory _latestGlobalPoint
@@ -665,17 +710,11 @@ contract LinearIncreasingEscrow is
         if (_newPoint.checkpointTs != block.timestamp) revert("token point not up to date");
         if (_latestGlobalPoint.ts != block.timestamp) revert("global point not up to date");
 
-        // if there is something to be replaced (old point has data)
-        uint oldCp = _oldPoint.checkpointTs;
-        uint elapsed = 0;
-        if (oldCp != 0 && block.timestamp > oldCp) {
-            elapsed = block.timestamp - oldCp;
-        }
-
         // evaluate the old curve up until now and remove its impact from the bias
         // TODO bounding to zero
+        // calculate bounded elapsed time since last point was written
+        uint48 elapsed = _getBoundedElasedSinceLastPoint(lockStart, _oldPoint.checkpointTs);
         int256 oldUserBias = _getBiasUnbound(elapsed, _oldPoint.coefficients);
-        console.log("Old user bias", oldUserBias);
         _latestGlobalPoint.coefficients[0] -= oldUserBias;
 
         // if the new point is not an exit, then add it back in
@@ -685,9 +724,12 @@ contract LinearIncreasingEscrow is
         }
 
         // the immediate reduction is slope requires removing the old and adding the new
-        // this could involve zero writes
-        _latestGlobalPoint.coefficients[1] -= _oldPoint.coefficients[1];
-        _latestGlobalPoint.coefficients[1] += _newPoint.coefficients[1];
+        // only needs to be done if we are still accumulating voting power, else will double decrement
+        // TODO: can we simplify this?
+        if (lockStart > block.timestamp || block.timestamp - lockStart < _maxTime()) {
+            _latestGlobalPoint.coefficients[1] -= _oldPoint.coefficients[1];
+            _latestGlobalPoint.coefficients[1] += _newPoint.coefficients[1];
+        }
 
         return _latestGlobalPoint;
     }

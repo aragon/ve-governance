@@ -121,25 +121,31 @@ contract TestLinearIncreasingCheckpoint is LinearCurveBase {
     // user 3 deposits 1m ether exactly on week 5
     // user 1 reduces later in the same block to 0.5m
     // user 2 exits mid week
-    // user 1 reduces later mid week
     // wait until end of max period
     // user 1 exits at week interval
     // user 3 exits same time
+    // so: deposit 1m starting @ week 2
+    // deposit 1m starting @ week 3
+    // deposit 1m starting @ week 5
+    // a spreadsheet of the voting power w. visuals is here:
+    // https://docs.google.com/spreadsheets/d/1KLoo1vBZDvYRwcUKfomZhfT4fiANEEWqm092efuaacg/edit?usp=sharing
     function testCheckpoint() public {
         uint shane = 1;
         uint matt = 2;
         uint phil = 3;
+
+        LockedBalance memory shaneLastLock;
+        LockedBalance memory mattLastLock;
+        LockedBalance memory philLastLock;
 
         vm.warp(1 weeks + 1 days);
 
         // get the next cp interval
         uint48 nextInterval = uint48(clock.epochNextCheckpointTs());
 
-        curve.unsafeCheckpoint(
-            shane,
-            LockedBalance(0, 0),
-            LockedBalance({start: nextInterval, amount: 1_000_000e18})
-        );
+        shaneLastLock = LockedBalance({start: nextInterval, amount: 1_000_000e18});
+
+        curve.unsafeCheckpoint(shane, LockedBalance(0, 0), shaneLastLock);
 
         {
             int slope = curve.getCoefficients(1_000_000e18)[1];
@@ -186,6 +192,8 @@ contract TestLinearIncreasingCheckpoint is LinearCurveBase {
             LockedBalance(0, 0),
             LockedBalance({start: nextInterval, amount: 500_000e18})
         );
+
+        mattLastLock = LockedBalance({start: nextInterval, amount: 500_000e18});
 
         {
             // assertions:
@@ -240,6 +248,8 @@ contract TestLinearIncreasingCheckpoint is LinearCurveBase {
             LockedBalance({start: nextInterval, amount: 500_000e18}),
             LockedBalance({start: nextInterval, amount: 1_000_000e18})
         );
+
+        mattLastLock = LockedBalance({start: nextInterval, amount: 1_000_000e18});
 
         {
             // assertions:
@@ -335,28 +345,204 @@ contract TestLinearIncreasingCheckpoint is LinearCurveBase {
             int slope = curve.getCoefficients(3_000_000e18)[1];
             assertEq(p5.coefficients[1] / 1e18, slope, "slope should be the result of 3m ether");
 
-            // the bias should be 1m for 1 week (w2 -> w3)
-            // 2m for 2 weeks (w3 -> w5)
-            //           // + 1m new
-            //           uint expBiasP5 = (curve.getBias(1 weeks, 1_000_000e18) - 1_000_000e18) + // marginal contribution of first deposit
-            //               // marginal contribution of first + second deposit
-            // // not sure this is correct
-            //               (curve.getBias(2 weeks, 2_000_000e18) - 2_000_000e18) +
-            //               // base qty in the contracts
-            //               3_000_000e18;
-            //
-            //           assertEq(uint(p5.coefficients[0]) / 1e18, expBiasP5);
-            //
-            // we can calculate this another way:
-            // evaluate the curve over the first week
-            // then take the end state of that curve as the deposit for the next 2 weeks
-            // then add that to the 1m
-            uint w2To3 = curve.getBias(1 weeks, 1_000_000e18);
-            console.log("w2To3", w2To3 + 1_000_000e18);
-            uint w3To5 = curve.getBias(2 weeks, w2To3 + 1_000_000e18);
-            console.log("w3To5", w3To5 + 1_000_000e18);
-            uint w5 = w3To5 + 1_000_000e18;
-            assertEq(uint(p5.coefficients[0]) / 1e18, w5);
+            // we should be able to sum the user biases to get to the total
+            uint shaneBias = curve.getBias(3 weeks, 1_000_000e18);
+            uint mattBias = curve.getBias(2 weeks, 1_000_000e18);
+            uint philBias = curve.getBias(0, 1_000_000e18);
+
+            assertEq(uint(p5.coefficients[0]) / 1e18, shaneBias + mattBias + philBias);
+
+            // sanity check from excel: should be ~3,048,077
+            assertGt(uint(p5.coefficients[0]) / 1e18, 3_048_076e18, "bias p5 sanity check");
+            assertLt(uint(p5.coefficients[0]) / 1e18, 3_048_078e18, "bias p5 sanity check");
+        }
+
+        // user 1 reduces later in the same block to 0.5m
+        curve.unsafeCheckpoint(
+            1,
+            shaneLastLock,
+            LockedBalance({start: shaneLastLock.start, amount: 500_000e18})
+        );
+        {
+            // we should not have changed the index
+            assertEq(curve.latestPointIndex(), 5, "index should be 5");
+
+            // point 5 should be the same ts
+            GlobalPoint memory p5 = curve.pointHistory(5);
+            assertEq(p5.ts, block.timestamp, "point 5 should be at current time");
+
+            // point 5 slope has decreased by 500k worth
+            int expSlope = curve.getCoefficients(2_500_000e18)[1];
+            int k500Slope = curve.getCoefficients(500_000e18)[1];
+            assertEq(p5.coefficients[1] / 1e18, expSlope, "slope should be 2.5m");
+            // point 5 bias is same as before -500k voting power accumulated
+            // TODO think deeply about this - is it correct that it's a straight reduction
+            // or should there bshaneNewBiascumulation?
+
+            uint shaneNewBias = curve.getBias(3 weeks, 500_000e18);
+            uint mattBias = curve.getBias(2 weeks, 1_000_000e18);
+            uint philBias = curve.getBias(0, 1_000_000e18);
+            uint newBias = shaneNewBias + mattBias + philBias;
+
+            assertEq(uint(p5.coefficients[0]) / 1e18, newBias, "bias should be og bias - 500k");
+
+            // the scheduled changes to the curve at the original end have been increased accordingly
+            assertEq(
+                curve.scheduledCurveChanges(shaneLastLock.start + curve.maxTime())[1],
+                -k500Slope // was a million, now 500k
+            );
+        }
+
+        // user 2 exits mid week
+        vm.warp(5 weeks + 3 days);
+
+        curve.unsafeCheckpoint(
+            2,
+            mattLastLock,
+            LockedBalance({start: mattLastLock.start, amount: 0})
+        );
+
+        {
+            //  assert a point written at ts
+            assertEq(curve.latestPointIndex(), 6, "index should be 6");
+            GlobalPoint memory p6 = curve.pointHistory(6);
+            assertEq(p6.ts, block.timestamp, "point 6 should be at current time");
+
+            // check basically the above
+            // point 6 slope decreased by a milly
+            int expSlope = curve.getCoefficients(1_500_000e18)[1];
+            assertEq(p6.coefficients[1] / 1e18, expSlope, "slope should be 1.5m");
+
+            // point 6 bias should be just be shane's half and phils
+            uint shaneNewBias = curve.getBias(3 weeks + 3 days, 500_000e18);
+            uint philBias = curve.getBias(3 days, 1_000_000e18);
+
+            assertEq(
+                uint(p6.coefficients[0]) / 1e18,
+                shaneNewBias + philBias,
+                "bias should be shane and phil"
+            );
+
+            // the scheduled changes to the curve at the original end have been increased accordingly
+            assertEq(
+                curve.scheduledCurveChanges(mattLastLock.start + curve.maxTime())[1],
+                0 // was a million, now 0
+            );
+        }
+
+        // wait until end of max period - we should now see that voting power has capped off for shane and phil
+        // shane should have maxxed out 2y from his first withdrawal, there's a gap where phil will still
+        // increase so let's inspect that
+        vm.warp(2 weeks + curve.maxTime());
+        curve.unsafeManualCheckpoint();
+        {
+            // last cp was 6
+            // we've advanced 104 - 3 weeks from last CP (101)
+            // +6 = 107
+            assertEq(curve.latestPointIndex(), 107, "index should be 107");
+
+            // should have sparse array from 7 to 106
+            for (uint i = 7; i < 107; i++) {
+                assertEq(curve.pointHistory(i).ts, 0, "point should be empty");
+            }
+
+            // fetch the latest point
+            GlobalPoint memory p107 = curve.pointHistory(107);
+
+            assertEq(p107.ts, block.timestamp, "point 107 should be at current time");
+            // expect the slope has now DECREASED as we've hit shane's max
+
+            assertEq(
+                p107.coefficients[1] / 1e18,
+                curve.getCoefficients(1_000_000e18)[1],
+                "slope should have now removed shane's deposit"
+            );
+
+            // we would expect shane's bias to be the maxxed
+            uint shaneExpBias = curve.getBias(curve.maxTime(), 500_000e18);
+
+            // phil deposited at 5 weeks, so he should still be increasing
+            uint philBias = curve.getBias(curve.maxTime() - 3 weeks, 1_000_000e18);
+
+            uint expectedBias = shaneExpBias + philBias;
+            assertEq(
+                uint(p107.coefficients[0]) / 1e18,
+                expectedBias,
+                "bias of max shane and <max phil"
+            );
+        }
+
+        // move forward 3 weeks and 1 day. The curve is now static
+        vm.warp(5 weeks + 1 days + curve.maxTime());
+        curve.unsafeManualCheckpoint();
+
+        {
+            // point will be 111
+            assertEq(curve.latestPointIndex(), 111, "index should be 111");
+
+            // sparse check, up to 110 b/c that's the scheduled change
+            for (uint i = 108; i < 110; i++) {
+                assertEq(curve.pointHistory(i).ts, 0, "point should be empty");
+            }
+
+            // fetch the latest points
+            GlobalPoint memory p110 = curve.pointHistory(110);
+
+            // p110 should be at the week interval
+            assertEq(
+                p110.ts,
+                5 weeks + curve.maxTime(),
+                "point 110 should be at the week interval"
+            );
+
+            // expect the slope to be zero
+            assertEq(p110.coefficients[1] / 1e18, 0, "no further changes should be happening");
+
+            GlobalPoint memory p111 = curve.pointHistory(111);
+
+            assertEq(p111.ts, block.timestamp, "point 111 should be at current time");
+
+            // expect the slope is now zero
+            assertEq(p111.coefficients[1] / 1e18, 0, "no further changes should be happening");
+
+            // we would expect shane's bias to be the maxxed
+            uint shaneExpBias = curve.getBias(curve.maxTime(), 500_000e18);
+
+            // phil deposited at 5 weeks, so he should still be increasing
+            uint philBias = curve.getBias(curve.maxTime(), 1_000_000e18);
+
+            uint expectedBias = shaneExpBias + philBias;
+            assertEq(
+                uint(p111.coefficients[0]) / 1e18,
+                expectedBias,
+                "bias of max shane and max phil"
+            );
+
+            // double check both biases are equal
+            assertEq(p110.coefficients[0], p111.coefficients[0], "both biases should be equal");
+        }
+
+        // exit both parties and see that the curve is emptied
+        curve.unsafeCheckpoint(
+            shane,
+            LockedBalance({start: shaneLastLock.start, amount: 500_000e18}),
+            LockedBalance({start: shaneLastLock.start, amount: 0})
+        );
+        curve.unsafeCheckpoint(
+            phil,
+            LockedBalance({start: 5 weeks, amount: 1_000_000e18}),
+            LockedBalance({start: 5 weeks, amount: 0})
+        );
+        {
+            // we expect the checkpoint hasn't increased
+            assertEq(curve.latestPointIndex(), 111, "index should be 111");
+
+            // fetch the latest point
+            GlobalPoint memory p111 = curve.pointHistory(111);
+
+            //slope and bias should be zero
+            assertEq(p111.coefficients[1] / 1e18, 0, "slope should be zero");
+            assertEq(p111.coefficients[0] / 1e18, 0, "bias should be zero");
         }
     }
 }
