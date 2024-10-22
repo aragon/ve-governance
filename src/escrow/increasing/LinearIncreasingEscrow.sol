@@ -465,6 +465,8 @@ contract LinearIncreasingEscrow is
         uint256 tokenInterval = tokenPointIntervals[_tokenId];
         oldPoint = _tokenPointHistory[_tokenId][tokenInterval];
 
+        console.log("opcts", oldPoint.checkpointTs, newPoint.checkpointTs);
+
         // we can't write checkpoints out of order as it would interfere with searching
         if (oldPoint.checkpointTs > newPoint.checkpointTs) revert InvalidCheckpoint();
 
@@ -483,13 +485,12 @@ contract LinearIncreasingEscrow is
             // problem we have now is that the coefficient[0] is later being used
             // todo this is janky AF
             newPoint.coefficients[1] = coefficients[1];
+            // this bias is stored having been converted from fixed point
+            // be mindful about converting back
             // newPoint.bias = _getBias(elapsed, coefficients);
-            // the bug here is that
             newPoint.coefficients[0] = elapsed == 0
                 ? coefficients[0]
                 : _getBiasUnbound(elapsed, coefficients);
-            // this bias is stored having been converted from fixed point
-            // be mindful about converting back
         }
 
         // if we're writing to a new point, increment the interval

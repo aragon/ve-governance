@@ -37,7 +37,7 @@ contract TestLinearIncreasingScheduleChanges is LinearCurveBase {
         TokenPoint memory oldPoint;
         LockedBalance memory oldLocked;
 
-        // bound coefficients
+        // bound coefficients - int128 to avoid overflow
         _newPoint.coefficients[0] = int(int128(_boundCoeff[0]));
         _newPoint.coefficients[1] = int(int128(_boundCoeff[1]));
 
@@ -53,19 +53,19 @@ contract TestLinearIncreasingScheduleChanges is LinearCurveBase {
         // start should be the same as the new point
         assertEq(
             startChanges[0],
-            _newPoint.coefficients[0],
+            _newPoint.coefficients[0] / 1e18,
             "startChanges[0] != _newPoint.coefficients[0]"
         );
         assertEq(
             startChanges[1],
-            _newPoint.coefficients[1],
+            _newPoint.coefficients[1] / 1e18,
             "startChanges[1] != _newPoint.coefficients[1]"
         );
 
         // end should be the same as the new point slope but in the negative
         assertEq(
             endChanges[1],
-            -_newPoint.coefficients[1],
+            -_newPoint.coefficients[1] / 1e18,
             "endChanges[1] != -_newPoint.coefficients[1]"
         );
     }
@@ -75,18 +75,18 @@ contract TestLinearIncreasingScheduleChanges is LinearCurveBase {
         // write some existing state to some location
         uint48 start = 100;
         uint48 end = start + curve.maxTime();
-        int256[3] memory startChanges = [int(1), int(2), int(0)];
+        int256[3] memory startChanges = [int(1e18), int(2e18), int(0)];
 
         curve.writeSchedule(start, [startChanges[0], startChanges[1], 0]);
-        curve.writeSchedule(end, [int(4), int(5), int(6)]);
+        curve.writeSchedule(end, [int(4e18), int(5e18), int(6e18)]);
 
         TokenPoint memory newPoint;
         TokenPoint memory oldPoint;
 
         LockedBalance memory newLocked = LockedBalance({start: start, amount: 100});
 
-        newPoint.coefficients[0] = 1;
-        newPoint.coefficients[1] = 2;
+        newPoint.coefficients[0] = 1e18;
+        newPoint.coefficients[1] = 2e18;
 
         oldPoint.coefficients[0] = startChanges[0];
         oldPoint.coefficients[1] = startChanges[1];
@@ -113,18 +113,18 @@ contract TestLinearIncreasingScheduleChanges is LinearCurveBase {
         uint48 start = 100;
         uint48 end = start + curve.maxTime();
 
-        int256[3] memory startChanges = [int(1), int(2), 0];
+        int256[3] memory startChanges = [int(1e18), int(2e18), 0];
 
         curve.writeSchedule(start, [startChanges[0], startChanges[1], 0]);
-        curve.writeSchedule(end, [int(4), int(5), 0]);
+        curve.writeSchedule(end, [int(4e18), int(5e18), 0]);
 
         TokenPoint memory newPoint;
         TokenPoint memory oldPoint;
 
         LockedBalance memory newLocked = LockedBalance({start: start, amount: 100});
 
-        newPoint.coefficients[0] = 10;
-        newPoint.coefficients[1] = 20;
+        newPoint.coefficients[0] = 10e18;
+        newPoint.coefficients[1] = 20e18;
 
         oldPoint.coefficients[0] = startChanges[0];
         oldPoint.coefficients[1] = startChanges[1];
@@ -183,8 +183,8 @@ contract TestLinearIncreasingScheduleChanges is LinearCurveBase {
         oldLocked.amount = newLocked.amount;
 
         // now setup the new new point
-        newPoint.coefficients[0] = 10;
-        newPoint.coefficients[1] = 20;
+        newPoint.coefficients[0] = 10e18;
+        newPoint.coefficients[1] = 20e18;
 
         // setup the new start
         newLocked = LockedBalance({start: start, amount: 2});
@@ -220,7 +220,7 @@ contract TestLinearIncreasingScheduleChanges is LinearCurveBase {
     function testRewrite_startSameBeforeStart() public {
         uint48 start = 100;
         uint48 end = start + curve.maxTime();
-        int256[3] memory startCoeff = [int(1), int(2), 0];
+        int256[3] memory startCoeff = [int(1e18), int(2e18), 0];
         (
             TokenPoint memory oldPoint,
             TokenPoint memory newPoint,
@@ -243,7 +243,7 @@ contract TestLinearIncreasingScheduleChanges is LinearCurveBase {
     function testRewrite_startSameAtStart(bool _exact) public {
         uint48 start = 100;
         uint48 end = start + curve.maxTime();
-        int256[3] memory startCoeff = [int(1), int(2), 0];
+        int256[3] memory startCoeff = [int(1e18), int(2e18), 0];
         (
             TokenPoint memory oldPoint,
             TokenPoint memory newPoint,
@@ -256,8 +256,16 @@ contract TestLinearIncreasingScheduleChanges is LinearCurveBase {
         curve.scheduleCurveChanges(oldPoint, newPoint, oldLocked, newLocked);
 
         // expectation, the window should have passed to schedule changes so instead we simply adjust the end
-        assertEq(curve.scheduledCurveChanges(start)[0], startCoeff[0], "start[0] != startCoeff[0]");
-        assertEq(curve.scheduledCurveChanges(start)[1], startCoeff[1], "start[1] != startCoeff[1]");
+        assertEq(
+            curve.scheduledCurveChanges(start)[0],
+            startCoeff[0] / 1e18,
+            "start[0] != startCoeff[0]"
+        );
+        assertEq(
+            curve.scheduledCurveChanges(start)[1],
+            startCoeff[1] / 1e18,
+            "start[1] != startCoeff[1]"
+        );
 
         // end should be the negative of the new point
         assertEq(curve.scheduledCurveChanges(end)[0], 0, "end[0] != 0");
@@ -267,7 +275,7 @@ contract TestLinearIncreasingScheduleChanges is LinearCurveBase {
     function testRewrite_startSameAtEnd(bool _exact) public {
         uint48 start = 100;
         uint48 end = start + curve.maxTime();
-        int256[3] memory startCoeff = [int(1), int(2), 0];
+        int256[3] memory startCoeff = [int(1e18), int(2e18), 0];
         (
             TokenPoint memory oldPoint,
             TokenPoint memory newPoint,
@@ -280,18 +288,30 @@ contract TestLinearIncreasingScheduleChanges is LinearCurveBase {
         curve.scheduleCurveChanges(oldPoint, newPoint, oldLocked, newLocked);
 
         // expectation, window missed completely
-        assertEq(curve.scheduledCurveChanges(start)[0], startCoeff[0], "start[0] != startCoeff[0]");
-        assertEq(curve.scheduledCurveChanges(start)[1], startCoeff[1], "start[1] != startCoeff[1]");
+        assertEq(
+            curve.scheduledCurveChanges(start)[0],
+            startCoeff[0] / 1e18,
+            "start[0] != startCoeff[0]"
+        );
+        assertEq(
+            curve.scheduledCurveChanges(start)[1],
+            startCoeff[1] / 1e18,
+            "start[1] != startCoeff[1]"
+        );
 
         // end should be the negative of the new point
         assertEq(curve.scheduledCurveChanges(end)[0], 0, "end[0] != 0");
-        assertEq(curve.scheduledCurveChanges(end)[1], -startCoeff[1], "end[1] != -startCoeff[1]");
+        assertEq(
+            curve.scheduledCurveChanges(end)[1],
+            -startCoeff[1] / 1e18,
+            "end[1] != -startCoeff[1]"
+        );
     }
 
     function testRewrite_diffStartBeforeStart() public {
         uint48 start = 100;
         uint48 end = start + curve.maxTime();
-        int256[3] memory startCoeff = [int(1), int(2), 0];
+        int256[3] memory startCoeff = [int(1e18), int(2e18), 0];
         (
             TokenPoint memory oldPoint,
             TokenPoint memory newPoint,
@@ -322,7 +342,7 @@ contract TestLinearIncreasingScheduleChanges is LinearCurveBase {
     function testRewrite_diffStartAtFirstStart(uint32 _warp) public {
         uint48 start = 100;
         vm.assume(_warp >= start);
-        int256[3] memory startCoeff = [int(1), int(2), 0];
+        int256[3] memory startCoeff = [int(1e18), int(2e18), 0];
         (
             TokenPoint memory oldPoint,
             TokenPoint memory newPoint,
@@ -342,7 +362,7 @@ contract TestLinearIncreasingScheduleChanges is LinearCurveBase {
     function testAdd_sameStartBeforeStart() public {
         uint48 start = 100;
         uint48 end = start + curve.maxTime();
-        int256[3] memory startCoeff = [int(1), int(2), 0];
+        int256[3] memory startCoeff = [int(1e18), int(2e18), 0];
         (
             TokenPoint memory oldPoint,
             TokenPoint memory newPoint,
@@ -357,12 +377,12 @@ contract TestLinearIncreasingScheduleChanges is LinearCurveBase {
         // but the old point is still there
         assertEq(
             curve.scheduledCurveChanges(start)[0],
-            startCoeff[0] + newPoint.coefficients[0],
+            (startCoeff[0] + newPoint.coefficients[0]) / 1e18,
             "start[0] != 11"
         );
         assertEq(
             curve.scheduledCurveChanges(start)[1],
-            startCoeff[1] + newPoint.coefficients[1],
+            (startCoeff[1] + newPoint.coefficients[1]) / 1e18,
             "start[1] != 22"
         );
 
@@ -370,7 +390,7 @@ contract TestLinearIncreasingScheduleChanges is LinearCurveBase {
         assertEq(curve.scheduledCurveChanges(end)[0], 0, "end[0] != 0");
         assertEq(
             curve.scheduledCurveChanges(end)[1],
-            -startCoeff[1] - newPoint.coefficients[1],
+            (-startCoeff[1] - newPoint.coefficients[1]) / 1e18,
             "end[1] != -22"
         );
     }
@@ -393,12 +413,12 @@ contract TestLinearIncreasingScheduleChanges is LinearCurveBase {
         // expected: both old points still there. end date is replaced for 1/2
         assertEq(
             curve.scheduledCurveChanges(start)[0],
-            startCoeff[0] + startCoeff[0],
+            (startCoeff[0] + startCoeff[0]) / 1e18,
             "start[0] != 2"
         );
         assertEq(
             curve.scheduledCurveChanges(start)[1],
-            startCoeff[1] + startCoeff[1],
+            (startCoeff[1] + startCoeff[1]) / 1e18,
             "start[1] != 4"
         );
 
@@ -406,7 +426,7 @@ contract TestLinearIncreasingScheduleChanges is LinearCurveBase {
         assertEq(curve.scheduledCurveChanges(end)[0], 0, "end[0] != 0");
         assertEq(
             curve.scheduledCurveChanges(end)[1],
-            -startCoeff[1] - newPoint.coefficients[1],
+            (-startCoeff[1] - newPoint.coefficients[1]) / 1e18,
             "end[1] != -22"
         );
     }
@@ -429,19 +449,19 @@ contract TestLinearIncreasingScheduleChanges is LinearCurveBase {
         // expected: nothing changes from the initial state
         assertEq(
             curve.scheduledCurveChanges(start)[0],
-            startCoeff[0] + startCoeff[0],
+            (startCoeff[0] + startCoeff[0]) / 1e18,
             "start[0] != 2"
         );
         assertEq(
             curve.scheduledCurveChanges(start)[1],
-            startCoeff[1] + startCoeff[1],
+            (startCoeff[1] + startCoeff[1]) / 1e18,
             "start[1] != 4"
         );
 
         assertEq(curve.scheduledCurveChanges(end)[0], 0, "end[0] != 0");
         assertEq(
             curve.scheduledCurveChanges(end)[1],
-            -startCoeff[1] - startCoeff[1],
+            (-startCoeff[1] - startCoeff[1]) / 1e18,
             "end[1] != -4"
         );
     }
@@ -466,26 +486,26 @@ contract TestLinearIncreasingScheduleChanges is LinearCurveBase {
         // expectation: the old lock has been removed at the start and moved to the new start
         // but the old point is still there
 
-        assertEq(curve.scheduledCurveChanges(start)[0], startCoeff[0], "start[0] != 1");
-        assertEq(curve.scheduledCurveChanges(start)[1], startCoeff[1], "start[1] != 2");
+        assertEq(curve.scheduledCurveChanges(start)[0], startCoeff[0] / 1e18, "start[0] != 1");
+        assertEq(curve.scheduledCurveChanges(start)[1], startCoeff[1] / 1e18, "start[1] != 2");
         assertEq(
             curve.scheduledCurveChanges(newLocked.start)[0],
-            newPoint.coefficients[0],
+            newPoint.coefficients[0] / 1e18,
             "newLocked.start[0] != 10"
         );
         assertEq(
             curve.scheduledCurveChanges(newLocked.start)[1],
-            newPoint.coefficients[1],
+            newPoint.coefficients[1] / 1e18,
             "newLocked.start[1] != 20"
         );
 
         // the end should be the aggregate of the first swapped point and the old point
         assertEq(curve.scheduledCurveChanges(end)[0], 0, "end[0] != 0");
-        assertEq(curve.scheduledCurveChanges(end)[1], -startCoeff[1], "end[1] != -2");
+        assertEq(curve.scheduledCurveChanges(end)[1], -startCoeff[1] / 1e18, "end[1] != -2");
         assertEq(curve.scheduledCurveChanges(end + 1)[0], 0, "end[0] != 0");
         assertEq(
             curve.scheduledCurveChanges(end + 1)[1],
-            -newPoint.coefficients[1],
+            -newPoint.coefficients[1] / 1e18,
             "end[1] != -20"
         );
     }
@@ -495,7 +515,7 @@ contract TestLinearIncreasingScheduleChanges is LinearCurveBase {
         uint48 start = 100;
         uint48 end = start + curve.maxTime();
 
-        int256[3] memory startCoeff = [int(10), int(20), 0];
+        int256[3] memory startCoeff = [int(10e18), int(20e18), 0];
         (
             TokenPoint memory oldPoint,
             TokenPoint memory newPoint,
@@ -504,8 +524,8 @@ contract TestLinearIncreasingScheduleChanges is LinearCurveBase {
         ) = _initState(start, startCoeff);
 
         // rewrite our new point to be 1, 2
-        newPoint.coefficients[0] = 1;
-        newPoint.coefficients[1] = 2;
+        newPoint.coefficients[0] = 1e18;
+        newPoint.coefficients[1] = 2e18;
 
         // write the second schedule change
         curve.scheduleCurveChanges(oldPoint, newPoint, oldLocked, newLocked);

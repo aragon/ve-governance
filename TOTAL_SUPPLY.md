@@ -101,8 +101,12 @@ TODOs:
 decide and review scheduled adjustments
 fix the bug with the warmup period
 retire the bias if not needed
+consider compressing the storage slots
 do a full test of the curve in other logic stuff
 Create a test on the user point with some hard coded values
 Create an exploit where the user double counts by depositing AT the boundary
 Multiple same block updates and if that's possible
 Test boundary updates: - Scheduled updates are processed - what about individual updates
+Add the total supply and the binary search
+write a full document
+test the revert conditions
