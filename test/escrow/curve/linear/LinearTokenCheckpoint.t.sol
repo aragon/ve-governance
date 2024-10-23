@@ -155,7 +155,21 @@ contract TestLinearIncreasingCurveTokenCheckpoint is LinearCurveBase {
             _oldLocked.start - 1
         );
 
-        // expectation - can't do it
+        // expectation - depends on the _warp
+        // if we now warp to after the start
+
+        // we don't check lock times any more
+        // instead we check the start time of the points
+        // if the locks haven't started yet, we write the checkpoint in the future
+        // to the newStart.
+        // We then compare this to the old point and if the newPoint start date is BEFORE the old start
+        // then this reverts
+        // However if it's at the same time, there's no such revert
+        // This also holds if the lock start is in the past, it gets snapped to the current time
+        // hence we will jut overwrite the point
+        // anotehr option is that if the newLock.start is before the old point, we could reject it
+        // but that would mean you couldn't update the points.
+
         vm.expectRevert(InvalidCheckpoint.selector);
         (oldPoint, newPoint) = curve.tokenCheckpoint(_tokenId, _oldLocked, _newLocked);
     }
@@ -338,7 +352,7 @@ contract TestLinearIncreasingCurveTokenCheckpoint is LinearCurveBase {
         );
     }
 
-    function testFuzz_newAmountAtDifferentBlockTimestamp(
+    function testFuzz_newAmountAtDifferentBlockTimestampAfter(
         uint256 _tokenId,
         LockedBalance memory _oldLocked,
         uint32 _warp,
@@ -357,6 +371,66 @@ contract TestLinearIncreasingCurveTokenCheckpoint is LinearCurveBase {
 
         LockedBalance memory _newLocked = LockedBalance(_newAmount, _oldLocked.start);
         (oldPoint, newPoint) = curve.tokenCheckpoint(_tokenId, _oldLocked, _newLocked);
+
+        // expectation: new point written with new bias
+        assertEq(curve.tokenPointIntervals(_tokenId), 2, "C10: token interval incorrect");
+
+        uint elapsed = (_oldLocked.start > block.timestamp)
+            ? 0
+            : block.timestamp - _oldLocked.start;
+
+        uint newBias = curve.getBias(elapsed, _newAmount);
+        uint oldBias = curve.getBias(elapsed, _oldLocked.amount);
+
+        // assertEq(newPoint.bias, newBias, "C10: new bias incorrect");
+
+        // if the new amount is the same, should be equivalent to the old lock
+        if (_newAmount == _oldLocked.amount) {
+            assertEq(newBias, oldBias, "C10: old and new bias should be the same");
+        }
+        // if the new amount is less then the bias should be less than the equivalent
+        else if (_newAmount < _oldLocked.amount) {
+            assertLt(newBias, oldBias, "C10: new bias should be less than old bias");
+        }
+        // if the new amount is greater then the bias should be greater than the equivalent
+        else {
+            assertGt(newBias, oldBias, "C10: new bias should be greater than old bias");
+        }
+
+        assertEq(newPoint.checkpointTs, _oldLocked.start, "C10: checkpointTs incorrect");
+        assertEq(newPoint.writtenTs, warpTime, "C10: writtenTs incorrect");
+        assertEq(
+            newPoint.coefficients[0] / 1e18,
+            curve.getCoefficients(_newLocked.amount)[0],
+            "C10: constant incorrect"
+        );
+        assertEq(
+            newPoint.coefficients[1] / 1e18,
+            curve.getCoefficients(_newLocked.amount)[1],
+            "C10: linear incorrect"
+        );
+    }
+
+    function testFuzz_newAmountAtDifferentBlockTimestampBefore(
+        uint256 _tokenId,
+        LockedBalance memory _oldLocked,
+        uint32 _warp,
+        uint32 _change,
+        uint128 _newAmount
+    ) public {
+        _setValidateState(_tokenId, _oldLocked, _warp);
+        vm.assume(_oldLocked.start < type(uint32).max);
+
+        TokenPoint memory oldPoint;
+        TokenPoint memory newPoint;
+
+        uint48 warpTime = uint48(_warp) + uint48(_change);
+
+        // write the state prior to warping
+        LockedBalance memory _newLocked = LockedBalance(_newAmount, _oldLocked.start);
+        (oldPoint, newPoint) = curve.tokenCheckpoint(_tokenId, _oldLocked, _newLocked);
+
+        vm.warp(warpTime);
 
         // expectation: new point written with new bias
         assertEq(curve.tokenPointIntervals(_tokenId), 2, "C10: token interval incorrect");

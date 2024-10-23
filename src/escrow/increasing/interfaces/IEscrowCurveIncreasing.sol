@@ -73,6 +73,10 @@ interface IEscrowCurveErrorsAndEvents {
     error WriteToPastNotSupported();
     error ZeroDepositsNotSupported();
     error RetroactiveStartChange();
+    error TokenPointNotUpToDate();
+    error GlobalPointNotUpToDate();
+    error Wait1Second();
+    error OnlyScheduledDeposits();
 }
 
 interface IEscrowCurveIndex {

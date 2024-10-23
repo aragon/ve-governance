@@ -98,15 +98,30 @@ suppose we have a user who writes
 
 TODOs:
 
-decide and review scheduled adjustments
-fix the bug with the warmup period
-retire the bias if not needed
-consider compressing the storage slots
-do a full test of the curve in other logic stuff
-Create a test on the user point with some hard coded values
-Create an exploit where the user double counts by depositing AT the boundary
-Multiple same block updates and if that's possible
-Test boundary updates: - Scheduled updates are processed - what about individual updates
-Add the total supply and the binary search
-write a full document
-test the revert conditions
+Getting ready for live
+
+Minimum
+
+1. Fix all the tests
+2. Add the binary search for total supply
+3. Run the regression test and adjust the escrow contract
+4. Fix the bug with the warmup
+5. Check all the reverts and fix the revert conditions
+6. Test the manual checkpoint
+
+Optimise
+
+1. Brainstorm splitting the checkpointing system up a bit
+2. Look at retiring and deprecating the bias
+3. Consider if a model of scheduled adjustments makes sense
+4. Consider if storage slots can be compressed
+5. Fix the redundant maxTime check
+
+E2E:
+
+1. Testing
+
+Document
+
+1. Visual Doc
+2. README
