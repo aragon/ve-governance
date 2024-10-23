@@ -19,6 +19,7 @@ test-unit :; forge test --no-match-path "test/fork/**/*.sol"
 
 # Fork testing - mode sepolia
 ft-mode-sepolia-fork :; forge test --match-contract TestE2EV2 \
+	--fork-block-number 19879000 \
 	--rpc-url https://sepolia.mode.network \
 	-vv
 
@@ -71,11 +72,13 @@ deploy-preview-mode :; forge script script/Deploy.s.sol:Deploy \
 	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
 	-vvvvv
 
-deploy-mode :; forge script script/Deploy.s.sol:Deploy \
-	--rpc-url https://mainnet.mode.network \
-	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
-	--broadcast \
-	--verify \
-	--etherscan-api-key $(ETHERSCAN_API_KEY) \
-	-vvv
+
+ deploy-mode :; forge script script/Deploy.s.sol:Deploy \
+     --rpc-url https://mainnet.mode.network \
+     --private-key $(DEPLOYMENT_PRIVATE_KEY) \
+     --broadcast \
+     --verify \
+     --verifier blockscout \
+     --verifier-url https://explorer.mode.network/api\? \
+     -vvv
 
