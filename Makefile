@@ -39,6 +39,19 @@ ft-sepolia-fork :; forge test --match-contract TestE2EV2 \
 
 #### Deployments ####
 
+stakeinspector-preview-mode :; forge script DeployStakeInspector \
+  --rpc-url https://mainnet.mode.network \
+	-vvvvv
+
+stakeinspector-mode :; forge script DeployStakeInspector \
+  --rpc-url https://mainnet.mode.network \
+  --private-key $(DEPLOYMENT_PRIVATE_KEY) \
+  --broadcast \
+  --verify \
+  --verifier blockscout \
+  --verifier-url https://explorer.mode.network/api\? \
+  -vvvvv
+
 deploy-preview-mode-sepolia :; forge script script/Deploy.s.sol:Deploy \
   --rpc-url https://sepolia.mode.network \
 	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
