@@ -3,7 +3,6 @@ pragma solidity ^0.8.17;
 
 import {console2 as console} from "forge-std/console2.sol";
 import {TestHelpers} from "@helpers/TestHelpers.sol";
-import {console2 as console} from "forge-std/console2.sol";
 import {DaoUnauthorized} from "@aragon/osx/core/utils/auth.sol";
 
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
@@ -20,6 +19,12 @@ contract MockEscrow {
     address public token;
     LinearIncreasingEscrow public curve;
 
+    mapping(uint256 => IVotingEscrow.LockedBalance) internal _locked;
+
+    function setLockedBalance(uint256 _tokenId, IVotingEscrow.LockedBalance memory lock) external {
+        _locked[_tokenId] = lock;
+    }
+
     function setCurve(LinearIncreasingEscrow _curve) external {
         curve = _curve;
     }
@@ -31,16 +36,19 @@ contract MockEscrow {
     ) external {
         return curve.checkpoint(_tokenId, _oldLocked, _newLocked);
     }
+
+    function locked(uint256 _tokenId) external view returns (IVotingEscrow.LockedBalance memory) {
+        return _locked[_tokenId];
+    }
 }
 
 /// @dev expose internal functions for testing
 contract MockLinearIncreasingEscrow is LinearIncreasingEscrow {
     function tokenCheckpoint(
         uint256 _tokenId,
-        IVotingEscrow.LockedBalance memory _oldLocked,
         IVotingEscrow.LockedBalance memory _newLocked
     ) public returns (TokenPoint memory, TokenPoint memory) {
-        return _tokenCheckpoint(_tokenId, _oldLocked, _newLocked);
+        return _tokenCheckpoint(_tokenId, _newLocked);
     }
 
     function scheduleCurveChanges(
@@ -65,7 +73,16 @@ contract MockLinearIncreasingEscrow is LinearIncreasingEscrow {
         _pointHistory[_index] = _latestPoint;
     }
 
-    function getLatestGlobalPointOrWriteFirstPoint() external returns (GlobalPoint memory) {
+    function writeNewTokenPoint(
+        uint256 _tokenId,
+        TokenPoint memory _point,
+        uint _interval
+    ) external {
+        tokenPointIntervals[_tokenId] = _interval;
+        _tokenPointHistory[_tokenId][_interval] = _point;
+    }
+
+    function getLatestGlobalPointOrWriteFirstPoint() external returns (GlobalPoint memory, uint) {
         return _getLatestGlobalPointOrWriteFirstPoint();
     }
 
@@ -94,11 +111,11 @@ contract MockLinearIncreasingEscrow is LinearIncreasingEscrow {
     function getBiasUnbound(
         uint elapsed,
         int[3] memory coefficients
-    ) external view returns (int256) {
+    ) external pure returns (int256) {
         return _getBiasUnbound(elapsed, coefficients);
     }
 
-    function getBiasUnbound(uint elapsed, uint amount) external view returns (int256) {
+    function getBiasUnbound(uint elapsed, uint amount) external pure returns (int256) {
         return _getBiasUnbound(elapsed, _getCoefficients(amount));
     }
 

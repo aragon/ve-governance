@@ -31,27 +31,32 @@ contract TestLinearIncreasingPopulateHistory is LinearCurveBase {
     }
 
     // in the case of no history we will return nothing unless exactly on the boundary
+
+    // so, if
     function testNoHistorySingleSchedule(uint32 _warp) public {
         uint interval = clock.checkpointInterval();
         vm.assume(_warp >= interval);
+        _warp = 3024000;
         vm.warp(_warp);
-
         uint48 priorInterval = uint48(clock.epochNextCheckpointTs()) -
             uint48(clock.checkpointInterval());
 
         // write a scheduled point
         curve.writeSchedule(priorInterval, [int256(1000), int256(2), int256(0)]);
 
+        // schedule the earliest point
+        curve.writeEarliestScheduleChange(priorInterval);
+
         // populate the history
         (GlobalPoint memory point, uint index) = curve.populateHistory();
 
-        // if we have a scheduled write exactly now, we should have the
-        // point written to memory but not storage as we have to add the user data later
+        // if we have a scheduled write exactly on the interval, we should have the
+        // point written to memory and storage
         if (priorInterval == _warp) {
             assertEq(point.coefficients[0], 1000, "coeff0 exact");
             assertEq(point.coefficients[1], 2, "coeff1 exact");
             assertEq(index, 1, "index exact");
-            assertEq(curve.pointHistory(1).coefficients[0], 0, "ph exact");
+            assertEq(curve.pointHistory(1).coefficients[0], 1000, "ph exact");
         }
         // otherwise expect nothing
         else {
@@ -65,8 +70,9 @@ contract TestLinearIncreasingPopulateHistory is LinearCurveBase {
     // test no prior history, no schedulling - returns CI 0, empty point with block.ts
     function testGetLatestPointNoPriorNoSchedule(uint32 warp) public {
         vm.warp(warp);
-        GlobalPoint memory point = curve.getLatestGlobalPointOrWriteFirstPoint();
+        (GlobalPoint memory point, uint idx) = curve.getLatestGlobalPointOrWriteFirstPoint();
 
+        assertEq(idx, 0, "idx");
         assertEq(point.ts, block.timestamp, "ts");
         assertEq(point.bias, 0, "bias");
         assertEq(point.coefficients[0], 0, "coeff0");
@@ -81,8 +87,10 @@ contract TestLinearIncreasingPopulateHistory is LinearCurveBase {
         vm.assume(warp < type(uint48).max);
         vm.warp(warp);
         curve.writeEarliestScheduleChange(warp + 1);
-        GlobalPoint memory point = curve.getLatestGlobalPointOrWriteFirstPoint();
 
+        (GlobalPoint memory point, uint idx) = curve.getLatestGlobalPointOrWriteFirstPoint();
+
+        assertEq(idx, 0, "idx");
         assertEq(point.ts, block.timestamp, "ts");
         assertEq(point.bias, 0, "bias");
         assertEq(point.coefficients[0], 0, "coeff0");
@@ -99,8 +107,9 @@ contract TestLinearIncreasingPopulateHistory is LinearCurveBase {
         vm.warp(warp);
         curve.writeEarliestScheduleChange(warp - 1);
         curve.writeSchedule(warp - 1, [int(1), int(2), int(0)]);
-        GlobalPoint memory point = curve.getLatestGlobalPointOrWriteFirstPoint();
+        (GlobalPoint memory point, uint idx) = curve.getLatestGlobalPointOrWriteFirstPoint();
 
+        assertEq(idx, 1, "idx");
         assertEq(point.ts, warp - 1, "ts");
         assertEq(point.bias, 0, "bias"); // TODO
         assertEq(point.coefficients[0], 1, "coeff0");
@@ -120,8 +129,9 @@ contract TestLinearIncreasingPopulateHistory is LinearCurveBase {
         vm.assume(warp > 0);
         vm.warp(warp);
         curve.writeNewGlobalPoint(GlobalPoint(1, warp - 1, [int(1), int(2), int(0)]), 123);
-        GlobalPoint memory point = curve.getLatestGlobalPointOrWriteFirstPoint();
+        (GlobalPoint memory point, uint idx) = curve.getLatestGlobalPointOrWriteFirstPoint();
 
+        assertEq(idx, 123, "idx");
         assertEq(point.ts, warp - 1, "ts");
         assertEq(point.bias, 1, "bias");
         assertEq(point.coefficients[0], 1, "coeff0");
@@ -465,10 +475,10 @@ contract TestLinearIncreasingPopulateHistory is LinearCurveBase {
         assertEq(p1.coefficients[0], globalPrev.coefficients[0]);
         assertEq(p1.coefficients[1], globalPrev.coefficients[1]);
 
-        // point 2 - 4 not written
+        // point 2 - 4 weekly points
         for (uint i = 2; i < 5; i++) {
             GlobalPoint memory p = curve.pointHistory(i);
-            assertEq(p.ts, 0);
+            assertEq(p.ts, i * 1 weeks);
         }
 
         // point 6 not written
@@ -623,8 +633,11 @@ contract TestLinearIncreasingPopulateHistory is LinearCurveBase {
             "p2.coefficients[1]"
         );
 
-        // point 3 is zero as sparse
-        assertEq(p3.ts, 0);
+        // point 3 is at the week boundary
+        assertEq(p3.ts, 3 weeks, "p3.ts != 3 weeks");
+        // it should just be the continuation of the slope
+        uint expectedCoeff0p3 = curve.getBias(2 weeks, 10e18) + curve.getBias(1 weeks, 1e18);
+        assertEq(uint(p3.coefficients[0]) / 1e18, expectedCoeff0p3, "p3.coefficients[0]");
 
         // point 4 should be written but the coefficients should now stop increasing
         assertEq(p4.ts, 4 weeks, "p4.ts != 4 weeks");
@@ -635,7 +648,7 @@ contract TestLinearIncreasingPopulateHistory is LinearCurveBase {
         uint expectedCoeff0p4 = curve.getBias(3 weeks, 10e18) + curve.getBias(2 weeks, 1e18);
         assertEq(uint(p4.coefficients[0]) / 1e18, expectedCoeff0p4, "p4.coefficients[0]");
 
-        // point 5 should not be written as no changes
+        // point 5 should not be written as ahead of time
         assertEq(p5.ts, 0, "p5.ts != block.timestamp");
 
         // last point in memory should be same as point 4

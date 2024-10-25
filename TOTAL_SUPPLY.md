@@ -102,12 +102,30 @@ Getting ready for live
 
 Minimum
 
+time wise - priotise for now
+
+1. change the token checkpoint to only take in a lock - done
+2. add the remaining test functions to ensure we've covered ourselves
+   - Token unit - todo tonight
+   - elapsed thingy
+   - Warmup: big test -done
+   - Voting Power: this can be done in the big test as well done
+3. Test the revert conditions with a second big test
+4. check the manual checkpoint works as expected
+
+Then optimise can come tomorrow
+
 1. Fix all the tests
-2. Add the binary search for total supply
+   - decide on implementation - leaving for now
+   - unit test some of the other functions - done
+   - adjust the token tests
+2. Add the binary search for total supply - done
 3. Run the regression test and adjust the escrow contract
-4. Fix the bug with the warmup
-5. Check all the reverts and fix the revert conditions
-6. Test the manual checkpoint
+4. Fix the bug with the warmup - needs testing
+5. Check all the revert - done
+6. fix the revert conditions
+7. Test the manual checkpoint
+8. Review all the comments
 
 Optimise
 
@@ -125,3 +143,5 @@ Document
 
 1. Visual Doc
 2. README
+
+Qus: New locked start passed to the update - what if that changes?

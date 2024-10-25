@@ -21,6 +21,22 @@ contract TestLinearIncreasingApplyTokenChange is LinearCurveBase {
         return _old;
     }
 
+    function testRevertsIfPointsArentInSync() public {
+        vm.warp(0);
+        TokenPoint memory oldPoint;
+        TokenPoint memory newPoint;
+        GlobalPoint memory globalPoint;
+        newPoint.checkpointTs = 1;
+
+        vm.expectRevert(TokenPointNotUpToDate.selector);
+        curve.applyTokenUpdateToGlobal(0, oldPoint, newPoint, globalPoint);
+
+        vm.warp(newPoint.checkpointTs);
+
+        vm.expectRevert(GlobalPointNotUpToDate.selector);
+        curve.applyTokenUpdateToGlobal(0, oldPoint, newPoint, globalPoint);
+    }
+
     // when run on an empty global point, adds the user's own point
     // deposit
     function testEmptyGlobalDeposit() public {
@@ -32,9 +48,11 @@ contract TestLinearIncreasingApplyTokenChange is LinearCurveBase {
 
         TokenPoint memory newPoint = curve.previewPoint(10 ether);
         newPoint.checkpointTs = uint128(block.timestamp);
-        // write it
 
-        globalPoint = curve.applyTokenUpdateToGlobal(0, oldPoint, newPoint, globalPoint);
+        // assume the lock starts immediately
+        uint48 lockStart = uint48(block.timestamp);
+
+        globalPoint = curve.applyTokenUpdateToGlobal(lockStart, oldPoint, newPoint, globalPoint);
 
         uint expectedBias = 10 ether;
 
@@ -53,7 +71,10 @@ contract TestLinearIncreasingApplyTokenChange is LinearCurveBase {
 
         TokenPoint memory newPoint0 = curve.previewPoint(10 ether);
         newPoint0.checkpointTs = uint128(block.timestamp);
-        globalPoint = curve.applyTokenUpdateToGlobal(0, oldPoint, newPoint0, globalPoint);
+        // assume the lock starts immediately
+        uint48 lockStart = uint48(block.timestamp);
+
+        globalPoint = curve.applyTokenUpdateToGlobal(lockStart, oldPoint, newPoint0, globalPoint);
 
         // copy the new to old point and redefine the new point
         oldPoint = _copyNewToOld(newPoint0, oldPoint);
@@ -62,7 +83,7 @@ contract TestLinearIncreasingApplyTokenChange is LinearCurveBase {
         newPoint1.checkpointTs = uint128(block.timestamp);
 
         GlobalPoint memory newGlobalPoint = curve.applyTokenUpdateToGlobal(
-            0,
+            lockStart,
             oldPoint,
             newPoint1,
             globalPoint
@@ -86,13 +107,15 @@ contract TestLinearIncreasingApplyTokenChange is LinearCurveBase {
         globalPoint.coefficients[1] = curve.previewPoint(100 ether).coefficients[1];
 
         TokenPoint memory oldPoint; // 0
-
         TokenPoint memory newPoint = curve.previewPoint(10 ether);
         newPoint.checkpointTs = uint128(block.timestamp);
 
+        // again this is the first lock
+        uint48 lockStart = uint48(block.timestamp);
+
         int cachedSlope = globalPoint.coefficients[1];
 
-        globalPoint = curve.applyTokenUpdateToGlobal(0, oldPoint, newPoint, globalPoint);
+        globalPoint = curve.applyTokenUpdateToGlobal(lockStart, oldPoint, newPoint, globalPoint);
 
         // expectation: bias && slope incremented
         assertEq(uint(globalPoint.coefficients[0]) / 1e18, 110 ether);
@@ -101,43 +124,53 @@ contract TestLinearIncreasingApplyTokenChange is LinearCurveBase {
     }
 
     // change - elapsed
+    // test that if we have existing state and some time elapses
+    // the change is correctly applied
     function testChangeOnExistingGlobalStateElapsedTime() public {
         vm.warp(100);
 
+        // imagine the state is set with 100 ether total
         GlobalPoint memory globalPoint;
         globalPoint.ts = block.timestamp;
-
-        // imagine the state is set with 100 ether total
         globalPoint.coefficients[0] = curve.previewPoint(100 ether).coefficients[0];
         globalPoint.coefficients[1] = curve.previewPoint(100 ether).coefficients[1];
 
+        // no existing point
         TokenPoint memory oldPoint; // 0
 
+        // user makes a deposit at the same time as global for 10 eth
         TokenPoint memory newPoint0 = curve.previewPoint(10 ether);
         newPoint0.checkpointTs = uint128(block.timestamp);
 
-        globalPoint = curve.applyTokenUpdateToGlobal(0, oldPoint, newPoint0, globalPoint);
-        int cachedCoeff0 = globalPoint.coefficients[0];
+        uint48 lockStart = uint48(block.timestamp);
+
+        // apply the deposit of the user to the state
+        globalPoint = curve.applyTokenUpdateToGlobal(lockStart, oldPoint, newPoint0, globalPoint);
+
+        // should be a global state of 110 eth
+        assertEq(uint(globalPoint.coefficients[0]) / 1e18, 110 ether);
 
         // copy the new to old point and redefine the new point
         oldPoint = _copyNewToOld(newPoint0, oldPoint);
 
+        // warp into the future, we're gonna write a new point over the top
+        // representing a change in the deposit
         vm.warp(200);
 
-        TokenPoint memory newPoint1 = curve.previewPoint(20 ether);
-        newPoint1.checkpointTs = uint128(block.timestamp);
-
-        // define a new global point by evaluating it over the elapsed time
+        // our existing global point should have accrued 110 ether's worth of bias for 100 seconds
         globalPoint.coefficients[0] = curve.getBiasUnbound(100, globalPoint.coefficients);
         globalPoint.ts = block.timestamp;
 
+        // an entirely fresh, new point is written which should overrwrite the old
+        TokenPoint memory newPoint1 = curve.previewPoint(20 ether);
+        newPoint1.checkpointTs = uint128(block.timestamp);
+
         GlobalPoint memory newGlobalPoint = curve.applyTokenUpdateToGlobal(
-            0,
+            lockStart,
             oldPoint,
             newPoint1,
             globalPoint
         );
-
         // we would now expect that the new global point is:
         // 110 ether evaled over 100 seconds - (10 ether evaled over 100 seconds) + (20 ether)
         uint expectedCoeff0 = curve.getBias(100, 110 ether) -

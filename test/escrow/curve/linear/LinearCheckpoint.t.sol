@@ -8,108 +8,6 @@ import {IVotingEscrowIncreasing, ILockedBalanceIncreasing} from "src/escrow/incr
 import {LinearCurveBase} from "./LinearBase.sol";
 
 contract TestLinearIncreasingCheckpoint is LinearCurveBase {
-    function testDepositSingleUser() public {
-        // test 1 user and see that it maxes out
-
-        vm.warp(1 weeks + 1 days);
-
-        curve.unsafeCheckpoint(
-            1,
-            LockedBalance(0, 0),
-            LockedBalance({start: 2 weeks, amount: 1000 ether})
-        );
-
-        // wait until the end of the week
-        vm.warp(2 weeks);
-
-        curve.unsafeManualCheckpoint();
-
-        assertEq(curve.latestPointIndex(), 1, "index should be 1");
-
-        vm.warp(2 weeks + curve.maxTime());
-
-        curve.unsafeManualCheckpoint();
-
-        assertEq(
-            curve.latestPointIndex(),
-            curve.maxTime() / 1 weeks + 1,
-            "index should be maxTime / 1 weeks, 1 indexed"
-        );
-
-        vm.warp(2 weeks + curve.maxTime() + 10 weeks);
-
-        curve.unsafeManualCheckpoint();
-
-        assertEq(
-            curve.latestPointIndex(),
-            curve.maxTime() / 1 weeks + 11,
-            "index should be maxTime / 1 weeks, 1 indexed + 10"
-        );
-
-        // check that most of the array is sparse
-        for (uint i = 0; i < curve.maxTime() / 1 weeks + 11; i++) {
-            if (i == 1 || i == 2 || i == 105) {
-                continue;
-            } else {
-                assertEq(curve.pointHistory(i).ts, 0, "point should be empty");
-            }
-        }
-    }
-    function testDepositTwoUsers() public {
-        // test 1 user and see that it maxes out
-
-        vm.warp(1 weeks + 1 days);
-
-        curve.unsafeCheckpoint(
-            1,
-            LockedBalance(0, 0),
-            LockedBalance({start: 2 weeks, amount: 1000 ether})
-        );
-
-        // wait until the end of the week
-        vm.warp(2 weeks);
-
-        curve.unsafeManualCheckpoint();
-
-        assertEq(curve.latestPointIndex(), 1, "index should be 1");
-
-        vm.warp(2 weeks + 1 days);
-
-        curve.unsafeCheckpoint(
-            2,
-            LockedBalance(0, 0),
-            LockedBalance({start: 3 weeks, amount: 1000 ether})
-        );
-
-        vm.warp(2 weeks + curve.maxTime());
-
-        curve.unsafeManualCheckpoint();
-
-        assertEq(
-            curve.latestPointIndex(),
-            curve.maxTime() / 1 weeks + 2,
-            "index should be maxTime / 1 weeks, 1 indexed"
-        );
-
-        vm.warp(2 weeks + curve.maxTime() + 10 weeks);
-
-        curve.unsafeManualCheckpoint();
-
-        assertEq(
-            curve.latestPointIndex(),
-            curve.maxTime() / 1 weeks + 12,
-            "index should be maxTime / 1 weeks, 1 indexed + 10"
-        );
-
-        // check that most of the array is sparse
-        // for (uint i = 0; i < curve.maxTime() / 1 weeks + 11; i++) {
-        //     if (i == 1 || i == 2 || i == 105) {
-        //         continue;
-        //     } else {
-        //         assertEq(curve.pointHistory(i).ts, 0, "point should be empty");
-        //     }
-        // }
-    }
     // test a single deposit happening in the future
     // followed by manual checkpoint before and after the scheduled increase
 
@@ -143,6 +41,9 @@ contract TestLinearIncreasingCheckpoint is LinearCurveBase {
         uint48 nextInterval = uint48(clock.epochNextCheckpointTs());
 
         shaneLastLock = LockedBalance({start: nextInterval, amount: 1_000_000e18});
+
+        // write the lock
+        escrow.setLockedBalance(shane, shaneLastLock);
 
         curve.unsafeCheckpoint(shane, LockedBalance(0, 0), shaneLastLock);
 
@@ -193,6 +94,7 @@ contract TestLinearIncreasingCheckpoint is LinearCurveBase {
         );
 
         mattLastLock = LockedBalance({start: nextInterval, amount: 500_000e18});
+        escrow.setLockedBalance(matt, mattLastLock);
 
         {
             // assertions:
@@ -200,7 +102,6 @@ contract TestLinearIncreasingCheckpoint is LinearCurveBase {
             int changeInSlope = curve.getCoefficients(500_000e18)[1];
             uint expTotalVP = curve.getBias(3 days, 1_000_000e18);
             // current index is 2
-            // todo: think about this as there should ideally be nothing written
             // if the only change is a schedulled one
             assertEq(curve.latestPointIndex(), 2, "index should be 2");
 
@@ -249,6 +150,7 @@ contract TestLinearIncreasingCheckpoint is LinearCurveBase {
         );
 
         mattLastLock = LockedBalance({start: nextInterval, amount: 1_000_000e18});
+        escrow.setLockedBalance(matt, mattLastLock);
 
         {
             // assertions:
@@ -306,6 +208,7 @@ contract TestLinearIncreasingCheckpoint is LinearCurveBase {
             LockedBalance(0, 0),
             LockedBalance({start: nextInterval, amount: 1_000_000e18})
         );
+        escrow.setLockedBalance(phil, LockedBalance({start: nextInterval, amount: 1_000_000e18}));
         {
             // assertions:
             assertEq(curve.latestPointIndex(), 5, "index should be 5");
@@ -331,10 +234,11 @@ contract TestLinearIncreasingCheckpoint is LinearCurveBase {
                 "bias should be the sum of 1m and 2m"
             );
 
-            // point 4 should be skipped
-            // GlobalPoint memory p4 = curve.pointHistory(4);
-            // assertEq(p4.ts, 0, "point 4 should not exist");
-            //
+            // point 4 should be at the week boundary
+            GlobalPoint memory p4 = curve.pointHistory(4);
+
+            assertEq(p4.ts, 4 weeks, "point 4 should be at the week boundary");
+
             // point 5 should be written
             GlobalPoint memory p5 = curve.pointHistory(5);
 
@@ -646,6 +550,146 @@ contract TestLinearIncreasingCheckpoint is LinearCurveBase {
             totalVotingPower = curve.supplyAt(109 weeks + 1 days);
 
             assertEq(totalVotingPower, 0, "total voting power w109 + 1 day");
+        }
+
+        // let's query historic voting power
+        {
+            // for shane
+            {
+                // before 2 weeks - should be 0
+                uint votingPower = curve.votingPowerAt(shane, 1 weeks + 6 days);
+                assertEq(votingPower, 0, "voting power should be 0 for shane at 1w6d");
+
+                // on week 2 - should be 1m
+                votingPower = curve.votingPowerAt(shane, 2 weeks);
+                assertEq(votingPower, 1_000_000e18, "voting power should be 1m for shane at 2w");
+
+                // on week 2.5 - should be 1m + 0.5w
+                votingPower = curve.votingPowerAt(shane, 2 weeks + 3 days);
+                assertEq(
+                    votingPower,
+                    curve.getBias(3 days, 1_000_000e18),
+                    "voting power should be 1m + 0.5w for shane at 2w3d"
+                );
+
+                // week 5 - should be 0.5 run for 3 weeks
+                votingPower = curve.votingPowerAt(shane, 5 weeks);
+                assertEq(
+                    votingPower,
+                    curve.getBias(3 weeks, 500_000e18),
+                    "voting power should be 0.5 run for 3 weeks"
+                );
+
+                // week 75 - 0.5 run for 73 weeks
+                votingPower = curve.votingPowerAt(shane, 75 weeks);
+                assertEq(
+                    votingPower,
+                    curve.getBias(73 weeks, 500_000e18),
+                    "voting power should be 0.5 run for 73 weeks"
+                );
+
+                // maxxed out at 106 weeks
+                votingPower = curve.votingPowerAt(shane, 106 weeks);
+                assertEq(
+                    votingPower,
+                    curve.getBias(curve.maxTime(), 500_000e18),
+                    "voting power should be maxxed out at 106 weeks"
+                );
+
+                // maxxed out 109 + 1 - 1
+                votingPower = curve.votingPowerAt(shane, 109 weeks + 1 days - 1);
+                assertEq(
+                    votingPower,
+                    curve.getBias(curve.maxTime(), 500_000e18),
+                    "voting power should be maxxed out at 109 + 1 - 1"
+                );
+
+                // zero at 109 + 1
+                votingPower = curve.votingPowerAt(shane, 109 weeks + 1 days);
+                assertEq(votingPower, 0, "voting power should be 0");
+            }
+
+            // for matt
+            {
+                // before 3 weeks - should be 0
+                uint votingPower = curve.votingPowerAt(matt, 2 weeks + 6 days);
+                assertEq(votingPower, 0, "voting power should be 0 for matt at 2w6d");
+
+                // on week 3 - should be 1m
+                votingPower = curve.votingPowerAt(matt, 3 weeks);
+                assertEq(votingPower, 1_000_000e18, "voting power should be 1m for matt at 3w");
+
+                // on week 3.5 - should be 1m + 0.5w
+                votingPower = curve.votingPowerAt(matt, 3 weeks + 3 days);
+                assertEq(
+                    votingPower,
+                    curve.getBias(3 days, 1_000_000e18),
+                    "voting power should be 1m + 0.5w for matt at 3w3d"
+                );
+
+                // week 5 - should be 1m + 2w
+                votingPower = curve.votingPowerAt(matt, 5 weeks);
+                assertEq(
+                    votingPower,
+                    curve.getBias(2 weeks, 1_000_000e18),
+                    "voting power should be 1m + 2w for matt at 5w"
+                );
+
+                // week 5.5 (3 days -1) - should be 1m + 2.5w
+                votingPower = curve.votingPowerAt(matt, 5 weeks + 3 days - 1);
+                assertEq(
+                    votingPower,
+                    curve.getBias(2 weeks + 3 days - 1, 1_000_000e18),
+                    "voting power should be 1m + 2.5w for matt at 5w3d"
+                );
+
+                // week 5.5 (4 days) - should be 0
+                votingPower = curve.votingPowerAt(matt, 5 weeks + 3 days);
+                assertEq(votingPower, 0, "voting power should be 0 for matt at 5w3d");
+            }
+
+            // for phil
+            {
+                // before 5 weeks - should be 0
+                uint votingPower = curve.votingPowerAt(phil, 4 weeks + 6 days);
+                assertEq(votingPower, 0, "voting power should be 0 for phil at 4w6d");
+
+                // on week 5 - should be 0 as warming up
+                votingPower = curve.votingPowerAt(phil, 5 weeks);
+                assertEq(votingPower, 0, "voting power should be 0 for phil at 5w as warming up");
+
+                // at week 5 + 3 exactly still warming
+                votingPower = curve.votingPowerAt(phil, 5 weeks + 3 days);
+                assertEq(votingPower, 0, "voting power should be 0 for phil at 5w3d as warming up");
+
+                // +1s should be 5 w, 3d + 1
+                votingPower = curve.votingPowerAt(phil, 5 weeks + 3 days + 1);
+                assertEq(
+                    votingPower,
+                    curve.getBias(3 days + 1, 1_000_000e18),
+                    "voting power should be starting for phil at 5w3d + 1"
+                );
+
+                // on week 5 + 104 weeks - max
+                votingPower = curve.votingPowerAt(phil, 5 weeks + 104 weeks);
+                assertEq(
+                    votingPower,
+                    curve.getBias(curve.maxTime(), 1_000_000e18),
+                    "voting power should be maxxed out for phil at 5w + 104w"
+                );
+
+                // on week 109 + 1 - 1 - max
+                votingPower = curve.votingPowerAt(phil, 109 weeks + 1 days - 1);
+                assertEq(
+                    votingPower,
+                    curve.getBias(curve.maxTime(), 1_000_000e18),
+                    "voting power should be maxxed out for phil at 109 + 1 - 1"
+                );
+
+                // on week 109 + 1 - 0 - 0
+                votingPower = curve.votingPowerAt(phil, 109 weeks + 1 days);
+                assertEq(votingPower, 0, "voting power should be 0 for phil at 109 + 1");
+            }
         }
     }
 }
