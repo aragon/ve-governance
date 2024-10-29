@@ -136,7 +136,7 @@ contract TestE2EV2 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCur
         }
         // connect to the existing factory to fetch the contract addresses
         else if (_getTestMode() == TestMode.ForkExisting) {
-            address factoryAddress = vm.envAddress("FACTORY");
+            address factoryAddress = vm.envOr("FACTORY_ADDRESS", address(0));
             if (factoryAddress == address(0)) {
                 revert("Factory address not set");
             }
@@ -1384,7 +1384,7 @@ contract TestE2EV2 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCur
         } catch {}
 
         // next we just try a good old fashioned find a whale and rug them in the test
-        address whale = vm.envOr("TOKEN_TEST_WHALE", address(0));
+        address whale = vm.envOr("TEST_TOKEN_WHALE", address(0));
         if (whale == address(0)) {
             return false;
         }

@@ -4,59 +4,79 @@ Welcome to Aragon's veGovernance Plugin - a flexible, modular and secure system 
 
 ## Setup
 
-To get started, ensure that [Foundry](https://getfoundry.sh/) is installed on your computer, then copy `.env.example` into `.env` and define the parameters
+To get started, ensure that [Foundry](https://getfoundry.sh/) is installed on your computer.
+
+<details>
+  <summary>Also make sure to install [GNU Make](https://www.gnu.org/software/make/).</summary>
+  
+  ```sh
+  # debian
+  sudo apt install build-essential
+
+  # arch
+  sudo pacman -S base-devel
+
+  # nix
+  nix-env -iA nixpkgs.gnumake
+
+  # macOS
+  brew install make
+  ```
+
+</details>
+
+### Using the Makefile
+
+The `Makefile` as the command launcher of the project. It's the recommended way to work with it. It manages the env variables of common tasks and executes only the steps that require being run.
+
+```
+$ make 
+Available targets:
+
+- make init                  Check the required tools and dependencies
+- make clean                 Clean the artifacts
+
+- make test-unit             Run unit tests, locally
+
+- make test-fork-testnet     Run a fork test (testnet)
+- make test-fork-prodnet     Run a fork test (production network)
+- make test-fork-holesky     Run a fork test (Holesky)
+- make test-fork-sepolia     Run a fork test (Sepolia)
+- make test-exfork-testnet   Fork test with an existing factory (testnet)
+- make test-exfork-prodnet   Fork test with an existing factory (production network)
+- make test-exfork-holesky   Fork test with an existing factory (Holesky)
+- make test-exfork-sepolia   Fork test with an existing factory (Sepolia)
+
+- make test-coverage         Make an HTML coverage report under ./report
+
+- make pre-deploy-testnet    Simulate a deployment to the defined testnet
+- make pre-deploy-prodnet    Simulate a deployment to the defined production network
+- make deploy-testnet        Deploy to the defined testnet network and verify
+- make deploy-prodnet        Deploy to the production network and verify
+```
+
+Run `make init`:
+- It ensures that Foundry is installed
+- It runs a first compilation of the project
+- It copies `.env.example` into `.env` and `.env.dev.example` into `.env.dev`
+
+Next, customize the values of `.env` and optionally `.env.dev`.
 
 ### Understanding `.env.example`
 
 The env.example file contains descriptions for all the initial settings. You don't need all of these right away but should review prior to fork tests and deployments
 
-## Using the Makefile
-
-The `Makefile` functions as a script runner for common tasks. It's recommended to start there. Ensure you have the required tools installed to run the `make` command on your system:
-
-```sh
-# debian
-sudo apt install build-essential
-
-# arch
-sudo pacman -S base-devel
-
-# nix
-nix-env -iA nixpkgs.gnumake
-
-# macOS
-brew install make
-```
-
-Then run the commands as needed
-
-```sh
-# Setup the repo
-make install
-
-# run unit tests
-make unit-test
-
-# generate coverage report in the `report` directory
-# requires lcov and genhtml
-# serve the report/index.html in browser to view
-make coverage
-
-# the .env.example is set to work with sepolia
-make ft-sepolia-fork
-```
-
 ## Running fork tests
 
 Fork testing has 2 modes:
 
-1. "fork-deploy" will run against the live network fork, deploying new contracts via a new instance of the factory
+1. "fork-deploy" will run against the live network fork, deploying new contracts via a new instance of the factory. See `make test-fork-testnet`, `make test-fork-prodnet` and simmilar
 
-2. "fork-existing" will run against the live network fork, using the existing factory & therefore the existing contracts
+2. "fork-existing" will run against the live network fork, using the existing factory & therefore the existing contracts. See `make test-exfork-testnet`, `make test-exfork-prodnet` and simmilar
 
 In both cases, you will need to find the correct Aragon OSx contracts for the chain you wish to fork against. These can be found in the [OSx commons repo](https://github.com/aragon/osx-commons/tree/main/configs/src/deployments/json)
 
-> If running frequent fork tests it's recommended you pass a block number to enable caching
+> If running frequent fork tests it's recommended to pass a block number to enable caching
 
 ## Deployment
 
@@ -65,25 +85,32 @@ Deployments are done using the deployment factory. This is a singleton contract 
 - Deploy all contracts
 - Set permissions
 - Transfer ownership to a freshly deployed multisig
-- Store the addresses of the deployment in a single, queriable place.
+- Store the addresses of the deployment in a single source of truth that can be queried at any time.
 
-Check the `Makefile` for examples of deployments on different networks.
+Check the available make targets to simulate and deploy the smart contracts:
+
+```
+- make pre-deploy-testnet    Simulate a deployment to the defined testnet
+- make pre-deploy-prodnet    Simulate a deployment to the defined production network
+- make deploy-testnet        Deploy to the defined testnet network and verify
+- make deploy-prodnet        Deploy to the production network and verify
+```
 
 ### Deployment Checklist
 
-- [] I have reviewed the parameters for the veDAO I want to deploy
-- [] I have reviewed the multisig file for the correct addresses
-  - [] I have ensured all multisig members have undergone a proper security review and are aware of the security implications of being on said multisig
-- [] I have updated the `.env` with these parameters
-- [] I have updated the `CurveConstantLib` and `Clock` with any new constants.
-- [] All my unit tests pass
-- [] I have run a fork test in `fork-deploy` mode against the OSx contracts on my target testnet
-- [] I have deployed my contracts successfully to a target testnet
-- [] I have confirmed my tests still work in `fork-existing` mode with the live tokens and the factory.
-- [] I have run the same workflow against the mainnet I wish to deploy on
-- [] I have previewed my deploy
-- [] My deployer address is a fresh wallet or setup for repeat production deploys in a safe manner.
-- [] My wallet has sufficient native token for gas
+- [ ] I have reviewed the parameters for the veDAO I want to deploy
+- [ ] I have reviewed the multisig file for the correct addresses
+  - [ ] I have ensured all multisig members have undergone a proper security review and are aware of the security implications of being on said multisig
+- [ ] I have updated the `.env` with these parameters
+- [ ] I have updated the `CurveConstantLib` and `Clock` with any new constants.
+- [ ] All my unit tests pass
+- [ ] I have run a fork test in `fork-deploy` mode against the OSx contracts on my target testnet
+- [ ] I have deployed my contracts successfully to a target testnet
+- [ ] I have confirmed my tests still work in `fork-existing` mode with the live tokens and the factory.
+- [ ] I have run the same workflow against the mainnet I wish to deploy on
+- [ ] I have previewed my deploy
+- [ ] My deployer address is a fresh wallet or setup for repeat production deploys in a safe manner.
+- [ ] My wallet has sufficient native token for gas
 
 ### Manual from the command line
 

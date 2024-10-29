@@ -5,17 +5,23 @@
 -include .env.dev
 
 # Set the RPC URL's for each target
-test-fork-testnet: export RPC_URL = "https://sepolia.mode.network"
-test-fork-prodnet: export RPC_URL = "https://mainnet.mode.network"
+test-fork-testnet: export RPC_URL = $(TESTNET_RPC_URL)
+test-fork-prodnet: export RPC_URL = $(PRODNET_RPC_URL)
 test-fork-holesky: export RPC_URL = "https://holesky.drpc.org"
 test-fork-sepolia: export RPC_URL = "https://sepolia.drpc.org"
 
-pre-deploy-testnet: export RPC_URL = "https://sepolia.mode.network"
-deploy-testnet: export RPC_URL = "https://sepolia.mode.network"
-pre-deploy-prodnet: export RPC_URL = "https://mainnet.mode.network"
-deploy-prodnet: export RPC_URL = "https://mainnet.mode.network"
+pre-deploy-testnet: export RPC_URL = $(TESTNET_RPC_URL)
+pre-deploy-prodnet: export RPC_URL = $(PRODNET_RPC_URL)
+deploy-testnet: export RPC_URL = $(TESTNET_RPC_URL)
+deploy-prodnet: export RPC_URL = $(PRODNET_RPC_URL)
 
-# Override the verifier and block explorer parameters
+# Set the network ID
+pre-deploy-testnet: export NETWORK = $(TESTNET_NETWORK)
+pre-deploy-prodnet: export NETWORK = $(PRODNET_NETWORK)
+deploy-testnet: export NETWORK = $(TESTNET_NETWORK)
+deploy-prodnet: export NETWORK = $(PRODNET_NETWORK)
+
+# Override the verifier and block explorer parameters (network dependent)
 deploy-testnet: export VERIFIER_TYPE_PARAM = --verifier blockscout
 deploy-testnet: export VERIFIER_URL_PARAM = --verifier-url "https://sepolia.explorer.mode.network/api\?"
 deploy-prodnet: export ETHERSCAN_API_KEY_PARAM = --etherscan-api-key $(ETHERSCAN_API_KEY)
@@ -23,7 +29,7 @@ deploy-prodnet: export ETHERSCAN_API_KEY_PARAM = --etherscan-api-key $(ETHERSCAN
 # Set production deployments' flag
 deploy: export DEPLOY_AS_PRODUCTION = true
 
-# Override the fork mode
+# Override the fork test mode (existing)
 test-exfork-testnet: export FORK_TEST_MODE = fork-existing
 test-exfork-prodnet: export FORK_TEST_MODE = fork-existing
 test-exfork-holesky: export FORK_TEST_MODE = fork-existing
@@ -71,15 +77,15 @@ test-unit: ##           Run unit tests, locally
 
 #### Fork testing ####
 
-test-exfork-testnet: test-fork-testnet ## Fork test with an existing factory (testnet)
-test-exfork-prodnet: test-fork-prodnet ## Fork test with an existing factory (production network)
-test-exfork-holesky: test-fork-holesky ## Fork test with an existing factory (Holesky)
-test-exfork-sepolia: test-fork-sepolia ## Fork test with an existing factory (Sepolia)
-
 test-fork-testnet: test-fork ##   Run a fork test (testnet)
 test-fork-prodnet: test-fork ##   Run a fork test (production network)
 test-fork-holesky: test-fork ##   Run a fork test (Holesky)
 test-fork-sepolia: test-fork ##   Run a fork test (Sepolia)
+
+test-exfork-testnet: test-fork-testnet ## Fork test with an existing factory (testnet)
+test-exfork-prodnet: test-fork-prodnet ## Fork test with an existing factory (production network)
+test-exfork-holesky: test-fork-holesky ## Fork test with an existing factory (Holesky)
+test-exfork-sepolia: test-fork-sepolia ## Fork test with an existing factory (Sepolia)
 
 test-fork:
 	forge test --match-contract $(E2E_TEST_NAME) --rpc-url $(RPC_URL) $(VERBOSITY)
@@ -87,6 +93,8 @@ test-fork:
 : ## 
 
 test-coverage: report/index.html ##       Make an HTML coverage report under ./report
+	@which open > /dev/null && open report/index.html || echo -n
+	@which xdg-open > /dev/null && xdg-open report/index.html || echo -n
 
 report/index.html: lcov.info.pruned
 	genhtml $^ -o report --branch-coverage
