@@ -33,7 +33,7 @@ contract Deploy is Script {
     /// @notice Runs the deployment flow, records the given parameters and artifacts, and it becomes read only
     function run() public broadcast {
         // Prepare all parameters
-        bool isProduction = vm.envBool("DEPLOY_AS_PRODUCTION");
+        bool isProduction = vm.envOr("DEPLOY_AS_PRODUCTION", false);
         DeploymentParameters memory parameters = getDeploymentParameters(isProduction);
 
         // Create the DAO

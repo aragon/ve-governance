@@ -1,6 +1,6 @@
 pragma solidity ^0.8.17;
 
-import {Test} from "forge-std/Test.sol";
+import {AragonTest} from "../base/AragonTest.sol";
 import {console2 as console} from "forge-std/console2.sol";
 
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
@@ -25,8 +25,11 @@ interface IERC20Mint is IERC20 {
 }
 
 contract GhettoMultisig {
-    function approveCallerToSpendTokenWithID(address _token, uint256 _id) external {
-        _token.call(abi.encodeWithSignature("approve(address,uint256)", msg.sender, _id));
+    function approveCallerToSpendTokenWithID(
+        address _token,
+        uint256 _id
+    ) external returns (bool, bytes memory) {
+        return _token.call(abi.encodeWithSignature("approve(address,uint256)", msg.sender, _id));
     }
 }
 
@@ -49,7 +52,7 @@ contract MultisigReceiver is GhettoMultisig {
  * 4. A more robust suite for admininstration of the contracts
  * 5. Ability to connect to an existing deployment and test on the real network
  */
-contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveTokenStorage {
+contract TestE2EV2 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveTokenStorage {
     error VotingInactive();
     error OnlyEscrow();
     error GaugeDoesNotExist(address _pool);
@@ -79,7 +82,7 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
     DAO dao;
     IERC20Mint token;
 
-    MultisigReceiver jordisMultisig;
+    MultisigReceiver carolsMultisig;
 
     address[] signers;
 
@@ -94,7 +97,7 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
 
     /*///////////////////////////////////////////////////////////////
                                 Setup
-    /////////////////////////////////////////////balanceCarlos////////////////*/
+    /////////////////////////////////////////////////////////////*/
 
     /// The test here will run in 2 modes:
     /// 1. Local Mode (Not yet supported): we deploy the OSx contracts locally using mocks to expedite testing
@@ -106,7 +109,7 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
 
         // fetch the deployment parameters
         DeploymentParameters memory deploymentParameters = deploy.getDeploymentParameters(
-            vm.envBool("DEPLOY_AS_PRODUCTION")
+            vm.envOr("DEPLOY_AS_PRODUCTION", false)
         );
 
         signers = deploy.readMultisigMembers();
@@ -461,30 +464,24 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
     //////////////////////////////////////////////////////////////*/
 
     /// here we walkthrough a user journey with 3 users
-    /// carlos will have 2 locks, holding both at the same time
-    /// javi will have 1 lock minted at the same time as user 1 holds both
-    /// carlos will mint his lock for him
-    /// jordi will have 1 lock minted after user 1 has exited one of their locks
-    /// jordi will have a smart contract wallet
+    /// alice will have 2 locks, holding both at the same time
+    /// bob will have 1 lock minted at the same time as user 1 holds both
+    /// alice will mint his lock for him
+    /// carol will have 1 lock minted after user 1 has exited one of their locks
+    /// carol will have a smart contract wallet
     /// we will have them create the lock, vote across a couple epochs, and then exit
     /// we will also have them attempt to circumvent the system and fail
     /// finally we will define one attacker who will attempt to attack the system and fail
 
-    // 3 caballeros
-    address carlos = address(0xca7105);
-    address javi = address(0x7af1);
-    address jordi = address(0x707d1);
+    uint balanceAlice = 1000 ether;
+    uint balanceBob = 0 ether;
+    uint balanceCarol = 1_234 ether;
 
-    uint balanceCarlos = 1000 ether;
-    uint balanceJavi = 0 ether;
-    uint balanceJordi = 1_234 ether;
+    uint depositAlice0 = 250 ether;
+    uint depositAlice1 = 500 ether;
+    uint depositAliceBob = 250 ether;
 
-    uint depositCarlos0 = 250 ether;
-    uint depositCarlos1 = 500 ether;
-    uint depositCarlosJavi = 250 ether;
-
-    // 1 attacker
-    address jordan = address(0x707da);
+    // 1 attacker (david)
 
     uint epochStartTime;
 
@@ -499,102 +496,94 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
         vm.warp(nextEpoch);
         epochStartTime = block.timestamp;
 
-        // set up labels
-        {
-            vm.label(carlos, "Carlos");
-            vm.label(javi, "Javi");
-            vm.label(jordi, "Jordi");
-            vm.label(jordan, "Jordan");
-        }
-
         // first we give the guys each some tokens of the underlying
         {
             vm.startPrank(distributor);
             {
-                token.transfer(carlos, balanceCarlos);
-                token.transfer(jordi, balanceJordi);
+                token.transfer(alice, balanceAlice);
+                token.transfer(carol, balanceCarol);
             }
             vm.stopPrank();
         }
 
-        // carlos goes first and makes the first deposit, it's at the start of the
+        // alice goes first and makes the first deposit, it's at the start of the
         // week, so we would expect him to be warm by the end of the week if using <6 day
-        // we wait a couple of days and he makes a deposit for javi
+        // we wait a couple of days and he makes a deposit for bob
         // we expect his warmup to carryover to the next week
         // we expect both of their locks to start accruing voting power on the same day
         {
             goToEpochStartPlus(1 days);
 
-            vm.startPrank(carlos);
+            vm.startPrank(alice);
             {
-                token.approve(address(escrow), balanceCarlos);
+                token.approve(address(escrow), balanceAlice);
 
-                escrow.createLock(depositCarlos0);
+                escrow.createLock(depositAlice0);
 
                 goToEpochStartPlus(6 days);
 
-                escrow.createLockFor(depositCarlosJavi, javi);
+                escrow.createLockFor(depositAliceBob, bob);
             }
             vm.stopPrank();
 
-            // check carlos has token 1, javi has token   2
-            assertEq(lock.ownerOf(1), carlos, "Carlos should own token 1");
-            assertEq(lock.ownerOf(2), javi, "Javi should own token 2");
+            // check alice has token 1, bob has token   2
+            assertEq(lock.ownerOf(1), alice, "Alice should own token 1");
+            assertEq(lock.ownerOf(2), bob, "Bob should own token 2");
 
             // check the token points written
             TokenPoint memory tp1_1 = curve.tokenPointHistory(1, 1);
             TokenPoint memory tp2_1 = curve.tokenPointHistory(2, 1);
 
-            assertEq(tp1_1.bias, depositCarlos0, "Carlos point 1 should have the correct bias");
-            assertEq(tp2_1.bias, depositCarlosJavi, "Javi point should have the correct bias");
+            assertEq(tp1_1.bias, depositAlice0, "Alice point 1 should have the correct bias");
+            assertEq(tp2_1.bias, depositAliceBob, "Bob point should have the correct bias");
 
             assertEq(
                 tp1_1.checkpointTs,
                 epochStartTime + clock.checkpointInterval(),
-                "Carlos point should have the correct checkpoint"
+                "Alice point should have the correct checkpoint"
             );
             assertEq(
                 tp2_1.checkpointTs,
                 epochStartTime + clock.checkpointInterval(),
-                "Javi point should have the correct checkpoint"
+                "Bob point should have the correct checkpoint"
             );
 
             assertEq(
                 tp1_1.writtenTs,
                 epochStartTime + 1 days,
-                "Carlos point should have the correct written timestamp"
+                "Alice point should have the correct written timestamp"
             );
             assertEq(
                 tp2_1.writtenTs,
                 epochStartTime + 6 days,
-                "Javi point should have the correct written timestamp"
+                "Bob point should have the correct written timestamp"
             );
 
             // check the contract has the correct total
             assertEq(
                 escrow.totalLocked(),
-                depositCarlos0 + depositCarlosJavi,
+                depositAlice0 + depositAliceBob,
                 "Total locked should be the sum of the two deposits"
             );
 
             // checked the locked balances and the token points
             assertEq(
                 escrow.locked(1).amount,
-                depositCarlos0,
-                "Carlos should have the correct amount locked"
+                depositAlice0,
+                "Alice should have the correct amount locked"
             );
             assertEq(
                 escrow.locked(2).amount,
-                depositCarlosJavi,
-                "Javi should have the correct amount locked"
+                depositAliceBob,
+                "Bob should have the correct amount locked"
             );
 
-            // start date in the future - carlos will not be warm as his lock is not active yet
-            assertFalse(curve.isWarm(1), "Carlos should not be warm");
-            assertFalse(curve.isWarm(2), "Javi should not be warm");
+            // start date in the future - alice will not be warm as his lock is not active yet
+            assertFalse(curve.isWarm(1), "Alice should not be warm");
+            assertFalse(curve.isWarm(2), "Bob should not be warm");
 
-            assertEq(escrow.votingPower(1), 0, "Carlos should have no voting power");
-            assertEq(escrow.votingPower(2), 0, "Javi should have no voting power");
+            assertEq(escrow.votingPower(1), 0, "Alice should have no voting power");
+            assertEq(escrow.votingPower(2), 0, "Bob should have no voting power");
 
             assertEq(
                 escrow.locked(1).start,
@@ -607,14 +596,14 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
                 "Both locks should start at the next checkpoint"
             );
 
-            // fast forward to the checkpoint interval carlos is warm and has voting power, javi is not
+            // fast forward to the checkpoint interval alice is warm and has voting power, bob is not
             goToEpochStartPlus(clock.checkpointInterval());
 
-            assertEq(escrow.votingPower(1), depositCarlos0, "Carlos should have voting power");
-            assertTrue(curve.isWarm(1), "Carlos should not be warm");
+            assertEq(escrow.votingPower(1), depositAlice0, "Alice should have voting power");
+            assertTrue(curve.isWarm(1), "Alice should not be warm");
 
-            assertEq(escrow.votingPower(2), 0, "Javi should not have the correct voting power");
-            assertFalse(curve.isWarm(2), "Javi should not be warm");
+            assertEq(escrow.votingPower(2), 0, "Bob should not have the correct voting power");
+            assertFalse(curve.isWarm(2), "Bob should not be warm");
         }
 
         // we fast forward 4 weeks and check the expected balances
@@ -625,41 +614,41 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
             // we could check a < x < b, but checking x exactly is tedious
         }
 
-        // we have carlos make a second deposit and validate that his total voting power is initially unchanged
+        // we have alice make a second deposit and validate that his total voting power is initially unchanged
         {
-            vm.startPrank(carlos);
+            vm.startPrank(alice);
             {
-                escrow.createLock(depositCarlos1);
+                escrow.createLock(depositAlice1);
             }
             vm.stopPrank();
 
             // check the token points written
             TokenPoint memory tp1_2 = curve.tokenPointHistory(3, 1);
 
-            assertEq(tp1_2.bias, depositCarlos1, "Carlos point 2 should have the correct bias");
+            assertEq(tp1_2.bias, depositAlice1, "Alice point 2 should have the correct bias");
             assertEq(
                 tp1_2.checkpointTs,
                 epochStartTime + 4 weeks + clock.checkpointInterval(),
-                "Carlos point should have the correct checkpoint"
+                "Alice point should have the correct checkpoint"
             );
             assertEq(
                 tp1_2.writtenTs,
                 epochStartTime + 4 weeks,
-                "Carlos point should have the correct written timestamp"
+                "Alice point should have the correct written timestamp"
             );
 
             // check the voting power is unchanged (my boi aint warm)
             assertEq(
                 escrow.votingPower(3),
                 0,
-                "Carlos should have no voting power on the second lock"
+                "Alice should have no voting power on the second lock"
             );
-            assertFalse(curve.isWarm(3), "Carlos should not be warm on the second lock");
+            assertFalse(curve.isWarm(3), "Alice should not be warm on the second lock");
 
             // check the total voting power on the escrow
             assertEq(
                 escrow.totalLocked(),
-                depositCarlos0 + depositCarlos1 + depositCarlosJavi,
+                depositAlice0 + depositAlice1 + depositAliceBob,
                 "Total locked should be the sum of the two deposits"
             );
 
@@ -668,9 +657,9 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
                 curve.tokenPointHistory(1, 1).checkpointTs;
 
             assertEq(
-                escrow.votingPowerForAccount(carlos),
-                curve.getBias(timeElapsedSinceFirstLock, depositCarlos0),
-                "Carlos should only have the first lock active"
+                escrow.votingPowerForAccount(alice),
+                curve.getBias(timeElapsedSinceFirstLock, depositAlice0),
+                "Alice should only have the first lock active"
             );
         }
         // we then fast forward 1 week and check that his voting power has increased as expected with the new lock
@@ -683,20 +672,20 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
 
             // elased time is zero so should be exactly equal to the bias
             assertEq(
-                escrow.votingPowerForAccount(carlos),
-                curve.getBias(timeElapsedSinceFirstLock, depositCarlos0) + depositCarlos1,
-                "Carlos should now have the correct aggregate voting power"
+                escrow.votingPowerForAccount(alice),
+                curve.getBias(timeElapsedSinceFirstLock, depositAlice0) + depositAlice1,
+                "Alice should now have the correct aggregate voting power"
             );
         }
 
-        // jordan tries to enter the queue with one of their locks
+        // david tries to enter the queue with one of their locks
         {
-            vm.startPrank(jordan);
+            vm.startPrank(david);
             {
                 bytes memory erc721ownererr = "ERC721: caller is not token owner or approved";
                 for (uint i = 1; i <= 3; i++) {
                     vm.expectRevert(OnlyEscrow.selector);
-                    queue.queueExit(i, jordan);
+                    queue.queueExit(i, david);
 
                     vm.expectRevert(erc721ownererr);
                     escrow.beginWithdrawal(i);
@@ -709,7 +698,7 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
         {
             assertFalse(clock.votingActive(), "Voting should not be active");
 
-            address[3] memory stakers = [carlos, javi, jordi];
+            address[3] memory stakers = [alice, bob, carol];
             GaugeVote[] memory votes = new GaugeVote[](0);
             for (uint i = 0; i < 3; i++) {
                 address staker = stakers[i];
@@ -764,7 +753,7 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
             GaugeVote[] memory incorrectVotes = new GaugeVote[](1);
             incorrectVotes[0] = GaugeVote({gauge: address(123), weight: 1});
 
-            vm.startPrank(carlos);
+            vm.startPrank(alice);
             {
                 vm.expectRevert(abi.encodeWithSelector(GaugeDoesNotExist.selector, address(123)));
                 voter.vote(1, incorrectVotes);
@@ -806,13 +795,13 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
                 );
             }
 
-            // jordan tries voting for someone else and fails
+            // david tries voting for someone else and fails
             {
                 GaugeVote[] memory votes = new GaugeVote[](2);
                 votes[0] = GaugeVote({gauge: gauge0, weight: 1});
                 votes[1] = GaugeVote({gauge: gauge1, weight: 1});
 
-                vm.startPrank(jordan);
+                vm.startPrank(david);
                 {
                     vm.expectRevert(NotApprovedOrOwner.selector);
                     voter.vote(1, votes);
@@ -824,61 +813,61 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
                 vm.stopPrank();
             }
 
-            // the boys vote: carlos votes with multiple and jord with a single
+            // the boys vote: alice votes with multiple and carol with a single
             {
                 GaugeVote[] memory votes = new GaugeVote[](2);
 
-                // carlos is 50 50
+                // alice is 50 50
                 votes[0] = GaugeVote({gauge: gauge0, weight: 1});
                 votes[1] = GaugeVote({gauge: gauge1, weight: 1});
                 uint[] memory ids = new uint[](2);
                 ids[0] = 1;
                 ids[1] = 3;
 
-                vm.startPrank(carlos);
+                vm.startPrank(alice);
                 {
                     voter.voteMultiple(ids, votes);
                 }
                 vm.stopPrank();
 
-                // javi votes for the one gauge
+                // bob votes for the one gauge
                 votes = new GaugeVote[](1);
                 votes[0] = GaugeVote({gauge: gauge0, weight: 1});
 
-                vm.startPrank(javi);
+                vm.startPrank(bob);
                 {
                     voter.vote(2, votes);
                 }
                 vm.stopPrank();
 
-                // check the votes - we should have all of javi's votes (id 2) for gauge 0
-                // carlos' votes should be split between the two gauges
-                // in total the second gauge should have 50% of the votes of carlos' votes
-                // and the first 100% of javi's votes + 50% of carlos' votes
+                // check the votes - we should have all of bob's votes (id 2) for gauge 0
+                // alice' votes should be split between the two gauges
+                // in total the second gauge should have 50% of the votes of alice' votes
+                // and the first 100% of bob's votes + 50% of alice' votes
                 assertEq(
                     voter.votes(1, gauge0),
                     escrow.votingPower(1) / 2,
-                    "Carlos 1 g 0 should have the correct votes"
+                    "Alice 1 g 0 should have the correct votes"
                 );
                 assertEq(
                     voter.votes(1, gauge1),
                     escrow.votingPower(1) / 2,
-                    "Carlos 1 g 1 should have the correct votes"
+                    "Alice 1 g 1 should have the correct votes"
                 );
                 assertEq(
                     voter.votes(2, gauge0),
                     escrow.votingPower(2),
-                    "Javi should have the correct votes"
+                    "Bob should have the correct votes"
                 );
                 assertEq(
                     voter.votes(3, gauge0),
                     escrow.votingPower(3) / 2,
-                    "Carlos 3 g 0 should have the correct votes"
+                    "Alice 3 g 0 should have the correct votes"
                 );
                 assertEq(
                     voter.votes(3, gauge1),
                     escrow.votingPower(3) / 2,
-                    "Carlos 3 g 1 should have the correct votes"
+                    "Alice 3 g 1 should have the correct votes"
                 );
 
                 // check the gauge votes
@@ -893,25 +882,25 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
             }
         }
 
-        // jordi create a deposit mid vote and tries to vote - he should have no voting power
+        // carol create a deposit mid vote and tries to vote - he should have no voting power
         {
-            vm.startPrank(jordi);
+            vm.startPrank(carol);
             {
-                token.approve(address(escrow), balanceJordi);
+                token.approve(address(escrow), balanceCarol);
 
                 // bad contract first
                 GhettoMultisig badMultisig = new GhettoMultisig();
 
                 vm.expectRevert("ERC721: transfer to non ERC721Receiver implementer");
-                escrow.createLockFor(balanceJordi, address(badMultisig));
+                escrow.createLockFor(balanceCarol, address(badMultisig));
 
                 // he fixes it
-                jordisMultisig = new MultisigReceiver();
+                carolsMultisig = new MultisigReceiver();
 
-                escrow.createLockFor(balanceJordi, address(jordisMultisig));
+                escrow.createLockFor(balanceCarol, address(carolsMultisig));
 
-                // allow jordi to vote on behalf of his msig
-                jordisMultisig.approveCallerToSpendTokenWithID(address(lock), 4);
+                // allow carol to vote on behalf of his msig
+                carolsMultisig.approveCallerToSpendTokenWithID(address(lock), 4);
 
                 GaugeVote[] memory votes = new GaugeVote[](2);
                 votes[0] = GaugeVote({gauge: gauge0, weight: 1});
@@ -923,51 +912,51 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
             vm.stopPrank();
         }
 
-        // javi updates his vote
+        // bob updates his vote
         {
             GaugeVote[] memory votes = new GaugeVote[](1);
             votes[0] = GaugeVote({gauge: gauge1, weight: 1});
 
-            vm.startPrank(javi);
+            vm.startPrank(bob);
             {
                 voter.vote(2, votes);
             }
             vm.stopPrank();
 
-            // check the votes - we should have all of javi's votes (id 2) for gauge 1
-            // carlos' votes should be split between the two gauges
-            // in total the second gauge should have 100% of Javi's votes + 50% of the votes of carlos' votes
-            // and the first 50% of carlos' votes
+            // check the votes - we should have all of bob's votes (id 2) for gauge 1
+            // alice' votes should be split between the two gauges
+            // in total the second gauge should have 100% of Bob's votes + 50% of the votes of alice' votes
+            // and the first 50% of alice' votes
             assertEq(
                 voter.votes(1, gauge0),
                 escrow.votingPower(1) / 2,
-                "Carlos 1 g 0 should have the correct votes"
+                "Alice 1 g 0 should have the correct votes"
             );
 
             assertEq(
                 voter.votes(1, gauge1),
                 escrow.votingPower(1) / 2,
-                "Carlos 1 g 1 should have the correct votes"
+                "Alice 1 g 1 should have the correct votes"
             );
 
-            assertEq(voter.votes(2, gauge0), 0, "Javi should have the correct votes");
+            assertEq(voter.votes(2, gauge0), 0, "Bob should have the correct votes");
 
             assertEq(
                 voter.votes(2, gauge1),
                 escrow.votingPower(2),
-                "Javi should have the correct votes"
+                "Bob should have the correct votes"
             );
 
             assertEq(
                 voter.votes(3, gauge0),
                 escrow.votingPower(3) / 2,
-                "Carlos 3 g 0 should have the correct votes"
+                "Alice 3 g 0 should have the correct votes"
             );
 
             assertEq(
                 voter.votes(3, gauge1),
                 escrow.votingPower(3) / 2,
-                "Carlos 3 g 1 should have the correct votes"
+                "Alice 3 g 1 should have the correct votes"
             );
 
             // check the gauge votes
@@ -995,8 +984,8 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
 
             assertFalse(clock.votingActive(), "Voting should not be active");
 
-            // carlos tries to exit
-            vm.startPrank(carlos);
+            // alice tries to exit
+            vm.startPrank(alice);
             {
                 vm.expectRevert(VotingInactive.selector);
                 escrow.resetVotesAndBeginWithdrawal(1);
@@ -1007,46 +996,46 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
             vm.stopPrank();
         }
 
-        // we wait till voting is over and they begin the exit - carlos does anyhow
+        // we wait till voting is over and they begin the exit - alice does anyhow
         // we check he can't exit early and someone can't exit for him
         {
             goToEpochStartPlus(8 weeks + 1 hours);
 
-            vm.startPrank(carlos);
+            vm.startPrank(alice);
             {
                 lock.approve(address(escrow), 1);
                 escrow.resetVotesAndBeginWithdrawal(1);
             }
             vm.stopPrank();
 
-            // carlos doesnt have the nft - its in the queue but he has a ticket
-            assertEq(lock.ownerOf(1), address(escrow), "Carlos should not own the nft");
-            assertEq(queue.queue(1).holder, carlos, "Carlos should be in the queue");
+            // alice doesnt have the nft - its in the queue but he has a ticket
+            assertEq(lock.ownerOf(1), address(escrow), "Alice should not own the nft");
+            assertEq(queue.queue(1).holder, alice, "Alice should be in the queue");
 
             // exit date should be the next checkpoint
             assertEq(
                 queue.queue(1).exitDate,
                 epochStartTime + 8 weeks + clock.checkpointInterval(),
-                "Carlos should be able to exit at the next checkpoint"
+                "Alice should be able to exit at the next checkpoint"
             );
 
             // second user point wrttien
             TokenPoint memory tp1_2 = curve.tokenPointHistory(1, 2);
 
-            assertEq(tp1_2.bias, 0, "Carlos point 1_2 should have the correct bias");
+            assertEq(tp1_2.bias, 0, "Alice point 1_2 should have the correct bias");
             assertEq(
                 tp1_2.checkpointTs,
                 epochStartTime + 8 weeks + clock.checkpointInterval(),
-                "Carlos point should have the correct checkpoint"
+                "Alice point should have the correct checkpoint"
             );
             assertEq(
                 tp1_2.writtenTs,
                 epochStartTime + 8 weeks + 1 hours,
-                "Carlos point should have the correct written timestamp"
+                "Alice point should have the correct written timestamp"
             );
 
             // he can't exit early
-            vm.startPrank(carlos);
+            vm.startPrank(alice);
             {
                 vm.expectRevert(CannotExit.selector);
                 escrow.withdraw(1);
@@ -1068,15 +1057,15 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
 
             // he should have his original amount back, minus any fees
             assertEq(
-                token.balanceOf(carlos),
-                depositCarlos0 - (queue.feePercent() * depositCarlos0) / 10_000,
-                "Carlos should have the correct balance after exiting"
+                token.balanceOf(alice),
+                depositAlice0 - (queue.feePercent() * depositAlice0) / 10_000,
+                "Alice should have the correct balance after exiting"
             );
 
             // check the total locked
             assertEq(
                 escrow.totalLocked(),
-                depositCarlos1 + depositCarlosJavi + balanceJordi,
+                depositAlice1 + depositAliceBob + balanceCarol,
                 "Total locked should be the sum of the two deposits"
             );
         }
@@ -1102,31 +1091,31 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
             assertEq(queue.cooldown(), 1 weeks, "Queue should have the correct cooldown period");
         }
 
-        // carlos creates a new lock 12 h the window opens, he should be warm tomorrow
+        // alice creates a new lock 12 h the window opens, he should be warm tomorrow
         {
             goToEpochStartPlus(10 weeks - 12 hours);
 
-            vm.startPrank(carlos);
+            vm.startPrank(alice);
             {
-                token.approve(address(escrow), depositCarlos0);
-                escrow.createLock(depositCarlos0);
+                token.approve(address(escrow), depositAlice0);
+                escrow.createLock(depositAlice0);
             }
             vm.stopPrank();
 
             // nope
             goToEpochStartPlus(10 weeks + 12 hours);
-            assertFalse(curve.isWarm(5), "Carlos should not be warm");
+            assertFalse(curve.isWarm(5), "Alice should not be warm");
 
             // +1s
             goToEpochStartPlus(10 weeks + 12 hours + 1);
-            assertTrue(curve.isWarm(5), "Carlos should be warm");
+            assertTrue(curve.isWarm(5), "Alice should be warm");
         }
 
-        // javi goes for an exit, he should be able to exit in a week
+        // bob goes for an exit, he should be able to exit in a week
         {
             goToEpochStartPlus(10 weeks + 3 days);
 
-            vm.startPrank(javi);
+            vm.startPrank(bob);
             {
                 voter.reset(2);
                 lock.approve(address(escrow), 2);
@@ -1134,56 +1123,56 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
             }
             vm.stopPrank();
 
-            // javi doesnt have the nft - its in the queue but he has a ticket
-            assertEq(lock.ownerOf(2), address(escrow), "Javi should not own the nft");
-            assertEq(queue.queue(2).holder, javi, "Javi should be in the queue");
+            // bob doesnt have the nft - its in the queue but he has a ticket
+            assertEq(lock.ownerOf(2), address(escrow), "Bob should not own the nft");
+            assertEq(queue.queue(2).holder, bob, "Bob should be in the queue");
 
             // exit date should be 1 week from now
             assertEq(
                 queue.queue(2).exitDate,
                 epochStartTime + 11 weeks + 3 days,
-                "Javi should be able to exit in a week"
+                "Bob should be able to exit in a week"
             );
 
             // go there + 1 and exit
             goToEpochStartPlus(11 weeks + 3 days + 1);
 
-            vm.startPrank(javi);
+            vm.startPrank(bob);
             {
                 escrow.withdraw(2);
             }
             vm.stopPrank();
 
-            // total locked should be carlos' 2 deposits + jordis
+            // total locked should be alice' 2 deposits + carols
             assertEq(
                 escrow.totalLocked(),
-                depositCarlos0 + depositCarlos1 + balanceJordi,
+                depositAlice0 + depositAlice1 + balanceCarol,
                 "Total locked should be the sum of the deposits"
             );
         }
 
-        // jordi tries to send his nft to the lock and queue, and can't but he accidentally sends it to the escrow
+        // carol tries to send his nft to the lock and queue, and can't but he accidentally sends it to the escrow
         {
-            vm.startPrank(jordi);
+            vm.startPrank(carol);
             {
                 vm.expectRevert(NotWhitelisted.selector);
-                lock.transferFrom(jordi, address(queue), 4);
+                lock.transferFrom(carol, address(queue), 4);
 
                 vm.expectRevert(NotWhitelisted.selector);
-                lock.transferFrom(jordi, address(lock), 4);
+                lock.transferFrom(carol, address(lock), 4);
 
                 // he sends it to the escrow
-                lock.transferFrom(address(jordisMultisig), address(escrow), 4);
+                lock.transferFrom(address(carolsMultisig), address(escrow), 4);
             }
             vm.stopPrank();
 
-            assertEq(lock.ownerOf(4), address(escrow), "Jordi should not own the nft");
+            assertEq(lock.ownerOf(4), address(escrow), "Carol should not own the nft");
 
             // he can't get it back now :(
-            vm.startPrank(jordi);
+            vm.startPrank(carol);
             {
                 vm.expectRevert("ERC721: caller is not token owner or approved");
-                lock.transferFrom(address(escrow), jordi, 4);
+                lock.transferFrom(address(escrow), carol, 4);
             }
             vm.stopPrank();
         }
@@ -1194,39 +1183,39 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
             actions[0] = IDAO.Action({
                 to: address(lock),
                 value: 0,
-                data: abi.encodeWithSelector(lock.setWhitelisted.selector, address(jordi), true)
+                data: abi.encodeWithSelector(lock.setWhitelisted.selector, address(carol), true)
             });
             actions[1] = IDAO.Action({
                 to: address(escrow),
                 value: 0,
-                data: abi.encodeWithSelector(escrow.sweepNFT.selector, 4, jordi)
+                data: abi.encodeWithSelector(escrow.sweepNFT.selector, 4, carol)
             });
             actions[2] = IDAO.Action({
                 to: address(lock),
                 value: 0,
-                data: abi.encodeWithSelector(lock.setWhitelisted.selector, address(jordi), false)
+                data: abi.encodeWithSelector(lock.setWhitelisted.selector, address(carol), false)
             });
 
             _buildSignProposal(actions);
 
             // check he has it
-            assertEq(lock.ownerOf(4), jordi, "Jordi should own the nft");
+            assertEq(lock.ownerOf(4), carol, "Carol should own the nft");
         }
 
-        // jordan convinces the dev team to give him sweeper access and tries to rug all the tokens, he cant
+        // david convinces the dev team to give him sweeper access and tries to rug all the tokens, he cant
         {
             IDAO.Action[] memory actions = new IDAO.Action[](1);
             actions[0] = IDAO.Action({
                 to: address(dao),
                 value: 0,
-                data: abi.encodeCall(dao.grant, (address(escrow), jordan, escrow.SWEEPER_ROLE()))
+                data: abi.encodeCall(dao.grant, (address(escrow), david, escrow.SWEEPER_ROLE()))
             });
             _buildSignProposal(actions);
 
             vm.prank(distributor);
-            token.transfer(jordan, 100 ether);
+            token.transfer(david, 100 ether);
 
-            vm.startPrank(jordan);
+            vm.startPrank(david);
             {
                 vm.expectRevert(NothingToSweep.selector);
                 escrow.sweep();
@@ -1234,11 +1223,11 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
                 // however he sends some of his own tokens and can get those out
                 token.transfer(address(escrow), 100 ether);
 
-                assertEq(token.balanceOf(jordan), 0, "Jordan should have no tokens");
+                assertEq(token.balanceOf(david), 0, "David should have no tokens");
 
                 escrow.sweep();
 
-                assertEq(token.balanceOf(jordan), 100 ether, "Jordan should have his tokens");
+                assertEq(token.balanceOf(david), 100 ether, "David should have his tokens");
             }
             vm.stopPrank();
         }
@@ -1248,7 +1237,7 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
             // warp to a voting window
             goToEpochStartPlus(12 weeks + 2 hours);
 
-            vm.startPrank(carlos);
+            vm.startPrank(alice);
             {
                 lock.approve(address(escrow), 3);
                 lock.approve(address(escrow), 5);
@@ -1258,7 +1247,7 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
             }
             vm.stopPrank();
 
-            vm.startPrank(jordi);
+            vm.startPrank(carol);
             {
                 lock.approve(address(escrow), 4);
                 escrow.beginWithdrawal(4);
@@ -1268,16 +1257,16 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
             // fast forward like 5 weeks
             goToEpochStartPlus(16 weeks);
 
-            // carlos exits
-            vm.startPrank(carlos);
+            // alice exits
+            vm.startPrank(alice);
             {
                 escrow.withdraw(3);
                 escrow.withdraw(5);
             }
             vm.stopPrank();
 
-            // jordi exits
-            vm.startPrank(jordi);
+            // carol exits
+            vm.startPrank(carol);
             {
                 escrow.withdraw(4);
             }
@@ -1309,6 +1298,7 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
     //////////////////////////////////////////////////////////////*/
 
     function _getTestMode() internal view returns (TestMode) {
+        // FORK_TEST_MODE is defined on the Makefile, depending on the target
         string memory mode = vm.envOr("FORK_TEST_MODE", string("fork-deploy"));
         if (keccak256(abi.encodePacked(mode)) == keccak256(abi.encodePacked("fork-deploy"))) {
             return TestMode.ForkDeploy;
