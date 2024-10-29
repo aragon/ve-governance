@@ -27,7 +27,7 @@ To get started, ensure that [Foundry](https://getfoundry.sh/) is installed on yo
 
 ### Using the Makefile
 
-The `Makefile` as the command launcher of the project. It's the recommended way to work with it. It manages the env variables of common tasks and executes only the steps that require being run.
+The `Makefile` as the target launcher of the project. It's the recommended way to work with it. It manages the env variables of common tasks and executes only the steps that require being run.
 
 ```
 $ make 
@@ -37,17 +37,20 @@ Available targets:
 - make clean                 Clean the artifacts
 
 - make test-unit             Run unit tests, locally
-
-- make test-fork-testnet     Run a fork test (testnet)
-- make test-fork-prodnet     Run a fork test (production network)
-- make test-fork-holesky     Run a fork test (Holesky)
-- make test-fork-sepolia     Run a fork test (Sepolia)
-- make test-exfork-testnet   Fork test with an existing factory (testnet)
-- make test-exfork-prodnet   Fork test with an existing factory (production network)
-- make test-exfork-holesky   Fork test with an existing factory (Holesky)
-- make test-exfork-sepolia   Fork test with an existing factory (Sepolia)
-
 - make test-coverage         Make an HTML coverage report under ./report
+
+- make test-fork-testnet     Run a clean fork test (testnet)
+- make test-fork-prodnet     Run a clean fork test (production network)
+- make test-fork-holesky     Run a clean fork test (Holesky)
+- make test-fork-sepolia     Run a clean fork test (Sepolia)
+- make test-fork-prod-testnet   Fork test using the .env token params (testnet)
+- make test-fork-prod-prodnet   Fork test using the .env token params (production network)
+- make test-fork-prod-holesky   Fork test using the .env token params (Holesky)
+- make test-fork-prod-sepolia   Fork test using the .env token params (Sepolia)
+- make test-fork-factory-testnet   Fork test on an existing factory (testnet)
+- make test-fork-factory-prodnet   Fork test on an existing factory (production network)
+- make test-fork-factory-holesky   Fork test on an existing factory (Holesky)
+- make test-fork-factory-sepolia   Fork test on an existing factory (Sepolia)
 
 - make pre-deploy-testnet    Simulate a deployment to the defined testnet
 - make pre-deploy-prodnet    Simulate a deployment to the defined production network
@@ -135,22 +138,22 @@ RPC_URL="https://eth-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}"
 # Run the deployment script
 
 # If using Etherscan
-forge script --chain "$NETWORK" script/Deploy.s.sol:Deploy --rpc-url "$RPC_URL" --broadcast --verify
+forge script --chain "$NETWORK" script/DeployGauges.s.sol:Deploy --rpc-url "$RPC_URL" --broadcast --verify
 
 # If using BlockScout
-forge script --chain "$NETWORK" script/Deploy.s.sol:Deploy --rpc-url "$RPC_URL" --broadcast --verify --verifier blockscout --verifier-url "https://sepolia.explorer.mode.network/api\?"
+forge script --chain "$NETWORK" script/DeployGauges.s.sol:Deploy --rpc-url "$RPC_URL" --broadcast --verify --verifier blockscout --verifier-url "https://sepolia.explorer.mode.network/api\?"
 ```
 
 If you get the error Failed to get EIP-1559 fees, add `--legacy` to the command:
 
 ```sh
-forge script --chain "$NETWORK" script/Deploy.s.sol:Deploy --rpc-url "$RPC_URL" --broadcast --verify --legacy
+forge script --chain "$NETWORK" script/DeployGauges.s.sol:Deploy --rpc-url "$RPC_URL" --broadcast --verify --legacy
 ```
 
 If some contracts fail to verify on Etherscan, retry with this command:
 
 ```sh
-forge script --chain "$NETWORK" script/Deploy.s.sol:Deploy --rpc-url "$RPC_URL" --verify --legacy --private-key "$DEPLOYMENT_PRIVATE_KEY" --resume
+forge script --chain "$NETWORK" script/DeployGauges.s.sol:Deploy --rpc-url "$RPC_URL" --verify --legacy --private-key "$DEPLOYMENT_PRIVATE_KEY" --resume
 ```
 
 ## Contracts Overview

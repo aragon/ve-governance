@@ -4,6 +4,8 @@
 -include .env
 -include .env.dev
 
+# VARIABLE ASSIGNMENTS
+
 # Set the RPC URL's for each target
 test-fork-testnet: export RPC_URL = $(TESTNET_RPC_URL)
 test-fork-prodnet: export RPC_URL = $(PRODNET_RPC_URL)
@@ -27,20 +29,28 @@ deploy-testnet: export VERIFIER_URL_PARAM = --verifier-url "https://sepolia.expl
 deploy-prodnet: export ETHERSCAN_API_KEY_PARAM = --etherscan-api-key $(ETHERSCAN_API_KEY)
 
 # Set production deployments' flag
+test-fork-prod-testnet: export DEPLOY_AS_PRODUCTION = true
+test-fork-prod-prodnet: export DEPLOY_AS_PRODUCTION = true
+test-fork-prod-holesky: export DEPLOY_AS_PRODUCTION = true
+test-fork-prod-sepolia: export DEPLOY_AS_PRODUCTION = true
 deploy: export DEPLOY_AS_PRODUCTION = true
 
 # Override the fork test mode (existing)
-test-exfork-testnet: export FORK_TEST_MODE = fork-existing
-test-exfork-prodnet: export FORK_TEST_MODE = fork-existing
-test-exfork-holesky: export FORK_TEST_MODE = fork-existing
-test-exfork-sepolia: export FORK_TEST_MODE = fork-existing
+test-fork-factory-testnet: export FORK_TEST_MODE = fork-existing
+test-fork-factory-prodnet: export FORK_TEST_MODE = fork-existing
+test-fork-factory-holesky: export FORK_TEST_MODE = fork-existing
+test-fork-factory-sepolia: export FORK_TEST_MODE = fork-existing
+
+# CONSTANTS
 
 TEST_SRC_FILES=$(wildcard test/*.sol test/**/*.sol script/*.sol script/**/*.sol src/escrow/increasing/delegation/*.sol src/libs/ProxyLib.sol)
 FORK_TEST_WILDCARD="test/fork/**/*.sol"
 E2E_TEST_NAME=TestE2EV2
-DEPLOY_SCRIPT=script/Deploy.s.sol:Deploy
+DEPLOY_SCRIPT=script/DeployGauges.s.sol:DeployGauges
 VERBOSITY=-vvv
 DEPLOYMENT_LOG_FILE=$(shell echo "./deployment-$(shell date +"%y-%m-%d-%H-%M").log")
+
+# TARGETS
 
 .PHONY: help
 help:
@@ -52,9 +62,9 @@ help:
 
 .PHONY: init
 init: .env .env.dev ##                Check the required tools and dependencies
-	@which forge || curl -L https://foundry.paradigm.xyz | bash
+	@which forge > /dev/null || curl -L https://foundry.paradigm.xyz | bash
 	@forge build
-	@which lcov || echo "Note: lcov can be installed by running 'sudo apt install lcov'"
+	@which lcov > /dev/null || echo "Note: lcov can be installed by running 'sudo apt install lcov'"
 
 .PHONY: clean
 clean: ##               Clean the artifacts
@@ -74,25 +84,6 @@ clean: ##               Clean the artifacts
 test-unit: ##           Run unit tests, locally
 	forge test --no-match-path $(FORK_TEST_WILDCARD)
 
-: ## 
-
-#### Fork testing ####
-
-test-fork-testnet: test-fork ##   Run a fork test (testnet)
-test-fork-prodnet: test-fork ##   Run a fork test (production network)
-test-fork-holesky: test-fork ##   Run a fork test (Holesky)
-test-fork-sepolia: test-fork ##   Run a fork test (Sepolia)
-
-test-exfork-testnet: test-fork-testnet ## Fork test with an existing factory (testnet)
-test-exfork-prodnet: test-fork-prodnet ## Fork test with an existing factory (production network)
-test-exfork-holesky: test-fork-holesky ## Fork test with an existing factory (Holesky)
-test-exfork-sepolia: test-fork-sepolia ## Fork test with an existing factory (Sepolia)
-
-test-fork:
-	forge test --match-contract $(E2E_TEST_NAME) --rpc-url $(RPC_URL) $(VERBOSITY)
-
-: ## 
-
 test-coverage: report/index.html ##       Make an HTML coverage report under ./report
 	@which open > /dev/null && open report/index.html || echo -n
 	@which xdg-open > /dev/null && xdg-open report/index.html || echo -n
@@ -101,10 +92,32 @@ report/index.html: lcov.info.pruned
 	genhtml $^ -o report --branch-coverage
 
 lcov.info.pruned: lcov.info
-	lcov --remove ./$< -o ./$<.pruned $^
+	lcov --remove ./$< -o ./$@ $^
 
 lcov.info: $(TEST_SRC_FILES)
 	forge coverage --no-match-path $(FORK_TEST_WILDCARD) --report lcov
+
+: ## 
+
+#### Fork testing ####
+
+test-fork-testnet: test-fork ##   Run a clean fork test (testnet)
+test-fork-prodnet: test-fork ##   Run a clean fork test (production network)
+test-fork-holesky: test-fork ##   Run a clean fork test (Holesky)
+test-fork-sepolia: test-fork ##   Run a clean fork test (Sepolia)
+
+test-fork-prod-testnet: test-fork-testnet ## Fork test using the .env token params (testnet)
+test-fork-prod-prodnet: test-fork-prodnet ## Fork test using the .env token params (production network)
+test-fork-prod-holesky: test-fork-holesky ## Fork test using the .env token params (Holesky)
+test-fork-prod-sepolia: test-fork-sepolia ## Fork test using the .env token params (Sepolia)
+
+test-fork-factory-testnet: test-fork-testnet ## Fork test on an existing factory (testnet)
+test-fork-factory-prodnet: test-fork-prodnet ## Fork test on an existing factory (production network)
+test-fork-factory-holesky: test-fork-holesky ## Fork test on an existing factory (Holesky)
+test-fork-factory-sepolia: test-fork-sepolia ## Fork test on an existing factory (Sepolia)
+
+test-fork:
+	forge test --match-contract $(E2E_TEST_NAME) --rpc-url $(RPC_URL) $(VERBOSITY)
 
 : ## 
 

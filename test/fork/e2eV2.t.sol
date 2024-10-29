@@ -18,7 +18,7 @@ import {IGaugeVote} from "src/voting/ISimpleGaugeVoter.sol";
 import {VotingEscrow, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams} from "src/voting/SimpleGaugeVoterSetup.sol";
 
 import {GaugesDaoFactory, GaugePluginSet, Deployment} from "src/factory/GaugesDaoFactory.sol";
-import {Deploy, DeploymentParameters} from "script/Deploy.s.sol";
+import {DeployGauges, DeploymentParameters} from "script/DeployGauges.s.sol";
 
 interface IERC20Mint is IERC20 {
     function mint(address _to, uint256 _amount) external;
@@ -105,7 +105,7 @@ contract TestE2EV2 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCur
     /// 3. Fork Mode: Existing (Supported): we don't deploy via the factory, we use the existing contract for everything
     function setUp() public {
         // deploy the deploy script
-        Deploy deploy = new Deploy();
+        DeployGauges deploy = new DeployGauges();
 
         // fetch the deployment parameters
         DeploymentParameters memory deploymentParameters = deploy.getDeploymentParameters(
