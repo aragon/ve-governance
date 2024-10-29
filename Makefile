@@ -40,6 +40,7 @@ FORK_TEST_WILDCARD="test/fork/**/*.sol"
 E2E_TEST_NAME=TestE2EV2
 DEPLOY_SCRIPT=script/Deploy.s.sol:Deploy
 VERBOSITY=-vvv
+DEPLOYMENT_LOG_FILE=$(shell echo "./deployment-$(shell date +"%y-%m-%d-%H-%M").log")
 
 .PHONY: help
 help:
@@ -130,4 +131,4 @@ deploy:
 		$(VERIFIER_TYPE_PARAM) \
 		$(VERIFIER_URL_PARAM) \
 		$(ETHERSCAN_API_KEY_PARAM) \
-		$(VERBOSITY)
+		$(VERBOSITY) | tee $(DEPLOYMENT_LOG_FILE)
