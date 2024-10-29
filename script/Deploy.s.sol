@@ -86,6 +86,10 @@ contract Deploy is Script {
         string memory membersFilePath = vm.envString("MULTISIG_MEMBERS_JSON_FILE_NAME");
         string memory path = string.concat(vm.projectRoot(), membersFilePath);
         string memory strJson = vm.readFile(path);
+
+        bool exists = vm.keyExistsJson(strJson, "$.members");
+        if (!exists) revert EmptyMultisig();
+
         result = vm.parseJsonAddressArray(strJson, "$.members");
 
         if (result.length == 0) revert EmptyMultisig();

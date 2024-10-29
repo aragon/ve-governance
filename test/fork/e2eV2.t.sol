@@ -118,9 +118,8 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
             // setup OSx mocks
             // write the addresses
         }
-
         // deploy the contracts via the factory
-        if (_getTestMode() == TestMode.ForkDeploy) {
+        else if (_getTestMode() == TestMode.ForkDeploy) {
             // random ens domain
             deploymentParameters.voterEnsSubdomain = _hToS(
                 keccak256(abi.encodePacked("gauges", block.timestamp))
@@ -1310,7 +1309,7 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
     //////////////////////////////////////////////////////////////*/
 
     function _getTestMode() internal view returns (TestMode) {
-        string memory mode = vm.envString("FORK_TEST_MODE");
+        string memory mode = vm.envOr("FORK_TEST_MODE", string("fork-deploy"));
         if (keccak256(abi.encodePacked(mode)) == keccak256(abi.encodePacked("fork-deploy"))) {
             return TestMode.ForkDeploy;
         } else if (
@@ -1318,7 +1317,7 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
         ) {
             return TestMode.ForkExisting;
         } else if (keccak256(abi.encodePacked(mode)) == keccak256(abi.encodePacked("local"))) {
-            revert("Local mode not yet supported");
+            return TestMode.Local;
         } else {
             revert("Invalid test mode - valid options are fork-deploy, fork-existing, local");
         }
@@ -1395,7 +1394,7 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
         } catch {}
 
         // next we just try a good old fashioned find a whale and rug them in the test
-        address whale = vm.envAddress("TOKEN_TEST_WHALE");
+        address whale = vm.envOr("TOKEN_TEST_WHALE", address(0));
         if (whale == address(0)) {
             return false;
         }
