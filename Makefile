@@ -4,12 +4,12 @@
 -include .env
 -include .env.test
 
-# RULE SPECIFIC ENV VARS
+# RULE SPECIFIC ENV VARS [optional]
 
 # Override the verifier and block explorer parameters (network dependent)
-deploy-testnet: export VERIFIER_TYPE_PARAM = --verifier blockscout
-deploy-testnet: export VERIFIER_URL_PARAM = --verifier-url "https://sepolia.explorer.mode.network/api\?"
 deploy-prodnet: export ETHERSCAN_API_KEY_PARAM = --etherscan-api-key $(ETHERSCAN_API_KEY)
+# deploy-testnet: export VERIFIER_TYPE_PARAM = --verifier blockscout
+# deploy-testnet: export VERIFIER_URL_PARAM = --verifier-url "https://sepolia.explorer.mode.network/api\?"
 
 # CONSTANTS
 
@@ -51,7 +51,8 @@ clean: ## Clean the artifacts
 
 : ## 
 
-test-unit: ##     Run unit tests, locally
+.PHONY: test
+test: ##          Run unit tests, locally
 	forge test --no-match-path $(FORK_TEST_WILDCARD)
 
 test-coverage: report/index.html ## Generate an HTML coverage report under ./report
@@ -94,6 +95,7 @@ test-fork-factory-prodnet: export FORK_TEST_MODE = existing-factory
 test-fork-factory-testnet: test-fork-testnet ## Fork test using an existing factory (testnet)
 test-fork-factory-prodnet: test-fork-prodnet ## Fork test using an existing factory (production network)
 
+.PHONY: test-fork
 test-fork:
 	forge test --match-contract $(E2E_TEST_NAME) --rpc-url $(RPC_URL) $(VERBOSITY)
 
@@ -107,7 +109,7 @@ pre-deploy-testnet: export NETWORK = $(TESTNET_NETWORK)
 pre-deploy-prodnet: export RPC_URL = $(PRODNET_RPC_URL)
 pre-deploy-prodnet: export NETWORK = $(PRODNET_NETWORK)
 
-pre-deploy-mint-testnet: pre-deploy ## Simulate a deployment to the testnet, minting test token(s)
+pre-deploy-mint-testnet: pre-deploy-testnet ## Simulate a deployment to the testnet, minting test token(s)
 pre-deploy-testnet: pre-deploy ##      Simulate a deployment to the testnet
 pre-deploy-prodnet: pre-deploy ##      Simulate a deployment to the production network
 
@@ -119,17 +121,21 @@ deploy-testnet: export NETWORK = $(TESTNET_NETWORK)
 deploy-prodnet: export RPC_URL = $(PRODNET_RPC_URL)
 deploy-prodnet: export NETWORK = $(PRODNET_NETWORK)
 
-deploy-mint-testnet: deploy ## Deploy to the testnet, mint test tokens and verify
+deploy-mint-testnet: deploy-testnet ## Deploy to the testnet, mint test tokens and verify
 deploy-testnet: deploy ##      Deploy to the testnet and verify
 deploy-prodnet: deploy ##      Deploy to the production network and verify
 
+.PHONY: pre-deploy
 pre-deploy:
+	@echo "Simulating the deployment"
 	forge script $(DEPLOY_SCRIPT) \
 		--chain $(NETWORK) \
 		--rpc-url $(RPC_URL) \
 		$(VERBOSITY)
 
-deploy:
+.PHONY: deploy
+deploy: test
+	@echo "Starting the deployment"
 	forge script $(DEPLOY_SCRIPT) \
 		--chain $(NETWORK) \
 		--rpc-url $(RPC_URL) \

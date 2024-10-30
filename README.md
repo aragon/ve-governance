@@ -36,7 +36,7 @@ Available targets:
 - make init    Check the required tools and dependencies
 - make clean   Clean the artifacts
 
-- make test-unit       Run unit tests, locally
+- make test            Run unit tests, locally
 - make test-coverage   Generate an HTML coverage report under ./report
 
 - make test-fork-mint-testnet   Clean fork test, minting test tokens (testnet)
