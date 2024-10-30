@@ -99,14 +99,16 @@ Check the available make targets to simulate and deploy the smart contracts:
 
 ### Deployment Checklist
 
-- [ ] I am running on a docker container running Alpine Linux
+- [ ] I have cloned the official repository on my computer and I have checked out the corresponding branch
+- [ ] I am running on a docker container running Debian Linux (stable)
   - [ ] I have run `docker run --rm -it -v .:/deployment debian:bookworm-slim`
-  - [ ] I have run `apt update && apt install make curl git`
+  - [ ] I have run `apt update && apt install -y make curl git vim neovim bc`
   - [ ] I have run `curl -L https://foundry.paradigm.xyz | bash`
   - [ ] I have run `source /root/.bashrc && foundryup`
   - [ ] I have run `cd /deployment`
   - [ ] I have run `make init`
   - [ ] I have printed the contents of `.env` and `.env.test` on the screen
+- [ ] I am opening an editor on the `/deployment` folder, within Docker
 - [ ] The `.env` file contains the correct parameters for the deployment
   - [ ] I have created a brand new burner wallet and copied the private key to `DEPLOYMENT_PRIVATE_KEY`
   - [ ] I have reviewed the target network and RPC URL

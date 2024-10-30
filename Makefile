@@ -19,6 +19,8 @@ E2E_TEST_NAME=TestE2EV2
 DEPLOY_SCRIPT=script/DeployGauges.s.sol:DeployGauges
 VERBOSITY=-vvv
 DEPLOYMENT_LOG_FILE=$(shell echo "./deployment-$(shell date +"%y-%m-%d-%H-%M").log")
+DEPLOYMENT_ADDRESS=$(shell cast wallet address --private-key $(DEPLOYMENT_PRIVATE_KEY))
+SHELL:=/bin/bash
 
 # TARGETS
 
@@ -143,3 +145,31 @@ deploy: test
 		$(VERIFIER_URL_PARAM) \
 		$(ETHERSCAN_API_KEY_PARAM) \
 		$(VERBOSITY) | tee $(DEPLOYMENT_LOG_FILE)
+
+: ## 
+
+.PHONY: refund
+refund: ## Refund the remaining balance left on the deployment account
+	@echo "Refunding the remaining balance on $(DEPLOYMENT_ADDRESS)"
+	@if [ -z $(REFUND_ADDRESS) -o $(REFUND_ADDRESS) = "0x0000000000000000000000000000000000000000" ]; then \
+		echo "- The refund address is empty" ; \
+		exit 1; \
+	fi
+	@BALANCE=$(shell cast balance $(DEPLOYMENT_ADDRESS) --rpc-url $(PRODNET_RPC_URL)) && \
+		GAS_PRICE=$(shell cast gas-price --rpc-url $(PRODNET_RPC_URL)) && \
+		REMAINING=$$(echo "$$BALANCE - $$GAS_PRICE * 21000" | bc) && \
+		\
+		ENOUGH_BALANCE=$$(echo "$$REMAINING > 0" | bc) && \
+		if [ "$$ENOUGH_BALANCE" = "0" ]; then \
+			echo -e "- No balance can be refunded: $$BALANCE wei\n- Minimum balance: $${REMAINING:1} wei" ; \
+			exit 1; \
+		fi ; \
+		echo -n -e "Summary:\n- Refunding: $$REMAINING (wei)\n- Recipient: $(REFUND_ADDRESS)\n\nContinue? (y/N) " && \
+		\
+		read CONFIRM && \
+		if [ "$$CONFIRM" != "y" ]; then echo "Aborting" ; exit 1; fi ; \
+		\
+		cast send --private-key $(DEPLOYMENT_PRIVATE_KEY) \
+			--rpc-url $(PRODNET_RPC_URL) \
+			--value $$REMAINING \
+			$(REFUND_ADDRESS)
