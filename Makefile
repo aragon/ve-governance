@@ -115,13 +115,11 @@ pre-deploy-prodnet: pre-deploy ##      Simulate a deployment to the production n
 
 : ## 
 
-deploy-mint-testnet: export MINT_TEST_TOKENS = true
 deploy-testnet: export RPC_URL = $(TESTNET_RPC_URL)
 deploy-testnet: export NETWORK = $(TESTNET_NETWORK)
 deploy-prodnet: export RPC_URL = $(PRODNET_RPC_URL)
 deploy-prodnet: export NETWORK = $(PRODNET_NETWORK)
 
-deploy-mint-testnet: deploy-testnet ## Deploy to the testnet, mint test tokens and verify
 deploy-testnet: deploy ##      Deploy to the testnet and verify
 deploy-prodnet: deploy ##      Deploy to the production network and verify
 

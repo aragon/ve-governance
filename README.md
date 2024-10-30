@@ -52,7 +52,6 @@ Available targets:
 - make pre-deploy-testnet        Simulate a deployment to the testnet
 - make pre-deploy-prodnet        Simulate a deployment to the production network
 
-- make deploy-mint-testnet   Deploy to the testnet, mint test tokens and verify
 - make deploy-testnet        Deploy to the testnet and verify
 - make deploy-prodnet        Deploy to the production network and verify
 ```
@@ -100,19 +99,81 @@ Check the available make targets to simulate and deploy the smart contracts:
 
 ### Deployment Checklist
 
-- [ ] I have reviewed the parameters for the veDAO I want to deploy
-- [ ] I have reviewed the multisig file for the correct addresses
+- [ ] I am running on a docker container running Alpine Linux
+  - [ ] I have run `docker run --rm -it -v .:/deployment debian:bookworm-slim`
+  - [ ] I have run `apt update && apt install make curl git`
+  - [ ] I have run `curl -L https://foundry.paradigm.xyz | bash`
+  - [ ] I have run `source /root/.bashrc && foundryup`
+  - [ ] I have run `cd /deployment`
+  - [ ] I have run `make init`
+  - [ ] I have printed the contents of `.env` and `.env.test` on the screen
+- [ ] The `.env` file contains the correct parameters for the deployment
+  - [ ] I have created a brand new burner wallet and copied the private key to `DEPLOYMENT_PRIVATE_KEY`
+  - [ ] I have reviewed the target network and RPC URL
+  - [ ] I have checked that the JSON file under `MULTISIG_MEMBERS_JSON_FILE_NAME` contains the correct list of addresses
   - [ ] I have ensured all multisig members have undergone a proper security review and are aware of the security implications of being on said multisig
-- [ ] I have updated the `.env` with these parameters
+  - [ ] I have checked that `MIN_APPROVALS` and `MULTISIG_PROPOSAL_EXPIRATION_PERIOD` are correct
+  - [ ] I have checked 
+  - [ ] I have verified that `TOKEN1_ADDRESS` corresponds to an ERC20 contract on the target chain (same for TOKEN2 if applicable)
+  - [ ] I have checked that `VE_TOKEN1_NAME` and `VE_TOKEN1_SYMBOL` are correct (same for TOKEN2 if applicable)
+  - I have checked that fee percent, warmup period, cooldown period, min lock duration, and min deposit:
+    - [ ] Have the expected values
+    - [ ] Cannot leave the voting contract or user tokens locked
+  - [ ] I have checked that `VOTING_PAUSED` is true, should voting not be active right away
+  - [ ] The multisig plugin repo and version:
+    - [ ] Correspond to the official contract on the target network
+    - [ ] Point to the latest stable release available
+  - The plugin ENS subdomain
+    - [ ] Contains a meaningful and unique value
+  - The OSx addresses:
+    - [ ] Exist on the target network
+    - [ ] Contain the latest stable official version of the OSx DAO implementation, the Plugin Setup Processor and the Plugin Repo Factory
 - [ ] I have updated the `CurveConstantLib` and `Clock` with any new constants.
-- [ ] All my unit tests pass
-- [ ] I have run a fork test in `new-factory` mode against the OSx contracts on my target testnet
-- [ ] I have deployed my contracts successfully to a target testnet
-- [ ] I have confirmed my tests still work in `existing-factory` mode with the live tokens and the factory.
-- [ ] I have run the same workflow against the mainnet I wish to deploy on
-- [ ] I have previewed my deploy
-- [ ] My deployer address is a fresh wallet or setup for repeat production deploys in a safe manner.
+- [ ] All my unit tests pass (`make test`)
+- **Target test network**
+  - [ ] I have run a fork test in `new-factory` mode with minted tokens against the official OSx contracts on the testnet
+    - `make test-fork-mint-testnet`
+  - [ ] I have deployed my contracts successfully to the target testnet
+    - `make deploy-testnet`
+  - [ ] I have updated `FACTORY_ADDRESS` on `.env.test` with the address of the deployed factory
+  - If there is a live token with an address holding ≥ 3000 tokens on the testnet:
+    - [ ] I have defined `TEST_TOKEN_WHALE` on `.env.test`
+    - [ ] I have run a fork test in `new-factory` mode with the live token on the testnet
+      - `make test-fork-testnet`
+    - [ ] I have confirmed that tests still work in `existing-factory` mode with the live token(s) and the already deployed factory on the testnet.
+      - `make test-fork-factory-testnet`
+- **Target production network**
+  - [ ] I have run a fork test in `new-factory` mode with minted tokens against the official OSx contracts on the prodnet
+    - `make test-fork-mint-prodnet`
+  - If the live token has an address holding ≥ 3000 tokens on the prodnet:
+    - [ ] I have defined `TEST_TOKEN_WHALE` on `.env.test`
+    - [ ] I have run a fork test in `new-factory` mode with the live token on the prodnet
+      - `make test-fork-prodnet`
+    - [ ] I have confirmed that tests still work in `existing-factory` mode with the live token(s) and the already deployed factory on the prodnet.
+      - `make test-fork-factory-prodnet`
+- [ ] My deployment wallet is a newly created account, ready for safe production deploys.
+- My computer:
+  - [ ] Is running in a safe physical location and a trusted network
+  - [ ] It exposes no services or ports
+  - [ ] The wifi or wired network used does does not have open ports to a WAN
+- [ ] I have previewed my deploy without any errors
+  - `make pre-deploy-prodnet`
 - [ ] My wallet has sufficient native token for gas
+  - At least, 15% more than the estimated simulation
+- [ ] Unit tests still run clean
+- [ ] I have run `git status` and it reports no local changes
+- [ ] The current local git branch corresponds to its counterpart on `origin`
+  - [ ] I confirm that the rest of members of the ceremony pulled the last commit of my branch and reported the same commit hash as my output for `git log -n 1`
+- [ ] I have initiated the production deployment with `make deploy-prodnet`
+
+### Post deployment checklist
+
+- [ ] The deployment process completed with no errors
+- [ ] The deployed factory was deployed by the deployment address
+- [ ] The reported DAO contract was created by the newly deployed factory
+- [ ] The smart contracts are correctly verified on Etherscan or the corresponding block explorer
+- [ ] The output of the latest `deployment-*.log` file corresponds to the console output
+- [ ] I have transferred the remaining funds of the deployment wallet to the address that originally funded it
 
 ### Manual from the command line
 
