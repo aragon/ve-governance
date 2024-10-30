@@ -109,7 +109,7 @@ contract TestE2EV2 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCur
 
         // fetch the deployment parameters
         DeploymentParameters memory deploymentParameters = deploy.getDeploymentParameters(
-            vm.envOr("DEPLOY_AS_PRODUCTION", false)
+            vm.envOr("MINT_TEST_TOKENS", false)
         );
 
         signers = deploy.readMultisigMembers();

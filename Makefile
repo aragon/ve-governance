@@ -2,15 +2,13 @@
 
 # Import the .env files and export their values (ignore any error if missing)
 -include .env
--include .env.dev
+-include .env.test
 
 # VARIABLE ASSIGNMENTS
 
 # Set the RPC URL's for each target
 test-fork-testnet: export RPC_URL = $(TESTNET_RPC_URL)
 test-fork-prodnet: export RPC_URL = $(PRODNET_RPC_URL)
-test-fork-holesky: export RPC_URL = "https://holesky.drpc.org"
-test-fork-sepolia: export RPC_URL = "https://sepolia.drpc.org"
 
 pre-deploy-testnet: export RPC_URL = $(TESTNET_RPC_URL)
 pre-deploy-prodnet: export RPC_URL = $(PRODNET_RPC_URL)
@@ -29,17 +27,15 @@ deploy-testnet: export VERIFIER_URL_PARAM = --verifier-url "https://sepolia.expl
 deploy-prodnet: export ETHERSCAN_API_KEY_PARAM = --etherscan-api-key $(ETHERSCAN_API_KEY)
 
 # Set production deployments' flag
-test-fork-prod-testnet: export DEPLOY_AS_PRODUCTION = true
-test-fork-prod-prodnet: export DEPLOY_AS_PRODUCTION = true
-test-fork-prod-holesky: export DEPLOY_AS_PRODUCTION = true
-test-fork-prod-sepolia: export DEPLOY_AS_PRODUCTION = true
-deploy: export DEPLOY_AS_PRODUCTION = true
+test-fork-mint-testnet: export MINT_TEST_TOKENS = true
+test-fork-mint-prodnet: export MINT_TEST_TOKENS = true
+
+pre-deploy-mint-testnet: export MINT_TEST_TOKENS = true
+deploy-mint-testnet: export MINT_TEST_TOKENS = true
 
 # Override the fork test mode (existing)
 test-fork-factory-testnet: export FORK_TEST_MODE = fork-existing
 test-fork-factory-prodnet: export FORK_TEST_MODE = fork-existing
-test-fork-factory-holesky: export FORK_TEST_MODE = fork-existing
-test-fork-factory-sepolia: export FORK_TEST_MODE = fork-existing
 
 # CONSTANTS
 
@@ -61,13 +57,13 @@ help:
 		| sed 's/^- make    $$//g'
 
 .PHONY: init
-init: .env .env.dev ##                Check the required tools and dependencies
+init: .env .env.test ##  Check the required tools and dependencies
 	@which forge > /dev/null || curl -L https://foundry.paradigm.xyz | bash
 	@forge build
 	@which lcov > /dev/null || echo "Note: lcov can be installed by running 'sudo apt install lcov'"
 
 .PHONY: clean
-clean: ##               Clean the artifacts
+clean: ## Clean the artifacts
 	rm -Rf ./out/* lcov.info* ./report/*
 
 # Copy the .env files if not present
@@ -75,16 +71,16 @@ clean: ##               Clean the artifacts
 	cp .env.example .env
 	@echo "NOTE: Edit the correct values of .env before you continue"
 
-.env.dev:
-	cp .env.dev.example .env.dev
-	@echo "NOTE: Edit the correct values of .env.dev before you continue"
+.env.test:
+	cp .env.test.example .env.test
+	@echo "NOTE: Edit the correct values of .env.test before you continue"
 
 : ## 
 
-test-unit: ##           Run unit tests, locally
+test-unit: ##     Run unit tests, locally
 	forge test --no-match-path $(FORK_TEST_WILDCARD)
 
-test-coverage: report/index.html ##       Make an HTML coverage report under ./report
+test-coverage: report/index.html ## Generate an HTML coverage report under ./report
 	@which open > /dev/null && open report/index.html || echo -n
 	@which xdg-open > /dev/null && xdg-open report/index.html || echo -n
 
@@ -101,20 +97,18 @@ lcov.info: $(TEST_SRC_FILES)
 
 #### Fork testing ####
 
-test-fork-testnet: test-fork ##   Run a clean fork test (testnet)
-test-fork-prodnet: test-fork ##   Run a clean fork test (production network)
-test-fork-holesky: test-fork ##   Run a clean fork test (Holesky)
-test-fork-sepolia: test-fork ##   Run a clean fork test (Sepolia)
+test-fork-mint-testnet: test-fork-testnet ## Clean fork test, minting test tokens (testnet)
+test-fork-mint-prodnet: test-fork-prodnet ## Clean fork test, minting test tokens (production network)
 
-test-fork-prod-testnet: test-fork-testnet ## Fork test using the .env token params (testnet)
-test-fork-prod-prodnet: test-fork-prodnet ## Fork test using the .env token params (production network)
-test-fork-prod-holesky: test-fork-holesky ## Fork test using the .env token params (Holesky)
-test-fork-prod-sepolia: test-fork-sepolia ## Fork test using the .env token params (Sepolia)
+: ## 
 
-test-fork-factory-testnet: test-fork-testnet ## Fork test on an existing factory (testnet)
-test-fork-factory-prodnet: test-fork-prodnet ## Fork test on an existing factory (production network)
-test-fork-factory-holesky: test-fork-holesky ## Fork test on an existing factory (Holesky)
-test-fork-factory-sepolia: test-fork-sepolia ## Fork test on an existing factory (Sepolia)
+test-fork-testnet: test-fork ## Fork test using the existing token(s) (testnet)
+test-fork-prodnet: test-fork ## Fork test using the existing token(s) (production network)
+
+: ## 
+
+test-fork-factory-testnet: test-fork-testnet ## Fork test using an existing factory (testnet)
+test-fork-factory-prodnet: test-fork-prodnet ## Fork test using an existing factory (production network)
 
 test-fork:
 	forge test --match-contract $(E2E_TEST_NAME) --rpc-url $(RPC_URL) $(VERBOSITY)
@@ -123,10 +117,14 @@ test-fork:
 
 #### Deployment targets ####
 
-pre-deploy-testnet: pre-deploy ##  Simulate a deployment to the defined testnet
-pre-deploy-prodnet: pre-deploy ##  Simulate a deployment to the defined production network
+pre-deploy-mint-testnet: pre-deploy ## Simulate a deployment to the testnet, minting test token(s)
+pre-deploy-testnet: pre-deploy ##      Simulate a deployment to the testnet
+pre-deploy-prodnet: pre-deploy ##      Simulate a deployment to the production network
 
-deploy-testnet: deploy ##      Deploy to the defined testnet network and verify
+: ## 
+
+deploy-mint-testnet: deploy ## Deploy to the testnet, mint test tokens and verify
+deploy-testnet: deploy ##      Deploy to the testnet and verify
 deploy-prodnet: deploy ##      Deploy to the production network and verify
 
 pre-deploy:

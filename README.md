@@ -33,37 +33,36 @@ The `Makefile` as the target launcher of the project. It's the recommended way t
 $ make 
 Available targets:
 
-- make init                  Check the required tools and dependencies
-- make clean                 Clean the artifacts
+- make init    Check the required tools and dependencies
+- make clean   Clean the artifacts
 
-- make test-unit             Run unit tests, locally
-- make test-coverage         Make an HTML coverage report under ./report
+- make test-unit       Run unit tests, locally
+- make test-coverage   Generate an HTML coverage report under ./report
 
-- make test-fork-testnet     Run a clean fork test (testnet)
-- make test-fork-prodnet     Run a clean fork test (production network)
-- make test-fork-holesky     Run a clean fork test (Holesky)
-- make test-fork-sepolia     Run a clean fork test (Sepolia)
-- make test-fork-prod-testnet   Fork test using the .env token params (testnet)
-- make test-fork-prod-prodnet   Fork test using the .env token params (production network)
-- make test-fork-prod-holesky   Fork test using the .env token params (Holesky)
-- make test-fork-prod-sepolia   Fork test using the .env token params (Sepolia)
-- make test-fork-factory-testnet   Fork test on an existing factory (testnet)
-- make test-fork-factory-prodnet   Fork test on an existing factory (production network)
-- make test-fork-factory-holesky   Fork test on an existing factory (Holesky)
-- make test-fork-factory-sepolia   Fork test on an existing factory (Sepolia)
+- make test-fork-mint-testnet   Clean fork test, minting test tokens (testnet)
+- make test-fork-mint-prodnet   Clean fork test, minting test tokens (production network)
 
-- make pre-deploy-testnet    Simulate a deployment to the defined testnet
-- make pre-deploy-prodnet    Simulate a deployment to the defined production network
-- make deploy-testnet        Deploy to the defined testnet network and verify
+- make test-fork-testnet   Fork test using the existing token(s) (testnet)
+- make test-fork-prodnet   Fork test using the existing token(s) (production network)
+
+- make test-fork-factory-testnet   Fork test using an existing factory (testnet)
+- make test-fork-factory-prodnet   Fork test using an existing factory (production network)
+
+- make pre-deploy-mint-testnet   Simulate a deployment to the testnet, minting test token(s)
+- make pre-deploy-testnet        Simulate a deployment to the testnet
+- make pre-deploy-prodnet        Simulate a deployment to the production network
+
+- make deploy-mint-testnet   Deploy to the testnet, mint test tokens and verify
+- make deploy-testnet        Deploy to the testnet and verify
 - make deploy-prodnet        Deploy to the production network and verify
 ```
 
 Run `make init`:
 - It ensures that Foundry is installed
 - It runs a first compilation of the project
-- It copies `.env.example` into `.env` and `.env.dev.example` into `.env.dev`
+- It copies `.env.example` into `.env` and `.env.test.example` into `.env.test`
 
-Next, customize the values of `.env` and optionally `.env.dev`.
+Next, customize the values of `.env` and optionally `.env.test`.
 
 ### Understanding `.env.example`
 

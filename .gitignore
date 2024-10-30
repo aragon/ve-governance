@@ -1,6 +1,6 @@
-^.env.example
-^.env.dev.example
 .env*
+!.env.example
+!.env.test.example
 
 # Logs
 *.log
