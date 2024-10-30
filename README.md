@@ -42,8 +42,8 @@ Available targets:
 - make test-fork-mint-testnet   Clean fork test, minting test tokens (testnet)
 - make test-fork-mint-prodnet   Clean fork test, minting test tokens (production network)
 
-- make test-fork-testnet   Fork test using the existing token(s) (testnet)
-- make test-fork-prodnet   Fork test using the existing token(s) (production network)
+- make test-fork-testnet   Fork test using the existing token(s), new factory (testnet)
+- make test-fork-prodnet   Fork test using the existing token(s), new factory (production network)
 
 - make test-fork-factory-testnet   Fork test using an existing factory (testnet)
 - make test-fork-factory-prodnet   Fork test using an existing factory (production network)
@@ -72,9 +72,9 @@ The env.example file contains descriptions for all the initial settings. You don
 
 Fork testing has 2 modes:
 
-1. "fork-deploy" will run against the live network fork, deploying new contracts via a new instance of the factory. See `make test-fork-testnet`, `make test-fork-prodnet` and simmilar
+1. "new-factory" will run against the live network fork, deploying new contracts via a new instance of the factory. See `make test-fork-testnet`, `make test-fork-prodnet` and simmilar
 
-2. "fork-existing" will run against the live network fork, using the existing factory & therefore the existing contracts. See `make test-exfork-testnet`, `make test-exfork-prodnet` and simmilar
+2. "existing-factory" will run against the live network fork, using the existing factory & therefore the existing contracts. See `make test-fork-factory-testnet`, `make test-fork-factory-prodnet` and simmilar
 
 In both cases, you will need to find the correct Aragon OSx contracts for the chain you wish to fork against. These can be found in the [OSx commons repo](https://github.com/aragon/osx-commons/tree/main/configs/src/deployments/json)
 
@@ -106,9 +106,9 @@ Check the available make targets to simulate and deploy the smart contracts:
 - [ ] I have updated the `.env` with these parameters
 - [ ] I have updated the `CurveConstantLib` and `Clock` with any new constants.
 - [ ] All my unit tests pass
-- [ ] I have run a fork test in `fork-deploy` mode against the OSx contracts on my target testnet
+- [ ] I have run a fork test in `new-factory` mode against the OSx contracts on my target testnet
 - [ ] I have deployed my contracts successfully to a target testnet
-- [ ] I have confirmed my tests still work in `fork-existing` mode with the live tokens and the factory.
+- [ ] I have confirmed my tests still work in `existing-factory` mode with the live tokens and the factory.
 - [ ] I have run the same workflow against the mainnet I wish to deploy on
 - [ ] I have previewed my deploy
 - [ ] My deployer address is a fresh wallet or setup for repeat production deploys in a safe manner.

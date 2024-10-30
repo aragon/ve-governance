@@ -82,14 +82,14 @@ test-fork-mint-prodnet: test-fork-prodnet ## Clean fork test, minting test token
 test-fork-testnet: export RPC_URL = $(TESTNET_RPC_URL)
 test-fork-prodnet: export RPC_URL = $(PRODNET_RPC_URL)
 
-test-fork-testnet: test-fork ## Fork test using the existing token(s) (testnet)
-test-fork-prodnet: test-fork ## Fork test using the existing token(s) (production network)
+test-fork-testnet: test-fork ## Fork test using the existing token(s), new factory (testnet)
+test-fork-prodnet: test-fork ## Fork test using the existing token(s), new factory (production network)
 
 : ## 
 
 # Override the fork test mode (existing factory)
-test-fork-factory-testnet: export FORK_TEST_MODE = fork-existing
-test-fork-factory-prodnet: export FORK_TEST_MODE = fork-existing
+test-fork-factory-testnet: export FORK_TEST_MODE = existing-factory
+test-fork-factory-prodnet: export FORK_TEST_MODE = existing-factory
 
 test-fork-factory-testnet: test-fork-testnet ## Fork test using an existing factory (testnet)
 test-fork-factory-prodnet: test-fork-prodnet ## Fork test using an existing factory (production network)

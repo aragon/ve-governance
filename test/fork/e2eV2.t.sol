@@ -1299,17 +1299,17 @@ contract TestE2EV2 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCur
 
     function _getTestMode() internal view returns (TestMode) {
         // FORK_TEST_MODE is defined on the Makefile, depending on the target
-        string memory mode = vm.envOr("FORK_TEST_MODE", string("fork-deploy"));
-        if (keccak256(abi.encodePacked(mode)) == keccak256(abi.encodePacked("fork-deploy"))) {
+        string memory mode = vm.envOr("FORK_TEST_MODE", string("new-factory"));
+        if (keccak256(abi.encodePacked(mode)) == keccak256(abi.encodePacked("new-factory"))) {
             return TestMode.ForkDeploy;
         } else if (
-            keccak256(abi.encodePacked(mode)) == keccak256(abi.encodePacked("fork-existing"))
+            keccak256(abi.encodePacked(mode)) == keccak256(abi.encodePacked("existing-factory"))
         ) {
             return TestMode.ForkExisting;
         } else if (keccak256(abi.encodePacked(mode)) == keccak256(abi.encodePacked("local"))) {
             return TestMode.Local;
         } else {
-            revert("Invalid test mode - valid options are fork-deploy, fork-existing, local");
+            revert("Invalid test mode - valid options are new-factory, existing-factory, local");
         }
     }
 
