@@ -4,42 +4,16 @@
 -include .env
 -include .env.test
 
-# VARIABLE ASSIGNMENTS
-
-# Set the RPC URL's for each target
-test-fork-testnet: export RPC_URL = $(TESTNET_RPC_URL)
-test-fork-prodnet: export RPC_URL = $(PRODNET_RPC_URL)
-
-pre-deploy-testnet: export RPC_URL = $(TESTNET_RPC_URL)
-pre-deploy-prodnet: export RPC_URL = $(PRODNET_RPC_URL)
-deploy-testnet: export RPC_URL = $(TESTNET_RPC_URL)
-deploy-prodnet: export RPC_URL = $(PRODNET_RPC_URL)
-
-# Set the network ID
-pre-deploy-testnet: export NETWORK = $(TESTNET_NETWORK)
-pre-deploy-prodnet: export NETWORK = $(PRODNET_NETWORK)
-deploy-testnet: export NETWORK = $(TESTNET_NETWORK)
-deploy-prodnet: export NETWORK = $(PRODNET_NETWORK)
+# RULE SPECIFIC ENV VARS
 
 # Override the verifier and block explorer parameters (network dependent)
 deploy-testnet: export VERIFIER_TYPE_PARAM = --verifier blockscout
 deploy-testnet: export VERIFIER_URL_PARAM = --verifier-url "https://sepolia.explorer.mode.network/api\?"
 deploy-prodnet: export ETHERSCAN_API_KEY_PARAM = --etherscan-api-key $(ETHERSCAN_API_KEY)
 
-# Set production deployments' flag
-test-fork-mint-testnet: export MINT_TEST_TOKENS = true
-test-fork-mint-prodnet: export MINT_TEST_TOKENS = true
-
-pre-deploy-mint-testnet: export MINT_TEST_TOKENS = true
-deploy-mint-testnet: export MINT_TEST_TOKENS = true
-
-# Override the fork test mode (existing)
-test-fork-factory-testnet: export FORK_TEST_MODE = fork-existing
-test-fork-factory-prodnet: export FORK_TEST_MODE = fork-existing
-
 # CONSTANTS
 
-TEST_SRC_FILES=$(wildcard test/*.sol test/**/*.sol script/*.sol script/**/*.sol src/escrow/increasing/delegation/*.sol src/libs/ProxyLib.sol)
+TEST_COVERAGE_SRC_FILES=$(wildcard test/*.sol test/**/*.sol script/*.sol script/**/*.sol src/escrow/increasing/delegation/*.sol src/libs/ProxyLib.sol)
 FORK_TEST_WILDCARD="test/fork/**/*.sol"
 E2E_TEST_NAME=TestE2EV2
 DEPLOY_SCRIPT=script/DeployGauges.s.sol:DeployGauges
@@ -90,22 +64,32 @@ report/index.html: lcov.info.pruned
 lcov.info.pruned: lcov.info
 	lcov --remove ./$< -o ./$@ $^
 
-lcov.info: $(TEST_SRC_FILES)
+lcov.info: $(TEST_COVERAGE_SRC_FILES)
 	forge coverage --no-match-path $(FORK_TEST_WILDCARD) --report lcov
 
 : ## 
 
 #### Fork testing ####
 
+test-fork-mint-testnet: export MINT_TEST_TOKENS = true
+test-fork-mint-prodnet: export MINT_TEST_TOKENS = true
+
 test-fork-mint-testnet: test-fork-testnet ## Clean fork test, minting test tokens (testnet)
 test-fork-mint-prodnet: test-fork-prodnet ## Clean fork test, minting test tokens (production network)
 
 : ## 
 
+test-fork-testnet: export RPC_URL = $(TESTNET_RPC_URL)
+test-fork-prodnet: export RPC_URL = $(PRODNET_RPC_URL)
+
 test-fork-testnet: test-fork ## Fork test using the existing token(s) (testnet)
 test-fork-prodnet: test-fork ## Fork test using the existing token(s) (production network)
 
 : ## 
+
+# Override the fork test mode (existing factory)
+test-fork-factory-testnet: export FORK_TEST_MODE = fork-existing
+test-fork-factory-prodnet: export FORK_TEST_MODE = fork-existing
 
 test-fork-factory-testnet: test-fork-testnet ## Fork test using an existing factory (testnet)
 test-fork-factory-prodnet: test-fork-prodnet ## Fork test using an existing factory (production network)
@@ -117,11 +101,23 @@ test-fork:
 
 #### Deployment targets ####
 
+pre-deploy-mint-testnet: export MINT_TEST_TOKENS = true
+pre-deploy-testnet: export RPC_URL = $(TESTNET_RPC_URL)
+pre-deploy-testnet: export NETWORK = $(TESTNET_NETWORK)
+pre-deploy-prodnet: export RPC_URL = $(PRODNET_RPC_URL)
+pre-deploy-prodnet: export NETWORK = $(PRODNET_NETWORK)
+
 pre-deploy-mint-testnet: pre-deploy ## Simulate a deployment to the testnet, minting test token(s)
 pre-deploy-testnet: pre-deploy ##      Simulate a deployment to the testnet
 pre-deploy-prodnet: pre-deploy ##      Simulate a deployment to the production network
 
 : ## 
+
+deploy-mint-testnet: export MINT_TEST_TOKENS = true
+deploy-testnet: export RPC_URL = $(TESTNET_RPC_URL)
+deploy-testnet: export NETWORK = $(TESTNET_NETWORK)
+deploy-prodnet: export RPC_URL = $(PRODNET_RPC_URL)
+deploy-prodnet: export NETWORK = $(PRODNET_NETWORK)
 
 deploy-mint-testnet: deploy ## Deploy to the testnet, mint test tokens and verify
 deploy-testnet: deploy ##      Deploy to the testnet and verify
