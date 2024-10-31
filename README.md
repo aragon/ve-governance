@@ -151,10 +151,12 @@ Check the available make targets to simulate and deploy the smart contracts:
     - `make test-fork-mint-prodnet`
   - If the live token has an address holding ≥ 3000 tokens on the prodnet:
     - [ ] I have defined `TEST_TOKEN_WHALE` on `.env.test`
+    - [ ] I have updated `TOKEN1_ADDRESS` to have the address of the testnet token deployed above
     - [ ] I have run a fork test in `new-factory` mode with the live token on the prodnet
       - `make test-fork-prodnet`
     - [ ] I have confirmed that tests still work in `existing-factory` mode with the live token(s) and the already deployed factory on the prodnet.
       - `make test-fork-factory-prodnet`
+    - [ ] I have reverted `TOKEN1_ADDRESS` to the intended address of the token on the production network
 - [ ] My deployment wallet is a newly created account, ready for safe production deploys.
 - My computer:
   - [ ] Is running in a safe physical location and a trusted network
