@@ -82,6 +82,8 @@ test-fork-mint-prodnet: test-fork-prodnet ## Clean fork test, minting test token
 
 test-fork-testnet: export RPC_URL = $(TESTNET_RPC_URL)
 test-fork-prodnet: export RPC_URL = $(PRODNET_RPC_URL)
+test-fork-testnet: export FORK_BLOCK_NUMBER = $(FORK_TESTNET_BLOCK_NUMBER)
+test-fork-prodnet: export FORK_BLOCK_NUMBER = $(FORK_PRODNET_BLOCK_NUMBER)
 
 test-fork-testnet: test-fork ## Fork test using the existing token(s), new factory (testnet)
 test-fork-prodnet: test-fork ## Fork test using the existing token(s), new factory (production network)
@@ -97,7 +99,16 @@ test-fork-factory-prodnet: test-fork-prodnet ## Fork test using an existing fact
 
 .PHONY: test-fork
 test-fork:
-	forge test --match-contract $(E2E_TEST_NAME) --rpc-url $(RPC_URL) $(VERBOSITY)
+	@if [ -z "$(strip $(FORK_BLOCK_NUMBER))" ] ; then \
+		forge test --match-contract $(E2E_TEST_NAME) \
+			--rpc-url $(RPC_URL) \
+			$(VERBOSITY) ; \
+	else \
+		forge test --match-contract $(E2E_TEST_NAME) \
+			--rpc-url $(RPC_URL) \
+			--fork-block-number $(FORK_BLOCK_NUMBER) \
+			$(VERBOSITY) ; \
+	fi
 
 : ## 
 

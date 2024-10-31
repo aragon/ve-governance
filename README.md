@@ -133,6 +133,7 @@ Check the available make targets to simulate and deploy the smart contracts:
 - [ ] I have updated the `CurveConstantLib` and `Clock` with any new constants.
 - [ ] All my unit tests pass (`make test`)
 - **Target test network**
+  - [ ] I have defined `FORK_TESTNET_BLOCK_NUMBER` on `.env.test`, with the current block number
   - [ ] I have run a fork test in `new-factory` mode with minted tokens against the official OSx contracts on the testnet
     - `make test-fork-mint-testnet`
   - [ ] I have deployed my contracts successfully to the target testnet
@@ -145,6 +146,7 @@ Check the available make targets to simulate and deploy the smart contracts:
     - [ ] I have confirmed that tests still work in `existing-factory` mode with the live token(s) and the already deployed factory on the testnet.
       - `make test-fork-factory-testnet`
 - **Target production network**
+  - [ ] I have defined `FORK_PRODNET_BLOCK_NUMBER` on `.env.test`, with the current block number
   - [ ] I have run a fork test in `new-factory` mode with minted tokens against the official OSx contracts on the prodnet
     - `make test-fork-mint-prodnet`
   - If the live token has an address holding ≥ 3000 tokens on the prodnet:
