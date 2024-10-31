@@ -12,7 +12,7 @@ import {PluginSetupProcessor} from "@aragon/osx/framework/plugin/setup/PluginSet
 import {MockERC20} from "@mocks/MockERC20.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
-contract Deploy is Script {
+contract DeployGauges is Script {
     using SafeCast for uint256;
 
     SimpleGaugeVoterSetup simpleGaugeVoterSetup;
@@ -33,8 +33,8 @@ contract Deploy is Script {
     /// @notice Runs the deployment flow, records the given parameters and artifacts, and it becomes read only
     function run() public broadcast {
         // Prepare all parameters
-        bool isProduction = vm.envBool("DEPLOY_AS_PRODUCTION");
-        DeploymentParameters memory parameters = getDeploymentParameters(isProduction);
+        bool mintTestTokens = vm.envOr("MINT_TEST_TOKENS", false);
+        DeploymentParameters memory parameters = getDeploymentParameters(mintTestTokens);
 
         // Create the DAO
         GaugesDaoFactory factory = new GaugesDaoFactory(parameters);
@@ -45,10 +45,10 @@ contract Deploy is Script {
     }
 
     function getDeploymentParameters(
-        bool isProduction
+        bool mintTestTokens
     ) public returns (DeploymentParameters memory parameters) {
         address[] memory multisigMembers = readMultisigMembers();
-        TokenParameters[] memory tokenParameters = getTokenParameters(isProduction);
+        TokenParameters[] memory tokenParameters = getTokenParameters(mintTestTokens);
 
         // NOTE: Multisig is already deployed, using the existing Aragon's repo
         // NOTE: Deploying the plugin setup from the current script to avoid code size constraints
@@ -86,6 +86,10 @@ contract Deploy is Script {
         string memory membersFilePath = vm.envString("MULTISIG_MEMBERS_JSON_FILE_NAME");
         string memory path = string.concat(vm.projectRoot(), membersFilePath);
         string memory strJson = vm.readFile(path);
+
+        bool exists = vm.keyExistsJson(strJson, "$.members");
+        if (!exists) revert EmptyMultisig();
+
         result = vm.parseJsonAddressArray(strJson, "$.members");
 
         if (result.length == 0) revert EmptyMultisig();
@@ -103,31 +107,11 @@ contract Deploy is Script {
     }
 
     function getTokenParameters(
-        bool isProduction
+        bool mintTestTokens
     ) internal returns (TokenParameters[] memory tokenParameters) {
-        if (isProduction) {
-            // USE TOKEN(s)
-            console.log("Using production parameters");
-
-            bool hasTwoTokens = vm.envAddress("TOKEN2_ADDRESS") != address(0);
-            tokenParameters = new TokenParameters[](hasTwoTokens ? 2 : 1);
-
-            tokenParameters[0] = TokenParameters({
-                token: vm.envAddress("TOKEN1_ADDRESS"),
-                veTokenName: vm.envString("VE_TOKEN1_NAME"),
-                veTokenSymbol: vm.envString("VE_TOKEN1_SYMBOL")
-            });
-
-            if (hasTwoTokens) {
-                tokenParameters[1] = TokenParameters({
-                    token: vm.envAddress("TOKEN2_ADDRESS"),
-                    veTokenName: vm.envString("VE_TOKEN2_NAME"),
-                    veTokenSymbol: vm.envString("VE_TOKEN2_SYMBOL")
-                });
-            }
-        } else {
-            // MINT TEST TOKEN
-            console.log("Using testing parameters (minting 2 dev tokens)");
+        if (mintTestTokens) {
+            // MINT
+            console.log("Deploying 2 token contracts (testing)");
 
             address[] memory multisigMembers = readMultisigMembers();
             tokenParameters = new TokenParameters[](2);
@@ -141,6 +125,27 @@ contract Deploy is Script {
                 veTokenName: "VE Token 2",
                 veTokenSymbol: "veTK2"
             });
+        } else {
+            // USE TOKEN(s)
+
+            bool hasTwoTokens = vm.envAddress("TOKEN2_ADDRESS") != address(0);
+            tokenParameters = new TokenParameters[](hasTwoTokens ? 2 : 1);
+
+            console.log("Using token", vm.envAddress("TOKEN1_ADDRESS"));
+            tokenParameters[0] = TokenParameters({
+                token: vm.envAddress("TOKEN1_ADDRESS"),
+                veTokenName: vm.envString("VE_TOKEN1_NAME"),
+                veTokenSymbol: vm.envString("VE_TOKEN1_SYMBOL")
+            });
+
+            if (hasTwoTokens) {
+                console.log("Using token", vm.envAddress("TOKEN2_ADDRESS"));
+                tokenParameters[1] = TokenParameters({
+                    token: vm.envAddress("TOKEN2_ADDRESS"),
+                    veTokenName: vm.envString("VE_TOKEN2_NAME"),
+                    veTokenSymbol: vm.envString("VE_TOKEN2_SYMBOL")
+                });
+            }
         }
     }
 
@@ -149,8 +154,8 @@ contract Deploy is Script {
         MockERC20 newToken = new MockERC20();
 
         for (uint i = 0; i < holders.length; ) {
-            newToken.mint(holders[i], 50 ether);
-            console.log("Minting 50 eth for", holders[i]);
+            newToken.mint(holders[i], 5000 ether);
+            console.log("Minting 5000 tokens for", holders[i]);
 
             unchecked {
                 i++;
