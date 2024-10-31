@@ -13,11 +13,11 @@ deploy-prodnet: export ETHERSCAN_API_KEY_PARAM = --etherscan-api-key $(ETHERSCAN
 
 # CONSTANTS
 
-TEST_COVERAGE_SRC_FILES=$(wildcard test/*.sol test/**/*.sol script/*.sol script/**/*.sol src/escrow/increasing/delegation/*.sol src/libs/ProxyLib.sol)
-FORK_TEST_WILDCARD="test/fork/**/*.sol"
-E2E_TEST_NAME=TestE2EV2
-DEPLOY_SCRIPT=script/DeployGauges.s.sol:DeployGauges
-VERBOSITY=-vvv
+TEST_COVERAGE_SRC_FILES:=$(wildcard test/*.sol test/**/*.sol script/*.sol script/**/*.sol src/escrow/increasing/delegation/*.sol src/libs/ProxyLib.sol)
+FORK_TEST_WILDCARD:="test/fork/**/*.sol"
+E2E_TEST_NAME:=TestE2EV2
+DEPLOY_SCRIPT:=script/DeployGauges.s.sol:DeployGauges
+VERBOSITY:=-vvv
 SHELL:=/bin/bash
 
 # TARGETS
