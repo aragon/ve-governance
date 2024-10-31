@@ -39,7 +39,7 @@ init: .env .env.test ##  Check the required tools and dependencies
 	@which lcov > /dev/null || echo "Note: lcov can be installed by running 'sudo apt install lcov'"
 
 .PHONY: clean
-clean: ## Clean the artifacts
+clean: ## Clean the build artifacts
 	rm -Rf ./out/* lcov.info* ./report/*
 
 # Copy the .env files if not present

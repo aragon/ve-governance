@@ -34,7 +34,7 @@ $ make
 Available targets:
 
 - make init    Check the required tools and dependencies
-- make clean   Clean the artifacts
+- make clean   Clean the build artifacts
 
 - make test            Run unit tests, locally
 - make test-coverage   Generate an HTML coverage report under ./report
@@ -172,10 +172,11 @@ Check the available make targets to simulate and deploy the smart contracts:
 
 - [ ] The deployment process completed with no errors
 - [ ] The deployed factory was deployed by the deployment address
-- [ ] The reported DAO contract was created by the newly deployed factory
+- [ ] The reported contracts have been created created by the newly deployed factory
 - [ ] The smart contracts are correctly verified on Etherscan or the corresponding block explorer
 - [ ] The output of the latest `deployment-*.log` file corresponds to the console output
 - [ ] I have transferred the remaining funds of the deployment wallet to the address that originally funded it
+  - `make refund`
 
 ### Manual from the command line
 
