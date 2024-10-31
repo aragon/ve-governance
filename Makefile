@@ -18,8 +18,6 @@ FORK_TEST_WILDCARD="test/fork/**/*.sol"
 E2E_TEST_NAME=TestE2EV2
 DEPLOY_SCRIPT=script/DeployGauges.s.sol:DeployGauges
 VERBOSITY=-vvv
-DEPLOYMENT_LOG_FILE=$(shell echo "./deployment-$(shell date +"%y-%m-%d-%H-%M").log")
-DEPLOYMENT_ADDRESS=$(shell cast wallet address --private-key $(DEPLOYMENT_PRIVATE_KEY))
 SHELL:=/bin/bash
 
 # TARGETS
@@ -122,6 +120,9 @@ deploy-testnet: export NETWORK = $(TESTNET_NETWORK)
 deploy-prodnet: export RPC_URL = $(PRODNET_RPC_URL)
 deploy-prodnet: export NETWORK = $(PRODNET_NETWORK)
 
+deploy-testnet: export DEPLOYMENT_LOG_FILE=./deployment-$(patsubst "%",%,$(TESTNET_NETWORK))-$(shell date +"%y-%m-%d-%H-%M").log
+deploy-prodnet: export DEPLOYMENT_LOG_FILE=./deployment-$(patsubst "%",%,$(PRODNET_NETWORK))-$(shell date +"%y-%m-%d-%H-%M").log
+
 deploy-testnet: deploy ##      Deploy to the testnet and verify
 deploy-prodnet: deploy ##      Deploy to the production network and verify
 
@@ -147,6 +148,8 @@ deploy: test
 		$(VERBOSITY) | tee $(DEPLOYMENT_LOG_FILE)
 
 : ## 
+
+refund: export DEPLOYMENT_ADDRESS = $(shell cast wallet address --private-key $(DEPLOYMENT_PRIVATE_KEY))
 
 .PHONY: refund
 refund: ## Refund the remaining balance left on the deployment account
