@@ -43,7 +43,25 @@ ft-sepolia-fork :; forge test --match-contract TestE2EV2 \
 deploy-preview-mode-sepolia :; forge script script/Deploy.s.sol:Deploy \
   --rpc-url https://sepolia.mode.network \
 	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
-	-vvvvv	
+	-vvvvv
+
+deploy-preview-sepolia :; forge script script/Deploy.s.sol:Deploy \
+  --rpc-url https://eth-sepolia.g.alchemy.com/v2/KqUmJvu1tiJqOdy6lopFGzVa5MfPVn2J \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	-vvvvv
+
+deploy-preview-holesky :; forge script script/Deploy.s.sol:Deploy \
+  --rpc-url https://eth-holesky.g.alchemy.com/v2/KqUmJvu1tiJqOdy6lopFGzVa5MfPVn2J \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	-vvvvv
+
+deploy-holesky :; forge script script/Deploy.s.sol:Deploy \
+    --rpc-url https://eth-holesky.g.alchemy.com/v2/KqUmJvu1tiJqOdy6lopFGzVa5MfPVn2J \
+    --private-key $(DEPLOYMENT_PRIVATE_KEY) \
+    --broadcast \
+    --verify \
+    --etherscan-api-key $(ETHERSCAN_API_KEY) \
+    -vvvvv
 
 deploy-mode-sepolia :; forge script script/Deploy.s.sol:Deploy \
 	--rpc-url https://sepolia.mode.network \
@@ -68,4 +86,3 @@ deploy-preview-mode :; forge script script/Deploy.s.sol:Deploy \
      --verifier blockscout \
      --verifier-url https://explorer.mode.network/api\? \
      -vvv
-
