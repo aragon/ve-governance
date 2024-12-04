@@ -481,8 +481,22 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
     uint balanceJordi = 1_234 ether;
 
     uint depositCarlos0 = 250 ether;
+    uint depositCarlos0Fees = 1.25 ether; // 0.5% fee
     uint depositCarlos1 = 500 ether;
+    uint depositCarlos1Fees = 2.5 ether; // 0.5% fee
+    uint depositCarlos2 = 248.75 ether;
+    uint depositCarlos2Fees = 1.24375 ether; // 0.5% fee
     uint depositCarlosJavi = 250 ether;
+    uint depositCarlosJaviFees = 1.25 ether; // 0.5% fee
+    uint depositJordi0 = 1_234 ether;
+    uint depositJordi0Fees = 6.17 ether; // 0.5% fee
+
+    uint totalFees =
+        depositCarlos0Fees +
+            depositCarlos2Fees +
+            depositCarlos1Fees +
+            depositCarlosJaviFees +
+            depositJordi0Fees;
 
     // 1 attacker
     address jordan = address(0x707da);
@@ -1070,7 +1084,7 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
             // he should have his original amount back, minus any fees
             assertEq(
                 token.balanceOf(carlos),
-                depositCarlos0 - (queue.feePercent() * depositCarlos0) / 10_000,
+                depositCarlos2,
                 "Carlos should have the correct balance after exiting"
             );
 
@@ -1109,8 +1123,8 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
 
             vm.startPrank(carlos);
             {
-                token.approve(address(escrow), depositCarlos0);
-                escrow.createLock(depositCarlos0);
+                token.approve(address(escrow), depositCarlos2);
+                escrow.createLock(depositCarlos2);
             }
             vm.stopPrank();
 
@@ -1158,7 +1172,7 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
             // total locked should be carlos' 2 deposits + jordis
             assertEq(
                 escrow.totalLocked(),
-                depositCarlos0 + depositCarlos1 + balanceJordi,
+                depositCarlos2 + depositCarlos1 + balanceJordi,
                 "Total locked should be the sum of the deposits"
             );
         }
@@ -1283,6 +1297,27 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
                 escrow.withdraw(4);
             }
             vm.stopPrank();
+        }
+
+        {
+            // fees are in the queue contract
+            assertEq(
+                token.balanceOf(address(queue)),
+                totalFees,
+                "Queue contract should have the fees"
+            );
+            assertEq(token.balanceOf(address(dao)), 0, "DAO should have no fees");
+
+            // we get the fees out
+            vm.startPrank(address(dao));
+            {
+                queue.withdraw(totalFees);
+            }
+            vm.stopPrank();
+
+            // fees are in the dao
+            assertEq(token.balanceOf(address(queue)), 0, "Queue contract should have 0 fees left");
+            assertEq(token.balanceOf(address(dao)), totalFees, "DAO should have the fees");
         }
 
         // we check the end state of the contracts
