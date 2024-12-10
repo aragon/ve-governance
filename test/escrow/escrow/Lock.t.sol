@@ -5,6 +5,7 @@ import {EscrowBase} from "./EscrowBase.sol";
 import {console2 as console} from "forge-std/console2.sol";
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
+import {DaoUnauthorized} from "@aragon/osx/core/utils/auth.sol";
 import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
@@ -94,6 +95,54 @@ contract TestLockMintBurn is EscrowBase, IEscrowCurveTokenStorage, IGaugeVote {
         vm.prank(address(reentrant));
         vm.expectRevert("revert");
         newLock.mint(address(reentrant), 1);
+    }
+
+    function testSetNFTMetadata() public {
+        vm.prank(address(escrow));
+        nftLock.mint(address(123), 1);
+
+        assertEq(nftLock.tokenURI(1), "");
+
+        vm.prank(address(this));
+        nftLock.setBaseURI("https://example.com/");
+        assertEq(nftLock.baseTokenURI(), "https://example.com/");
+        assertEq(nftLock.tokenURI(1), "https://example.com/1");
+
+        vm.prank(address(this));
+        nftLock.setTokenURI(1, "?tokenId=1");
+        assertEq(nftLock.tokenURI(1), "https://example.com/?tokenId=1");
+
+        vm.prank(address(escrow));
+        nftLock.mint(address(123), 2);
+
+        assertEq(nftLock.tokenURI(2), "https://example.com/2");
+    }
+
+    function testOnlyOwnerCanSetNFTMetadata(address _notEscrow) public {
+        vm.assume(_notEscrow != address(this));
+
+        bytes memory data = abi.encodeWithSelector(
+            DaoUnauthorized.selector,
+            address(dao),
+            address(nftLock),
+            address(_notEscrow),
+            nftLock.LOCK_ADMIN_ROLE()
+        );
+
+        vm.prank(address(escrow));
+        nftLock.mint(address(123), 1);
+
+        vm.prank(_notEscrow);
+        vm.expectRevert(data);
+        nftLock.setBaseURI("https://example.com/");
+
+        assertEq(nftLock.baseTokenURI(), "");
+        assertEq(nftLock.tokenURI(1), "");
+
+        vm.prank(_notEscrow);
+        vm.expectRevert(data);
+        nftLock.setTokenURI(1, "?tokenId=1");
+        assertEq(nftLock.tokenURI(1), "");
     }
 }
 
