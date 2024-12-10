@@ -108,7 +108,7 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
         // solmate (optimized): 449.206254284606635135
         assertEq(
             curve.votingPowerAt(tokenIdFirst, block.timestamp),
-            449206254284606635135,
+            473276452878968806921,
             "Balance incorrect after warmup"
         );
         assertEq(curve.isWarm(tokenIdFirst), true, "Still warming up");
@@ -117,7 +117,7 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
         // solmate:   1067784483312193385000000000
         assertEq(
             curve.votingPowerAt(tokenIdSecond, block.timestamp),
-            1067784483312193385000000000,
+            1125000482252891219000000000,
             "Balance incorrect after warmup II"
         );
 
@@ -130,17 +130,17 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
         // solmate2:  600.985163959347101952
         assertEq(
             curve.votingPowerAt(tokenIdFirst, block.timestamp),
-            600985163959347101952,
+            666092499999616779456,
             "Balance incorrect after p1"
         );
 
-        uint256 expectedMaxI = 2524126241845405205760;
-        uint256 expectedMaxII = 5999967296216704000000000000;
+        uint256 expectedMaxI = 3365519999995401353472;
+        uint256 expectedMaxII = 7999999999989068800000000000;
 
         // warp to the final period
-        // TECHNICALLY, this should finish at exactly 5 periodd and 6 * voting power
+        // TECHNICALLY, this should finish at exactly 5 periods and 6 * voting power
         // but FP arithmetic has a small rounding error
-        vm.warp(start + clock.epochDuration() * 5);
+        vm.warp(start + clock.epochDuration() * 12);
         assertEq(
             curve.votingPowerAt(tokenIdFirst, block.timestamp),
             expectedMaxI,
