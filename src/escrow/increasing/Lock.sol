@@ -147,6 +147,8 @@ contract Lock is
 
     function setBaseURI(string memory _baseTokenURI) external auth(LOCK_ADMIN_ROLE) {
         baseTokenURI = _baseTokenURI;
+
+        emit BaseURISet(baseTokenURI);
     }
 
     function setTokenURI(uint256 _tokenId, string memory _tokenURI) external auth(LOCK_ADMIN_ROLE) {
