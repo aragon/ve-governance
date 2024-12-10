@@ -32,6 +32,7 @@ contract TestLockMintBurn is EscrowBase, IEscrowCurveTokenStorage, IGaugeVote {
         assertEq(_nftLock.name(), _name);
         assertEq(_nftLock.symbol(), _symbol);
         assertEq(_nftLock.escrow(), _escrow);
+        assertEq(_nftLock.baseTokenURI(), "");
         assertEq(address(_nftLock.dao()), _dao);
     }
 
