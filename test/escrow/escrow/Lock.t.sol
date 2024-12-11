@@ -8,6 +8,9 @@ import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {DaoUnauthorized} from "@aragon/osx/core/utils/auth.sol";
 import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
 
+import {IERC721EnumerableUpgradeable as IERC721Enumerable} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/IERC721EnumerableUpgradeable.sol";
+import {IERC721MetadataUpgradeable as IERC721Metadata} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/IERC721MetadataUpgradeable.sol";
+
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
 import {IEscrowCurveTokenStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
@@ -39,6 +42,8 @@ contract TestLockMintBurn is EscrowBase, IEscrowCurveTokenStorage, IGaugeVote {
     function testSupportsInterface() public view {
         assertTrue(nftLock.supportsInterface(type(ILock).interfaceId));
         assertFalse(nftLock.supportsInterface(0xffffffff));
+        assertTrue(nftLock.supportsInterface(type(IERC721Metadata).interfaceId));
+        assertTrue(nftLock.supportsInterface(type(IERC721Enumerable).interfaceId));
     }
 
     function testFuzz_OnlyEscrowCanMint(address _notEscrow) public {
