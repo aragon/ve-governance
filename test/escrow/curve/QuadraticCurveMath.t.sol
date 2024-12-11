@@ -11,12 +11,12 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
     function test_votingPowerComputesCorrect() public {
         /**
             Period	Result
-          1	1
-          2	1.428571429
-          3	2.142857143
-          4	3.142857143
-          5	4.428571429
-          6	6
+            0	1
+            1	2
+            2	3
+            3	4
+            4	5
+            5	6
          */
         uint256 amount = 100e18;
 
@@ -104,8 +104,6 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
         // warmup complete
         vm.warp(block.timestamp + 1);
 
-        // python:              449.206279554928541696
-        // solmate (optimized): 449.206254284606635135
         assertEq(
             curve.votingPowerAt(tokenIdFirst, block.timestamp),
             510838204935452985628,
@@ -113,8 +111,6 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
         );
         assertEq(curve.isWarm(tokenIdFirst), true, "Still warming up");
 
-        // python:    1067784543380942056100724736
-        // solmate:   1067784483312193385000000000
         assertEq(
             curve.votingPowerAt(tokenIdSecond, block.timestamp),
             1214286541005141519000000000,
@@ -123,11 +119,6 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
 
         // warp to the start of period 2
         vm.warp(start + clock.epochDuration());
-        // excel:     600.985714300000000000
-        // PRB:       600.985163959347100568
-        // solmate:   600.985163959347101852
-        // python :   600.985714285714341888
-        // solmate2:  600.985163959347101952
         assertEq(
             curve.votingPowerAt(tokenIdFirst, block.timestamp),
             841379999999706526656,
