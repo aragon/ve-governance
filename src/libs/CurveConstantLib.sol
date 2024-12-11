@@ -13,7 +13,7 @@ pragma solidity ^0.8.0;
 library CurveConstantLib {
     int256 internal constant SHARED_CONSTANT_COEFFICIENT = 1e18;
     /// @dev 2 / (7 * 2_weeks) - expressed in fixed point
-    int256 internal constant SHARED_LINEAR_COEFFICIENT = 826714169348;
+    int256 internal constant SHARED_LINEAR_COEFFICIENT = 826719576719;
     /// @dev 1 / (7 * (2_weeks)^2) - expressed in fixed point
     int256 internal constant SHARED_QUADRATIC_COEFFICIENT = 0;
 

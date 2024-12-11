@@ -31,3 +31,5 @@ lcov*
 # multisig addresses
 script/multisig-*.json
 ^script/multisig-members.json
+
+.DS_Store
