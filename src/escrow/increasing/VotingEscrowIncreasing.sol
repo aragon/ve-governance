@@ -489,5 +489,6 @@ contract VotingEscrow is
     function _authorizeUpgrade(address) internal virtual override auth(ESCROW_ADMIN_ROLE) {}
 
     /// @dev Reserved storage space to allow for layout changes in the future.
-    uint256[39] private __gap;
+    /// @dev V2: -1 slot for migrator contract
+    uint256[38] private __gap;
 }
