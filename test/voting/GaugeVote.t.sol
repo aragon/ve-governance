@@ -96,9 +96,8 @@ contract TestGaugeVote is GaugeVotingBase {
         // check the vote
         assertEq(voter.isVoting(tokenId), true);
 
-        // warp to the next epoch
+        // warp to the next distribution period
         vm.warp(block.timestamp + 1 weeks);
-
         vm.assume(!voter.votingActive());
 
         // try to reset
