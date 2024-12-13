@@ -81,7 +81,7 @@ contract SimpleGaugeVoter is
     }
 
     /*///////////////////////////////////////////////////////////////
-                               Voting 
+                               Voting
     //////////////////////////////////////////////////////////////*/
 
     /// @notice extrememly simple for loop. We don't need reentrancy checks in this implementation
@@ -181,7 +181,7 @@ contract SimpleGaugeVoter is
         voteData.lastVoted = block.timestamp;
     }
 
-    function reset(uint256 _tokenId) external nonReentrant whenNotPaused whenVotingActive {
+    function reset(uint256 _tokenId) external nonReentrant whenNotPaused {
         if (!IVotingEscrow(escrow).isApprovedOrOwner(msg.sender, _tokenId))
             revert NotApprovedOrOwner();
         if (!isVoting(_tokenId)) revert NotCurrentlyVoting();
