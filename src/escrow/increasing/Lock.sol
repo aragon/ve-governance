@@ -14,10 +14,10 @@ import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 contract Lock is
     ILock,
     ERC721Enumerable,
-    ERC721URIStorageUpgradeable,
     UUPSUpgradeable,
     DaoAuthorizable,
-    ReentrancyGuard
+    ReentrancyGuard,
+    ERC721URIStorageUpgradeable
 {
     /// @dev enables transfers without whitelisting
     address public constant WHITELIST_ANY_ADDRESS =
