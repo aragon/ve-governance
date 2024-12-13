@@ -72,16 +72,12 @@ contract TestGaugeVote is GaugeVotingBase {
         vm.expectRevert(VotingInactive.selector);
         voter.vote(0, votes);
 
-        // try to reset
-        vm.expectRevert(VotingInactive.selector);
-        voter.reset(0);
-
         // vote multiple
         vm.expectRevert(VotingInactive.selector);
         voter.voteMultiple(ids, votes);
     }
 
-    function testFuzz_cannotResetInDistributionPeriod() public {
+    function testFuzz_canResetInDistributionPeriod() public {
         // create the vote
         votes.push(GaugeVote(1, gauge));
 
@@ -95,18 +91,24 @@ contract TestGaugeVote is GaugeVotingBase {
         // check the vote
         assertEq(voter.isVoting(tokenId), true);
 
-        // warp to the next distribution period
-        _increaseTime(1 weeks);
+        // warp to the next epoch
+        vm.warp(block.timestamp + 1 weeks);
+
         vm.assume(!voter.votingActive());
 
         // try to reset
         vm.startPrank(owner);
         {
-            vm.expectRevert(VotingInactive.selector);
             voter.reset(tokenId);
         }
         vm.stopPrank();
+
+        assertEq(voter.isVoting(tokenId), false);
     }
+
+    //Check vp is 0 after reset
+    //Check gaugeVotes are same before and after reset, and are 0 after next voting period
+    //
 
     // can't vote if you don't own the token
     function testCannotVoteIfYouDontOwnTheToken() public {
