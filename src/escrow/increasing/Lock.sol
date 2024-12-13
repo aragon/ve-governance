@@ -2,14 +2,23 @@
 pragma solidity ^0.8.17;
 
 import {ILock} from "@escrow-interfaces/ILock.sol";
+import {ERC721Upgradeable as ERC721} from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import {ERC721EnumerableUpgradeable as ERC721Enumerable} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
+import {ERC721URIStorageUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721URIStorageUpgradeable.sol";
 import {ReentrancyGuardUpgradeable as ReentrancyGuard} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 
 /// @title NFT representation of an escrow locking mechanism
-contract Lock is ILock, ERC721Enumerable, UUPSUpgradeable, DaoAuthorizable, ReentrancyGuard {
+contract Lock is
+    ILock,
+    ERC721Enumerable,
+    UUPSUpgradeable,
+    DaoAuthorizable,
+    ReentrancyGuard,
+    ERC721URIStorageUpgradeable
+{
     /// @dev enables transfers without whitelisting
     address public constant WHITELIST_ANY_ADDRESS =
         address(uint160(uint256(keccak256("WHITELIST_ANY_ADDRESS"))));
@@ -22,6 +31,8 @@ contract Lock is ILock, ERC721Enumerable, UUPSUpgradeable, DaoAuthorizable, Reen
 
     /// @notice Whitelisted contracts that are allowed to transfer
     mapping(address => bool) public whitelisted;
+
+    string public baseTokenURI;
 
     /*//////////////////////////////////////////////////////////////
                               Modifiers
@@ -38,7 +49,7 @@ contract Lock is ILock, ERC721Enumerable, UUPSUpgradeable, DaoAuthorizable, Reen
 
     function supportsInterface(
         bytes4 _interfaceId
-    ) public view override(ERC721Enumerable) returns (bool) {
+    ) public view override(ERC721Enumerable, ERC721URIStorageUpgradeable) returns (bool) {
         return super.supportsInterface(_interfaceId) || _interfaceId == type(ILock).interfaceId;
     }
 
@@ -83,6 +94,16 @@ contract Lock is ILock, ERC721Enumerable, UUPSUpgradeable, DaoAuthorizable, Reen
         emit WhitelistSet(WHITELIST_ANY_ADDRESS, true);
     }
 
+    /// @notice Override the beforeTokenTransfer as required by ERC721Enumerable
+    function _beforeTokenTransfer(
+        address _from,
+        address _to,
+        uint256 _tokenId,
+        uint256 batchSize
+    ) internal override(ERC721, ERC721Enumerable) {
+        super._beforeTokenTransfer(_from, _to, _tokenId, batchSize);
+    }
+
     /// @dev Override the transfer to check if the recipient is whitelisted
     /// This avoids needing to check for mint/burn but is less idomatic than beforeTokenTransfer
     function _transfer(address _from, address _to, uint256 _tokenId) internal override {
@@ -110,6 +131,30 @@ contract Lock is ILock, ERC721Enumerable, UUPSUpgradeable, DaoAuthorizable, Reen
         _burn(_tokenId);
     }
 
+    function _burn(uint256 _tokenId) internal override(ERC721, ERC721URIStorageUpgradeable) {
+        super._burn(_tokenId);
+    }
+
+    function tokenURI(
+        uint256 _tokenId
+    ) public view override(ERC721, ERC721URIStorageUpgradeable) returns (string memory) {
+        return super.tokenURI(_tokenId);
+    }
+
+    function _baseURI() internal view override returns (string memory) {
+        return baseTokenURI;
+    }
+
+    function setBaseURI(string memory _baseTokenURI) external auth(LOCK_ADMIN_ROLE) {
+        baseTokenURI = _baseTokenURI;
+
+        emit BaseURISet(baseTokenURI);
+    }
+
+    function setTokenURI(uint256 _tokenId, string memory _tokenURI) external auth(LOCK_ADMIN_ROLE) {
+        _setTokenURI(_tokenId, _tokenURI);
+    }
+
     /*//////////////////////////////////////////////////////////////
                               UUPS Upgrade
     //////////////////////////////////////////////////////////////*/
@@ -123,5 +168,5 @@ contract Lock is ILock, ERC721Enumerable, UUPSUpgradeable, DaoAuthorizable, Reen
     /// @notice Internal method authorizing the upgrade of the contract via the [upgradeability mechanism for UUPS proxies](https://docs.openzeppelin.com/contracts/4.x/api/proxy#UUPSUpgradeable) (see [ERC-1822](https://eips.ethereum.org/EIPS/eip-1822)).
     function _authorizeUpgrade(address) internal virtual override auth(LOCK_ADMIN_ROLE) {}
 
-    uint256[48] private __gap;
+    uint256[47] private __gap;
 }
