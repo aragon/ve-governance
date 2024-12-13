@@ -89,6 +89,87 @@ contract VotingEscrow is
     bool private _lockNFTSet;
 
     /*//////////////////////////////////////////////////////////////
+                              Added: V2
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Emitted when the user migrates to the new destination contract
+    /// @param owner The owner of the veNFT at the time of the migration
+    /// @param oldTokenId TokenId burned in the old staking contract
+    /// @param newTokenId TokenId minted in the new staking contract
+    /// @param amount The locked amount migrated between contracts
+    event Migrated(
+        address indexed owner,
+        uint256 indexed oldTokenId,
+        uint256 indexed newTokenId,
+        uint256 amount
+    );
+
+    /// @notice Emitted when the migrator is added, activating the migration
+    event MigrationEnabled(address migrator);
+
+    error MigrationAlreadySet();
+    error MigrationNotActive();
+
+    /// @notice The destination staking contract can add this to allow another address to call
+    /// the migrate function on it
+    bytes32 public constant MIGRATOR_ROLE = keccak256("MIGRATOR");
+
+    /// @notice destination migration contract
+    address public migrator;
+
+    /// @notice The Escrow Admin can enable migrations by setting a destination migration contract.
+    /// @dev This function also approves all tokens in this contract to be transferred to the new migrator.
+    /// @param _migrator The address of the destination migration contract
+    function enableMigration(address _migrator) external auth(ESCROW_ADMIN_ROLE) {
+        if (migrator != address(0)) revert MigrationAlreadySet();
+        migrator = _migrator;
+        IERC20(token).approve(migrator, totalLocked);
+        emit MigrationEnabled(_migrator);
+    }
+
+    /// @notice Defined on the staking contract being exited from - burn the tokenId and mint a new one.
+    /// @dev Skips withdrawal queue logic and vote resets
+    /// @param _tokenId veNFT to migrate from
+    /// @return newTokenId veNFT created during the migrationg
+    function migrateFrom(uint256 _tokenId) external returns (uint256 newTokenId) {
+        // check the migration contract is set and the tokenid is active
+        if (migrator == address(0)) revert MigrationNotActive();
+        if (votingPower(_tokenId) == 0) revert CannotExit();
+
+        // the user should be approved
+        address owner = IERC721EMB(lockNFT).ownerOf(_tokenId);
+
+        LockedBalance memory oldLocked = _locked[_tokenId];
+        uint256 value = oldLocked.amount;
+
+        // burn the current veNFT and write a zero checkpoint.
+        _locked[_tokenId] = LockedBalance(0, 0);
+        totalLocked -= value;
+        _checkpointClear(_tokenId);
+        IERC721EMB(lockNFT).burn(_tokenId);
+
+        // createLockFor on the new contract for the owner of the veNFT
+        newTokenId = VotingEscrow(migrator).migrateTo(value, owner);
+
+        // emit the migrated event
+        emit Migrated(owner, _tokenId, newTokenId, value);
+
+        return newTokenId;
+    }
+
+    /// @notice Defined on the destination staking contract. Creates a new veNFT with the old params
+    /// @dev Skips validations like pause, allowing migration ahead of general release.
+    /// @param _value The amount of underlying token to be migrated.
+    /// @param _for The original owner of the lock
+    /// @return newTokenId the veNFT on the destination staking contract
+    function migrateTo(
+        uint256 _value,
+        address _for
+    ) external nonReentrant auth(MIGRATOR_ROLE) returns (uint256 newTokenId) {
+        return _createLockFor(_value, _for);
+    }
+
+    /*//////////////////////////////////////////////////////////////
                               Initialization
     //////////////////////////////////////////////////////////////*/
 
@@ -408,5 +489,6 @@ contract VotingEscrow is
     function _authorizeUpgrade(address) internal virtual override auth(ESCROW_ADMIN_ROLE) {}
 
     /// @dev Reserved storage space to allow for layout changes in the future.
-    uint256[39] private __gap;
+    /// @dev V2: -1 slot for migrator contract
+    uint256[38] private __gap;
 }
