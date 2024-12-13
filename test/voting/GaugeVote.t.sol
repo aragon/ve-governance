@@ -110,10 +110,6 @@ contract TestGaugeVote is GaugeVotingBase {
         assertEq(voter.isVoting(tokenId), false);
     }
 
-    //Check vp is 0 after reset
-    //Check gaugeVotes are same before and after reset, and are 0 after next voting period
-    //
-
     // can't vote if you don't own the token
     function testCannotVoteIfYouDontOwnTheToken() public {
         // try to vote as this address (not the holder)
