@@ -13,6 +13,7 @@ import {IClock} from "@clock/IClock.sol";
 import {IEscrowCurveIncreasing as IEscrowCurve} from "./interfaces/IEscrowCurveIncreasing.sol";
 import {IExitQueue} from "./interfaces/IExitQueue.sol";
 import {IVotingEscrowIncreasing as IVotingEscrow} from "./interfaces/IVotingEscrowIncreasing.sol";
+import {IMigrateable} from "./interfaces/IMigrateable.sol";
 
 // libraries
 import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
@@ -29,7 +30,8 @@ contract VotingEscrow is
     ReentrancyGuard,
     Pausable,
     DaoAuthorizable,
-    UUPSUpgradeable
+    UUPSUpgradeable,
+    IMigrateable
 {
     using SafeERC20 for IERC20;
     using SafeCast for uint256;
@@ -92,24 +94,6 @@ contract VotingEscrow is
                               Added: V2
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Emitted when the user migrates to the new destination contract
-    /// @param owner The owner of the veNFT at the time of the migration
-    /// @param oldTokenId TokenId burned in the old staking contract
-    /// @param newTokenId TokenId minted in the new staking contract
-    /// @param amount The locked amount migrated between contracts
-    event Migrated(
-        address indexed owner,
-        uint256 indexed oldTokenId,
-        uint256 indexed newTokenId,
-        uint256 amount
-    );
-
-    /// @notice Emitted when the migrator is added, activating the migration
-    event MigrationEnabled(address migrator);
-
-    error MigrationAlreadySet();
-    error MigrationNotActive();
-
     /// @notice The destination staking contract can add this to allow another address to call
     /// the migrate function on it
     bytes32 public constant MIGRATOR_ROLE = keccak256("MIGRATOR");
@@ -123,7 +107,8 @@ contract VotingEscrow is
     function enableMigration(address _migrator) external auth(ESCROW_ADMIN_ROLE) {
         if (migrator != address(0)) revert MigrationAlreadySet();
         migrator = _migrator;
-        IERC20(token).approve(migrator, totalLocked);
+        // we approve max in the event that new deposits happen
+        IERC20(token).approve(migrator, type(uint256).max);
         emit MigrationEnabled(_migrator);
     }
 
@@ -134,10 +119,16 @@ contract VotingEscrow is
     function migrateFrom(uint256 _tokenId) external returns (uint256 newTokenId) {
         // check the migration contract is set and the tokenid is active
         if (migrator == address(0)) revert MigrationNotActive();
+        if (!IERC721EMB(lockNFT).isApprovedOrOwner(_msgSender(), _tokenId)) revert NotOwner();
         if (votingPower(_tokenId) == 0) revert CannotExit();
 
         // the user should be approved
         address owner = IERC721EMB(lockNFT).ownerOf(_tokenId);
+
+        // reset votes from voting contract
+        if (isVoting(_tokenId)) {
+            ISimpleGaugeVoter(voter).reset(_tokenId);
+        }
 
         LockedBalance memory oldLocked = _locked[_tokenId];
         uint256 value = oldLocked.amount;
