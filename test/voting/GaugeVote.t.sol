@@ -66,9 +66,9 @@ contract TestGaugeVote is GaugeVotingBase {
         voter.createGauge(gauge, "metadata");
     }
 
-    function testFuzz_cannotVoteOutsideVotingWindow(uint256 time) public {
+    function testFuzz_cannotVoteOutsideVotingWindow(uint256 _time) public {
         // warp to a random time
-        vm.warp(time);
+        vm.warp(_time);
 
         // should now be inactive (we don't test this part herewe have the epoch logic tests)
         vm.assume(!voter.votingActive());
@@ -97,7 +97,7 @@ contract TestGaugeVote is GaugeVotingBase {
         assertEq(voter.isVoting(tokenId), true);
 
         // warp to the next distribution period
-        vm.warp(block.timestamp + 1 weeks);
+        _increaseTime(1 weeks);
         vm.assume(!voter.votingActive());
 
         // try to reset
@@ -107,7 +107,59 @@ contract TestGaugeVote is GaugeVotingBase {
         }
         vm.stopPrank();
 
+        // check the vote
         assertEq(voter.isVoting(tokenId), false);
+        assertEq(voter.gaugesVotedFor(tokenId).length, 0);
+        assertEq(voter.votes(tokenId, gauge), 0);
+        assertEq(voter.usedVotingPower(tokenId), 0);
+
+        // global state
+        assertEq(voter.totalVotingPowerCast(), 0);
+        assertEq(voter.gaugeVotes(gauge), 0);
+    }
+
+    function testFuzz_canResetAnytime(uint _time) public {
+        // create the vote
+        votes.push(GaugeVote(1, gauge));
+
+        // vote
+        vm.startPrank(owner);
+        {
+            voter.vote(tokenId, votes);
+        }
+        vm.stopPrank();
+
+        // check the vote
+        uint newVotingPower = escrow.votingPower(tokenId);
+        assertEq(voter.isVoting(tokenId), true);
+        assertEq(voter.gaugesVotedFor(tokenId).length, 1);
+        assertEq(voter.gaugesVotedFor(tokenId)[0], gauge);
+        assertEq(voter.votes(tokenId, gauge), newVotingPower);
+        assertEq(voter.usedVotingPower(tokenId), newVotingPower);
+
+        // global state
+        assertEq(voter.totalVotingPowerCast(), newVotingPower);
+        assertEq(voter.gaugeVotes(gauge), newVotingPower);
+
+        // warp to the next distribution period
+        _increaseTime(_time);
+
+        // try to reset
+        vm.startPrank(owner);
+        {
+            voter.reset(tokenId);
+        }
+        vm.stopPrank();
+
+        // check the vote
+        assertEq(voter.isVoting(tokenId), false);
+        assertEq(voter.gaugesVotedFor(tokenId).length, 0);
+        assertEq(voter.votes(tokenId, gauge), 0);
+        assertEq(voter.usedVotingPower(tokenId), 0);
+
+        // global state
+        assertEq(voter.totalVotingPowerCast(), 0);
+        assertEq(voter.gaugeVotes(gauge), 0);
     }
 
     // can't vote if you don't own the token
