@@ -118,7 +118,7 @@ contract TestGaugeVote is GaugeVotingBase {
         assertEq(voter.gaugeVotes(gauge), 0);
     }
 
-    function testFuzz_canResetAnytime(uint _time) public {
+    function testFuzz_canResetAnytime(uint48 _time) public {
         // create the vote
         votes.push(GaugeVote(1, gauge));
 
