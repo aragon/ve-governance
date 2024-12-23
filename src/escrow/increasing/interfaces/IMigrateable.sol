@@ -29,6 +29,7 @@ interface IMigrateableEventsAndErrors {
     );
     error MigrationAlreadySet();
     error MigrationNotActive();
+    error MigrationActive();
 }
 
 interface IMigrateable is IMigrateableFrom, IMigrateableTo, IMigrateableEventsAndErrors {}
