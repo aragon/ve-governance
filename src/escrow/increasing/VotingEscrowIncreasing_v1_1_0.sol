@@ -13,6 +13,7 @@ import {IClock} from "@clock/IClock.sol";
 import {IEscrowCurveIncreasing as IEscrowCurve} from "./interfaces/IEscrowCurveIncreasing.sol";
 import {IExitQueue} from "./interfaces/IExitQueue.sol";
 import {IVotingEscrowIncreasing as IVotingEscrow} from "./interfaces/IVotingEscrowIncreasing.sol";
+import {IMigrateable} from "./interfaces/IMigrateable.sol";
 
 // libraries
 import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
@@ -24,12 +25,13 @@ import {ReentrancyGuardUpgradeable as ReentrancyGuard} from "@openzeppelin/contr
 import {PausableUpgradeable as Pausable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
 
-contract VotingEscrow is
+contract VotingEscrowV1_1_0 is
     IVotingEscrow,
     ReentrancyGuard,
     Pausable,
     DaoAuthorizable,
-    UUPSUpgradeable
+    UUPSUpgradeable,
+    IMigrateable
 {
     using SafeERC20 for IERC20;
     using SafeCast for uint256;
@@ -87,6 +89,76 @@ contract VotingEscrow is
     address public lockNFT;
 
     bool private _lockNFTSet;
+
+    /*//////////////////////////////////////////////////////////////
+                              Added: V2
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice The destination staking contract can add this to allow another address to call
+    /// the migrate function on it
+    bytes32 public constant MIGRATOR_ROLE = keccak256("MIGRATOR");
+
+    /// @notice destination migration contract
+    address public migrator;
+
+    /// @notice The Escrow Admin can enable migrations by setting a destination migration contract.
+    /// @dev This function also approves all tokens in this contract to be transferred to the new migrator.
+    /// @param _migrator The address of the destination migration contract
+    function enableMigration(address _migrator) external auth(ESCROW_ADMIN_ROLE) {
+        if (migrator != address(0)) revert MigrationAlreadySet();
+        migrator = _migrator;
+        // we approve max in the event that new deposits happen
+        IERC20(token).approve(migrator, type(uint256).max);
+        emit MigrationEnabled(_migrator);
+    }
+
+    /// @notice Defined on the staking contract being exited from - burn the tokenId and mint a new one.
+    /// @dev Skips withdrawal queue logic and vote resets
+    /// @param _tokenId veNFT to migrate from
+    /// @return newTokenId veNFT created during the migrationg
+    function migrateFrom(uint256 _tokenId) external returns (uint256 newTokenId) {
+        // check the migration contract is set and the tokenid is active
+        if (migrator == address(0)) revert MigrationNotActive();
+        if (!IERC721EMB(lockNFT).isApprovedOrOwner(_msgSender(), _tokenId)) revert NotOwner();
+        if (votingPower(_tokenId) == 0) revert CannotExit();
+
+        // the user should be approved
+        address owner = IERC721EMB(lockNFT).ownerOf(_tokenId);
+
+        // reset votes from voting contract
+        if (isVoting(_tokenId)) {
+            ISimpleGaugeVoter(voter).reset(_tokenId);
+        }
+
+        LockedBalance memory oldLocked = _locked[_tokenId];
+        uint256 value = oldLocked.amount;
+
+        // burn the current veNFT and write a zero checkpoint.
+        _locked[_tokenId] = LockedBalance(0, 0);
+        totalLocked -= value;
+        _checkpointClear(_tokenId);
+        IERC721EMB(lockNFT).burn(_tokenId);
+
+        // createLockFor on the new contract for the owner of the veNFT
+        newTokenId = VotingEscrowV1_1_0(migrator).migrateTo(value, owner);
+
+        // emit the migrated event
+        emit Migrated(owner, _tokenId, newTokenId, value);
+
+        return newTokenId;
+    }
+
+    /// @notice Defined on the destination staking contract. Creates a new veNFT with the old params
+    /// @dev Skips validations like pause, allowing migration ahead of general release.
+    /// @param _value The amount of underlying token to be migrated.
+    /// @param _for The original owner of the lock
+    /// @return newTokenId the veNFT on the destination staking contract
+    function migrateTo(
+        uint256 _value,
+        address _for
+    ) external nonReentrant auth(MIGRATOR_ROLE) returns (uint256 newTokenId) {
+        return _createLockFor(_value, _for);
+    }
 
     /*//////////////////////////////////////////////////////////////
                               Initialization
@@ -251,6 +323,7 @@ contract VotingEscrow is
     function _createLockFor(uint256 _value, address _to) internal returns (uint256) {
         if (_value == 0) revert ZeroAmount();
         if (_value < minDeposit) revert AmountTooSmall();
+        if (migrator != address(0)) revert MigrationActive();
 
         // query the duration lib to get the next time we can deposit
         uint256 startTime = IClock(clock).epochNextCheckpointTs();
@@ -408,5 +481,6 @@ contract VotingEscrow is
     function _authorizeUpgrade(address) internal virtual override auth(ESCROW_ADMIN_ROLE) {}
 
     /// @dev Reserved storage space to allow for layout changes in the future.
-    uint256[39] private __gap;
+    /// @dev V2: -1 slot for migrator contract
+    uint256[38] private __gap;
 }

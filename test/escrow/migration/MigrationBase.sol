@@ -21,7 +21,7 @@ import {IVotingEscrowEventsStorageErrorsEvents} from "@escrow-interfaces/IVoting
 import {IMigrateableEventsAndErrors} from "@escrow-interfaces/IMigrateable.sol";
 import {IWhitelistErrors, IWhitelistEvents} from "@escrow-interfaces/ILock.sol";
 import {Lock} from "@escrow/Lock.sol";
-import {VotingEscrow} from "@escrow/VotingEscrowIncreasing.sol";
+import {VotingEscrowV1_1_0 as VotingEscrow} from "@escrow/VotingEscrowIncreasing_v1_1_0.sol";
 import {QuadraticIncreasingEscrow} from "@escrow/QuadraticIncreasingEscrow.sol";
 import {ExitQueue} from "@escrow/ExitQueue.sol";
 import {SimpleGaugeVoter, SimpleGaugeVoterSetup} from "src/voting/SimpleGaugeVoterSetup.sol";
