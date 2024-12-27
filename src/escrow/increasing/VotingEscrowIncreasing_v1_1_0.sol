@@ -91,7 +91,7 @@ contract VotingEscrowV1_1_0 is
     bool private _lockNFTSet;
 
     /*//////////////////////////////////////////////////////////////
-                              Added: V2
+                              Added: V1.1.0
     //////////////////////////////////////////////////////////////*/
 
     /// @notice The destination staking contract can add this to allow another address to call
@@ -481,6 +481,6 @@ contract VotingEscrowV1_1_0 is
     function _authorizeUpgrade(address) internal virtual override auth(ESCROW_ADMIN_ROLE) {}
 
     /// @dev Reserved storage space to allow for layout changes in the future.
-    /// @dev V2: -1 slot for migrator contract
+    /// @dev V1.1.0: -1 slot for migrator contract
     uint256[38] private __gap;
 }
