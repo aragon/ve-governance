@@ -87,8 +87,6 @@ contract TestMigrationStateless is MigrationBase {
     }
 
     function testCannotMigrateIfNotOwner() public {
-        src.escrow.enableMigration(address(migrator));
-
         address depositor = address(420);
 
         src.token.mint(depositor, 100 ether);
@@ -100,14 +98,14 @@ contract TestMigrationStateless is MigrationBase {
             tokenId = src.escrow.createLock(100 ether);
         }
         vm.stopPrank();
+
+        src.escrow.enableMigration(address(migrator));
 
         vm.expectRevert(NotOwner.selector);
         src.escrow.migrateFrom(tokenId);
     }
 
     function testCannotMigrateIfNoVotingPower() public {
-        src.escrow.enableMigration(address(migrator));
-
         address depositor = address(420);
 
         src.token.mint(depositor, 100 ether);
@@ -117,15 +115,35 @@ contract TestMigrationStateless is MigrationBase {
         {
             src.token.approve(address(src.escrow), 100 ether);
             tokenId = src.escrow.createLock(100 ether);
+        }
+        vm.stopPrank();
+
+        src.escrow.enableMigration(address(migrator));
+
+        vm.startPrank(depositor);
+        {
             vm.expectRevert(CannotExit.selector);
             src.escrow.migrateFrom(tokenId);
         }
         vm.stopPrank();
     }
+    function testCannotDepositIfMigrationEnabled() public {
+        src.escrow.enableMigration(address(dst.escrow));
+        address depositor = address(420);
+
+        src.token.mint(depositor, 100 ether);
+        uint tokenId;
+
+        vm.startPrank(depositor);
+        {
+            src.token.approve(address(src.escrow), 100 ether);
+            vm.expectRevert(MigrationActive.selector);
+            tokenId = src.escrow.createLock(100 ether);
+        }
+        vm.stopPrank();
+    }
 
     function testCannotMigrateIfMigratorRoleNotGivenToDestination() public {
-        src.escrow.enableMigration(address(dst.escrow));
-
         address depositor = address(420);
 
         src.token.mint(depositor, 100 ether);
@@ -137,7 +155,13 @@ contract TestMigrationStateless is MigrationBase {
             tokenId = src.escrow.createLock(100 ether);
 
             vm.warp(src.clock.checkpointInterval() + 1);
+        }
+        vm.stopPrank();
 
+        src.escrow.enableMigration(address(dst.escrow));
+
+        vm.startPrank(depositor);
+        {
             vm.expectRevert(
                 _authErr(
                     address(dst.dao),
@@ -152,8 +176,6 @@ contract TestMigrationStateless is MigrationBase {
     }
 
     function testMigrateFromAndTo() public {
-        src.escrow.enableMigration(address(dst.escrow));
-
         dst.dao.grant({
             _who: address(src.escrow),
             _where: address(dst.escrow),
@@ -170,9 +192,14 @@ contract TestMigrationStateless is MigrationBase {
         {
             src.token.approve(address(src.escrow), 100 ether);
             tokenId = src.escrow.createLock(100 ether);
+        }
+        vm.stopPrank();
 
-            vm.warp(src.clock.checkpointInterval() + 1);
+        vm.warp(src.clock.checkpointInterval() + 1);
+        src.escrow.enableMigration(address(dst.escrow));
 
+        vm.startPrank(depositor);
+        {
             vm.expectEmit(true, true, true, true);
             emit Migrated(depositor, tokenId, 1, 100 ether);
             newTokenId = src.escrow.migrateFrom(tokenId);

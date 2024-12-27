@@ -44,18 +44,17 @@ contract TestMigrationStateful is MigrationBase, IGaugeVote {
 
     // tests votes reset if the user is voting
     function testVotesResetIfVoting(uint32 _warp) public {
-        src.escrow.enableMigration(address(migrator));
-
         // setup a gauge vote
         src.voter.createGauge(gauge, "metadata");
 
         address depositor = address(420);
         src.token.mint(depositor, 100 ether);
+        uint tokenId;
 
         vm.startPrank(depositor);
         {
             src.token.approve(address(src.escrow), 100 ether);
-            uint tokenId = src.escrow.createLock(100 ether);
+            tokenId = src.escrow.createLock(100 ether);
 
             // arbitrary jump for voting power
             vm.warp(1 weeks);
@@ -68,10 +67,15 @@ contract TestMigrationStateful is MigrationBase, IGaugeVote {
 
             // check votes are set
             assertGt(src.voter.totalVotingPowerCast(), 0, "votes cast");
+        }
+        vm.stopPrank();
 
-            // random warp: means we can be in either voting or non-voting period
-            vm.warp(block.timestamp + uint(_warp));
+        // random warp: means we can be in either voting or non-voting period
+        vm.warp(block.timestamp + uint(_warp));
+        src.escrow.enableMigration(address(migrator));
 
+        vm.startPrank(depositor);
+        {
             // migrate - requires approving the escrow
             src.nftLock.approve(address(src.escrow), tokenId);
             src.escrow.migrateFrom(tokenId);
@@ -83,7 +87,6 @@ contract TestMigrationStateful is MigrationBase, IGaugeVote {
     }
 
     function testExitingUserIsUnaffected() public {
-        src.escrow.enableMigration(address(dst.escrow));
         dst.dao.grant({
             _who: address(src.escrow),
             _where: address(dst.escrow),
@@ -112,6 +115,8 @@ contract TestMigrationStateful is MigrationBase, IGaugeVote {
             bobTokenId = src.escrow.createLock(100 ether);
         }
         vm.stopPrank();
+
+        src.escrow.enableMigration(address(dst.escrow));
 
         // u1 goes through the exit queue
         vm.warp(10 weeks); // arbitrary time
