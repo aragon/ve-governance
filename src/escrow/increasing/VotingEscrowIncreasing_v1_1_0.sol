@@ -120,7 +120,9 @@ contract VotingEscrowV1_1_0 is
         // check the migration contract is set and the tokenid is active
         if (migrator == address(0)) revert MigrationNotActive();
         if (!IERC721EMB(lockNFT).isApprovedOrOwner(_msgSender(), _tokenId)) revert NotOwner();
-        if (votingPower(_tokenId) == 0) revert CannotExit();
+
+        uint256 votingPowerSnapshot = votingPower(_tokenId);
+        if (votingPowerSnapshot == 0) revert CannotExit();
 
         // the user should be approved
         address owner = IERC721EMB(lockNFT).ownerOf(_tokenId);
@@ -143,7 +145,7 @@ contract VotingEscrowV1_1_0 is
         newTokenId = VotingEscrowV1_1_0(migrator).migrateTo(value, owner);
 
         // emit the migrated event
-        emit Migrated(owner, _tokenId, newTokenId, value);
+        emit Migrated(owner, _tokenId, newTokenId, value, votingPowerSnapshot);
 
         return newTokenId;
     }
