@@ -12,6 +12,6 @@ library CurveConstantLib {
     /// @dev linear curve with zero quadratic term
     int256 internal constant SHARED_QUADRATIC_COEFFICIENT = 0;
 
-    /// @dev the maxiumum number of epochs the cure can keep increasing
+    /// @dev the maximum number of epochs the cure can keep increasing
     uint256 internal constant MAX_EPOCHS = 5;
 }
