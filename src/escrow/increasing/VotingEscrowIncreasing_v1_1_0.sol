@@ -68,7 +68,7 @@ contract VotingEscrowV1_1_0 is
                               Helper Contracts
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Address of the underying ERC20 token.
+    /// @notice Address of the underlying ERC20 token.
     /// @dev Only tokens with 18 decimals and no transfer fees are supported
     address public token;
 
@@ -115,7 +115,7 @@ contract VotingEscrowV1_1_0 is
     /// @notice Defined on the staking contract being exited from - burn the tokenId and mint a new one.
     /// @dev Skips withdrawal queue logic and vote resets
     /// @param _tokenId veNFT to migrate from
-    /// @return newTokenId veNFT created during the migrationg
+    /// @return newTokenId veNFT created during the migration
     function migrateFrom(uint256 _tokenId) external nonReentrant returns (uint256 newTokenId) {
         // check the migration contract is set and the tokenid is active
         if (migrator == address(0)) revert MigrationNotActive();
