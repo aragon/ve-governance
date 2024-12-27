@@ -122,12 +122,12 @@ contract Lock is
 
     /// @notice Minting and burning functions that can only be called by the escrow contract
     /// @dev Safe mint ensures contract addresses are ERC721 Receiver contracts
-    function mint(address _to, uint256 _tokenId) external onlyEscrow nonReentrant {
+    function mint(address _to, uint256 _tokenId) external nonReentrant onlyEscrow {
         _safeMint(_to, _tokenId);
     }
 
     /// @notice Minting and burning functions that can only be called by the escrow contract
-    function burn(uint256 _tokenId) external onlyEscrow nonReentrant {
+    function burn(uint256 _tokenId) external nonReentrant onlyEscrow {
         _burn(_tokenId);
     }
 
