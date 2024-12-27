@@ -200,8 +200,9 @@ contract TestMigrationStateless is MigrationBase {
 
         vm.startPrank(depositor);
         {
+            uint votingPower = src.escrow.votingPower(tokenId);
             vm.expectEmit(true, true, true, true);
-            emit Migrated(depositor, tokenId, 1, 100 ether);
+            emit Migrated(depositor, tokenId, 1, 100 ether, votingPower);
             newTokenId = src.escrow.migrateFrom(tokenId);
         }
         vm.stopPrank();
