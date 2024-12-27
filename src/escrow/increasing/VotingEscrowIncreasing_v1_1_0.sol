@@ -91,7 +91,7 @@ contract VotingEscrowV1_1_0 is
     bool private _lockNFTSet;
 
     /*//////////////////////////////////////////////////////////////
-                              Added: V1.1.0
+                              Added: V2
     //////////////////////////////////////////////////////////////*/
 
     /// @notice The destination staking contract can add this to allow another address to call
@@ -116,7 +116,7 @@ contract VotingEscrowV1_1_0 is
     /// @dev Skips withdrawal queue logic and vote resets
     /// @param _tokenId veNFT to migrate from
     /// @return newTokenId veNFT created during the migrationg
-    function migrateFrom(uint256 _tokenId) external returns (uint256 newTokenId) {
+    function migrateFrom(uint256 _tokenId) external nonReentrant returns (uint256 newTokenId) {
         // check the migration contract is set and the tokenid is active
         if (migrator == address(0)) revert MigrationNotActive();
         if (!IERC721EMB(lockNFT).isApprovedOrOwner(_msgSender(), _tokenId)) revert NotOwner();
