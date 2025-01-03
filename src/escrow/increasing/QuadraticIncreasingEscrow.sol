@@ -55,6 +55,34 @@ contract QuadraticIncreasingEscrow is
     mapping(uint256 => TokenPoint[1_000_000_000]) internal _tokenPointHistory;
 
     /*//////////////////////////////////////////////////////////////
+			    STORAGE PROOF
+    //////////////////////////////////////////////////////////////*/
+
+    /// includes the tokenid in the struct
+    struct SP__ENTRY {
+        uint256 tokenId;
+        TokenPoint data;
+    }
+
+    // enumerable array for all the entries
+    SP__ENTRY[] public entries;
+
+    function getTokenPointHistory(uint256 _tokenId) external view returns (TokenPoint[] memory) {
+        // check the interval
+        uint256 ival = tokenPointIntervals[_tokenId];
+
+        TokenPoint[] memory history = new TokenPoint[](ival);
+
+        if (ival > 0) {
+            for (uint256 i; i <= ival; i++) {
+                history[i] = _tokenPointHistory[_tokenId][i];
+            }
+        }
+
+        return history;
+    }
+
+    /*//////////////////////////////////////////////////////////////
                                 MATH
     //////////////////////////////////////////////////////////////*/
 
