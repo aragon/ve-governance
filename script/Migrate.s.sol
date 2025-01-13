@@ -5,7 +5,8 @@ import {Script, console} from "forge-std/Script.sol";
 import {DAO, IDAO} from "@aragon/osx/core/dao/DAO.sol";
 import {GaugesDaoFactory, DeploymentParameters, Deployment, TokenParameters} from "../src/factory/GaugesDaoFactory.sol";
 import {Multisig, MultisigSetup as MultisigPluginSetup} from "@aragon/osx/plugins/governance/multisig/MultisigSetup.sol";
-import {VotingEscrow, Clock, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams} from "src/voting/SimpleGaugeVoterSetup.sol";
+import {Clock, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams} from "src/voting/SimpleGaugeVoterSetup.sol";
+import {VotingEscrowV1_1_0 as VotingEscrow} from "src/escrow/increasing/VotingEscrowIncreasing_v1_1_0.sol";
 import {PluginRepo} from "@aragon/osx/framework/plugin/repo/PluginRepo.sol";
 import {PluginRepoFactory} from "@aragon/osx/framework/plugin/repo/PluginRepoFactory.sol";
 import {PluginSetupProcessor} from "@aragon/osx/framework/plugin/setup/PluginSetupProcessor.sol";
@@ -118,7 +119,7 @@ contract Migrate is Script {
                 (
                     address(dst.votingEscrow),
                     address(src.votingEscrow),
-                    dst.votingEscrow.MIGRATOR_ROLE()
+                    VotingEscrow(address(dst.votingEscrow)).MIGRATOR_ROLE()
                 )
             )
         });
@@ -132,7 +133,10 @@ contract Migrate is Script {
         actions[0] = IDAO.Action({
             to: address(src.votingEscrow),
             value: 0,
-            data: abi.encodeCall(src.votingEscrow.enableMigration, (address(dst.votingEscrow)))
+            data: abi.encodeCall(
+                VotingEscrow(address(src.votingEscrow)).enableMigration,
+                (address(dst.votingEscrow))
+            )
         });
 
         _buildSignProposal(actions, srcMultisig);
