@@ -15,7 +15,7 @@ import {PluginSetup} from "@aragon/osx/framework/plugin/setup/PluginSetup.sol";
 
 // these should be interfaces
 import {SimpleGaugeVoterV1_1_0 as SimpleGaugeVoter} from "@voting/SimpleGaugeVoter_v1_1_0.sol";
-import {VotingEscrowV1_1_0 as VotingEscrow} from "@escrow/VotingEscrowIncreasing_v1_1_0.sol";
+import {VotingEscrow} from "@escrow/VotingEscrowIncreasing.sol";
 import {ExitQueue} from "@escrow/ExitQueue.sol";
 import {QuadraticIncreasingEscrow} from "@escrow/QuadraticIncreasingEscrow.sol";
 import {Clock} from "@clock/Clock.sol";
