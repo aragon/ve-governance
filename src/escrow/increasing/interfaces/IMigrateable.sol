@@ -21,14 +21,17 @@ interface IMigrateableEventsAndErrors {
     /// @param oldTokenId TokenId burned in the old staking contract
     /// @param newTokenId TokenId minted in the new staking contract
     /// @param amount The locked amount migrated between contracts
+    /// @param votingPower The voting power at the time of migration
     event Migrated(
         address indexed owner,
         uint256 indexed oldTokenId,
         uint256 indexed newTokenId,
-        uint256 amount
+        uint256 amount,
+        uint256 votingPower
     );
     error MigrationAlreadySet();
     error MigrationNotActive();
+    error MigrationActive();
 }
 
 interface IMigrateable is IMigrateableFrom, IMigrateableTo, IMigrateableEventsAndErrors {}
