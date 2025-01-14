@@ -40,8 +40,11 @@ ft-mode-migration :; forge test --match-contract TestMigrate \
 	--rpc-url https://mainnet.mode.network/ \
 	--fork-block-number 17215462 \
 	-vv
-	 
-
+	
+ft-mode-upgrade-fork :; forge test --match-contract TestUpgradeToV110 \
+	--rpc-url https://mainnet.mode.network/ \
+	--fork-block-number 18336106 \
+	-vvvv
 
 
 #### Deployments ####
