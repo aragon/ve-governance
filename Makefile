@@ -46,6 +46,11 @@ ft-mode-upgrade-fork :; forge test --match-contract TestUpgradeToV110 \
 	--fork-block-number 18336106 \
 	-vvvv
 
+ft-mode-sepolia-upgrade-fork :; forge test --match-contract TestUpgradeToV110 \
+	--rpc-url https://sepolia.mode.network/ \
+	--fork-block-number 24750860 \
+	-vvvv
+
 
 #### Deployments ####
 

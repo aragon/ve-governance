@@ -6,22 +6,27 @@ import "forge-std/Test.sol";
 import {Multisig} from "@aragon/multisig/Multisig.sol";
 import {VotingEscrow, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams} from "src/voting/SimpleGaugeVoterSetup.sol";
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
+import {GaugesDaoFactory, GaugePluginSet, DeploymentParameters, Deployment, TokenParameters, DAO} from "src/factory/GaugesDaoFactory.sol";
 
 uint256 constant PROPOSAL_ID = 44; // pinned to block 18336106
 contract TestUpgradeToV110 is Test {
+    GaugesDaoFactory factory;
+    GaugePluginSet modePluginSet;
+    GaugePluginSet bptPluginSet;
+
+    /// @dev Mode multisig executing via the dao
+    Multisig modeMultisig;
+
+    /// @dev Mode dao owning the contracts
+    DAO modeDAO;
+
     /// @dev Aragon signer multisig on the mode multisig
     Multisig aragonMultisig = Multisig(address(0x4315B4D2C707981f7fA51DBE91079Ea8c44e2e95));
 
-    /// @dev Mode multisig owning the contracts
-    Multisig modeMultisig = Multisig(address(0x0eB63a3565942D16C1c1211bD78F1B3Dcfe1A254));
-
-    /// also the bpt
-    Lock lockMode = Lock(address(0x06ab1Dc3c330E9CeA4fDF0C7C6F6Fb6442A4273C));
-    Lock lockBPT = Lock(address(0x19d1c7958b2CacBc796b51b98F7d86ccaa6950eE));
-    SimpleGaugeVoter voterMode =
-        SimpleGaugeVoter(address(0x71439Ae82068E19ea90e4F506c74936aE170Cf58));
-    SimpleGaugeVoter voterBPT =
-        SimpleGaugeVoter(address(0x2aA8A5C1Af4EA11A1f1F10f3b73cfB30419F77Fb));
+    Lock lockMode;
+    Lock lockBPT;
+    SimpleGaugeVoter voterMode;
+    SimpleGaugeVoter voterBPT;
 
     address[] aragonSigners;
     address[] modeSigners;
@@ -34,16 +39,144 @@ contract TestUpgradeToV110 is Test {
     }
 
     function setModeSigners() internal {
-        modeSigners.push(address(0x7d37E514aFB8CB7BD921b06317b5fC42066c3222));
-        modeSigners.push(address(0x0825BdB1A5868682B1F880CF1E743e0bA4634ceC));
-        modeSigners.push(address(0x3B6B12fd2a042A82b2E3e4BB94611C4e054004bC));
-        modeSigners.push(address(0x712A7e401cC0dB2D61707af269EdE852A1E53192));
+        address[] memory signers = readMultisigMembers();
+        for (uint256 i = 0; i < signers.length; i++) {
+            modeSigners.push(signers[i]);
+        }
+    }
+
+    function readMultisigMembers() public view returns (address[] memory result) {
+        // JSON list of members
+        string memory membersFilePath = vm.envString("MULTISIG_MEMBERS_JSON_FILE_NAME");
+        string memory path = string.concat(vm.projectRoot(), membersFilePath);
+        string memory strJson = vm.readFile(path);
+
+        bool exists = vm.keyExistsJson(strJson, "$.members");
+        if (!exists) revert("EmptyMultisig()");
+
+        result = vm.parseJsonAddressArray(strJson, "$.members");
+
+        if (result.length == 0) revert("EmptyMultisig()");
+    }
+
+    function _retrieveDeployment(address _factoryAddress) internal {
+        factory = GaugesDaoFactory(_factoryAddress);
+        Deployment memory deployment = factory.getDeployment();
+        modePluginSet = deployment.gaugeVoterPluginSets[0];
+        bptPluginSet = deployment.gaugeVoterPluginSets[1];
+        modeMultisig = deployment.multisigPlugin;
+        modeDAO = deployment.dao;
+
+        // bind the voter and lock contracts
+        lockMode = modePluginSet.nftLock;
+        lockBPT = bptPluginSet.nftLock;
+
+        voterMode = modePluginSet.plugin;
+        voterBPT = bptPluginSet.plugin;
     }
 
     function testUpgrade() public {
-        setAragonSigners();
         setModeSigners();
 
+        _retrieveDeployment(vm.envAddress("FACTORY_ADDRESS"));
+
+        // save the old impls
+        address lockImplOld = lockMode.implementation();
+        address voterImplOld = voterMode.implementation();
+        address lockBPTImplOld = lockBPT.implementation();
+        address voterBPTImplOld = voterBPT.implementation();
+
+        // check the uri is not currently there and reverts if we call
+        vm.startPrank(address(modeDAO));
+        {
+            try lockMode.setBaseURI("should revert") {
+                revert("should revert");
+            } catch {}
+
+            try lockBPT.setBaseURI("should revert") {
+                revert("should revert");
+            } catch {}
+        }
+        vm.stopPrank();
+
+        uint proposalId = createUpgradeProposal();
+
+        _signExecuteMultisigProposal(proposalId, modeSigners, modeMultisig);
+
+        // test
+        address lockImplNew = lockMode.implementation();
+        address voterImplNew = voterMode.implementation();
+        address lockBPTImplNew = lockBPT.implementation();
+        address voterBPTImplNew = voterBPT.implementation();
+
+        assertNotEq(lockImplOld, lockImplNew);
+        assertNotEq(voterImplOld, voterImplNew);
+        assertNotEq(lockBPTImplOld, lockImplNew);
+        assertNotEq(voterBPTImplOld, voterImplNew);
+
+        // uri is there on the new locks
+        vm.startPrank(address(modeDAO));
+        {
+            lockMode.setBaseURI("https://lockmode.com/");
+            lockBPT.setBaseURI("https://lockbpt.com/");
+        }
+        vm.stopPrank();
+    }
+
+    function createUpgradeProposal() internal returns (uint256 proposalId) {
+        IDAO.Action[] memory actions = buildActions();
+
+        /// if the network is mode, the proposal will be created on the aragon multisig
+        /// first, then reviewed, then sent to the mode team multisig for execution
+        string memory network = vm.envString("NETWORK");
+        if (strEq(network, "mode") || strEq(network, "mode-mainnet")) {
+            setAragonSigners();
+            IDAO.Action[] memory outerAction = new IDAO.Action[](1);
+
+            outerAction[0] = IDAO.Action({
+                to: address(modeMultisig),
+                value: 0,
+                data: abi.encodeCall(
+                    modeMultisig.createProposal,
+                    (
+                        "metadata goes here",
+                        actions,
+                        0,
+                        true,
+                        false,
+                        0,
+                        uint64(block.timestamp) + 1 weeks
+                    )
+                )
+            });
+
+            // sign on aragon
+            uint outerId;
+            vm.startPrank(aragonSigners[0]);
+            {
+                outerId = _buildMsigProposal(outerAction, aragonSigners, aragonMultisig);
+            }
+            vm.stopPrank();
+
+            _signExecuteMultisigProposal(outerId, aragonSigners, aragonMultisig);
+
+            // we dont expose the inner proposal id, so we know in advance from the pinned block
+            // what will be the next proposal id to be created
+            proposalId = PROPOSAL_ID;
+        }
+        // if running on a testnet, we are directly creating the proposal on the mode multisig
+        else if (strEq(network, "mode-sepolia")) {
+            vm.startPrank(modeSigners[0]);
+            {
+                proposalId = _buildMsigProposal(actions, modeSigners, modeMultisig);
+            }
+            vm.stopPrank();
+        } else {
+            revert("Network not recognized, expected mode, mode-mainnet or mode-sepolia");
+        }
+    }
+
+    function buildActions() internal returns (IDAO.Action[] memory) {
         // action 1: deploy new impls
         address lockImplNew = address(new Lock());
         address voterImplNew = address(new SimpleGaugeVoter());
@@ -74,44 +207,7 @@ contract TestUpgradeToV110 is Test {
             data: abi.encodeCall(voterBPT.upgradeTo, (voterImplNew))
         });
 
-        // this needs to be wrapped into a create proposal action on the mode msig via the aragon
-
-        IDAO.Action[] memory outerAction = new IDAO.Action[](1);
-
-        outerAction[0] = IDAO.Action({
-            to: address(modeMultisig),
-            value: 0,
-            data: abi.encodeCall(
-                modeMultisig.createProposal,
-                (
-                    "metadata goes here",
-                    actions,
-                    0,
-                    true,
-                    false,
-                    0,
-                    uint64(block.timestamp) + 1 weeks
-                )
-            )
-        });
-
-        // sign on aragon
-        uint outerId = _buildMsigProposal(outerAction, aragonSigners, aragonMultisig);
-
-        _signExecuteMultisigProposal(outerId, aragonSigners, aragonMultisig);
-
-        // sign on mode
-        _signExecuteMultisigProposal(PROPOSAL_ID, modeSigners, modeMultisig);
-
-        // test
-        assertEq(lockMode.implementation(), lockImplNew);
-        assertEq(voterMode.implementation(), voterImplNew);
-        assertEq(lockBPT.implementation(), lockImplNew);
-        assertEq(voterBPT.implementation(), voterImplNew);
-
-        // uri is there on the new locks
-        lockMode.tokenURI(1);
-        lockBPT.tokenURI(1);
+        return actions;
     }
 
     function _buildMsigProposal(
@@ -119,8 +215,6 @@ contract TestUpgradeToV110 is Test {
         address[] memory _signers,
         Multisig _multisig
     ) internal returns (uint256 proposalId) {
-        // prank the first signer who will create stuff
-        vm.startPrank(_signers[0]);
         {
             proposalId = _multisig.createProposal({
                 _metadata: "Outer proposal metadata",
@@ -132,7 +226,6 @@ contract TestUpgradeToV110 is Test {
                 _endDate: uint64(block.timestamp) + 1 weeks
             });
         }
-        vm.stopPrank();
 
         return proposalId;
     }
@@ -161,5 +254,9 @@ contract TestUpgradeToV110 is Test {
             _multisig.execute(_proposalId);
         }
         vm.stopPrank();
+    }
+
+    function strEq(string memory a, string memory b) internal pure returns (bool) {
+        return keccak256(abi.encodePacked(a)) == keccak256(abi.encodePacked(b));
     }
 }
