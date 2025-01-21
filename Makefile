@@ -53,6 +53,19 @@ ft-mode-sepolia-upgrade-fork :; forge test --match-contract TestUpgradeToV110 \
 
 
 #### Deployments ####
+upgrade-preview-mode-sepolia :; export TRY_EXECUTE=true && forge script UpgradeToV110 \
+	--rpc-url https://sepolia.mode.network \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	-vvvvv
+
+upgrade-mode-sepolia :; export TRY_EXECUTE=true && forge script UpgradeToV110 \
+	--rpc-url https://sepolia.mode.network \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	--broadcast \
+	--verify \
+	--verifier blockscout \
+	--verifier-url https://sepolia.explorer.mode.network/api\? \
+	-vvvvv
 
 deploy-preview-mode-sepolia :; forge script DeployGauges \
   --rpc-url https://sepolia.mode.network \

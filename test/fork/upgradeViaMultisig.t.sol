@@ -77,8 +77,10 @@ contract TestUpgradeToV110 is Test {
 
     function testUpgrade() public {
         setModeSigners();
+        setAragonSigners();
 
         _retrieveDeployment(vm.envAddress("FACTORY_ADDRESS"));
+        string memory network = vm.envString("NETWORK");
 
         // save the old impls
         address lockImplOld = lockMode.implementation();
@@ -99,7 +101,26 @@ contract TestUpgradeToV110 is Test {
         }
         vm.stopPrank();
 
-        uint proposalId = createUpgradeProposal();
+        uint proposalId;
+        IDAO.Action[] memory actions = buildActions();
+        if (isMainnet(network)) {
+            vm.startPrank(aragonSigners[0]);
+            uint256 aragonProposalId = _createAragonMsigProposal(actions);
+            vm.stopPrank();
+            _executeAragonProposal(aragonProposalId);
+            proposalId = PROPOSAL_ID;
+        } else if (isTestnet(network)) {
+            vm.startPrank(modeSigners[0]);
+            proposalId = _buildMsigProposal(
+                actions,
+                modeSigners,
+                modeMultisig,
+                vm.envOr("TRY_EXECUTE", false)
+            );
+            vm.stopPrank();
+        } else {
+            revert("Invalid network");
+        }
 
         _signExecuteMultisigProposal(proposalId, modeSigners, modeMultisig);
 
@@ -123,57 +144,42 @@ contract TestUpgradeToV110 is Test {
         vm.stopPrank();
     }
 
-    function createUpgradeProposal() internal returns (uint256 proposalId) {
-        IDAO.Action[] memory actions = buildActions();
+    function _createAragonMsigProposal(
+        IDAO.Action[] memory _actions
+    ) internal returns (uint256 proposalId) {
+        IDAO.Action[] memory outerAction = new IDAO.Action[](1);
 
-        /// if the network is mode, the proposal will be created on the aragon multisig
-        /// first, then reviewed, then sent to the mode team multisig for execution
-        string memory network = vm.envString("NETWORK");
-        if (strEq(network, "mode") || strEq(network, "mode-mainnet")) {
-            setAragonSigners();
-            IDAO.Action[] memory outerAction = new IDAO.Action[](1);
-
-            outerAction[0] = IDAO.Action({
-                to: address(modeMultisig),
-                value: 0,
-                data: abi.encodeCall(
-                    modeMultisig.createProposal,
-                    (
-                        "metadata goes here",
-                        actions,
-                        0,
-                        true,
-                        false,
-                        0,
-                        uint64(block.timestamp) + 1 weeks
-                    )
+        outerAction[0] = IDAO.Action({
+            to: address(modeMultisig),
+            value: 0,
+            data: abi.encodeCall(
+                modeMultisig.createProposal,
+                (
+                    "metadata goes here",
+                    _actions,
+                    0,
+                    true,
+                    false,
+                    0,
+                    uint64(block.timestamp) + 1 weeks
                 )
-            });
+            )
+        });
 
-            // sign on aragon
-            uint outerId;
-            vm.startPrank(aragonSigners[0]);
-            {
-                outerId = _buildMsigProposal(outerAction, aragonSigners, aragonMultisig);
-            }
-            vm.stopPrank();
+        // need to build on aragon first
+        proposalId = _buildMsigProposal(outerAction, aragonSigners, aragonMultisig, false);
+    }
 
-            _signExecuteMultisigProposal(outerId, aragonSigners, aragonMultisig);
+    function _executeAragonProposal(uint outerId) internal {
+        _signExecuteMultisigProposal(outerId, aragonSigners, aragonMultisig);
+    }
 
-            // we dont expose the inner proposal id, so we know in advance from the pinned block
-            // what will be the next proposal id to be created
-            proposalId = PROPOSAL_ID;
-        }
-        // if running on a testnet, we are directly creating the proposal on the mode multisig
-        else if (strEq(network, "mode-sepolia")) {
-            vm.startPrank(modeSigners[0]);
-            {
-                proposalId = _buildMsigProposal(actions, modeSigners, modeMultisig);
-            }
-            vm.stopPrank();
-        } else {
-            revert("Network not recognized, expected mode, mode-mainnet or mode-sepolia");
-        }
+    function isMainnet(string memory _network) internal view returns (bool) {
+        return strEq(_network, "mode") || strEq(_network, "mode-mainnet");
+    }
+
+    function isTestnet(string memory _network) internal view returns (bool) {
+        return strEq(_network, "mode-sepolia");
     }
 
     function buildActions() internal returns (IDAO.Action[] memory) {
@@ -213,7 +219,8 @@ contract TestUpgradeToV110 is Test {
     function _buildMsigProposal(
         IDAO.Action[] memory _actions,
         address[] memory _signers,
-        Multisig _multisig
+        Multisig _multisig,
+        bool _tryExecution
     ) internal returns (uint256 proposalId) {
         {
             proposalId = _multisig.createProposal({
@@ -221,7 +228,7 @@ contract TestUpgradeToV110 is Test {
                 _actions: _actions,
                 _allowFailureMap: 0,
                 _approveProposal: true,
-                _tryExecution: false,
+                _tryExecution: _tryExecution,
                 _startDate: 0,
                 _endDate: uint64(block.timestamp) + 1 weeks
             });
@@ -236,7 +243,6 @@ contract TestUpgradeToV110 is Test {
         Multisig _multisig
     ) internal {
         // load all the proposers into memory other than the first
-
         if (_signers.length > 1) {
             // have them sign
             for (uint256 i = 1; i < _signers.length; i++) {
