@@ -9,7 +9,7 @@ import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {GaugesDaoFactory, GaugePluginSet, DeploymentParameters, Deployment, TokenParameters, DAO} from "src/factory/GaugesDaoFactory.sol";
 import {IGaugeVote} from "@voting/ISimpleGaugeVoter.sol";
 
-uint256 constant PROPOSAL_ID = 44; // pinned to block 18336106
+uint256 constant PROPOSAL_ID = 47; // pinned to block on mainnet
 contract TestUpgradeToV110 is Test {
     GaugesDaoFactory factory;
     GaugePluginSet modePluginSet;
