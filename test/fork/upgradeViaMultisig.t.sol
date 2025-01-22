@@ -32,6 +32,9 @@ contract TestUpgradeToV110 is Test {
     address[] aragonSigners;
     address[] modeSigners;
 
+    // metadata for the proposal, pinned to pinata
+    bytes ipfsURI = bytes("ipfs://bafkreifbolvifin7oomrsdxnf6nej46mwka6oh3yon4yxdwkpdq7ku62wq");
+
     function setAragonSigners() internal {
         aragonSigners.push(address(0x946138B088524414EEDaf0699BA10d7Fb5673A34));
         aragonSigners.push(address(0xbd3eE47A1576F26454C65B96b7AbfaF8Ee9cB4a1));
@@ -210,15 +213,7 @@ contract TestUpgradeToV110 is Test {
             value: 0,
             data: abi.encodeCall(
                 modeMultisig.createProposal,
-                (
-                    "metadata goes here",
-                    _actions,
-                    0,
-                    true,
-                    false,
-                    0,
-                    uint64(block.timestamp) + 1 weeks
-                )
+                (ipfsURI, _actions, 0, true, false, 0, uint64(block.timestamp) + 1 weeks)
             )
         });
 
@@ -280,7 +275,7 @@ contract TestUpgradeToV110 is Test {
     ) internal returns (uint256 proposalId) {
         {
             proposalId = _multisig.createProposal({
-                _metadata: "Outer proposal metadata",
+                _metadata: ipfsURI,
                 _actions: _actions,
                 _allowFailureMap: 0,
                 _approveProposal: true,

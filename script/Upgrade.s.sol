@@ -13,12 +13,13 @@ contract UpgradeToV110 is Script, TestUpgradeToV110 {
     function run() public {
         setModeSigners();
 
+        address signer = vm.envAddress("SIGNER_ADDRESS");
         bool tryExecute = vm.envBool("TRY_EXECUTE");
         string memory network = vm.envString("NETWORK");
         _retrieveDeployment(vm.envAddress("FACTORY_ADDRESS"));
 
         uint proposalId;
-        vm.startBroadcast(vm.addr(vm.envUint("DEPLOYMENT_PRIVATE_KEY")));
+        vm.startBroadcast(signer);
         {
             IDAO.Action[] memory actions = buildActions();
             if (isMainnet(network)) {
