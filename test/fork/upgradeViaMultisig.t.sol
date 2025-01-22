@@ -7,6 +7,7 @@ import {Multisig} from "@aragon/multisig/Multisig.sol";
 import {VotingEscrow, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams} from "src/voting/SimpleGaugeVoterSetup.sol";
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {GaugesDaoFactory, GaugePluginSet, DeploymentParameters, Deployment, TokenParameters, DAO} from "src/factory/GaugesDaoFactory.sol";
+import {IGaugeVote} from "@voting/ISimpleGaugeVoter.sol";
 
 uint256 constant PROPOSAL_ID = 44; // pinned to block 18336106
 contract TestUpgradeToV110 is Test {
@@ -43,6 +44,13 @@ contract TestUpgradeToV110 is Test {
         for (uint256 i = 0; i < signers.length; i++) {
             modeSigners.push(signers[i]);
         }
+    }
+
+    // hardcoded staker, may or may not be voting at block
+    function getStaker(string memory _network) public view returns (address staker) {
+        if (isMainnet(_network)) return 0xE28842dAF2cDe94EecC81b26A436eB043454F010;
+        else if (isTestnet(_network)) return 0x8bF0280B2557B98532EC21e6c070Dba1bFAaDbf2;
+        else revert("Invalid network");
     }
 
     function readMultisigMembers() public view returns (address[] memory result) {
@@ -142,6 +150,54 @@ contract TestUpgradeToV110 is Test {
             lockBPT.setBaseURI("https://lockbpt.com/");
         }
         vm.stopPrank();
+
+        // check that reset is allowed during a voting window
+
+        // fetch a staker
+        address staker = getStaker(network);
+        bool isVotingActive = voterMode.votingActive();
+        // are they voting? if not, move to voting window
+
+        uint veNFT = VotingEscrow(voterMode.escrow()).ownedTokens(staker)[0];
+        if (!voterMode.isVoting(veNFT)) {
+            // create the gauge and vote for it
+            vm.startPrank(address(modeDAO));
+            {
+                voterMode.unpause();
+                voterMode.createGauge(address(1993), "");
+            }
+            vm.stopPrank();
+
+            // vote by moving to voting window
+            if (!isVotingActive) {
+                vm.warp(block.timestamp + 1 weeks);
+            }
+
+            vm.startPrank(staker);
+            {
+                IGaugeVote.GaugeVote[] memory votes = new IGaugeVote.GaugeVote[](1);
+                votes[0] = IGaugeVote.GaugeVote({weight: 1, gauge: address(1993)});
+                voterMode.vote(veNFT, votes);
+            }
+            vm.stopPrank();
+        }
+
+        // move to the dist window
+        if (isVotingActive) {
+            vm.warp(block.timestamp + 1 weeks);
+        }
+
+        // call reset
+        assertEq(voterMode.isVoting(veNFT), true);
+        assertEq(voterMode.votingActive(), false);
+
+        vm.startPrank(staker);
+        {
+            voterMode.reset(veNFT);
+        }
+        vm.stopPrank();
+
+        assertEq(voterMode.isVoting(veNFT), false);
     }
 
     function _createAragonMsigProposal(
