@@ -43,7 +43,7 @@ ft-mode-migration :; forge test --match-contract TestMigrate \
 	
 ft-mode-upgrade-fork :; forge test --match-contract TestUpgradeToV110 \
 	--rpc-url https://mainnet.mode.network/ \
-	--fork-block-number 18689270 \
+	--fork-block-number 18697900 \
 	-vvvv
 
 ft-mode-sepolia-upgrade-fork :; forge test --match-contract TestUpgradeToV110 \
@@ -68,15 +68,26 @@ upgrade-mode-sepolia :; export TRY_EXECUTE=true && forge script UpgradeToV110 \
 	-vvvvv
 
 # on an anvil fork will run the upgrade script
-anvil-fork-mode :; anvil -f https://mainnet.mode.network --fork-block-number 18689270 --auto-impersonate
+anvil-fork-mode :; anvil -f https://mainnet.mode.network --fork-block-number 18697900 # --auto-impersonate
 upgrade-fork-mode :; export TRY_EXECUTE=false && forge script UpgradeToV110 \
 	--rpc-url http://localhost:8545 \
-	--sender $(SIGNER_ADDRESS) \
-	--unlocked \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
 	--broadcast \
 	-vvvvv
 
+upgrade-preview-mode :; export TRY_EXECUTE=true && forge script UpgradeToV110 \
+	--rpc-url https://mainnet.mode.network \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	-vvvvv
 
+upgrade-mode :; export TRY_EXECUTE=true && forge script UpgradeToV110 \
+	--rpc-url https://mainnet.mode.network \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	--broadcast \
+	--verify \
+	--verifier blockscout \
+	--verifier-url https://explorer.mode.network/api\? \
+	-vvvvv
 
 deploy-preview-mode-sepolia :; forge script DeployGauges \
   --rpc-url https://sepolia.mode.network \

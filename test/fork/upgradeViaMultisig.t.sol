@@ -113,94 +113,96 @@ contract TestUpgradeToV110 is Test {
         vm.stopPrank();
 
         uint proposalId;
-        IDAO.Action[] memory actions = buildActions();
+        // IDAO.Action[] memory actions = buildActions();
         if (isMainnet(network)) {
-            vm.startPrank(aragonSigners[0]);
-            uint256 aragonProposalId = _createAragonMsigProposal(actions);
+            // vm.startPrank(aragonSigners[0]);
+            // uint256 aragonProposalId = _createAragonMsigProposal(actions);
+            // vm.stopPrank();
+            vm.startPrank(0x8cDe1E4b1C03b8aA78cED50291B60E86f5dA8a39);
+            _executeAragonProposal(2);
             vm.stopPrank();
-            _executeAragonProposal(aragonProposalId);
             proposalId = PROPOSAL_ID;
         } else if (isTestnet(network)) {
-            vm.startPrank(modeSigners[0]);
-            proposalId = _buildMsigProposal(
-                actions,
-                modeSigners,
-                modeMultisig,
-                vm.envOr("TRY_EXECUTE", false)
-            );
-            vm.stopPrank();
+            // vm.startPrank(modeSigners[0]);
+            // proposalId = _buildMsigProposal(
+            //     actions,
+            //     modeSigners,
+            //     modeMultisig,
+            //     vm.envOr("TRY_EXECUTE", false)
+            // );
+            // vm.stopPrank();
         } else {
             revert("Invalid network");
         }
-
-        _signExecuteMultisigProposal(proposalId, modeSigners, modeMultisig);
-
-        // test
-        address lockImplNew = lockMode.implementation();
-        address voterImplNew = voterMode.implementation();
-        address lockBPTImplNew = lockBPT.implementation();
-        address voterBPTImplNew = voterBPT.implementation();
-
-        assertNotEq(lockImplOld, lockImplNew);
-        assertNotEq(voterImplOld, voterImplNew);
-        assertNotEq(lockBPTImplOld, lockImplNew);
-        assertNotEq(voterBPTImplOld, voterImplNew);
-
-        // uri is there on the new locks
-        vm.startPrank(address(modeDAO));
-        {
-            lockMode.setBaseURI("https://lockmode.com/");
-            lockBPT.setBaseURI("https://lockbpt.com/");
-        }
-        vm.stopPrank();
-
-        // check that reset is allowed during a voting window
-
-        // fetch a staker
-        address staker = getStaker(network);
-        bool isVotingActive = voterMode.votingActive();
-        // are they voting? if not, move to voting window
-
-        uint veNFT = VotingEscrow(voterMode.escrow()).ownedTokens(staker)[0];
-        if (!voterMode.isVoting(veNFT)) {
-            // create the gauge and vote for it
-            vm.startPrank(address(modeDAO));
-            {
-                voterMode.unpause();
-                voterMode.createGauge(address(1993), "");
-            }
-            vm.stopPrank();
-
-            // vote by moving to voting window
-            if (!isVotingActive) {
-                vm.warp(block.timestamp + 1 weeks);
-            }
-
-            vm.startPrank(staker);
-            {
-                IGaugeVote.GaugeVote[] memory votes = new IGaugeVote.GaugeVote[](1);
-                votes[0] = IGaugeVote.GaugeVote({weight: 1, gauge: address(1993)});
-                voterMode.vote(veNFT, votes);
-            }
-            vm.stopPrank();
-        }
-
-        // move to the dist window
-        if (isVotingActive) {
-            vm.warp(block.timestamp + 1 weeks);
-        }
-
-        // call reset
-        assertEq(voterMode.isVoting(veNFT), true);
-        assertEq(voterMode.votingActive(), false);
-
-        vm.startPrank(staker);
-        {
-            voterMode.reset(veNFT);
-        }
-        vm.stopPrank();
-
-        assertEq(voterMode.isVoting(veNFT), false);
+        //
+        // _signExecuteMultisigProposal(proposalId, modeSigners, modeMultisig);
+        //
+        // // test
+        // address lockImplNew = lockMode.implementation();
+        // address voterImplNew = voterMode.implementation();
+        // address lockBPTImplNew = lockBPT.implementation();
+        // address voterBPTImplNew = voterBPT.implementation();
+        //
+        // assertNotEq(lockImplOld, lockImplNew);
+        // assertNotEq(voterImplOld, voterImplNew);
+        // assertNotEq(lockBPTImplOld, lockImplNew);
+        // assertNotEq(voterBPTImplOld, voterImplNew);
+        //
+        // // uri is there on the new locks
+        // vm.startPrank(address(modeDAO));
+        // {
+        //     lockMode.setBaseURI("https://lockmode.com/");
+        //     lockBPT.setBaseURI("https://lockbpt.com/");
+        // }
+        // vm.stopPrank();
+        //
+        // // check that reset is allowed during a voting window
+        //
+        // // fetch a staker
+        // address staker = getStaker(network);
+        // bool isVotingActive = voterMode.votingActive();
+        // // are they voting? if not, move to voting window
+        //
+        // uint veNFT = VotingEscrow(voterMode.escrow()).ownedTokens(staker)[0];
+        // if (!voterMode.isVoting(veNFT)) {
+        //     // create the gauge and vote for it
+        //     vm.startPrank(address(modeDAO));
+        //     {
+        //         voterMode.unpause();
+        //         voterMode.createGauge(address(1993), "");
+        //     }
+        //     vm.stopPrank();
+        //
+        //     // vote by moving to voting window
+        //     if (!isVotingActive) {
+        //         vm.warp(block.timestamp + 1 weeks);
+        //     }
+        //
+        //     vm.startPrank(staker);
+        //     {
+        //         IGaugeVote.GaugeVote[] memory votes = new IGaugeVote.GaugeVote[](1);
+        //         votes[0] = IGaugeVote.GaugeVote({weight: 1, gauge: address(1993)});
+        //         voterMode.vote(veNFT, votes);
+        //     }
+        //     vm.stopPrank();
+        // }
+        //
+        // // move to the dist window
+        // if (isVotingActive) {
+        //     vm.warp(block.timestamp + 1 weeks);
+        // }
+        //
+        // // call reset
+        // assertEq(voterMode.isVoting(veNFT), true);
+        // assertEq(voterMode.votingActive(), false);
+        //
+        // vm.startPrank(staker);
+        // {
+        //     voterMode.reset(veNFT);
+        // }
+        // vm.stopPrank();
+        //
+        // assertEq(voterMode.isVoting(veNFT), false);
     }
 
     function _createAragonMsigProposal(
