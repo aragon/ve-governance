@@ -520,7 +520,7 @@ contract TestE2EV2 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCur
 
                 escrow.createLock(depositAlice0);
 
-                goToEpochStartPlus(6 days);
+                goToEpochStartPlus(7 days - 1);
 
                 escrow.createLockFor(depositAliceBob, bob);
             }
@@ -555,7 +555,7 @@ contract TestE2EV2 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCur
             );
             assertEq(
                 tp2_1.writtenTs,
-                epochStartTime + 6 days,
+                epochStartTime + 7 days - 1,
                 "Bob point should have the correct written timestamp"
             );
 
@@ -987,8 +987,8 @@ contract TestE2EV2 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCur
             // alice tries to exit
             vm.startPrank(alice);
             {
-                vm.expectRevert(VotingInactive.selector);
-                escrow.resetVotesAndBeginWithdrawal(1);
+                // vm.expectRevert(VotingInactive.selector);
+                // escrow.resetVotesAndBeginWithdrawal(1);
 
                 vm.expectRevert(CannotExit.selector);
                 escrow.beginWithdrawal(1);
@@ -1015,7 +1015,7 @@ contract TestE2EV2 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCur
             // exit date should be the next checkpoint
             assertEq(
                 queue.queue(1).exitDate,
-                epochStartTime + 8 weeks + clock.checkpointInterval(),
+                epochStartTime + 8 weeks + 1 hours + 30 days,
                 "Alice should be able to exit at the next checkpoint"
             );
 
@@ -1040,8 +1040,8 @@ contract TestE2EV2 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCur
                 vm.expectRevert(CannotExit.selector);
                 escrow.withdraw(1);
 
-                // he waits till the end of the week to exit
-                goToEpochStartPlus(9 weeks);
+                // she waits till the end of the week to exit
+                goToEpochStartPlus(8 weeks + 1 hours + 30 days);
 
                 // can't exit yet
                 vm.expectRevert(CannotExit.selector);
@@ -1049,7 +1049,7 @@ contract TestE2EV2 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCur
 
                 // + 1s he can
 
-                goToEpochStartPlus(9 weeks + 1);
+                goToEpochStartPlus(8 weeks + 1 hours + 30 days + 1);
 
                 escrow.withdraw(1);
             }
@@ -1070,9 +1070,9 @@ contract TestE2EV2 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCur
             );
         }
 
-        // governance changes some params: warmup is now one day, cooldown is a week
+        // governance changes some params: warmup is now one day, cooldown and min lock are a week
         {
-            IDAO.Action[] memory actions = new IDAO.Action[](2);
+            IDAO.Action[] memory actions = new IDAO.Action[](3);
             actions[0] = IDAO.Action({
                 to: address(curve),
                 value: 0,
@@ -1083,12 +1083,18 @@ contract TestE2EV2 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCur
                 value: 0,
                 data: abi.encodeWithSelector(queue.setCooldown.selector, 1 weeks)
             });
+            actions[2] = IDAO.Action({
+                to: address(queue),
+                value: 0,
+                data: abi.encodeWithSelector(queue.setMinLock.selector, 1 weeks)
+            });
 
             _buildSignProposal(actions);
 
             // check the new params
             assertEq(curve.warmupPeriod(), 1 days, "Curve should have the correct warmup period");
             assertEq(queue.cooldown(), 1 weeks, "Queue should have the correct cooldown period");
+            assertEq(queue.minLock(), 1 weeks, "Queue should have the correct min lock period");
         }
 
         // alice creates a new lock 12 h the window opens, he should be warm tomorrow

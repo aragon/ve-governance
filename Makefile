@@ -34,7 +34,8 @@ ft-holesky-fork :; forge test --match-contract TestE2EV2 \
 # Fork testing - sepolia
 ft-sepolia-fork :; forge test --match-contract TestE2EV2 \
 	--rpc-url https://sepolia.drpc.org \
-	-vvvvv
+	--fork-block-number 7582770 \
+	-vvv
 
 ft-mode-migration :; forge test --match-contract TestMigrate \
 	--rpc-url https://mainnet.mode.network/ \
