@@ -1,0 +1,188 @@
+pragma solidity ^0.8.17;
+
+import {Test} from "forge-std/Test.sol";
+import {console2 as console} from "forge-std/console2.sol";
+
+// aragon contracts
+import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
+import {DAO} from "@aragon/osx/core/dao/DAO.sol";
+import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
+
+import {MockPluginSetupProcessor} from "@mocks/osx/MockPSP.sol";
+import {MockDAOFactory} from "@mocks/osx/MockDAOFactory.sol";
+import {MockERC20} from "@mocks/MockERC20.sol";
+
+import "@helpers/OSxHelpers.sol";
+
+import {IEscrowCurveTokenStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
+import {IWithdrawalQueueErrors} from "src/escrow/increasing/interfaces/IVotingEscrowIncreasing.sol";
+import {IGaugeVote} from "src/voting/ISimpleGaugeVoter.sol";
+import {VotingEscrow, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams} from "src/voting/SimpleGaugeVoterSetup_v1_2_0.sol";
+
+import {GaugeVotingBase} from "./GaugeVotingBase_v1_2_0.sol";
+
+contract TestGaugeTime is GaugeVotingBase {
+    function setUp() public override {
+        super.setUp();
+        vm.warp(0);
+    }
+
+    function nextDeposit() public view returns (uint256) {
+        return clock.epochNextCheckpointTs();
+    }
+
+    function testEpochTimes() public {
+        for (uint i = 0; i < 10; ++i) {
+            uint start = block.timestamp;
+
+            // start
+            assertEq(clock.elapsedInEpoch(), 0);
+            assertEq(voter.epochId(), i);
+            assertEq(voter.epochStart(), block.timestamp);
+            assertEq(voter.epochVoteStart(), block.timestamp + 1 hours);
+            assertEq(voter.epochVoteEnd(), block.timestamp + 1 weeks - 1 hours);
+            assertEq(voter.votingActive(), false);
+            assertEq(nextDeposit(), block.timestamp + 1 weeks);
+            assertEq(clock.epochStartsIn(), 0);
+
+            // +1hr: voting starts
+            vm.warp(start + 1 hours);
+
+            assertEq(clock.elapsedInEpoch(), 1 hours);
+            assertEq(voter.epochId(), i);
+            assertEq(voter.epochStart(), block.timestamp + 2 weeks - 1 hours);
+            assertEq(voter.epochVoteStart(), block.timestamp);
+            assertEq(voter.epochVoteEnd(), block.timestamp + 1 weeks - 2 hours);
+            assertEq(voter.votingActive(), true);
+            assertEq(nextDeposit(), block.timestamp + 1 weeks - 1 hours);
+            assertEq(clock.epochStartsIn(), 2 weeks - 1 hours);
+
+            // +1 week - 1 hours: voting ends
+            vm.warp(start + 1 weeks - 1 hours);
+
+            assertEq(clock.elapsedInEpoch(), 1 weeks - 1 hours);
+            assertEq(voter.epochId(), i);
+            assertEq(voter.epochStart(), block.timestamp + 1 weeks + 1 hours);
+            assertEq(voter.epochVoteStart(), block.timestamp + 1 weeks + 2 hours);
+            assertEq(voter.epochVoteEnd(), block.timestamp);
+            assertEq(voter.votingActive(), false);
+            assertEq(nextDeposit(), block.timestamp + 1 hours);
+            assertEq(clock.epochStartsIn(), 1 weeks + 1 hours);
+
+            // +1 week: next deposit opens
+            vm.warp(start + 1 weeks);
+
+            assertEq(clock.elapsedInEpoch(), 1 weeks);
+            assertEq(voter.epochId(), i);
+            assertEq(voter.epochStart(), block.timestamp + 1 weeks);
+            assertEq(voter.epochVoteStart(), block.timestamp + 1 weeks + 1 hours);
+            assertEq(voter.epochVoteEnd(), block.timestamp);
+            assertEq(voter.votingActive(), false);
+            assertEq(nextDeposit(), block.timestamp + 1 weeks);
+            assertEq(clock.epochStartsIn(), 1 weeks);
+
+            // whole of next week calculates correctly
+
+            vm.warp(start + 1 weeks + 3 days);
+
+            assertEq(clock.elapsedInEpoch(), 1 weeks + 3 days);
+            assertEq(voter.epochId(), i);
+            assertEq(voter.epochStart(), block.timestamp + 4 days);
+            assertEq(voter.epochVoteStart(), block.timestamp + 4 days + 1 hours);
+            assertEq(voter.epochVoteEnd(), block.timestamp);
+            assertEq(voter.votingActive(), false);
+            assertEq(nextDeposit(), block.timestamp + 4 days);
+            assertEq(clock.epochStartsIn(), 4 days);
+
+            // +1 week + 2 hours: next epoch starts
+            vm.warp(start + 2 weeks);
+        }
+    }
+
+    function testSeasonMinDuration() public {
+        uint start = block.timestamp;
+
+        vm.expectRevert("Clock: season does not exist");
+        clock.seasons(0);
+
+        assertEq(clock.minSeasonDuration(), 0);
+
+        vm.expectRevert("Clock: no seasons");
+        assertEq(clock.currentSeason(), 0);
+
+        clock.setMinSeasonDuration(2 weeks + 1);
+        assertEq(clock.minSeasonDuration(), 2 weeks + 1);
+
+        clock.newSeason();
+
+        // +2 weeks: right on the edge of the min duration
+        vm.warp(block.timestamp + 2 weeks);
+
+        // 1 sec too early
+        vm.expectRevert("Clock: season too short");
+        clock.newSeason();
+
+        // +1 sec: new season can starts
+        vm.warp(block.timestamp + 1);
+
+        clock.newSeason();
+
+        assertEq(clock.currentSeason(), 2);
+
+        assertEq(clock.seasonAt(uint48(0)), 0);
+        assertEq(clock.seasonAt(uint48(start + 1 weeks - 1)), 0);
+        assertEq(clock.seasonAt(uint48(start + 1 weeks)), 1);
+        assertEq(clock.seasonAt(uint48(start + 3 weeks)), 1);
+        assertEq(clock.seasonAt(uint48(start + 3 weeks + 1)), 2);
+        assertEq(clock.seasonAt(uint48(block.timestamp)), 2);
+    }
+
+    function testSeasonTimes() public {
+        uint start = block.timestamp;
+
+        vm.expectRevert("Clock: season does not exist");
+        clock.seasons(0);
+
+        assertEq(clock.minSeasonDuration(), 0);
+
+        vm.expectRevert("Clock: no seasons");
+        assertEq(clock.currentSeason(), 0);
+
+        vm.warp(block.timestamp + 1 weeks);
+
+        clock.newSeason();
+
+        assertEq(clock.currentSeason(), 1);
+        assertEq(clock.seasons(1), 1 weeks);
+
+        // +1 week: next season starts
+        vm.warp(block.timestamp + 1 weeks);
+
+        clock.newSeason();
+
+        assertEq(clock.currentSeason(), 2);
+        assertEq(clock.seasons(2), 2 weeks);
+
+        vm.warp(block.timestamp + 1 weeks);
+
+        assertEq(clock.seasonAt(uint48(0)), 0);
+        assertEq(clock.seasonAt(uint48(start + 1 weeks - 1)), 0);
+        assertEq(clock.seasonAt(uint48(start + 1 weeks)), 1);
+        assertEq(clock.seasonAt(uint48(start + 2 weeks - 1)), 1);
+        assertEq(clock.seasonAt(uint48(start + 2 weeks)), 2);
+        assertEq(clock.seasonAt(uint48(block.timestamp)), 2);
+    }
+
+    function testSetMinSeasonDurationTooShortReverts() public {
+        vm.expectRevert("Clock: season too short");
+        clock.setMinSeasonDuration(2 weeks);
+
+        clock.setMinSeasonDuration(2 weeks + 1);
+        assertEq(clock.minSeasonDuration(), 2 weeks + 1);
+    }
+
+
+
+
+    // expect revert on new season if not enough time has passed
+}
