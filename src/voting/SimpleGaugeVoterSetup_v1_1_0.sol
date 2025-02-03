@@ -14,12 +14,12 @@ import {PermissionLib} from "@aragon/osx/core/permission/PermissionLib.sol";
 import {PluginSetup} from "@aragon/osx/framework/plugin/setup/PluginSetup.sol";
 
 // these should be interfaces
-import {SimpleGaugeVoter} from "@voting/SimpleGaugeVoter.sol";
-import {VotingEscrow} from "@escrow/VotingEscrowIncreasing.sol";
+import {SimpleGaugeVoterV1_1_0 as SimpleGaugeVoter} from "@voting/SimpleGaugeVoter_v1_1_0.sol";
+import {VotingEscrowV1_1_0 as VotingEscrow} from "@escrow/VotingEscrowIncreasing_v1_1_0.sol";
 import {ExitQueue} from "@escrow/ExitQueue.sol";
 import {QuadraticIncreasingEscrow} from "@escrow/QuadraticIncreasingEscrow.sol";
 import {Clock} from "@clock/Clock.sol";
-import {Lock} from "@escrow/Lock.sol";
+import {Lock} from "@escrow/Lock_v1_1_0.sol";
 
 /// @param isPaused Whether the voter contract is deployed in a paused state
 /// @param veTokenName The name of the voting escrow token

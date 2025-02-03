@@ -5,7 +5,7 @@ import {Script, console} from "forge-std/Script.sol";
 import {DAO, IDAO} from "@aragon/osx/core/dao/DAO.sol";
 import {GaugesDaoFactory, DeploymentParameters, Deployment, TokenParameters} from "../src/factory/GaugesDaoFactory.sol";
 import {Multisig, MultisigSetup as MultisigPluginSetup} from "@aragon/osx/plugins/governance/multisig/MultisigSetup.sol";
-import {Clock, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams} from "src/voting/SimpleGaugeVoterSetup.sol";
+import {Clock, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams} from "src/voting/SimpleGaugeVoterSetup_v1_1_0.sol";
 import {VotingEscrowV1_1_0 as VotingEscrow} from "src/escrow/increasing/VotingEscrowIncreasing_v1_1_0.sol";
 import {PluginRepo} from "@aragon/osx/framework/plugin/repo/PluginRepo.sol";
 import {PluginRepoFactory} from "@aragon/osx/framework/plugin/repo/PluginRepoFactory.sol";
