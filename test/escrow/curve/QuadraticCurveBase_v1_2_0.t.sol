@@ -1,6 +1,6 @@
 pragma solidity ^0.8.17;
 
-import {TestHelpers} from "@helpers/TestHelpers.sol";
+import {TestHelpers} from "@helpers/TestHelpers_v1_2_0.sol";
 import {console2 as console} from "forge-std/console2.sol";
 import {DaoUnauthorized} from "@aragon/osx/core/utils/auth.sol";
 
@@ -51,6 +51,12 @@ contract QuadraticCurveBase is TestHelpers, ILockedBalanceIncreasing {
             _who: address(this),
             _where: address(curve),
             _permissionId: curve.CURVE_ADMIN_ROLE()
+        });
+
+        DAO(payable(address(dao))).grant({
+            _who: address(this),
+            _where: address(clock),
+            _permissionId: clock.SEASON_ADMIN_ROLE()
         });
 
         escrow.setCurve(curve);

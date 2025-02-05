@@ -28,7 +28,7 @@ contract ClockV1_2_0 is IClock, DaoAuthorizable, UUPSUpgradeable, IClockSeason {
     uint256 internal constant VOTE_WINDOW_BUFFER = 1 hours;
 
     /// @dev Seasons array
-    uint48[] public seasons;
+    uint48[] private seasons;
 
     /// @dev Min season duration
     uint48 public minSeasonDuration = 2 weeks;
@@ -225,39 +225,39 @@ contract ClockV1_2_0 is IClock, DaoAuthorizable, UUPSUpgradeable, IClockSeason {
     //////////////////////////////////////////////////////////////*/
 
     function currentSeason() external view returns (uint16) {
-        require(seasons.length > 0, "Clock: no seasons");
-
-        return uint16(seasons.length - 1); // TODO: return seasonAt(block.timestamp);?
+        return uint16(seasons.length);
     }
 
+    // returns the start and end timestamp of a season
+    // startTimestamp is zero for the first season (index 0)
     // endTimestamp can be 0 if the season is still active
     function season(uint16 seasonIndex) external view returns (uint48, uint48) {
-        require(seasonIndex < seasons.length, "Clock: season does not exist");
-        uint48 startTimestamp = seasons[seasonIndex];
-        uint48 endTimestamp = seasonIndex + 1 < seasons.length ? seasons[seasonIndex + 1] : 0;
+        require(seasonIndex <= seasons.length, "Clock: season does not exist");
+        uint48 startTimestamp = seasonIndex == 0 ? 0 : seasons[seasonIndex - 1];
+        uint48 endTimestamp = seasonIndex < seasons.length ? seasons[seasonIndex] : 0;
         return (startTimestamp, endTimestamp);
     }
 
     function seasonAt(uint48 _timestamp) external view returns (uint16) {
-        require(seasons.length > 0, "Clock: no seasons");
-        require(_timestamp >= seasons[0], "Clock: timestamp too early");
         for (uint16 i = 0; i < seasons.length; i++) {
             if (_timestamp < seasons[i]) {
-                return i - 1;
+                return i;
             }
         }
-        return uint16(seasons.length - 1);
+        return uint16(seasons.length);
     }
 
     // activates a new season
+    // starts at index 1
     function newSeason() external auth(SEASON_ADMIN_ROLE) {
         if (seasons.length > 0) {
+            //TODO: check
             uint48 lastSeason = seasons[seasons.length - 1];
             require(block.timestamp >= lastSeason + minSeasonDuration, "Clock: season is too short");
         }
         seasons.push(uint48(block.timestamp));
 
-        emit SeasonStarted(uint16(seasons.length - 1), uint48(block.timestamp));
+        emit SeasonStarted(uint16(seasons.length), uint48(block.timestamp));
     }
 
     // sets the minimum duration for a season
