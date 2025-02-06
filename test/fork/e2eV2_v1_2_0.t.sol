@@ -881,11 +881,11 @@ contract TestE2EV2 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCur
 
                 // check the gauge votes
                 assertEq(
-                    voter.gaugeVotes(gauge0),
+                    voter.gaugeVotes(0, gauge0),
                     escrow.votingPower(2) + escrow.votingPower(1) / 2 + escrow.votingPower(3) / 2
                 );
                 assertEq(
-                    voter.gaugeVotes(gauge1),
+                    voter.gaugeVotes(0, gauge1),
                     escrow.votingPower(1) / 2 + escrow.votingPower(3) / 2
                 );
             }
@@ -970,12 +970,12 @@ contract TestE2EV2 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCur
 
             // check the gauge votes
             assertEq(
-                voter.gaugeVotes(gauge0),
+                voter.gaugeVotes(0, gauge0),
                 escrow.votingPower(1) / 2 + escrow.votingPower(3) / 2
             );
 
             assertEq(
-                voter.gaugeVotes(gauge1),
+                voter.gaugeVotes(0, gauge1),
                 escrow.votingPower(2) + escrow.votingPower(1) / 2 + escrow.votingPower(3) / 2
             );
         }
@@ -1285,9 +1285,9 @@ contract TestE2EV2 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCur
         // we check the end state of the contracts
         {
             // no votes
-            assertEq(voter.totalVotingPowerCast(), 0, "Voter should have no votes");
-            assertEq(voter.gaugeVotes(gauge0), 0, "Gauge 0 should have no votes");
-            assertEq(voter.gaugeVotes(gauge1), 0, "Gauge 1 should have no votes");
+            assertEq(voter.totalVotingPowerCast(0), 0, "Voter should have no votes");
+            assertEq(voter.gaugeVotes(0, gauge0), 0, "Gauge 0 should have no votes");
+            assertEq(voter.gaugeVotes(0, gauge1), 0, "Gauge 1 should have no votes");
 
             // no tokens
             assertEq(token.balanceOf(address(escrow)), 0, "Escrow should have no tokens");

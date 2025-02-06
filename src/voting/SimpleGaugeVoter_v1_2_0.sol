@@ -3,14 +3,14 @@ pragma solidity ^0.8.17;
 
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {IVotingEscrowIncreasing as IVotingEscrow} from "@escrow-interfaces/IVotingEscrowIncreasing.sol";
-import {IClockUser, IClock} from "@clock/IClock.sol";
+import {IClockUser, IClock, IClockSeason} from "@clock/IClock.sol";
 import {ISimpleGaugeVoter} from "./ISimpleGaugeVoter.sol";
 
 import {ReentrancyGuardUpgradeable as ReentrancyGuard} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {PausableUpgradeable as Pausable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import {PluginUUPSUpgradeable} from "@aragon/osx/core/plugin/PluginUUPSUpgradeable.sol";
 
-contract SimpleGaugeVoterV1_1_0 is
+contract SimpleGaugeVoterV1_2_0 is
     ISimpleGaugeVoter,
     IClockUser,
     ReentrancyGuard,
@@ -26,8 +26,8 @@ contract SimpleGaugeVoterV1_1_0 is
     /// @notice Clock contract for epoch duration
     address public clock;
 
-    /// @notice The total votes that have accumulated in this contract
-    uint256 public totalVotingPowerCast;
+    /// @notice season => The total votes that have accumulated in this contract
+    mapping(uint256 => uint256) public totalVotingPowerCast;
 
     /// @notice enumerable list of all gauges that can be voted on
     address[] public gaugeList;
@@ -35,11 +35,11 @@ contract SimpleGaugeVoterV1_1_0 is
     /// @notice address => gauge data
     mapping(address => Gauge) public gauges;
 
-    /// @notice gauge => total votes (global)
-    mapping(address => uint256) public gaugeVotes;
+    /// @notice season => gauge => total votes (global)
+    mapping(uint256 => mapping(address => uint256)) public gaugeVotes;
 
-    /// @dev tokenId => tokenVoteData
-    mapping(uint256 => TokenVoteData) internal tokenVoteData;
+    /// @dev season => tokenId => tokenVoteData
+    mapping(uint256 => mapping(uint256 => TokenVoteData)) internal tokenVoteData;
 
     /*///////////////////////////////////////////////////////////////
                             Initialization
@@ -102,6 +102,42 @@ contract SimpleGaugeVoterV1_1_0 is
         _vote(_tokenId, _votes);
     }
 
+    function _castVote(GaugeVote memory currentVote, uint256 season, uint256 _tokenId, uint256 votingPower, uint256 sumOfWeights, TokenVoteData storage voteData) internal returns (uint256) {
+        // the gauge must exist and be active,
+        // it also can't have any votes or we haven't reset properly
+        if (!gaugeExists(currentVote.gauge)) revert GaugeDoesNotExist(currentVote.gauge);
+        if (!isActive(currentVote.gauge)) revert GaugeInactive(currentVote.gauge);
+
+        // prevent double voting
+        if (voteData.votes[currentVote.gauge] != 0) revert DoubleVote();
+
+        // calculate the weight for this gauge
+        uint256 votesForGauge = (currentVote.weight * votingPower) / sumOfWeights;
+        if (votesForGauge == 0) revert NoVotes();
+
+        // record the vote for the token
+        voteData.gaugesVotedFor.push(currentVote.gauge);
+        voteData.votes[currentVote.gauge] += votesForGauge;
+
+        // update the total weights accruing to this gauge
+        gaugeVotes[season][currentVote.gauge] += votesForGauge;
+        totalVotingPowerCast[season] += votesForGauge;
+        voteData.usedVotingPower += votesForGauge;
+
+        emit Voted({
+            voter: _msgSender(),
+            gauge: currentVote.gauge,
+            epoch: epochId(),
+            tokenId: _tokenId,
+            votingPowerCastForGauge: votesForGauge,
+            totalVotingPowerInGauge: gaugeVotes[season][currentVote.gauge],
+            totalVotingPowerInContract: totalVotingPowerCast[season],
+            timestamp: block.timestamp
+        });
+
+        return votesForGauge;
+    }
+
     function _vote(uint256 _tokenId, GaugeVote[] calldata _votes) internal {
         // ensure the user is allowed to vote on this
         if (!IVotingEscrow(escrow).isApprovedOrOwner(_msgSender(), _tokenId)) {
@@ -117,12 +153,13 @@ contract SimpleGaugeVoterV1_1_0 is
         // clear any existing votes
         if (isVoting(_tokenId)) _reset(_tokenId);
 
+        uint256 season = IClockSeason(clock).currentSeason();
+
         // voting power continues to increase over the voting epoch.
         // this means you can revote later in the epoch to increase votes.
         // while not a huge problem, it's worth noting that when rewards are fully
         // on chain, this could be a vector for gaming.
-        TokenVoteData storage voteData = tokenVoteData[_tokenId];
-        uint256 votingPowerUsed = 0;
+        TokenVoteData storage voteData = tokenVoteData[season][_tokenId];
         uint256 sumOfWeights = 0;
 
         for (uint256 i = 0; i < numVotes; i++) {
@@ -135,47 +172,9 @@ contract SimpleGaugeVoterV1_1_0 is
 
         // iterate over votes and distribute weight
         for (uint256 i = 0; i < numVotes; i++) {
-            // the gauge must exist and be active,
-            // it also can't have any votes or we haven't reset properly
-            address gauge = _votes[i].gauge;
-
-            if (!gaugeExists(gauge)) revert GaugeDoesNotExist(gauge);
-            if (!isActive(gauge)) revert GaugeInactive(gauge);
-
-            // prevent double voting
-            if (voteData.votes[gauge] != 0) revert DoubleVote();
-
-            // calculate the weight for this gauge
-            uint256 votesForGauge = (_votes[i].weight * votingPower) / sumOfWeights;
-            if (votesForGauge == 0) revert NoVotes();
-
-            // record the vote for the token
-            voteData.gaugesVotedFor.push(gauge);
-            voteData.votes[gauge] += votesForGauge;
-
-            // update the total weights accruing to this gauge
-            gaugeVotes[gauge] += votesForGauge;
-
-            // track the running changes to the total
-            // this might differ from the total voting power
-            // due to rounding, so aggregating like this ensures consistency
-            votingPowerUsed += votesForGauge;
-
-            emit Voted({
-                voter: _msgSender(),
-                gauge: gauge,
-                epoch: epochId(),
-                tokenId: _tokenId,
-                votingPowerCastForGauge: votesForGauge,
-                totalVotingPowerInGauge: gaugeVotes[gauge],
-                totalVotingPowerInContract: totalVotingPowerCast + votingPowerUsed,
-                timestamp: block.timestamp
-            });
+            GaugeVote memory currentVote = _votes[i];
+            _castVote(currentVote, season, _tokenId, votingPower, sumOfWeights, voteData);
         }
-
-        // record the total weight used for this vote
-        totalVotingPowerCast += votingPowerUsed;
-        voteData.usedVotingPower = votingPowerUsed;
 
         // setting the last voted also has the second-order effect of indicating the user has voted
         voteData.lastVoted = block.timestamp;
@@ -190,7 +189,8 @@ contract SimpleGaugeVoterV1_1_0 is
 
     function _reset(uint256 _tokenId) internal {
         // get what we need
-        TokenVoteData storage voteData = tokenVoteData[_tokenId];
+        uint256 season = IClockSeason(clock).currentSeason();
+        TokenVoteData storage voteData = tokenVoteData[season][_tokenId];
         address[] storage pastVotes = voteData.gaugesVotedFor;
 
         // reset the global state variables we don't need
@@ -198,14 +198,13 @@ contract SimpleGaugeVoterV1_1_0 is
         voteData.lastVoted = 0;
 
         // iterate over all the gauges voted for and reset the votes
-        uint256 votingPowerToRemove = 0;
         for (uint256 i = 0; i < pastVotes.length; i++) {
             address gauge = pastVotes[i];
             uint256 _votes = voteData.votes[gauge];
 
-            // remove from the total weight and globals
-            gaugeVotes[gauge] -= _votes;
-            votingPowerToRemove += _votes;
+            // remove from the total globals
+            gaugeVotes[season][gauge] -= _votes;
+            totalVotingPowerCast[season] -= _votes;
 
             delete voteData.votes[gauge];
 
@@ -215,15 +214,14 @@ contract SimpleGaugeVoterV1_1_0 is
                 epoch: epochId(),
                 tokenId: _tokenId,
                 votingPowerRemovedFromGauge: _votes,
-                totalVotingPowerInGauge: gaugeVotes[gauge],
-                totalVotingPowerInContract: totalVotingPowerCast - votingPowerToRemove,
+                totalVotingPowerInGauge: gaugeVotes[season][gauge],
+                totalVotingPowerInContract: totalVotingPowerCast[season],
                 timestamp: block.timestamp
             });
         }
 
         // clear the remaining state
         voteData.gaugesVotedFor = new address[](0);
-        totalVotingPowerCast -= votingPowerToRemove;
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -319,19 +317,23 @@ contract SimpleGaugeVoterV1_1_0 is
     }
 
     function isVoting(uint256 _tokenId) public view returns (bool) {
-        return tokenVoteData[_tokenId].lastVoted > 0;
+        uint256 season = IClockSeason(clock).currentSeason();
+        return tokenVoteData[season][_tokenId].lastVoted > 0;
     }
 
     function votes(uint256 _tokenId, address _gauge) external view returns (uint256) {
-        return tokenVoteData[_tokenId].votes[_gauge];
+        uint256 season = IClockSeason(clock).currentSeason();
+        return tokenVoteData[season][_tokenId].votes[_gauge];
     }
 
     function gaugesVotedFor(uint256 _tokenId) external view returns (address[] memory) {
-        return tokenVoteData[_tokenId].gaugesVotedFor;
+        uint256 season = IClockSeason(clock).currentSeason();
+        return tokenVoteData[season][_tokenId].gaugesVotedFor;
     }
 
     function usedVotingPower(uint256 _tokenId) external view returns (uint256) {
-        return tokenVoteData[_tokenId].usedVotingPower;
+        uint256 season = IClockSeason(clock).currentSeason();
+        return tokenVoteData[season][_tokenId].usedVotingPower;
     }
 
     /// Rest of UUPS logic is handled by OSx plugin
