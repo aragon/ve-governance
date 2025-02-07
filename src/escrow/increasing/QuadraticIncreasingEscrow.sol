@@ -54,6 +54,34 @@ contract QuadraticIncreasingEscrow is
     /// This implementation means that very short intervals may be challenging
     mapping(uint256 => TokenPoint[1_000_000_000]) internal _tokenPointHistory;
 
+    // ============GIORGI===============
+    uint256 public constant WEEK = 1 weeks;
+    uint256 internal constant MAXTIME = 4 * 365 * 86400;
+
+    uint256 public epoch;
+
+
+    struct UserPoint {
+        int128 bias;
+        int128 slope;
+        uint256 ts;
+    }
+
+    struct Changes {
+        uint128 finalBias; // This is how much it gets after no-more increase.
+        uint128 slope;
+    }
+
+    
+
+    mapping(uint256 => Changes) public slopeChanges;   
+    mapping(uint256 => UserPoint) internal pointHistory;
+    mapping(uint256 => UserPoint[1000000000]) internal userPointHistory;
+    mapping(uint256 => uint256) public userPointEpoch;
+
+    // ============GIORGI===============
+
+
     /*//////////////////////////////////////////////////////////////
                                 MATH
     //////////////////////////////////////////////////////////////*/
@@ -283,55 +311,106 @@ contract QuadraticIncreasingEscrow is
     /// @param _newLocked New locked amount / end lock time for the user
     function _checkpoint(
         uint256 _tokenId,
-        IVotingEscrow.LockedBalance memory /* _oldLocked */,
+        IVotingEscrow.LockedBalance memory _oldLocked,
         IVotingEscrow.LockedBalance memory _newLocked
     ) internal {
         // this implementation doesn't yet support manual checkpointing
         if (_tokenId == 0) revert InvalidTokenId();
+        
+        uint256 _epoch = epoch;
+        UserPoint memory uNew;
+        UserPoint memory uOld;
+        uint256 lastPointTs;
 
-        // instantiate a new, empty token point
-        TokenPoint memory uNew;
-        uint amount = _newLocked.amount;
-        bool isExiting = amount == 0;
+        UserPoint memory lastPoint = UserPoint({
+            bias: 0,
+            slope: 0,
+            ts: block.timestamp
+        });
 
-        if (!isExiting) {
-            int256[3] memory coefficients = _getCoefficients(amount);
-            // for a new lock, write the base bias (elapsed == 0)
-            uNew.coefficients = coefficients;
-            uNew.bias = _getBias(0, coefficients);
+        if (_epoch > 0) {
+            lastPoint = pointHistory[_epoch];
+            lastPointTs = lastPoint.ts;
         }
-        // write the new timestamp - in the case of an increasing curve
-        // we align the checkpoint to the start of the upcoming deposit interval
-        // to ensure global slope changes can be scheduled
-        // NOTE: the above global functionality is not implemented in this version of the contracts
-        // safe to cast as .start is 48 bit unsigned
-        uNew.checkpointTs = uint128(_newLocked.start);
 
-        // log the written ts - this can be used to compute warmups and burn downs
-        uNew.writtenTs = block.timestamp.toUint128();
+        uint256 lastCheckpoint = lastPoint.ts;
 
-        // check to see if we have an existing interval for this token
-        uint256 tokenInterval = tokenPointIntervals[_tokenId];
-
-        // if we don't have a point, we can write to the first interval
-        if (tokenInterval == 0) {
-            tokenPointIntervals[_tokenId] = ++tokenInterval;
+        if (_oldLocked.end  > block.timestamp && _oldLocked.amount > 0) {
+            uOld.slope = _oldLocked.amount / MAXTIME;
+            uOld.bias = _oldLocked.amount;
         }
-        // else we need to check the last point
-        else {
-            TokenPoint memory lastPoint = _tokenPointHistory[_tokenId][tokenInterval];
 
-            // can't do this: we can only write to same point or future
-            if (lastPoint.checkpointTs > uNew.checkpointTs) revert InvalidCheckpoint();
+        // new lock always starts now...
+        uNew.slope = _newLocked.amount / MAXTIME;
+        uNew.bias = _newLocked.amount;
 
-            // if we're writing to a new point, increment the interval
-            if (lastPoint.checkpointTs != uNew.checkpointTs) {
-                tokenPointIntervals[_tokenId] = ++tokenInterval;
+        Changes storage oldEnd = slopeChanges[_oldLocked.end];
+        Changes storage newEnd = slopeChanges[_newLocked.end];
+    
+        uint256 t_i = (lastCheckpoint / WEEK) * WEEK;
+
+        {
+            Changes memory c;
+            for (uint256 i = 0; i < 255; ++i) {
+                t_i += WEEK; // Initial value of t_i is always larger than the ts of the last point
+                
+                if (t_i > block.timestamp) {
+                    t_i = block.timestamp;
+                } else {
+                    c = slopeChanges[t_i];
+                }
+
+                lastPoint.bias += lastPoint.slope * (t_i - lastCheckpoint).toInt128();
+                lastPoint.slope -= c.slope;
+
+                lastCheckpoint = t_i;
+                lastPoint.ts = t_i;
+                _epoch += 1;
+                if (t_i == block.timestamp) {
+                    break;
+                } else {
+                    pointHistory[_epoch] = lastPoint;
+                }
+
             }
         }
 
-        // Record the new point
-        _tokenPointHistory[_tokenId][tokenInterval] = uNew;
+        lastPoint.slope += uNew.slope - uOld.slope;
+        lastPoint.bias += uNew.bias - uOld.bias - uOld.slope * (block.timestamp - lastPointTs);
+        
+
+        // TODO: see aerodome..
+        epoch = _epoch;
+        pointHistory[_epoch] = lastPoint;
+
+        if (_oldLocked.end > block.timestamp) {
+            oldEnd.slope -= uOld.slope;
+            // oldEnd.finalBias -= (uOld.bias + uOld.slope * (_oldLocked.end - lastPointTs));
+
+            if (_newLocked.end == _oldLocked.end) {
+                oldEnd.slope += uNew.slope; 
+            }
+        }
+
+        if (_newLocked.end > block.timestamp) {
+            if ((_newLocked.end > _oldLocked.end)) {
+                newEnd.slope += uNew.slope;
+            }
+            // else we already recorded it in above..
+
+
+            // newEnd.finalBias += uNew.slope * (_newLocked.end - block.timestamp) + uNew.bias;
+        }
+
+        uNew.ts = block.timestamp;
+        uint256 userEpoch = userPointEpoch[_tokenId];
+        if (userEpoch != 0 && userPointHistory[_tokenId][userEpoch].ts == block.timestamp) {
+            userPointHistory[_tokenId][userEpoch] = uNew;
+        } else {
+            userPointEpoch[_tokenId] = ++userEpoch;
+            userPointHistory[_tokenId][userEpoch] = uNew;
+        }
+
     }
 
     /*///////////////////////////////////////////////////////////////

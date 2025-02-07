@@ -19,6 +19,7 @@ interface IEscrowCurveGlobalStorage {
         uint256 ts;
         int256[3] coefficients;
     }
+
 }
 
 interface IEscrowCurveGlobal is IEscrowCurveGlobalStorage {

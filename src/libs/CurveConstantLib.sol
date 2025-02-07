@@ -19,4 +19,8 @@ library CurveConstantLib {
 
     /// @dev the maxiumum number of epochs the cure can keep increasing
     uint256 internal constant MAX_EPOCHS = 5;
+    
+    /// @notice Helps to define how the curve should be changing.
+    /// @dev `lockAmount/MAX_TIME` is the rate of change. 
+    uint256 internal constant MAX_TIME = 4 * 365;
 }

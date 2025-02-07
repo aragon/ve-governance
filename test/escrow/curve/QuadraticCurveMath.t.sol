@@ -30,31 +30,31 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
 
         console.log("Coefficients: %st^2 + %st + %s", quadratic, linear, const);
 
-        for (uint i; i <= 6; i++) {
-            uint period = 2 weeks * i;
-            console.log(
-                "Period: %d Voting Power      : %s",
-                i,
-                curve.getBias(period, 100e18) / 1e18
-            );
-            console.log(
-                "Period: %d Voting Power Bound: %s",
-                i,
-                curve.getBias(period, 100e18) / 1e18
-            );
-            console.log("Period: %d Voting Power Raw: %s\n", i, curve.getBias(period, 100e18));
-        }
+        // for (uint i; i <= 6; i++) {
+        //     uint period = 2 weeks * i;
+        //     console.log(
+        //         "Period: %d Voting Power      : %s",
+        //         i,
+        //         curve.getBias(period, 100e18) / 1e18
+        //     );
+        //     console.log(
+        //         "Period: %d Voting Power Bound: %s",
+        //         i,
+        //         curve.getBias(period, 100e18) / 1e18
+        //     );
+        //     console.log("Period: %d Voting Power Raw: %s\n", i, curve.getBias(period, 100e18));
+        // }
 
         // uncomment to see the full curve
-        // for (uint i; i <= 14 * 6; i++) {
-        //     uint day = i * 1 days;
-        //     uint week = day / 7 days;
-        //     uint period = day / 2 weeks;
+        for (uint i; i <= 14 * 6; i++) {
+            uint day = i * 1 days;
+            uint week = day / 7 days;
+            uint period = day / 2 weeks;
 
-        //     console.log("[Day: %d | Week %d | Period %d]", i, week, period);
-        //     console.log("Voting Power        : %s", curve.getBias(day, 100e18) / 1e18);
-        //     console.log("Voting Power (raw): %s\n", curve.getBias(day, 100e18));
-        // }
+            console.log("[Day: %d | Week %d | Period %d]", i, week, period);
+            console.log("Voting Power        : %s", curve.getBias(day, 100e18) / 1e18);
+            console.log("Voting Power (raw): %s\n", curve.getBias(day, 100e18));
+        }
     }
 
     // write a new checkpoint
