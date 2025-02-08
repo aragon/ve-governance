@@ -25,3 +25,6 @@ branch = v4.9.2
 [submodule "lib/openzeppelin-foundry-upgrades"]
 	path = lib/openzeppelin-foundry-upgrades
 	url = https://github.com/OpenZeppelin/openzeppelin-foundry-upgrades
+[submodule "lib/ve-governance/v100"]
+	path = lib/ve-governance/v100
+	url = https://github.com/aragon/ve-governance
