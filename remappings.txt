@@ -5,6 +5,7 @@ utils/=test/utils/
 @aragon/osx/=lib/osx/packages/contracts/src/
 @aragon/admin/=lib/osx/packages/contracts/src/plugins/governance/admin/
 @aragon/multisig/=lib/osx/packages/contracts/src/plugins/governance/multisig/
+@aragon/ve-governance-v100=lib/ve-governance/v100/src/
 
 @interfaces/=src/interfaces/
 @mocks/=test/mocks/

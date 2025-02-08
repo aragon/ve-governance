@@ -7,6 +7,8 @@
   },
   "scripts": {
     "build": "forge build",
-    "build-refs": "bash script/build-reference-builds.sh"
+    "build-clean": "forge build --force",
+    "build-refs": "bash script/build-reference-builds.sh",
+    "build-all": "bun run build-refs && bun run build-clean"
   }
 }
