@@ -25,5 +25,6 @@ ens-contracts/=lib/ens-contracts/contracts/
 openzeppelin-contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/
 openzeppelin-contracts/=lib/openzeppelin-contracts/
 erc4626-tests/=lib/openzeppelin-contracts-upgradeable/lib/erc4626-tests/
+openzeppelin-foundry-upgrades/=lib/openzeppelin-foundry-upgrades/src
 
 @solmate/=lib/solmate/src/
