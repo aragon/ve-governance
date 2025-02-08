@@ -1,6 +1,12 @@
 {
+  "name": "ve-governance",
+  "version": "1.0.0",
   "devDependencies": {
     "prettier": "^3.3.3",
     "prettier-plugin-solidity": "^1.4.1"
+  },
+  "scripts": {
+    "build": "forge build",
+    "build-refs": "bash script/build-reference-builds.sh"
   }
 }
