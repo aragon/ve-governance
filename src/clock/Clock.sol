@@ -37,6 +37,7 @@ contract Clock is IClock, DaoAuthorizable, UUPSUpgradeable, IClockSeason {
                             Initialization
     //////////////////////////////////////////////////////////////*/
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }

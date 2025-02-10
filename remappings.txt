@@ -5,6 +5,7 @@ utils/=test/utils/
 @aragon/osx/=lib/osx/packages/contracts/src/
 @aragon/admin/=lib/osx/packages/contracts/src/plugins/governance/admin/
 @aragon/multisig/=lib/osx/packages/contracts/src/plugins/governance/multisig/
+@aragon/ve-governance-v100=lib/ve-governance/v100/src/
 
 @interfaces/=src/interfaces/
 @mocks/=test/mocks/
@@ -25,5 +26,6 @@ ens-contracts/=lib/ens-contracts/contracts/
 openzeppelin-contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/
 openzeppelin-contracts/=lib/openzeppelin-contracts/
 erc4626-tests/=lib/openzeppelin-contracts-upgradeable/lib/erc4626-tests/
+openzeppelin-foundry-upgrades/=lib/openzeppelin-foundry-upgrades/src
 
 @solmate/=lib/solmate/src/

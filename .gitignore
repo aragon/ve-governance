@@ -10,6 +10,7 @@
 # Foundry
 cache/
 out/
+ref_builds/
 broadcast/
 
 # JS
