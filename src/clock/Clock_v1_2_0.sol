@@ -225,7 +225,7 @@ contract ClockV1_2_0 is IClock, DaoAuthorizable, UUPSUpgradeable, IClockSeason {
     //////////////////////////////////////////////////////////////*/
 
     function currentSeason() external view returns (uint16) {
-        return uint16(seasons.length);
+        return IClockSeason(this).seasonAt(uint48(block.timestamp));
     }
 
     // returns the start and end timestamp of a season
@@ -250,20 +250,22 @@ contract ClockV1_2_0 is IClock, DaoAuthorizable, UUPSUpgradeable, IClockSeason {
     // activates a new season
     // starts at index 1
     function newSeason() external auth(SEASON_ADMIN_ROLE) {
+        uint256 startTime = IClock(this).epochNextCheckpointTs();
+
         if (seasons.length > 0) {
             //TODO: check
             uint48 lastSeason = seasons[seasons.length - 1];
-            require(block.timestamp >= lastSeason + minSeasonDuration, "Clock: season is too short");
+            require(startTime >= lastSeason + minSeasonDuration, "Clock: season is too short");
         }
-        seasons.push(uint48(block.timestamp));
+        seasons.push(uint48(startTime));
 
-        emit SeasonStarted(uint16(seasons.length), uint48(block.timestamp));
+        emit SeasonStarted(uint16(seasons.length), uint48(startTime));
     }
 
     // sets the minimum duration for a season
     function setMinSeasonDuration(uint48 _newDuration) external auth(SEASON_ADMIN_ROLE) {
         // TODO: should we force a min duration bigger than epochs?
-        require(_newDuration > EPOCH_DURATION, "Clock: season is too short");
+        require(_newDuration >= EPOCH_DURATION, "Clock: season is too short");
         minSeasonDuration = _newDuration;
 
         emit SeasonDurationSet(_newDuration);

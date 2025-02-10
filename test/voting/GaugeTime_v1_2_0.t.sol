@@ -108,15 +108,19 @@ contract TestGaugeTime is GaugeVotingBase {
         assertEq(clock.minSeasonDuration(), 0);
         assertEq(clock.currentSeason(), 0);
 
-        clock.setMinSeasonDuration(2 weeks + 1);
-        assertEq(clock.minSeasonDuration(), 2 weeks + 1);
+        clock.setMinSeasonDuration(2 weeks);
+        assertEq(clock.minSeasonDuration(), 2 weeks);
 
         vm.warp(block.timestamp + 1 hours);
 
         clock.newSeason();
 
+        assertEq(clock.currentSeason(), 0);
+
         // +2 weeks: right on the edge of the min duration
-        vm.warp(block.timestamp + 2 weeks);
+        vm.warp(block.timestamp + 2 weeks - 1 hours - 1);
+
+        assertEq(clock.currentSeason(), 1);
 
         // 1 sec too early
         vm.expectRevert("Clock: season is too short");
@@ -132,10 +136,11 @@ contract TestGaugeTime is GaugeVotingBase {
         assertEq(clock.currentSeason(), 2);
 
         assertEq(clock.seasonAt(uint48(0)), 0);
-        assertEq(clock.seasonAt(uint48(start + 1 hours - 1)), 0);
-        assertEq(clock.seasonAt(uint48(start + 1 hours)), 1);
-        assertEq(clock.seasonAt(uint48(start + 1 hours + 2 weeks)), 1);
-        assertEq(clock.seasonAt(uint48(start + 1 hours + 2 weeks + 1)), 2);
+        assertEq(clock.seasonAt(uint48(start + 1 hours)), 0);
+        assertEq(clock.seasonAt(uint48(start + 1 weeks - 1)), 0);
+        assertEq(clock.seasonAt(uint48(start + 1 weeks)), 1);
+        assertEq(clock.seasonAt(uint48(start + 3 weeks - 1)), 1);
+        assertEq(clock.seasonAt(uint48(start + 3 weeks)), 2);
         assertEq(clock.seasonAt(uint48(block.timestamp)), 2);
     }
 
@@ -150,11 +155,20 @@ contract TestGaugeTime is GaugeVotingBase {
 
         vm.warp(block.timestamp + 1 weeks);
 
-        clock.newSeason();
+        clock.newSeason();        
+
+        assertEq(clock.currentSeason(), 0);
+        (seasonStart, seasonEnd) = clock.season(0);
+        assertEq(seasonStart, 0);
+        assertEq(seasonEnd, 2 weeks);
+
+        // +1 week: next season starts
+        vm.warp(block.timestamp + 1 weeks);
 
         assertEq(clock.currentSeason(), 1);
+
         (seasonStart, seasonEnd) = clock.season(1);
-        assertEq(seasonStart, 1 weeks);
+        assertEq(seasonStart, 2 weeks);
         assertEq(seasonEnd, 0);
 
         // +1 week: next season starts
@@ -162,18 +176,19 @@ contract TestGaugeTime is GaugeVotingBase {
 
         clock.newSeason();
 
-        assertEq(clock.currentSeason(), 2);
+        assertEq(clock.currentSeason(), 1);
+
         (seasonStart, seasonEnd) = clock.season(2);
-        assertEq(seasonStart, 2 weeks);
+        assertEq(seasonStart, 4 weeks);
         assertEq(seasonEnd, 0);
 
         vm.warp(block.timestamp + 1 weeks);
 
         assertEq(clock.seasonAt(uint48(0)), 0);
-        assertEq(clock.seasonAt(uint48(start + 1 weeks - 1)), 0);
-        assertEq(clock.seasonAt(uint48(start + 1 weeks)), 1);
-        assertEq(clock.seasonAt(uint48(start + 2 weeks - 1)), 1);
-        assertEq(clock.seasonAt(uint48(start + 2 weeks)), 2);
+        assertEq(clock.seasonAt(uint48(start + 2 weeks - 1)), 0);
+        assertEq(clock.seasonAt(uint48(start + 2 weeks)), 1);
+        assertEq(clock.seasonAt(uint48(start + 4 weeks - 1)), 1);
+        assertEq(clock.seasonAt(uint48(start + 4 weeks)), 2);
         assertEq(clock.seasonAt(uint48(block.timestamp)), 2);
     }
 
