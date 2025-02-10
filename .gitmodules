@@ -28,3 +28,6 @@ branch = v4.9.2
 [submodule "lib/ve-governance/v100"]
 	path = lib/ve-governance/v100
 	url = https://github.com/aragon/ve-governance
+[submodule "lib/ve-governance/v101"]
+	path = lib/ve-governance/v101
+	url = https://github.com/aragon/ve-governance
