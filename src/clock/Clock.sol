@@ -3,15 +3,17 @@ pragma solidity ^0.8.17;
 
 // interfaces
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
-import {IClock} from "./IClock.sol";
+import {IClock, IClockSeason} from "./IClock.sol";
 
 // contracts
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
 
 /// @title Clock
-contract Clock is IClock, DaoAuthorizable, UUPSUpgradeable {
+contract Clock is IClock, DaoAuthorizable, UUPSUpgradeable, IClockSeason {
     bytes32 public constant CLOCK_ADMIN_ROLE = keccak256("CLOCK_ADMIN_ROLE");
+
+    bytes32 public constant SEASON_ADMIN_ROLE = keccak256("SEASON_ADMIN_ROLE");
 
     /// @dev Epoch encompasses a voting and non-voting period
     uint256 internal constant EPOCH_DURATION = 2 weeks;
@@ -25,6 +27,12 @@ contract Clock is IClock, DaoAuthorizable, UUPSUpgradeable {
     /// @dev Opens and closes the voting window slightly early to avoid timing attacks
     uint256 internal constant VOTE_WINDOW_BUFFER = 1 hours;
 
+    /// @dev Seasons array
+    uint48[] private seasons;
+
+    /// @dev Min season duration
+    uint48 public minSeasonDuration = 2 weeks;
+
     /*///////////////////////////////////////////////////////////////
                             Initialization
     //////////////////////////////////////////////////////////////*/
@@ -35,7 +43,7 @@ contract Clock is IClock, DaoAuthorizable, UUPSUpgradeable {
 
     function initialize(address _dao) external initializer {
         __DaoAuthorizableUpgradeable_init(IDAO(_dao));
-        // uups not needdd
+        // uups not needed
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -210,6 +218,56 @@ contract Clock is IClock, DaoAuthorizable, UUPSUpgradeable {
         unchecked {
             return timestamp + resolveEpochNextCheckpointIn(timestamp);
         }
+    }
+
+    /*///////////////////////////////////////////////////////////////
+                            Seasons
+    //////////////////////////////////////////////////////////////*/
+
+    function currentSeason() external view returns (uint16) {
+        return IClockSeason(this).seasonAt(uint48(block.timestamp));
+    }
+
+    // returns the start and end timestamp of a season
+    // startTimestamp is zero for the first season (index 0)
+    // endTimestamp can be 0 if the season is still active
+    function season(uint16 seasonIndex) external view returns (uint48, uint48) {
+        require(seasonIndex <= seasons.length, "Clock: season does not exist");
+        uint48 startTimestamp = seasonIndex == 0 ? 0 : seasons[seasonIndex - 1];
+        uint48 endTimestamp = seasonIndex < seasons.length ? seasons[seasonIndex] : 0;
+        return (startTimestamp, endTimestamp);
+    }
+
+    function seasonAt(uint48 _timestamp) external view returns (uint16) {
+        for (uint16 i = 0; i < seasons.length; i++) {
+            if (_timestamp < seasons[i]) {
+                return i;
+            }
+        }
+        return uint16(seasons.length);
+    }
+
+    // activates a new season
+    // starts at index 1
+    function newSeason() external auth(SEASON_ADMIN_ROLE) {
+        uint256 startTime = IClock(this).epochNextCheckpointTs();
+
+        if (seasons.length > 0) {
+            uint48 lastSeason = seasons[seasons.length - 1];
+            require(startTime >= lastSeason + minSeasonDuration, "Clock: season is too short");
+        }
+        seasons.push(uint48(startTime));
+
+        emit SeasonStarted(uint16(seasons.length), uint48(startTime));
+    }
+
+    // sets the minimum duration for a season
+    function setMinSeasonDuration(uint48 _newDuration) external auth(SEASON_ADMIN_ROLE) {
+        // TODO: should we force a min duration bigger than epochs?
+        require(_newDuration >= EPOCH_DURATION, "Clock: season is too short");
+        minSeasonDuration = _newDuration;
+
+        emit SeasonDurationSet(_newDuration);
     }
 
     /*///////////////////////////////////////////////////////////////
