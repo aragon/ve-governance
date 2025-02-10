@@ -226,7 +226,7 @@ contract SimpleGaugeVoterSetup is PluginSetup {
         PermissionLib.Operation _grantOrRevoke
     ) public view returns (PermissionLib.MultiTargetPermission[] memory) {
         PermissionLib.MultiTargetPermission[]
-            memory permissions = new PermissionLib.MultiTargetPermission[](10);
+            memory permissions = new PermissionLib.MultiTargetPermission[](11);
 
         permissions[0] = PermissionLib.MultiTargetPermission({
             permissionId: SimpleGaugeVoter(_plugin).GAUGE_ADMIN_ROLE(),
@@ -307,6 +307,15 @@ contract SimpleGaugeVoterSetup is PluginSetup {
             operation: _grantOrRevoke,
             condition: PermissionLib.NO_CONDITION
         });
+
+        permissions[10] = PermissionLib.MultiTargetPermission({
+            permissionId: Clock(_clock).SEASON_ADMIN_ROLE(),
+            where: _clock,
+            who: _dao,
+            operation: _grantOrRevoke,
+            condition: PermissionLib.NO_CONDITION
+        });
+
         return permissions;
     }
 
