@@ -1,7 +1,11 @@
-name: CI
+name: Tests
 
 on:
   push:
+    branches:
+      - 'main'
+      - 'develop'
+      - 'deploy/**'
   pull_request:
   workflow_dispatch:
 
@@ -9,32 +13,70 @@ env:
   FOUNDRY_PROFILE: ci
 
 jobs:
-  check:
+  test-upgrades:
     strategy:
       fail-fast: true
-
-    name: Foundry project
+    name: Test upgrades
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+      - uses: oven-sh/setup-bun@v2
 
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
-        with:
-          version: nightly
+      - name: foundry-toolchain
+        uses: foundry-rs/foundry-toolchain@v1.3.1
 
       - name: Show Forge version
-        run: |
-          forge --version
+        run: forge --version
 
-      - name: Run Forge build
-        run: |
-          forge build --sizes
-        id: build
+      - name: Build
+        run: bun run build-all
 
-      - name: Run Forge tests
-        run: |
-          forge test --no-match-path "test/fork/**/*.sol" -vvv
-        id: test
+      - name: Run tests
+        run: bun run test-upgrades
+  test-fork:
+    strategy:
+      fail-fast: true
+    name: Test fork
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: oven-sh/setup-bun@v2
+
+      - name: foundry-toolchain
+        uses: foundry-rs/foundry-toolchain@v1.3.1
+
+      - name: Show Forge version
+        run: forge --version
+
+      - name: Build
+        run: bun run build
+
+      - name: Run tests
+        run: bun run test-fork
+  test-unit:
+    strategy:
+      fail-fast: true
+    name: Test unit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: oven-sh/setup-bun@v2
+
+      - name: foundry-toolchain
+        uses: foundry-rs/foundry-toolchain@v1.3.1
+
+      - name: Show Forge version
+        run: forge --version
+
+      - name: Build
+        run: bun run build
+
+      - name: Run tests
+        run: bun run test-unit
+  
