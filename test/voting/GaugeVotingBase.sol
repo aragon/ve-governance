@@ -154,7 +154,7 @@ contract GaugeVotingBase is
     }
 
     function _actions() internal view returns (IDAO.Action[] memory) {
-        IDAO.Action[] memory actions = new IDAO.Action[](9);
+        IDAO.Action[] memory actions = new IDAO.Action[](10);
 
         // action 0: apply the ve installation
         actions[0] = IDAO.Action({
@@ -228,6 +228,15 @@ contract GaugeVotingBase is
             data: abi.encodeCall(
                 PermissionManager.grant,
                 (address(curve), address(this), curve.CURVE_ADMIN_ROLE())
+            )
+        });
+
+        actions[9] = IDAO.Action({
+            to: address(dao),
+            value: 0,
+            data: abi.encodeCall(
+                PermissionManager.grant,
+                (address(clock), address(this), clock.SEASON_ADMIN_ROLE())
             )
         });
 

@@ -17,7 +17,7 @@ import "@helpers/OSxHelpers.sol";
 import {IEscrowCurveTokenStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
 import {IWithdrawalQueueErrors} from "src/escrow/increasing/interfaces/IVotingEscrowIncreasing.sol";
 import {IGaugeVote} from "src/voting/ISimpleGaugeVoter.sol";
-import {VotingEscrow, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams} from "src/voting/SimpleGaugeVoterSetup.sol";
+import {Clock, VotingEscrow, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams} from "src/voting/SimpleGaugeVoterSetup.sol";
 
 import {GaugeVotingBase} from "./GaugeVotingBase.sol";
 
@@ -114,8 +114,8 @@ contract TestGaugeVote is GaugeVotingBase {
         assertEq(voter.usedVotingPower(tokenId), 0);
 
         // global state
-        assertEq(voter.totalVotingPowerCast(), 0);
-        assertEq(voter.gaugeVotes(gauge), 0);
+        assertEq(voter.totalVotingPowerCast(0), 0);
+        assertEq(voter.gaugeVotes(0, gauge), 0);
     }
 
     function testFuzz_canResetAnytime(uint48 _time) public {
@@ -138,8 +138,8 @@ contract TestGaugeVote is GaugeVotingBase {
         assertEq(voter.usedVotingPower(tokenId), newVotingPower);
 
         // global state
-        assertEq(voter.totalVotingPowerCast(), newVotingPower);
-        assertEq(voter.gaugeVotes(gauge), newVotingPower);
+        assertEq(voter.totalVotingPowerCast(0), newVotingPower);
+        assertEq(voter.gaugeVotes(0,gauge), newVotingPower);
 
         // warp to the next distribution period
         _increaseTime(_time);
@@ -158,8 +158,8 @@ contract TestGaugeVote is GaugeVotingBase {
         assertEq(voter.usedVotingPower(tokenId), 0);
 
         // global state
-        assertEq(voter.totalVotingPowerCast(), 0);
-        assertEq(voter.gaugeVotes(gauge), 0);
+        assertEq(voter.totalVotingPowerCast(0), 0);
+        assertEq(voter.gaugeVotes(0,gauge), 0);
     }
 
     // can't vote if you don't own the token
@@ -310,8 +310,8 @@ contract TestGaugeVote is GaugeVotingBase {
         assertEq(voter.usedVotingPower(tokenId), votingPower);
 
         // global state
-        assertEq(voter.totalVotingPowerCast(), votingPower);
-        assertEq(voter.gaugeVotes(gauge), votingPower);
+        assertEq(voter.totalVotingPowerCast(0), votingPower);
+        assertEq(voter.gaugeVotes(0,gauge), votingPower);
     }
 
     // 32 bit integers mean we don't round to zero
@@ -355,9 +355,9 @@ contract TestGaugeVote is GaugeVotingBase {
         assertEq(voter.usedVotingPower(tokenId), expectedTotalVotes);
 
         // global state
-        assertEq(voter.totalVotingPowerCast(), expectedTotalVotes);
-        assertEq(voter.gaugeVotes(gauge), expectedVotesForGauge);
-        assertEq(voter.gaugeVotes(newGauge), expectedVotesForNewGauge);
+        assertEq(voter.totalVotingPowerCast(0), expectedTotalVotes);
+        assertEq(voter.gaugeVotes(0,gauge), expectedVotesForGauge);
+        assertEq(voter.gaugeVotes(0,newGauge), expectedVotesForNewGauge);
     }
 
     function testManualResets() public {
@@ -394,8 +394,8 @@ contract TestGaugeVote is GaugeVotingBase {
         assertEq(voter.usedVotingPower(tokenId), 0);
 
         // global state
-        assertEq(voter.totalVotingPowerCast(), 0);
-        assertEq(voter.gaugeVotes(gauge), 0);
+        assertEq(voter.totalVotingPowerCast(0), 0);
+        assertEq(voter.gaugeVotes(0,gauge), 0);
     }
 
     function testVotingResets() public {
@@ -433,8 +433,8 @@ contract TestGaugeVote is GaugeVotingBase {
         assertEq(voter.usedVotingPower(tokenId), newVotingPower);
 
         // global state
-        assertEq(voter.totalVotingPowerCast(), newVotingPower);
-        assertEq(voter.gaugeVotes(gauge), newVotingPower);
+        assertEq(voter.totalVotingPowerCast(0), newVotingPower);
+        assertEq(voter.gaugeVotes(0,gauge), newVotingPower);
     }
 
     function testCanVoteForMultiple() public {
@@ -609,5 +609,105 @@ contract TestGaugeVote is GaugeVotingBase {
             voter.reset(tokenIdA);
         }
         vm.stopPrank();
+    }
+
+    function testVoteWithSeasons(uint128 _weight) public {
+        vm.assume(_weight > 0);
+
+        // create the vote
+        votes.push(GaugeVote(_weight, gauge));
+
+        uint votingPower = escrow.votingPower(tokenId);
+
+        // vote
+        vm.startPrank(owner);
+        {
+            vm.expectEmit(true, true, true, true);
+            emit Voted({
+                voter: owner,
+                gauge: gauge,
+                epoch: voter.epochId(),
+                tokenId: tokenId,
+                votingPowerCastForGauge: votingPower,
+                totalVotingPowerInGauge: votingPower,
+                totalVotingPowerInContract: votingPower,
+                timestamp: block.timestamp
+            });
+            voter.vote(tokenId, votes);
+        }
+        vm.stopPrank();
+
+        // check the vote
+        assertEq(voter.isVoting(tokenId), true);
+        assertEq(voter.gaugesVotedFor(tokenId).length, 1);
+        assertEq(voter.gaugesVotedFor(tokenId)[0], gauge);
+        assertEq(voter.votes(tokenId, gauge), votingPower);
+        assertEq(voter.usedVotingPower(tokenId), votingPower);
+
+        // global state
+        assertEq(voter.totalVotingPowerCast(0), votingPower);
+        assertEq(voter.gaugeVotes(0,gauge), votingPower);
+
+        clock.newSeason();
+
+        vm.warp(block.timestamp + clock.epochNextCheckpointIn() - 1);
+
+        // check the vote right before the season ends
+        assertEq(voter.isVoting(tokenId), true);
+        assertEq(voter.gaugesVotedFor(tokenId).length, 1);
+        assertEq(voter.gaugesVotedFor(tokenId)[0], gauge);
+        assertEq(voter.votes(tokenId, gauge), votingPower);
+        assertEq(voter.usedVotingPower(tokenId), votingPower);
+
+        // global state
+        assertEq(voter.totalVotingPowerCast(0), votingPower);
+        assertEq(voter.gaugeVotes(0,gauge), votingPower);
+
+
+        // check the vote after the season ends
+        vm.warp(block.timestamp + 1);
+
+        assertEq(voter.isVoting(tokenId), false);
+        assertEq(voter.gaugesVotedFor(tokenId).length, 0);
+        assertEq(voter.votes(tokenId, gauge), 0);
+        assertEq(voter.usedVotingPower(tokenId), 0);
+        assertEq(voter.totalVotingPowerCast(1), 0);
+
+        uint votingPowerAfterNewSeason = escrow.votingPower(tokenId);
+        assertEq(votingPowerAfterNewSeason, lockDeposit);
+
+        // warp to the next voting period
+        vm.warp(block.timestamp + 1 weeks + 1 hours + 1);
+
+        uint votingPowerBeforeVoting = escrow.votingPower(tokenId);
+
+        // vote
+        vm.startPrank(owner);
+        {
+            vm.expectEmit(true, true, true, true);
+            emit Voted({
+                voter: owner,
+                gauge: gauge,
+                epoch: voter.epochId(),
+                tokenId: tokenId,
+                votingPowerCastForGauge: votingPowerBeforeVoting,
+                totalVotingPowerInGauge: votingPowerBeforeVoting,
+                totalVotingPowerInContract: votingPowerBeforeVoting,
+                timestamp: block.timestamp
+            });
+            voter.vote(tokenId, votes);
+        }
+        vm.stopPrank();
+
+        // check the vote
+        assertEq(voter.isVoting(tokenId), true);
+        assertEq(voter.gaugesVotedFor(tokenId).length, 1);
+        assertEq(voter.gaugesVotedFor(tokenId)[0], gauge);
+        assertEq(voter.votes(tokenId, gauge), votingPowerBeforeVoting);
+        assertEq(voter.usedVotingPower(tokenId), votingPowerBeforeVoting);
+
+        // global state
+        assertEq(voter.totalVotingPowerCast(1), votingPowerBeforeVoting);
+        assertEq(voter.gaugeVotes(1,gauge), votingPowerBeforeVoting);
     }
 }
