@@ -18,6 +18,8 @@ import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {ReentrancyGuardUpgradeable as ReentrancyGuard} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
+import {BalanceLogicLibrary} from "../../libs/BalanceLogicLibrary.sol";
+import {console2 as console} from "forge-std/console2.sol";
 
 /// @title Quadratic Increasing Escrow
 contract QuadraticIncreasingEscrow is
@@ -62,19 +64,18 @@ contract QuadraticIncreasingEscrow is
 
 
     struct UserPoint {
-        int128 bias;
-        int128 slope;
+        uint208 bias;
+        uint128 slope; // TODO: maybe int128 ? can it get negative values ?
         uint256 ts;
     }
 
-    struct Changes {
-        uint128 finalBias; // This is how much it gets after no-more increase.
-        uint128 slope;
-    }
+   
 
     
 
-    mapping(uint256 => Changes) public slopeChanges;   
+    // endTime => summed up slopes at that endTime
+    mapping(uint256 => uint128) public slopeChanges;
+
     mapping(uint256 => UserPoint) internal pointHistory;
     mapping(uint256 => UserPoint[1000000000]) internal userPointHistory;
     mapping(uint256 => uint256) public userPointEpoch;
@@ -285,12 +286,6 @@ contract QuadraticIncreasingEscrow is
         return _getBias(timeElapsed, lastPoint.coefficients);
     }
 
-    /// @notice [NOT IMPLEMENTED] Calculate total voting power at some point in the past
-    /// @dev This function will be implemented in a future version of the contract
-    function supplyAt(uint256) external pure returns (uint256) {
-        revert("Supply Not Implemented");
-    }
-
     /*//////////////////////////////////////////////////////////////
                               CHECKPOINT
     //////////////////////////////////////////////////////////////*/
@@ -301,8 +296,13 @@ contract QuadraticIncreasingEscrow is
         IVotingEscrow.LockedBalance memory _oldLocked,
         IVotingEscrow.LockedBalance memory _newLocked
     ) external nonReentrant {
-        if (msg.sender != escrow) revert OnlyEscrow();
+        // TODO: GIORGI uncomment later...
+        // if (msg.sender != escrow) revert OnlyEscrow();
         _checkpoint(_tokenId, _oldLocked, _newLocked);
+    }
+
+    function supplyAt(uint256 _timestamp) public view override returns (uint256) {
+        return BalanceLogicLibrary.supplyAt(slopeChanges, pointHistory, epoch, _timestamp);
     }
 
     /// @notice Record gper-user data to checkpoints. Used by VotingEscrow system.
@@ -320,7 +320,7 @@ contract QuadraticIncreasingEscrow is
         uint256 _epoch = epoch;
         UserPoint memory uNew;
         UserPoint memory uOld;
-        uint256 lastPointTs;
+        
 
         UserPoint memory lastPoint = UserPoint({
             bias: 0,
@@ -330,53 +330,59 @@ contract QuadraticIncreasingEscrow is
 
         if (_epoch > 0) {
             lastPoint = pointHistory[_epoch];
-            lastPointTs = lastPoint.ts;
         }
 
-        uint256 lastCheckpoint = lastPoint.ts;
+        uint256 lastCheckpoint = lastPoint.ts; // This will get modified in a loop.
+        uint256 lastPointTs = lastPoint.ts; // This stays the same as we need this value to calculate the bias for our point.
 
         if (_oldLocked.end  > block.timestamp && _oldLocked.amount > 0) {
-            uOld.slope = _oldLocked.amount / MAXTIME;
+            uOld.slope = (_oldLocked.amount / MAXTIME).toUint128();
             uOld.bias = _oldLocked.amount;
         }
 
-        // new lock always starts now...
-        uNew.slope = _newLocked.amount / MAXTIME;
+        // New lock always starts now.
+        uNew.slope = (_newLocked.amount / MAXTIME).toUint128();
         uNew.bias = _newLocked.amount;
 
-        Changes storage oldEnd = slopeChanges[_oldLocked.end];
-        Changes storage newEnd = slopeChanges[_newLocked.end];
+        uint128 oldDSlope = slopeChanges[_oldLocked.end];
+        uint128 newDSlope = slopeChanges[_newLocked.end];
     
         uint256 t_i = (lastCheckpoint / WEEK) * WEEK;
 
         {
-            Changes memory c;
+            uint128 slope;
             for (uint256 i = 0; i < 255; ++i) {
                 t_i += WEEK; // Initial value of t_i is always larger than the ts of the last point
                 
                 if (t_i > block.timestamp) {
                     t_i = block.timestamp;
                 } else {
-                    c = slopeChanges[t_i];
+                    slope = slopeChanges[t_i];
                 }
 
-                lastPoint.bias += lastPoint.slope * (t_i - lastCheckpoint).toInt128();
-                lastPoint.slope -= c.slope;
+                lastPoint.bias += lastPoint.slope * (t_i - lastCheckpoint).toUint128();
+                lastPoint.slope -= slope;
 
                 lastCheckpoint = t_i;
                 lastPoint.ts = t_i;
                 _epoch += 1;
+
                 if (t_i == block.timestamp) {
                     break;
                 } else {
                     pointHistory[_epoch] = lastPoint;
                 }
-
             }
         }
 
         lastPoint.slope += uNew.slope - uOld.slope;
-        lastPoint.bias += uNew.bias - uOld.bias - uOld.slope * (block.timestamp - lastPointTs);
+        // If `uOld.bias and uOld.slope` exist, that means user is editting the lock.
+        // From that new lock's point onwards, old bias/slope must be discarded from 
+        // the calculations, but only from the new lock point's timestamp, before then, 
+        // it still should calculate it.
+        // Note that we also subtract `uOld.slope * (block.timestamp - lastPointTs)` 
+        // because this was added in a loop above..
+        lastPoint.bias += (uNew.bias - uOld.bias - uOld.slope * (block.timestamp - lastPointTs)).toUint128();
         
 
         // TODO: see aerodome..
@@ -384,22 +390,21 @@ contract QuadraticIncreasingEscrow is
         pointHistory[_epoch] = lastPoint;
 
         if (_oldLocked.end > block.timestamp) {
-            oldEnd.slope -= uOld.slope;
-            // oldEnd.finalBias -= (uOld.bias + uOld.slope * (_oldLocked.end - lastPointTs));
+            oldDSlope -= uOld.slope;
 
             if (_newLocked.end == _oldLocked.end) {
-                oldEnd.slope += uNew.slope; 
+                oldDSlope += uNew.slope;
             }
+
+            slopeChanges[_oldLocked.end] = oldDSlope;
         }
 
         if (_newLocked.end > block.timestamp) {
             if ((_newLocked.end > _oldLocked.end)) {
-                newEnd.slope += uNew.slope;
+                newDSlope += uNew.slope;
+                slopeChanges[_newLocked.end] = newDSlope;
             }
             // else we already recorded it in above..
-
-
-            // newEnd.finalBias += uNew.slope * (_newLocked.end - block.timestamp) + uNew.bias;
         }
 
         uNew.ts = block.timestamp;
@@ -410,7 +415,6 @@ contract QuadraticIncreasingEscrow is
             userPointEpoch[_tokenId] = ++userEpoch;
             userPointHistory[_tokenId][userEpoch] = uNew;
         }
-
     }
 
     /*///////////////////////////////////////////////////////////////

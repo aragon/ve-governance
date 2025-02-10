@@ -7,7 +7,6 @@ utils/=test/utils/
 @aragon/multisig/=lib/osx/packages/contracts/src/plugins/governance/multisig/
 
 @interfaces/=src/interfaces/
-@mocks/=test/mocks/
 @libs/=src/libs/
 @escrow/=src/escrow/increasing/
 @escrow-interfaces/=src/escrow/increasing/interfaces/

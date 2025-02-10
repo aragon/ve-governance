@@ -24,6 +24,8 @@ import {ReentrancyGuardUpgradeable as ReentrancyGuard} from "@openzeppelin/contr
 import {PausableUpgradeable as Pausable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
 
+import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
+
 contract VotingEscrow is
     IVotingEscrow,
     ReentrancyGuard,
@@ -252,15 +254,15 @@ contract VotingEscrow is
         if (_value == 0) revert ZeroAmount();
         if (_value < minDeposit) revert AmountTooSmall();
 
-        // query the duration lib to get the next time we can deposit
-        uint256 startTime = IClock(clock).epochNextCheckpointTs();
+        uint256 startTime = block.timestamp;
+        uint256 endTime = (startTime / CurveConstantLib.WEEK) * CurveConstantLib.WEEK + CurveConstantLib.MAX_TIME;
 
         // increment the total locked supply and get the new tokenId
         totalLocked += _value;
         uint256 newTokenId = ++lastLockId;
 
         // write the lock and checkpoint the voting power
-        LockedBalance memory lock = LockedBalance(_value.toUint208(), startTime.toUint48());
+        LockedBalance memory lock = LockedBalance(_value.toUint208(), startTime.toUint48(), endTime.toUint48());
         _locked[newTokenId] = lock;
 
         // we don't allow edits in this implementation, so only the new lock is used
@@ -287,7 +289,7 @@ contract VotingEscrow is
     /// @dev Old locked balance is unused in the increasing case, at least in this implementation
     /// @param _newLocked New locked amount / start lock time for the user
     function _checkpoint(uint256 _tokenId, LockedBalance memory _newLocked) private {
-        IEscrowCurve(curve).checkpoint(_tokenId, LockedBalance(0, 0), _newLocked);
+        IEscrowCurve(curve).checkpoint(_tokenId, LockedBalance(0, 0, 0), _newLocked);
     }
 
     /// @dev resets the voting power for a given tokenId. Checkpoint is written to the end of the epoch.
@@ -297,8 +299,8 @@ contract VotingEscrow is
         uint256 checkpointClearTime = IClock(clock).epochNextCheckpointTs();
         IEscrowCurve(curve).checkpoint(
             _tokenId,
-            LockedBalance(0, 0),
-            LockedBalance(0, checkpointClearTime.toUint48())
+            LockedBalance(0, 0, 0),
+            LockedBalance(0, checkpointClearTime.toUint48(), 0)
         );
     }
 
@@ -354,7 +356,7 @@ contract VotingEscrow is
         }
 
         // clear out the token data
-        _locked[_tokenId] = LockedBalance(0, 0);
+        _locked[_tokenId] = LockedBalance(0, 0, 0);
         totalLocked -= value;
 
         // Burn the NFT and transfer the tokens to the user
