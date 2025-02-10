@@ -3,6 +3,7 @@ pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
 import {MockERC20} from "@solmate/test/utils/mocks/MockERC20.sol";
+import {GaugesDaoFactory, Deployment, DeploymentParameters, TokenParameters} from "../../src/factory/GaugesDaoFactory.sol";
 import {MockPluginSetupProcessor} from "@mocks/osx/MockPSP.sol";
 import {MockPluginSetupProcessorMulti} from "@mocks/osx/MockPSPMulti.sol";
 import {MockPluginRepoRegistry} from "@mocks/osx/MockPluginRepoRegistry.sol";
@@ -384,10 +385,12 @@ contract GaugesDaoFactoryTest is Test {
         TokenParameters[] memory tokenParameters = new TokenParameters[](2);
         tokenParameters[0] = TokenParameters({
             token: address(new MockERC20("T1", "T1", 18)),
+            token: address(new MockERC20("T1", "T1", 18)),
             veTokenName: "Name 1",
             veTokenSymbol: "TK1"
         });
         tokenParameters[1] = TokenParameters({
+            token: address(new MockERC20("T2", "T2", 18)),
             token: address(new MockERC20("T2", "T2", 18)),
             veTokenName: "Name 2",
             veTokenSymbol: "TK2"
@@ -769,15 +772,18 @@ contract GaugesDaoFactoryTest is Test {
         TokenParameters[] memory tokenParameters = new TokenParameters[](3);
         tokenParameters[0] = TokenParameters({
             token: address(new MockERC20("T3", "T3", 18)),
+            token: address(new MockERC20("T3", "T3", 18)),
             veTokenName: "Name 3",
             veTokenSymbol: "TK3"
         });
         tokenParameters[1] = TokenParameters({
             token: address(new MockERC20("T4", "T4", 18)),
+            token: address(new MockERC20("T4", "T4", 18)),
             veTokenName: "Name 4",
             veTokenSymbol: "TK4"
         });
         tokenParameters[2] = TokenParameters({
+            token: address(new MockERC20("T5", "T5", 18)),
             token: address(new MockERC20("T5", "T5", 18)),
             veTokenName: "Name 5",
             veTokenSymbol: "TK5"
@@ -1263,15 +1269,18 @@ contract GaugesDaoFactoryTest is Test {
         TokenParameters[] memory tokenParameters = new TokenParameters[](3);
         tokenParameters[0] = TokenParameters({
             token: address(new MockERC20("T3", "T3", 18)),
+            token: address(new MockERC20("T3", "T3", 18)),
             veTokenName: "Name 3",
             veTokenSymbol: "TK3"
         });
         tokenParameters[1] = TokenParameters({
             token: address(new MockERC20("T4", "T4", 18)),
+            token: address(new MockERC20("T4", "T4", 18)),
             veTokenName: "Name 4",
             veTokenSymbol: "TK4"
         });
         tokenParameters[2] = TokenParameters({
+            token: address(new MockERC20("T5", "T5", 18)),
             token: address(new MockERC20("T5", "T5", 18)),
             veTokenName: "Name 5",
             veTokenSymbol: "TK5"

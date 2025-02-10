@@ -22,6 +22,11 @@ ast = true
 build_info = true
 extra_output = ["storageLayout"]
 
+ffi = true
+ast = true
+build_info = true
+extra_output = ["storageLayout"]
+
 [profile.ci]
 fuzz = { runs = 10_000 }
 verbosity = 4

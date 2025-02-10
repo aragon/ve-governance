@@ -116,6 +116,20 @@ seed-mode-sepolia :; forge script SeedState \
 	--rpc-url https://sepolia.mode.network \
 	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
 	--broadcast \
+	--verify \
+	--etherscan-api-key $(ETHERSCAN_API_KEY) \
 	-vvvvv
 
+deploy-preview-ethereum-sepolia :; forge script DeployGauges \
+  --rpc-url $(RPC_URL) \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	-vvvvv	
 
+deploy-ethereum-sepolia :; forge script DeployGauges \
+	--rpc-url $(RPC_URL) \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	--broadcast \
+	--verify \
+	--verifier blockscout \
+	--etherscan-api-key $(ETHERSCAN_API_KEY) \
+	-vvvvv
