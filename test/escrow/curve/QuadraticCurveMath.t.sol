@@ -2,12 +2,17 @@ pragma solidity ^0.8.17;
 
 import {console2 as console} from "forge-std/console2.sol";
 
+import {SafeCastUpgradeable as SafeCast} from "@openzeppelin/contracts-upgradeable/utils/math/SafeCastUpgradeable.sol";
+
+import {IClock} from "src/clock/IClock.sol";
 import {QuadraticIncreasingEscrow, IVotingEscrow, IEscrowCurve} from "src/escrow/increasing/QuadraticIncreasingEscrow.sol";
 import {IVotingEscrowIncreasing, ILockedBalanceIncreasing} from "src/escrow/increasing/interfaces/IVotingEscrowIncreasing.sol";
 
 import {QuadraticCurveBase} from "./QuadraticCurveBase.t.sol";
 
 contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
+    using SafeCast for uint256;
+
     function test_votingPowerComputesCorrect() public {
         /**
             Period	Result
@@ -283,5 +288,55 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
             depositSecond,
             "Balance incorrect after season reset II"
         );
+
+        vm.warp(block.timestamp + clock.epochDuration());
+
+        assertEq(
+            curve.votingPowerAt(tokenIdFirst, block.timestamp),
+            600985163959347101952,
+            "Balance incorrect after p1"
+        );
+
+        assertEq(
+            curve.votingPowerAt(tokenIdSecond, block.timestamp),
+            1428570120419660800000000000,
+            "Balance incorrect after p1"
+        );
+        
+        vm.warp(block.timestamp + clock.epochDuration());
+
+        // Simulate a beginWithdrawal checkpoint
+        uint256 checkpointClearTime = IClock(clock).epochNextCheckpointTs();
+        escrow.checkpoint(
+            tokenIdFirst,
+            LockedBalance(0, 0),
+            LockedBalance(0, checkpointClearTime.toUint48())
+        );
+
+        assertEq(
+            curve.votingPowerAt(tokenIdFirst, block.timestamp),
+            901476370123561173504, 
+            "Voting power should be the same after beginWithdrawal"
+        );
+
+        clock.newSeason();
+
+        escrow.checkpoint(
+            tokenIdSecond,
+            LockedBalance(0, 0),
+            LockedBalance(0, checkpointClearTime.toUint48())
+        );
+
+        assertEq(
+            curve.votingPowerAt(tokenIdSecond, block.timestamp),
+            2142851910251161600000000000, 
+            "Voting power should be the same after beginWithdrawal II"
+        );
+        
+        vm.warp(block.timestamp + clock.epochDuration());
+        
+        assertEq(curve.votingPowerAt(tokenIdFirst, block.timestamp), 0, "Voting power should be after withdrawal");
+        assertEq(curve.votingPowerAt(tokenIdSecond, block.timestamp), 0, "Voting power should be after withdrawal II");
+
     }
 }
