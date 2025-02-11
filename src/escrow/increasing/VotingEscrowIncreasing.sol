@@ -254,8 +254,9 @@ contract VotingEscrow is
         if (_value == 0) revert ZeroAmount();
         if (_value < minDeposit) revert AmountTooSmall();
 
-        uint256 startTime = block.timestamp;
-        uint256 endTime = (startTime / CurveConstantLib.WEEK) * CurveConstantLib.WEEK + CurveConstantLib.MAX_TIME;
+        // query the duration lib to get the next time we can deposit
+        uint256 startTime = IClock(clock).epochNextCheckpointTs();
+        uint256 endTime = startTime + CurveConstantLib.MAX_TIME;
 
         // increment the total locked supply and get the new tokenId
         totalLocked += _value;
@@ -282,6 +283,30 @@ contract VotingEscrow is
         emit Deposit(_to, newTokenId, startTime, _value, totalLocked);
 
         return newTokenId;
+    }
+
+    function merge(uint256 _from,  uint256 _to) public {
+        // query the duration lib to get the next time we can deposit
+        uint256 startTime = IClock(clock).epochNextCheckpointTs();
+        uint256 endTime = startTime + CurveConstantLib.MAX_TIME;
+
+        LockedBalance memory oldLockedTo = _locked[_to];
+        if (oldLockedTo.end <= block.timestamp) revert LockExpired();
+
+        LockedBalance memory oldLockedFrom = _locked[_from];
+        uint256 end = oldLockedFrom.end >= oldLockedTo.end ? oldLockedFrom.end : oldLockedTo.end;
+
+        _burn(_from);
+        _locked[_from] = LockedBalance(0, 0, 0);
+        _checkpoint(_from, LockedBalance(0, 0, 0), LockedBalance(0, startTime, endTime));
+
+        LockedBalance memory newLockedTo;
+        newLockedTo.amount = oldLockedTo.amount + oldLockedFrom.amount;
+        newLockedTo.end = end; // TODO: make `end` round to the prev week start.
+        newLockedTo.start = startTime;
+
+        _checkpoint(_to, LockedBalance(0, 0, 0), newLockedTo);
+        _locked[_to] = newLockedTo;
     }
 
     /// @notice Record per-user data to checkpoints. Used by VotingEscrow system.

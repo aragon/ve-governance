@@ -67,11 +67,9 @@ contract QuadraticIncreasingEscrow is
         uint208 bias;
         uint128 slope; // TODO: maybe int128 ? can it get negative values ?
         uint256 ts;
+        uint256 start;
     }
 
-   
-
-    
 
     // endTime => summed up slopes at that endTime
     mapping(uint256 => uint128) public slopeChanges;
@@ -311,104 +309,105 @@ contract QuadraticIncreasingEscrow is
     /// @param _newLocked New locked amount / end lock time for the user
     function _checkpoint(
         uint256 _tokenId,
-        IVotingEscrow.LockedBalance memory _oldLocked,
+        IVotingEscrow.LockedBalance memory /* _oldLocked */,
         IVotingEscrow.LockedBalance memory _newLocked
     ) internal {
         // this implementation doesn't yet support manual checkpointing
         if (_tokenId == 0) revert InvalidTokenId();
-        
+
         uint256 _epoch = epoch;
         UserPoint memory uNew;
-        UserPoint memory uOld;
         
-
         UserPoint memory lastPoint = UserPoint({
             bias: 0,
             slope: 0,
-            ts: block.timestamp
+            ts: block.timestamp,
+            start: _newLocked.start
         });
 
         if (_epoch > 0) {
             lastPoint = pointHistory[_epoch];
+
+            if(lastPoint.start > _newLocked.start) {
+                revert("NotPossible");
+            }
+
+            // TODO: think if "start" match.
         }
 
-        uint256 lastCheckpoint = lastPoint.ts; // This will get modified in a loop.
-        uint256 lastPointTs = lastPoint.ts; // This stays the same as we need this value to calculate the bias for our point.
-
-        if (_oldLocked.end  > block.timestamp && _oldLocked.amount > 0) {
-            uOld.slope = (_oldLocked.amount / MAXTIME).toUint128();
-            uOld.bias = _oldLocked.amount;
-        }
-
-        // New lock always starts now.
-        uNew.slope = (_newLocked.amount / MAXTIME).toUint128();
+        // Calculate slope and bias for the `_newLocked`.
+        uNew.slope = _newLocked.amount / MAXTIME;
         uNew.bias = _newLocked.amount;
+        uNew.start = _newLocked.start;
+        uNew.ts = block.timestamp;
 
-        uint128 oldDSlope = slopeChanges[_oldLocked.end];
-        uint128 newDSlope = slopeChanges[_newLocked.end];
+        // Time points..
+        uint256 lastPointCheckpoint = lastPoint.start; // This will get modified in a loop.
+        uint256 lastPointTs = lastPoint.start; // This stays the same as we need this value to calculate the bias for our point.
+        uint256 currentPointStart = _newLocked.start;
+
+        uint128 currentDSlope = slopeChanges[_newLocked.end];
     
-        uint256 t_i = (lastCheckpoint / WEEK) * WEEK;
+        uint256 t_i = (lastPointCheckpoint / WEEK) * WEEK;
 
         {
-            uint128 slope;
+            uint128 dSlope;
             for (uint256 i = 0; i < 255; ++i) {
-                t_i += WEEK; // Initial value of t_i is always larger than the ts of the last point
+                t_i += WEEK;
                 
-                if (t_i > block.timestamp) {
-                    t_i = block.timestamp;
+                if (t_i > currentPointStart) {
+                    t_i = lastPointTs;
                 } else {
-                    slope = slopeChanges[t_i];
+                    dSlope = slopeChanges[t_i];
                 }
 
-                lastPoint.bias += lastPoint.slope * (t_i - lastCheckpoint).toUint128();
-                lastPoint.slope -= slope;
+                lastPoint.bias += lastPoint.slope * (t_i - lastPointCheckpoint).toUint128();
+                lastPoint.slope -= dSlope;
 
-                lastCheckpoint = t_i;
+                lastPointCheckpoint = t_i;
                 lastPoint.ts = t_i;
                 _epoch += 1;
 
-                if (t_i == block.timestamp) {
+                if (t_i == currentPointStart) {
                     break;
                 } else {
                     pointHistory[_epoch] = lastPoint;
                 }
             }
         }
-
-        lastPoint.slope += uNew.slope - uOld.slope;
-        // If `uOld.bias and uOld.slope` exist, that means user is editting the lock.
-        // From that new lock's point onwards, old bias/slope must be discarded from 
-        // the calculations, but only from the new lock point's timestamp, before then, 
-        // it still should calculate it.
-        // Note that we also subtract `uOld.slope * (block.timestamp - lastPointTs)` 
-        // because this was added in a loop above..
-        lastPoint.bias += (uNew.bias - uOld.bias - uOld.slope * (block.timestamp - lastPointTs)).toUint128();
         
+        uint256 userEpoch = userPointEpoch[_tokenId];
+
+        uint128 newSlope = lastPoint.slope + uNew.slope;
+        uint128 newBias = lastPoint.bias + uNew.bias;
+
+        if(userEpoch > 0 && _newLocked.amount == 0) {
+            UserPoint storage p = userPointHistory[_tokenId][userEpoch];
+            
+            if(_p.end > uNew.start) {
+                newSlope -= p.slope;
+                newBias -= (uNew.start - p.start) * p.slope - p.bias;
+            } else {
+                // we already subtracted p.slope in the above for loop,
+                // because we encounter slopeChanges[p.end] before newLocked.start. 
+                newBias -= (p.end - p.start) * p.slope - p.bias;
+            }
+
+            if(_p.end >= uNew.start) {
+                slopeChanges[_p.end] -= p.slope;
+            }
+        }
+
+        lastPoint.slope = newSlope;
+        lastPoint.bias = newBias;
 
         // TODO: see aerodome..
         epoch = _epoch;
         pointHistory[_epoch] = lastPoint;
 
-        if (_oldLocked.end > block.timestamp) {
-            oldDSlope -= uOld.slope;
-
-            if (_newLocked.end == _oldLocked.end) {
-                oldDSlope += uNew.slope;
-            }
-
-            slopeChanges[_oldLocked.end] = oldDSlope;
-        }
-
-        if (_newLocked.end > block.timestamp) {
-            if ((_newLocked.end > _oldLocked.end)) {
-                newDSlope += uNew.slope;
-                slopeChanges[_newLocked.end] = newDSlope;
-            }
-            // else we already recorded it in above..
-        }
-
-        uNew.ts = block.timestamp;
-        uint256 userEpoch = userPointEpoch[_tokenId];
+        currentDSlope += uNew.slope;
+        slopeChanges[_newLocked.end] = currentDSlope;
+        
         if (userEpoch != 0 && userPointHistory[_tokenId][userEpoch].ts == block.timestamp) {
             userPointHistory[_tokenId][userEpoch] = uNew;
         } else {
