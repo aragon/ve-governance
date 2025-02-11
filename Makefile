@@ -72,3 +72,17 @@ deploy-mode :; forge script script/Deploy.s.sol:Deploy \
 	--verify \
 	--etherscan-api-key $(ETHERSCAN_API_KEY) \
 	-vvv
+
+deploy-preview-ethereum-sepolia :; forge script DeployGauges \
+  --rpc-url $(RPC_URL) \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	-vvvvv	
+
+deploy-ethereum-sepolia :; forge script DeployGauges \
+	--rpc-url $(RPC_URL) \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	--broadcast \
+	--verify \
+	--verifier blockscout \
+	--etherscan-api-key $(ETHERSCAN_API_KEY) \
+	-vvvvv
