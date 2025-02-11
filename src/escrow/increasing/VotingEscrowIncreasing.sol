@@ -285,29 +285,29 @@ contract VotingEscrow is
         return newTokenId;
     }
 
-    function merge(uint256 _from,  uint256 _to) public {
-        // query the duration lib to get the next time we can deposit
-        uint256 startTime = IClock(clock).epochNextCheckpointTs();
-        uint256 endTime = startTime + CurveConstantLib.MAX_TIME;
+    // function merge(uint256 _from,  uint256 _to) public {
+    //     // query the duration lib to get the next time we can deposit
+    //     uint256 startTime = IClock(clock).epochNextCheckpointTs();
+    //     uint256 endTime = startTime + CurveConstantLib.MAX_TIME;
 
-        LockedBalance memory oldLockedTo = _locked[_to];
-        if (oldLockedTo.end <= block.timestamp) revert LockExpired();
+    //     LockedBalance memory oldLockedTo = _locked[_to];
+    //     if (oldLockedTo.end <= block.timestamp) revert LockExpired();
 
-        LockedBalance memory oldLockedFrom = _locked[_from];
-        uint256 end = oldLockedFrom.end >= oldLockedTo.end ? oldLockedFrom.end : oldLockedTo.end;
+    //     LockedBalance memory oldLockedFrom = _locked[_from];
+    //     uint256 end = oldLockedFrom.end >= oldLockedTo.end ? oldLockedFrom.end : oldLockedTo.end;
 
-        _burn(_from);
-        _locked[_from] = LockedBalance(0, 0, 0);
-        _checkpoint(_from, LockedBalance(0, 0, 0), LockedBalance(0, startTime, endTime));
+    //     _burn(_from);
+    //     _locked[_from] = LockedBalance(0, 0, 0);
+    //     _checkpoint(_from, LockedBalance(0, 0, 0), LockedBalance(0, startTime, endTime));
 
-        LockedBalance memory newLockedTo;
-        newLockedTo.amount = oldLockedTo.amount + oldLockedFrom.amount;
-        newLockedTo.end = end; // TODO: make `end` round to the prev week start.
-        newLockedTo.start = startTime;
+    //     LockedBalance memory newLockedTo;
+    //     newLockedTo.amount = oldLockedTo.amount + oldLockedFrom.amount;
+    //     newLockedTo.end = end; // TODO: make `end` round to the prev week start.
+    //     newLockedTo.start = startTime;
 
-        _checkpoint(_to, LockedBalance(0, 0, 0), newLockedTo);
-        _locked[_to] = newLockedTo;
-    }
+    //     _checkpoint(_to, LockedBalance(0, 0, 0), newLockedTo);
+    //     _locked[_to] = newLockedTo;
+    // }
 
     /// @notice Record per-user data to checkpoints. Used by VotingEscrow system.
     /// @param _tokenId NFT token ID

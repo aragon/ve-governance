@@ -66,8 +66,8 @@ contract QuadraticIncreasingEscrow is
     struct UserPoint {
         uint208 bias;
         uint128 slope; // TODO: maybe int128 ? can it get negative values ?
-        uint256 ts;
-        uint256 start;
+        uint48 ts;
+        uint48 start;
     }
 
 
@@ -321,7 +321,7 @@ contract QuadraticIncreasingEscrow is
         UserPoint memory lastPoint = UserPoint({
             bias: 0,
             slope: 0,
-            ts: block.timestamp,
+            ts: block.timestamp.toUint48(),
             start: _newLocked.start
         });
 
@@ -336,21 +336,20 @@ contract QuadraticIncreasingEscrow is
         }
 
         // Calculate slope and bias for the `_newLocked`.
-        uNew.slope = _newLocked.amount / MAXTIME;
+        uNew.slope = (_newLocked.amount / CurveConstantLib.MAX_TIME).toUint128();
         uNew.bias = _newLocked.amount;
         uNew.start = _newLocked.start;
-        uNew.ts = block.timestamp;
-
-        // Time points..
-        uint256 lastPointCheckpoint = lastPoint.start; // This will get modified in a loop.
-        uint256 lastPointTs = lastPoint.start; // This stays the same as we need this value to calculate the bias for our point.
-        uint256 currentPointStart = _newLocked.start;
-
+        uNew.ts = block.timestamp.toUint48();
         uint128 currentDSlope = slopeChanges[_newLocked.end];
-    
-        uint256 t_i = (lastPointCheckpoint / WEEK) * WEEK;
 
         {
+            // Time points..
+            uint256 lastPointCheckpoint = lastPoint.start; // This will get modified in a loop.
+            uint256 lastPointTs = lastPoint.start; // This stays the same as we need this value to calculate the bias for our point.
+            uint256 currentPointStart = _newLocked.start;
+
+            uint256 t_i = (lastPointCheckpoint / WEEK) * WEEK;
+
             uint128 dSlope;
             for (uint256 i = 0; i < 255; ++i) {
                 t_i += WEEK;
@@ -365,7 +364,7 @@ contract QuadraticIncreasingEscrow is
                 lastPoint.slope -= dSlope;
 
                 lastPointCheckpoint = t_i;
-                lastPoint.ts = t_i;
+                lastPoint.ts = t_i.toUint48();
                 _epoch += 1;
 
                 if (t_i == currentPointStart) {
@@ -379,27 +378,29 @@ contract QuadraticIncreasingEscrow is
         uint256 userEpoch = userPointEpoch[_tokenId];
 
         uint128 newSlope = lastPoint.slope + uNew.slope;
-        uint128 newBias = lastPoint.bias + uNew.bias;
-
+        uint208 newBias = lastPoint.bias + uNew.bias;
         if(userEpoch > 0 && _newLocked.amount == 0) {
             UserPoint storage p = userPointHistory[_tokenId][userEpoch];
             
-            if(_p.end > uNew.start) {
+            uint48 endOld = (p.start + CurveConstantLib.MAX_TIME).toUint48();
+
+            if(endOld > uNew.start) {
                 newSlope -= p.slope;
-                newBias -= (uNew.start - p.start) * p.slope - p.bias;
+                newBias = newBias - ((uNew.start - p.start) * p.slope + p.bias);
             } else {
                 // we already subtracted p.slope in the above for loop,
-                // because we encounter slopeChanges[p.end] before newLocked.start. 
-                newBias -= (p.end - p.start) * p.slope - p.bias;
+                // because we encounter slopeChanges[endOld] before newLocked.start. 
+                newBias = newBias - ((endOld - p.start) * p.slope + p.bias);
             }
 
-            if(_p.end >= uNew.start) {
-                slopeChanges[_p.end] -= p.slope;
+            if(endOld >= uNew.start) {
+                slopeChanges[endOld] -= p.slope;
             }
         }
 
         lastPoint.slope = newSlope;
         lastPoint.bias = newBias;
+        lastPoint.start = _newLocked.start;
 
         // TODO: see aerodome..
         epoch = _epoch;
