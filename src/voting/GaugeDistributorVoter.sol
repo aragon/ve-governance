@@ -350,6 +350,21 @@ contract GaugeDistributorVoter is
         return tokenVoteData[_tokenId].usedVotingPower;
     }
 
+    /// @notice function to add or change incentives for the gauges
+    /// @param token The address of the token the incentives will be sent in
+    /// @param epochPayout The epoch based of totla amount of payments that will be given
+    /// @param incentiveAllocator The address of the logic that will calculate payouts
+    function setTokenIncentive(
+        address token,
+        uint256 epochPayout,
+        IIncentiveAllocator incentiveAllocator
+    ) external auth(GAUGE_ADMIN_ROLE) {
+        TokenIncentive storage incentive = tokenIncentives[token];
+        incentive.active = true;
+        incentive.epochPayout = epochPayout;
+        incentive.incentiveAllocator = incentiveAllocator;
+    }
+
     /// @notice function to send the incentives over to the specified gauge
     /// @param _gauge The address of the gauge you are claiming the incentives for
     /// @param _tokenIncentive The address of the token to send the incentives for
