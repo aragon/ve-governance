@@ -12,7 +12,7 @@
     "build-all": "bun run build-refs && bun run build-clean",
     "test-unit": "forge test --no-match-path \"{test/fork/*.sol,test/upgrades/*.sol}\" -vvv",
     "test-fork": "forge test --match-path \"test/fork/**/*.sol\" --rpc-url https://sepolia.drpc.org -vvv",
-    "test-upgrades": "forge test --match-path \"test/upgrades/**/*.sol\" -vvv",
+    "test-upgrades": "forge test --build-info --match-path \"test/upgrades/**/*.sol\" -vvv",
     "test": "forge test -vvv"
   }
 }

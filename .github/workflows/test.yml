@@ -21,7 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: true
       - uses: oven-sh/setup-bun@v2
 
       - name: foundry-toolchain
@@ -72,7 +72,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: true
       - uses: oven-sh/setup-bun@v2
 
       - name: foundry-toolchain
@@ -94,7 +94,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: true
       - uses: oven-sh/setup-bun@v2
 
       - name: foundry-toolchain
