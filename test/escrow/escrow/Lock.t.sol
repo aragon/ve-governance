@@ -5,11 +5,7 @@ import {EscrowBase} from "./EscrowBase.sol";
 import {console2 as console} from "forge-std/console2.sol";
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
-import {DaoUnauthorized} from "@aragon/osx/core/utils/auth.sol";
 import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
-
-import {IERC721EnumerableUpgradeable as IERC721Enumerable} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/IERC721EnumerableUpgradeable.sol";
-import {IERC721MetadataUpgradeable as IERC721Metadata} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/IERC721MetadataUpgradeable.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
@@ -35,15 +31,12 @@ contract TestLockMintBurn is EscrowBase, IEscrowCurveTokenStorage, IGaugeVote {
         assertEq(_nftLock.name(), _name);
         assertEq(_nftLock.symbol(), _symbol);
         assertEq(_nftLock.escrow(), _escrow);
-        assertEq(_nftLock.baseTokenURI(), "");
         assertEq(address(_nftLock.dao()), _dao);
     }
 
     function testSupportsInterface() public view {
         assertTrue(nftLock.supportsInterface(type(ILock).interfaceId));
         assertFalse(nftLock.supportsInterface(0xffffffff));
-        assertTrue(nftLock.supportsInterface(type(IERC721Metadata).interfaceId));
-        assertTrue(nftLock.supportsInterface(type(IERC721Enumerable).interfaceId));
     }
 
     function testFuzz_OnlyEscrowCanMint(address _notEscrow) public {
@@ -101,54 +94,6 @@ contract TestLockMintBurn is EscrowBase, IEscrowCurveTokenStorage, IGaugeVote {
         vm.prank(address(reentrant));
         vm.expectRevert("revert");
         newLock.mint(address(reentrant), 1);
-    }
-
-    function testSetNFTMetadata() public {
-        vm.prank(address(escrow));
-        nftLock.mint(address(123), 1);
-
-        assertEq(nftLock.tokenURI(1), "");
-
-        vm.prank(address(this));
-        nftLock.setBaseURI("https://example.com/");
-        assertEq(nftLock.baseTokenURI(), "https://example.com/");
-        assertEq(nftLock.tokenURI(1), "https://example.com/1");
-
-        vm.prank(address(this));
-        nftLock.setTokenURI(1, "?tokenId=1");
-        assertEq(nftLock.tokenURI(1), "https://example.com/?tokenId=1");
-
-        vm.prank(address(escrow));
-        nftLock.mint(address(123), 2);
-
-        assertEq(nftLock.tokenURI(2), "https://example.com/2");
-    }
-
-    function testOnlyOwnerCanSetNFTMetadata(address _notEscrow) public {
-        vm.assume(_notEscrow != address(this));
-
-        bytes memory data = abi.encodeWithSelector(
-            DaoUnauthorized.selector,
-            address(dao),
-            address(nftLock),
-            address(_notEscrow),
-            nftLock.LOCK_ADMIN_ROLE()
-        );
-
-        vm.prank(address(escrow));
-        nftLock.mint(address(123), 1);
-
-        vm.prank(_notEscrow);
-        vm.expectRevert(data);
-        nftLock.setBaseURI("https://example.com/");
-
-        assertEq(nftLock.baseTokenURI(), "");
-        assertEq(nftLock.tokenURI(1), "");
-
-        vm.prank(_notEscrow);
-        vm.expectRevert(data);
-        nftLock.setTokenURI(1, "?tokenId=1");
-        assertEq(nftLock.tokenURI(1), "");
     }
 }
 

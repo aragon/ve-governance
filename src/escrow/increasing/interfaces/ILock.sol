@@ -2,16 +2,6 @@
 pragma solidity ^0.8.0;
 
 /*///////////////////////////////////////////////////////////////
-                        METADATA
-//////////////////////////////////////////////////////////////*/
-
-interface IMetadataEvents {
-    /// @notice Event emmited when the base metadata URI is updated
-    /// @param uri New base URI
-    event BaseURISet(string uri);
-}
-
-/*///////////////////////////////////////////////////////////////
                         WHITELIST
 //////////////////////////////////////////////////////////////*/
 interface IWhitelistEvents {
@@ -31,9 +21,7 @@ interface IWhitelist is IWhitelistEvents, IWhitelistErrors {
     function whitelisted(address addr) external view returns (bool);
 }
 
-interface IMetadata is IMetadataEvents {}
-
-interface ILock is IWhitelist, IMetadata {
+interface ILock is IWhitelist {
     error OnlyEscrow();
 
     /// @notice Address of the escrow contract that holds underyling assets
