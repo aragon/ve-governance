@@ -142,7 +142,7 @@ contract TestGaugeVote is GaugeVotingBase {
         assertEq(voter.gaugeVotes(gauge), newVotingPower);
 
         // warp to the next distribution period
-        _increaseTime(_time);
+        vm.warp(_time);
 
         // try to reset
         vm.startPrank(owner);
