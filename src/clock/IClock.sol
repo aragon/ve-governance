@@ -67,20 +67,11 @@ interface ISeasonEvents {
 interface IClockSeason is ISeasonEvents {
     function currentSeason() external view returns (uint16);
 
-    // endTimestamp can be 0 if the season is still active
     function season(
         uint16 seasonIndex
     ) external view returns (uint48 startTimestamp, uint48 endTimestamp);
 
-    // all seasons
-    //function seasons() external view returns (uint48[] memory startTimestamps);
-
     function seasonAt(uint48 _timestamp) external view returns (uint16 season);
 
-    // activates a new season
     function newSeason() external;
-
-    //function minSeasonDuration() external view returns (uint48 minDuration);
-
-    function setMinSeasonDuration(uint48 _newDuration) external;
 }

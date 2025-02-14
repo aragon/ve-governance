@@ -13,8 +13,6 @@ import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/pl
 contract Clock is IClock, DaoAuthorizable, UUPSUpgradeable, IClockSeason {
     bytes32 public constant CLOCK_ADMIN_ROLE = keccak256("CLOCK_ADMIN_ROLE");
 
-    bytes32 public constant SEASON_ADMIN_ROLE = keccak256("SEASON_ADMIN_ROLE");
-
     /// @dev Epoch encompasses a voting and non-voting period
     uint256 internal constant EPOCH_DURATION = 2 weeks;
 
@@ -29,9 +27,6 @@ contract Clock is IClock, DaoAuthorizable, UUPSUpgradeable, IClockSeason {
 
     /// @dev Seasons array
     uint48[] private seasons;
-
-    /// @dev Min season duration
-    uint48 public minSeasonDuration = 2 weeks;
 
     /*///////////////////////////////////////////////////////////////
                             Initialization
@@ -225,13 +220,15 @@ contract Clock is IClock, DaoAuthorizable, UUPSUpgradeable, IClockSeason {
                             Seasons
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Returns the current season index
+    /// @dev The season index starts at 0
     function currentSeason() external view returns (uint16) {
         return IClockSeason(this).seasonAt(uint48(block.timestamp));
     }
 
-    // returns the start and end timestamp of a season
-    // startTimestamp is zero for the first season (index 0)
-    // endTimestamp can be 0 if the season is still active
+    /// @notice Returns a season's start and end timestamps by index
+    /// @dev The startTimestamp of the first season is always 0
+    /// @dev The endTimestamp of the current season is always 0
     function season(uint16 seasonIndex) external view returns (uint48, uint48) {
         require(seasonIndex <= seasons.length, "Clock: season does not exist");
         uint48 startTimestamp = seasonIndex == 0 ? 0 : seasons[seasonIndex - 1];
@@ -239,6 +236,9 @@ contract Clock is IClock, DaoAuthorizable, UUPSUpgradeable, IClockSeason {
         return (startTimestamp, endTimestamp);
     }
 
+    /// @notice Returns the season index at a given timestamp
+    /// @dev The season index starts at 0 but the season index as 1 is indexed as 0 in the array
+    /// @dev If the timestamp is after the last season, returns the length of the seasons array
     function seasonAt(uint48 _timestamp) external view returns (uint16) {
         for (uint16 i = 0; i < seasons.length; i++) {
             if (_timestamp < seasons[i]) {
@@ -248,27 +248,20 @@ contract Clock is IClock, DaoAuthorizable, UUPSUpgradeable, IClockSeason {
         return uint16(seasons.length);
     }
 
-    // activates a new season
-    // starts at index 1
-    function newSeason() external auth(SEASON_ADMIN_ROLE) {
+    /// @notice Creates a new season
+    /// @dev The season duration must be greater than EPOCH_DURATION
+    function newSeason() external auth(CLOCK_ADMIN_ROLE) {
         uint256 startTime = IClock(this).epochNextCheckpointTs();
 
         if (seasons.length > 0) {
             uint48 lastSeason = seasons[seasons.length - 1];
-            require(startTime >= lastSeason + minSeasonDuration, "Clock: season is too short");
+            if (startTime < lastSeason + EPOCH_DURATION) {
+                revert ("Clock: season is too short");
+            }
         }
         seasons.push(uint48(startTime));
 
         emit SeasonStarted(uint16(seasons.length), uint48(startTime));
-    }
-
-    // sets the minimum duration for a season
-    function setMinSeasonDuration(uint48 _newDuration) external auth(SEASON_ADMIN_ROLE) {
-        // TODO: should we force a min duration bigger than epochs?
-        require(_newDuration >= EPOCH_DURATION, "Clock: season is too short");
-        minSeasonDuration = _newDuration;
-
-        emit SeasonDurationSet(_newDuration);
     }
 
     /*///////////////////////////////////////////////////////////////
