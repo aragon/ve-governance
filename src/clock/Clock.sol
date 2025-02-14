@@ -229,11 +229,12 @@ contract Clock is IClock, DaoAuthorizable, UUPSUpgradeable, IClockSeason {
     /// @notice Returns a season's start and end timestamps by index
     /// @dev The startTimestamp of the first season is always 0
     /// @dev The endTimestamp of the current season is always 0
-    function season(uint16 seasonIndex) external view returns (uint48, uint48) {
-        require(seasonIndex <= seasons.length, "Clock: season does not exist");
-        uint48 startTimestamp = seasonIndex == 0 ? 0 : seasons[seasonIndex - 1];
-        uint48 endTimestamp = seasonIndex < seasons.length ? seasons[seasonIndex] : 0;
-        return (startTimestamp, endTimestamp);
+    function season(uint16 seasonIndex) external view returns (uint48 startTimestamp, uint48 endTimestamp) {
+        if (seasonIndex > seasons.length) {
+            revert("Clock: season does not exist");
+        }
+        startTimestamp = seasonIndex == 0 ? 0 : seasons[seasonIndex - 1];
+        endTimestamp = seasonIndex < seasons.length ? seasons[seasonIndex] : 0;
     }
 
     /// @notice Returns the season index at a given timestamp

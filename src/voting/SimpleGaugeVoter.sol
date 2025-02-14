@@ -27,7 +27,7 @@ contract SimpleGaugeVoter is
     address public clock;
 
     /// @notice season => The total votes that have accumulated in this contract
-    mapping(uint256 => uint256) public totalVotingPowerCast;
+    mapping(uint16 => uint256) public totalVotingPowerCast;
 
     /// @notice enumerable list of all gauges that can be voted on
     address[] public gaugeList;
@@ -36,10 +36,10 @@ contract SimpleGaugeVoter is
     mapping(address => Gauge) public gauges;
 
     /// @notice season => gauge => total votes (global)
-    mapping(uint256 => mapping(address => uint256)) public gaugeVotes;
+    mapping(uint16 => mapping(address => uint256)) public gaugeVotes;
 
     /// @dev season => tokenId => tokenVoteData
-    mapping(uint256 => mapping(uint256 => TokenVoteData)) internal tokenVoteData;
+    mapping(uint16 => mapping(uint256 => TokenVoteData)) internal tokenVoteData;
 
     /*///////////////////////////////////////////////////////////////
                             Initialization
@@ -102,7 +102,7 @@ contract SimpleGaugeVoter is
         _vote(_tokenId, _votes);
     }
 
-    function _castVote(GaugeVote memory currentVote, uint256 season, uint256 _tokenId, uint256 votingPower, uint256 sumOfWeights, TokenVoteData storage voteData) internal returns (uint256) {
+    function _castVote(GaugeVote memory currentVote, uint16 season, uint256 _tokenId, uint256 votingPower, uint256 sumOfWeights, TokenVoteData storage voteData) internal returns (uint256) {
         // the gauge must exist and be active,
         // it also can't have any votes or we haven't reset properly
         if (!gaugeExists(currentVote.gauge)) revert GaugeDoesNotExist(currentVote.gauge);
@@ -153,7 +153,7 @@ contract SimpleGaugeVoter is
         // clear any existing votes
         if (isVoting(_tokenId)) _reset(_tokenId);
 
-        uint256 season = IClockSeason(clock).currentSeason();
+        uint16 season = IClockSeason(clock).currentSeason();
 
         // voting power continues to increase over the voting epoch.
         // this means you can revote later in the epoch to increase votes.
@@ -189,7 +189,7 @@ contract SimpleGaugeVoter is
 
     function _reset(uint256 _tokenId) internal {
         // get what we need
-        uint256 season = IClockSeason(clock).currentSeason();
+        uint16 season = IClockSeason(clock).currentSeason();
         TokenVoteData storage voteData = tokenVoteData[season][_tokenId];
         address[] storage pastVotes = voteData.gaugesVotedFor;
 
@@ -317,22 +317,22 @@ contract SimpleGaugeVoter is
     }
 
     function isVoting(uint256 _tokenId) public view returns (bool) {
-        uint256 season = IClockSeason(clock).currentSeason();
+        uint16 season = IClockSeason(clock).currentSeason();
         return tokenVoteData[season][_tokenId].lastVoted > 0;
     }
 
     function votes(uint256 _tokenId, address _gauge) external view returns (uint256) {
-        uint256 season = IClockSeason(clock).currentSeason();
+        uint16 season = IClockSeason(clock).currentSeason();
         return tokenVoteData[season][_tokenId].votes[_gauge];
     }
 
     function gaugesVotedFor(uint256 _tokenId) external view returns (address[] memory) {
-        uint256 season = IClockSeason(clock).currentSeason();
+        uint16 season = IClockSeason(clock).currentSeason();
         return tokenVoteData[season][_tokenId].gaugesVotedFor;
     }
 
     function usedVotingPower(uint256 _tokenId) external view returns (uint256) {
-        uint256 season = IClockSeason(clock).currentSeason();
+        uint16 season = IClockSeason(clock).currentSeason();
         return tokenVoteData[season][_tokenId].usedVotingPower;
     }
 
