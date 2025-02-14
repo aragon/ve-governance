@@ -22,7 +22,13 @@ contract GaugeDistributorVoter is
         bool active;
         uint256 epochPayout;
         IIncentiveAllocator incentiveAllocator;
+        // epoch => gauge ==> incentive amount
         mapping(uint256 => mapping(address => uint256)) incentivesPayed;
+    }
+
+    struct TokenAndAmount {
+        address gauge;
+        uint256 amountToBeDistributed;
     }
     /// @notice Custom error for when couldn't pay the incentives
     error DistributionAlreadyDone();
@@ -54,8 +60,14 @@ contract GaugeDistributorVoter is
     /// @dev tokenId => tokenVoteData
     mapping(uint256 => TokenVoteData) internal tokenVoteData;
 
-    /// @notice address => token incentive
+    /// @notice token address => token incentive
     mapping(address => TokenIncentive) public tokenIncentives;
+
+    /// @notice The calculated amount to be distributed per epoch => [gauge, amount]
+    mapping(uint256 => mapping(address => TokenAndAmount[])) public epochAmountsToBeDistributed;
+
+    /// @notice Fee percentage the gauge system will take
+    uint256 public feePercentage;
 
     /*///////////////////////////////////////////////////////////////
                             Initialization
@@ -97,7 +109,7 @@ contract GaugeDistributorVoter is
     }
 
     /*///////////////////////////////////////////////////////////////
-                               Voting 
+                               Voting
     //////////////////////////////////////////////////////////////*/
 
     /// @notice extrememly simple for loop. We don't need reentrancy checks in this implementation
@@ -383,17 +395,18 @@ contract GaugeDistributorVoter is
             revert DistributionAlreadyDone();
         }
 
-        // 1. If epoch voting % haven been calculated
-        // 1.2 Calculate the different percentages of the whole gauge
-        // 1.3 Store the percentages for the epoch
-        uint256 incentive = tokenIncentive.incentiveAllocator.calculateIncentive(_gauge);
+        // Since we are using a delegate call in here, we need to ensure the incentive allocator
+        // contract shares the same storage layout with this contract so there's no conflict.
+        (bool success, bytes memory data) = address(tokenIncentive.incentiveAllocator).delegatecall(
+            abi.encodeWithSignature("calculateIncentive(address,address)", _gauge, _tokenIncentive)
+        );
+        require(success, "Delegatecall failed");
+        uint256 incentive = abi.decode(data, (uint256));
 
-        // 2. Mark gauge + token as claimed incentives
+        // Mark gauge + token as claimed incentives
         tokenIncentive.incentivesPayed[epoch][_gauge] = incentive;
 
-        // 3. Send incentives
-        // 3.1. Create the payload for the DAO
-        // 3.2. Send payload to the DAO
+        // Send incentives
         bytes memory transferCalldata = abi.encode(IERC20.transfer.selector, _gauge, incentive);
         IDAO.Action[] memory paymentActions = new IDAO.Action[](1);
         paymentActions[0] = IDAO.Action({to: _tokenIncentive, value: 0, data: transferCalldata});
@@ -401,6 +414,10 @@ contract GaugeDistributorVoter is
         dao().execute(callId, paymentActions, 0);
 
         return incentive;
+    }
+
+    function setFeePercentage(uint256 _feePercentage) external auth(GAUGE_ADMIN_ROLE) {
+        feePercentage = _feePercentage;
     }
 
     /// Rest of UUPS logic is handled by OSx plugin

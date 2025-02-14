@@ -8,5 +8,5 @@ interface IIncentiveAllocator {
     /// @dev Implementing contracts should use relevant logic (e.g., gauge weight, emissions rate).
     /// @param gauge The address of the gauge to calculate incentives for.
     /// @return amount The amount of incentives to be allocated.
-    function calculateIncentive(address gauge) external view returns (uint256 amount);
+    function calculateIncentive(address gauge, address _token) external returns (uint256 amount);
 }
