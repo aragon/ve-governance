@@ -36,6 +36,8 @@ contract GaugeDistributorVoter is
     /// @notice Custom error for trying to claim an incentive that doesn't exist
     error UnexistantTokenIncentive();
 
+    event IncentivePaid(address gauge, address token, uint256 incentive);
+
     /// @notice The Gauge admin can can create and manage voting gauges for token holders
     bytes32 public constant GAUGE_ADMIN_ROLE = keccak256("GAUGE_ADMIN");
 
@@ -413,9 +415,12 @@ contract GaugeDistributorVoter is
         bytes32 callId = keccak256(abi.encodePacked(epoch, _gauge));
         dao().execute(callId, paymentActions, 0);
 
+        emit IncentivePaid(_gauge, _tokenIncentive, incentive);
         return incentive;
     }
 
+    /// @notice Set the fee percentage for the distributor
+    /// @param _feePercentage The new fee percentage
     function setFeePercentage(uint256 _feePercentage) external auth(GAUGE_ADMIN_ROLE) {
         feePercentage = _feePercentage;
     }
