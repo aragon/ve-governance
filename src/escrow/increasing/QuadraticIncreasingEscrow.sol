@@ -260,7 +260,6 @@ contract QuadraticIncreasingEscrow is
         uint256 timeElapsed;
         // if the last point is before the season start, use last season start
         if (lastPoint.checkpointTs < start) {
-            //TODO: get locked balance from escrow???
             timeElapsed = _t - start;
         } else {
             timeElapsed = _t - lastPoint.checkpointTs;
