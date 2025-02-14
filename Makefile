@@ -12,7 +12,10 @@ install :; make allow-scripts && forge build
 coverage:; ./coverage.sh
 	#
 # run unit tests
-test-unit :; forge test --no-match-path "test/fork/**/*.sol"
+test-unit :; forge test --no-match-path "test/extended/**/*.sol" 	
+	
+# run upgrade tests
+test-upgrades :; forge test --match-path "test/extended/upgrades/**/*.sol" --force
 
 #### Fork testing ####
 

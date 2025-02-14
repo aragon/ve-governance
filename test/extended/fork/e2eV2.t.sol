@@ -1,6 +1,6 @@
 pragma solidity ^0.8.17;
 
-import {AragonTest} from "../base/AragonTest.sol";
+import {AragonTest} from "../../base/AragonTest.sol";
 import {console2 as console} from "forge-std/console2.sol";
 
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
@@ -9,7 +9,7 @@ import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
 import {UUPSUpgradeable as UUPS} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
-import "../helpers/OSxHelpers.sol";
+import "../../helpers/OSxHelpers.sol";
 
 import {Clock} from "@clock/Clock.sol";
 import {IEscrowCurveTokenStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
