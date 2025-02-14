@@ -57,7 +57,7 @@ contract QuadraticCurveBase is TestHelpers, ILockedBalanceIncreasing {
         DAO(payable(address(dao))).grant({
             _who: address(this),
             _where: address(clock),
-            _permissionId: clock.SEASON_ADMIN_ROLE()
+            _permissionId: clock.CLOCK_ADMIN_ROLE()
         });
 
         escrow.setCurve(curve);

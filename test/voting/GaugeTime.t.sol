@@ -105,11 +105,7 @@ contract TestGaugeTime is GaugeVotingBase {
         (uint48 seasonStart, uint48 seasonEnd) = clock.season(0);
         assertEq(seasonStart, 0);
         assertEq(seasonEnd, 0);
-        assertEq(clock.minSeasonDuration(), 0);
         assertEq(clock.currentSeason(), 0);
-
-        clock.setMinSeasonDuration(2 weeks);
-        assertEq(clock.minSeasonDuration(), 2 weeks);
 
         vm.warp(block.timestamp + 1 hours);
 
@@ -150,7 +146,6 @@ contract TestGaugeTime is GaugeVotingBase {
         (uint48 seasonStart, uint48 seasonEnd) = clock.season(0);
         assertEq(seasonStart, 0);
         assertEq(seasonEnd, 0);
-        assertEq(clock.minSeasonDuration(), 0);
         assertEq(clock.currentSeason(), 0);
 
         vm.warp(block.timestamp + 1 weeks);
@@ -190,13 +185,5 @@ contract TestGaugeTime is GaugeVotingBase {
         assertEq(clock.seasonAt(uint48(start + 4 weeks - 1)), 1);
         assertEq(clock.seasonAt(uint48(start + 4 weeks)), 2);
         assertEq(clock.seasonAt(uint48(block.timestamp)), 2);
-    }
-
-    function testSetMinSeasonDurationTooShortReverts() public {
-        vm.expectRevert("Clock: season is too short");
-        clock.setMinSeasonDuration(2 weeks - 1);
-
-        clock.setMinSeasonDuration(2 weeks);
-        assertEq(clock.minSeasonDuration(), 2 weeks);
     }
 }

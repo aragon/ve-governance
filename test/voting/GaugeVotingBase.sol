@@ -236,7 +236,7 @@ contract GaugeVotingBase is
             value: 0,
             data: abi.encodeCall(
                 PermissionManager.grant,
-                (address(clock), address(this), clock.SEASON_ADMIN_ROLE())
+                (address(clock), address(this), clock.CLOCK_ADMIN_ROLE())
             )
         });
 
