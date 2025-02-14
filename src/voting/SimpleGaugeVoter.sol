@@ -102,6 +102,7 @@ contract SimpleGaugeVoter is
         _vote(_tokenId, _votes);
     }
 
+    /// @notice Cast the vote of an tokenId to a specific gauge
     function _castVote(GaugeVote memory currentVote, uint16 season, uint256 _tokenId, uint256 votingPower, uint256 sumOfWeights, TokenVoteData storage voteData) internal returns (uint256) {
         // the gauge must exist and be active,
         // it also can't have any votes or we haven't reset properly
@@ -138,6 +139,7 @@ contract SimpleGaugeVoter is
         return votesForGauge;
     }
 
+    /// @notice Cast the vote of an tokenId to the selected gauges
     function _vote(uint256 _tokenId, GaugeVote[] calldata _votes) internal {
         // ensure the user is allowed to vote on this
         if (!IVotingEscrow(escrow).isApprovedOrOwner(_msgSender(), _tokenId)) {

@@ -244,6 +244,8 @@ contract QuadraticIncreasingEscrow is
         return lower;
     }
 
+    /// @notice Get the voting power at a specific timestamp
+    /// @dev The voting power is computed since the last point or last season whatever happen after
     function votingPowerAt(uint256 _tokenId, uint256 _t) external view returns (uint256) {
         uint256 interval = _getPastTokenPointInterval(_tokenId, _t);
 
@@ -257,8 +259,8 @@ contract QuadraticIncreasingEscrow is
         uint16 season = IClockSeason(clock).seasonAt(uint48(_t));
         (uint48 start, ) = IClockSeason(clock).season(season);
 
-        uint256 timeElapsed;
         // if the last point is before the season start, use last season start
+        uint256 timeElapsed;
         if (lastPoint.checkpointTs < start) {
             timeElapsed = _t - start;
         } else {
