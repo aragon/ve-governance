@@ -94,6 +94,17 @@ deploy-preview-mode-sepolia :; forge script DeployGauges \
 	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
 	-vvvvv	
 
+seed-preview-mode-sepolia :; forge script SeedState \
+	--rpc-url https://sepolia.mode.network \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	-vvvvv
+
+seed-mode-sepolia :; forge script SeedState \
+	--rpc-url https://sepolia.mode.network \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	--broadcast \
+	-vvvvv
+
 deploy-mode-sepolia :; forge script DeployGauges \
 	--rpc-url https://sepolia.mode.network \
 	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
