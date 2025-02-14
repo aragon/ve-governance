@@ -4,6 +4,13 @@ pragma solidity ^0.8.0;
 import {Test, console2 as console} from "forge-std/Test.sol"; // Assuming you're using Foundry for testing
 import "@libs/SignedFixedPointMathLib.sol";
 
+/// foundry v1: need to wrap to test reverts as otherwise too high up the callstack
+contract WrappedLib {
+    function pow(int256 base, int256 exp) public pure {
+        SignedFixedPointMath.pow(base, exp);
+    }
+}
+
 contract SignedFixedPointMathTest is Test {
     using SignedFixedPointMath for int256;
 
@@ -76,8 +83,10 @@ contract SignedFixedPointMathTest is Test {
         int256 base = -1;
         int256 exp = 3;
 
+        WrappedLib w = new WrappedLib();
+
         vm.expectRevert(NegativeBase.selector);
-        SignedFixedPointMath.pow(base.toFP(), exp.toFP());
+        w.pow(base.toFP(), exp.toFP());
     }
 
     function testComparison() public {
