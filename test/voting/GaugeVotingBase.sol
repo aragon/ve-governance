@@ -17,6 +17,7 @@ import {ProxyLib} from "@libs/ProxyLib.sol";
 import "@helpers/OSxHelpers.sol";
 
 import {Clock} from "@clock/Clock.sol";
+import {ISeasonErrors} from "src/clock/IClock.sol";
 import {ISimpleGaugeVoterStorageEventsErrors} from "src/voting/ISimpleGaugeVoter.sol";
 import {IEscrowCurveTokenStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
 import {IWithdrawalQueueErrors} from "src/escrow/increasing/interfaces/IVotingEscrowIncreasing.sol";
@@ -27,7 +28,8 @@ contract GaugeVotingBase is
     Test,
     IGaugeVote,
     IEscrowCurveTokenStorage,
-    ISimpleGaugeVoterStorageEventsErrors
+    ISimpleGaugeVoterStorageEventsErrors,
+    ISeasonErrors
 {
     using ProxyLib for address;
 

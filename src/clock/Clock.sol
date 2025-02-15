@@ -231,7 +231,7 @@ contract Clock is IClock, DaoAuthorizable, UUPSUpgradeable, IClockSeason {
     /// @dev The endTimestamp of the current season is always 0
     function season(uint16 seasonIndex) external view returns (uint48 startTimestamp, uint48 endTimestamp) {
         if (seasonIndex > seasons.length) {
-            revert("Clock: season does not exist");
+            revert SeasonNotFound();
         }
         startTimestamp = seasonIndex == 0 ? 0 : seasons[seasonIndex - 1];
         endTimestamp = seasonIndex < seasons.length ? seasons[seasonIndex] : 0;
@@ -257,7 +257,7 @@ contract Clock is IClock, DaoAuthorizable, UUPSUpgradeable, IClockSeason {
         if (seasons.length > 0) {
             uint48 lastSeason = seasons[seasons.length - 1];
             if (startTime < lastSeason + EPOCH_DURATION) {
-                revert ("Clock: season is too short");
+                revert SeasonTooShort();
             }
         }
         seasons.push(uint48(startTime));

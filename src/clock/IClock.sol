@@ -64,7 +64,12 @@ interface ISeasonEvents {
     event SeasonDurationSet(uint48 duration);
 }
 
-interface IClockSeason is ISeasonEvents {
+interface ISeasonErrors {
+    error SeasonTooShort();
+    error SeasonNotFound();
+}
+
+interface IClockSeason is ISeasonEvents, ISeasonErrors {
     function currentSeason() external view returns (uint16);
 
     function season(

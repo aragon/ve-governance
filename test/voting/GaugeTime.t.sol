@@ -99,7 +99,7 @@ contract TestGaugeTime is GaugeVotingBase {
         }
     }
 
-    function testSeasonMinDuration() public {
+    function testSeasonTooShort() public {
         uint start = block.timestamp;
 
         (uint48 seasonStart, uint48 seasonEnd) = clock.season(0);
@@ -119,7 +119,7 @@ contract TestGaugeTime is GaugeVotingBase {
         assertEq(clock.currentSeason(), 1);
 
         // 1 sec too early
-        vm.expectRevert("Clock: season is too short");
+        vm.expectRevert(SeasonTooShort.selector);
         clock.newSeason();
 
         // +1 sec: new season can starts
