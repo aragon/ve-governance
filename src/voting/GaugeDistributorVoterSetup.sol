@@ -6,6 +6,7 @@ import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {ERC165Checker} from "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
 
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
+import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {IPluginSetup} from "@aragon/osx/framework/plugin/setup/IPluginSetup.sol";
 import {IProposal} from "@aragon/osx/core/plugin/proposal/IProposal.sol";
 
@@ -226,7 +227,7 @@ contract GaugeDistributorVoterSetup is PluginSetup {
         PermissionLib.Operation _grantOrRevoke
     ) public view returns (PermissionLib.MultiTargetPermission[] memory) {
         PermissionLib.MultiTargetPermission[]
-            memory permissions = new PermissionLib.MultiTargetPermission[](10);
+            memory permissions = new PermissionLib.MultiTargetPermission[](11);
 
         permissions[0] = PermissionLib.MultiTargetPermission({
             permissionId: GaugeDistributorVoter(_plugin).GAUGE_ADMIN_ROLE(),
@@ -237,6 +238,14 @@ contract GaugeDistributorVoterSetup is PluginSetup {
         });
 
         permissions[1] = PermissionLib.MultiTargetPermission({
+            operation: PermissionLib.Operation.Grant,
+            where: _dao,
+            who: _plugin,
+            condition: PermissionLib.NO_CONDITION,
+            permissionId: EXECUTE_PERMISSION_ID
+        });
+
+        permissions[2] = PermissionLib.MultiTargetPermission({
             permissionId: VotingEscrow(_escrow).ESCROW_ADMIN_ROLE(),
             where: _escrow,
             who: _dao,
@@ -244,7 +253,7 @@ contract GaugeDistributorVoterSetup is PluginSetup {
             condition: PermissionLib.NO_CONDITION
         });
 
-        permissions[2] = PermissionLib.MultiTargetPermission({
+        permissions[3] = PermissionLib.MultiTargetPermission({
             permissionId: ExitQueue(_queue).QUEUE_ADMIN_ROLE(),
             where: _queue,
             who: _dao,
@@ -252,7 +261,7 @@ contract GaugeDistributorVoterSetup is PluginSetup {
             condition: PermissionLib.NO_CONDITION
         });
 
-        permissions[3] = PermissionLib.MultiTargetPermission({
+        permissions[4] = PermissionLib.MultiTargetPermission({
             permissionId: QuadraticIncreasingEscrow(_curve).CURVE_ADMIN_ROLE(),
             where: _curve,
             who: _dao,
@@ -260,7 +269,7 @@ contract GaugeDistributorVoterSetup is PluginSetup {
             condition: PermissionLib.NO_CONDITION
         });
 
-        permissions[4] = PermissionLib.MultiTargetPermission({
+        permissions[5] = PermissionLib.MultiTargetPermission({
             permissionId: GaugeDistributorVoter(_plugin).UPGRADE_PLUGIN_PERMISSION_ID(),
             where: _plugin,
             who: _dao,
@@ -268,7 +277,7 @@ contract GaugeDistributorVoterSetup is PluginSetup {
             condition: PermissionLib.NO_CONDITION
         });
 
-        permissions[5] = PermissionLib.MultiTargetPermission({
+        permissions[6] = PermissionLib.MultiTargetPermission({
             permissionId: Clock(_clock).CLOCK_ADMIN_ROLE(),
             where: _clock,
             who: _dao,
@@ -276,7 +285,7 @@ contract GaugeDistributorVoterSetup is PluginSetup {
             condition: PermissionLib.NO_CONDITION
         });
 
-        permissions[6] = PermissionLib.MultiTargetPermission({
+        permissions[7] = PermissionLib.MultiTargetPermission({
             permissionId: Lock(_nft).LOCK_ADMIN_ROLE(),
             where: _nft,
             who: _dao,
@@ -284,7 +293,7 @@ contract GaugeDistributorVoterSetup is PluginSetup {
             condition: PermissionLib.NO_CONDITION
         });
 
-        permissions[7] = PermissionLib.MultiTargetPermission({
+        permissions[8] = PermissionLib.MultiTargetPermission({
             permissionId: VotingEscrow(_escrow).PAUSER_ROLE(),
             where: _escrow,
             who: _dao,
@@ -292,7 +301,7 @@ contract GaugeDistributorVoterSetup is PluginSetup {
             condition: PermissionLib.NO_CONDITION
         });
 
-        permissions[8] = PermissionLib.MultiTargetPermission({
+        permissions[9] = PermissionLib.MultiTargetPermission({
             permissionId: VotingEscrow(_escrow).SWEEPER_ROLE(),
             where: _escrow,
             who: _dao,
@@ -300,7 +309,7 @@ contract GaugeDistributorVoterSetup is PluginSetup {
             condition: PermissionLib.NO_CONDITION
         });
 
-        permissions[9] = PermissionLib.MultiTargetPermission({
+        permissions[10] = PermissionLib.MultiTargetPermission({
             permissionId: ExitQueue(_queue).WITHDRAW_ROLE(),
             where: _queue,
             who: _dao,

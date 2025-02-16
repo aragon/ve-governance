@@ -32,6 +32,7 @@ contract VotesBasedAllocator is GaugeDistributorVoter, IIncentiveAllocator {
     ) external returns (uint256 gaugeAmount) {
         // TODO: Implement some checks on who's calling the function
         // TODO: Check if we are in the distribution perdiod
+        // TODO: Check if the gauge is actually active and otherwise skip it
 
         uint256 epoch = epochId();
 

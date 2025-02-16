@@ -22,6 +22,8 @@ import {IEscrowCurveTokenStorage} from "@escrow-interfaces/IEscrowCurveIncreasin
 import {IWithdrawalQueueErrors} from "src/escrow/increasing/interfaces/IVotingEscrowIncreasing.sol";
 import {IGaugeVote} from "src/voting/ISimpleGaugeVoter.sol";
 import {VotingEscrow, Lock, QuadraticIncreasingEscrow, ExitQueue, GaugeDistributorVoter, GaugeDistributorVoterSetup, ISimpleGaugeVoterSetupParams} from "src/voting/GaugeDistributorVoterSetup.sol";
+import {IIncentiveAllocator} from "src/voting/allocators/IIncentiveAllocator.sol";
+import {VotesBasedAllocator} from "src/voting/allocators/VotesBasedAllocator.sol";
 
 contract GaugeVotingBase is
     Test,
@@ -46,6 +48,7 @@ contract GaugeVotingBase is
     QuadraticIncreasingEscrow curve;
     GaugeDistributorVoter voter;
     ExitQueue queue;
+    IIncentiveAllocator incentiveAllocator;
 
     DAO dao;
     Clock clock;
@@ -73,7 +76,10 @@ contract GaugeVotingBase is
         _setupVoterContracts();
         _applySetup();
 
-        // unpause the contract
+        // Voter setup
+        incentiveAllocator = new VotesBasedAllocator();
+        voter.setTokenIncentive(address(token), 10 ether, incentiveAllocator);
+        voter.setFeePercentage(500);
         voter.unpause();
     }
 

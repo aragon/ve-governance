@@ -366,7 +366,7 @@ contract GaugeDistributorVoter is
 
     /// @notice function to add or change incentives for the gauges
     /// @param token The address of the token the incentives will be sent in
-    /// @param epochPayout The epoch based of totla amount of payments that will be given
+    /// @param epochPayout The epoch based of total amount of payments that will be given
     /// @param incentiveAllocator The address of the logic that will calculate payouts
     function setTokenIncentive(
         address token,
@@ -409,7 +409,11 @@ contract GaugeDistributorVoter is
         tokenIncentive.incentivesPayed[epoch][_gauge] = incentive;
 
         // Send incentives
-        bytes memory transferCalldata = abi.encode(IERC20.transfer.selector, _gauge, incentive);
+        bytes memory transferCalldata = abi.encodeWithSelector(
+            IERC20.transfer.selector,
+            _gauge,
+            incentive
+        );
         IDAO.Action[] memory paymentActions = new IDAO.Action[](1);
         paymentActions[0] = IDAO.Action({to: _tokenIncentive, value: 0, data: transferCalldata});
         bytes32 callId = keccak256(abi.encodePacked(epoch, _gauge));
@@ -423,6 +427,13 @@ contract GaugeDistributorVoter is
     /// @param _feePercentage The new fee percentage
     function setFeePercentage(uint256 _feePercentage) external auth(GAUGE_ADMIN_ROLE) {
         feePercentage = _feePercentage;
+    }
+
+    /// @notice Check if a gauge can claim incentives
+    /// @param _gauge The gauge to check
+    /// @return True if the gauge can claim incentives, false otherwise
+    function canClaimIncentives(address _gauge, address _token) external view returns (bool) {
+        // TODO: Implement this function
     }
 
     /// Rest of UUPS logic is handled by OSx plugin
