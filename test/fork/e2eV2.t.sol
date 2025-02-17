@@ -1330,7 +1330,6 @@ contract TestE2EV2 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCur
 
             _startNewSeason();
 
-            // TODO: check the season is 0
             assertEq(0, clock.currentSeason(), "Season should still be 0");
 
             // check the token points written
@@ -1404,7 +1403,6 @@ contract TestE2EV2 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCur
             assertEq(escrow.votingPower(1), depositAlice0, "Alice should have voting power");
             assertTrue(curve.isWarm(1), "Alice should be warm");
 
-            // TODO: No VP???
             assertEq(escrow.votingPower(2), 0, "Carol should not have voting power");
             assertFalse(curve.isWarm(2), "Carol should not be warm");
 
@@ -1431,8 +1429,9 @@ contract TestE2EV2 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCur
 
             goToEpochStartPlus(clock.checkpointInterval() * 2);
 
-            _startNewSeason();
+            assertEq(escrow.votingPower(1), 0, "Alice should have no voting power");
 
+            _startNewSeason();
 
             goToEpochStartPlus(clock.checkpointInterval() * 2 + 6 days);
             
@@ -1450,7 +1449,6 @@ contract TestE2EV2 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCur
 
             assertEq(2, clock.currentSeason(), "Season should be 2");
 
-            assertEq(escrow.votingPower(1), 0, "Alice should have no voting power");
             assertEq(escrow.votingPower(2), 0, "Carol should have no voting power");
 
             goToEpochStartPlus(clock.checkpointInterval() * 3 + 2 days);
