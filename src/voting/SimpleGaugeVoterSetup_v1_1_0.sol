@@ -14,7 +14,7 @@ import {PermissionLib} from "@aragon/osx/core/permission/PermissionLib.sol";
 import {PluginSetup} from "@aragon/osx/framework/plugin/setup/PluginSetup.sol";
 
 // these should be interfaces
-import {SimpleGaugeVoter} from "@voting/SimpleGaugeVoter.sol";
+import {SimpleGaugeVoterV1_1_0 as SimpleGaugeVoter} from "@voting/SimpleGaugeVoter_v1_1_0.sol";
 import {VotingEscrow} from "@escrow/VotingEscrowIncreasing.sol";
 import {ExitQueue} from "@escrow/ExitQueue.sol";
 import {QuadraticIncreasingEscrow} from "@escrow/QuadraticIncreasingEscrow.sol";
@@ -44,7 +44,7 @@ struct ISimpleGaugeVoterSetupParams {
     uint48 warmup;
 }
 
-contract SimpleGaugeVoterSetup is PluginSetup {
+contract SimpleGaugeVoterSetupV1_1_0 is PluginSetup {
     using Address for address;
     using Clones for address;
     using ERC165Checker for address;

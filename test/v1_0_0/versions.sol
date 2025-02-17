@@ -11,6 +11,7 @@ import {VotingEscrow} from "@escrow/VotingEscrowIncreasing.sol";
 import {SimpleGaugeVoter} from "@voting/SimpleGaugeVoter.sol";
 import {SimpleGaugeVoterSetup} from "@voting/SimpleGaugeVoterSetup.sol";
 import {QuadraticIncreasingEscrow} from "@escrow/QuadraticIncreasingEscrow.sol";
+import {GaugesDaoFactory, Deployment, DeploymentParameters, TokenParameters, GaugePluginSet} from "@factory/GaugesDaoFactory.sol";
 
 // interfaces
 import {SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams} from "@voting/SimpleGaugeVoterSetup.sol";

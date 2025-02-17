@@ -16,8 +16,7 @@ import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {Addresslist} from "@aragon/osx/plugins/utils/Addresslist.sol";
 import {MultisigSetup as MultisigPluginSetup} from "@aragon/osx/plugins/governance/multisig/MultisigSetup.sol";
 
-import {GaugesDaoFactory, Deployment, DeploymentParameters, TokenParameters} from "src/factory/GaugesDaoFactory.sol";
-import {SimpleGaugeVoterSetup, VotingEscrow, Clock, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter} from "../versions.sol";
+import {SimpleGaugeVoterSetup, VotingEscrow, Clock, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, GaugesDaoFactory, Deployment, DeploymentParameters, TokenParameters} from "../versions.sol";
 
 contract GaugesDaoFactoryTest is Test {
     function test_ShouldStoreTheSettings_1() public {
