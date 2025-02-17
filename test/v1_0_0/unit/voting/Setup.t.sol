@@ -6,6 +6,7 @@ import {console2 as console} from "forge-std/console2.sol";
 // aragon contracts
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
+import {IPluginSetup} from "@aragon/osx/framework/plugin/setup/IPluginSetup.sol";
 import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
 
 import {MockPluginSetupProcessor} from "@mocks/osx/MockPSP.sol";
@@ -14,14 +15,8 @@ import {MockERC20} from "@mocks/MockERC20.sol";
 
 import "@helpers/OSxHelpers.sol";
 
-import {IEscrowCurveTokenStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
-import {IWithdrawalQueueErrors} from "src/escrow/increasing/interfaces/IVotingEscrowIncreasing.sol";
-import {IGaugeVote} from "src/voting/ISimpleGaugeVoter.sol";
-import {VotingEscrow, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams} from "src/voting/SimpleGaugeVoterSetup.sol";
-
+import {VotingEscrow, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams} from "../../versions.sol";
 import {GaugeVotingBase} from "./GaugeVotingBase.sol";
-
-import {IPluginSetup} from "@aragon/osx/framework/plugin/setup/IPluginSetup.sol";
 
 contract VoterSetupTest is GaugeVotingBase {
     error WrongHelpersArrayLength(uint256 length);

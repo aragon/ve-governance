@@ -10,10 +10,7 @@ import {MockERC20} from "@mocks/MockERC20.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
-import {IEscrowCurveTokenStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
-import {VotingEscrow} from "@escrow/VotingEscrowIncreasing.sol";
-
-import {SimpleGaugeVoter, SimpleGaugeVoterSetup} from "src/voting/SimpleGaugeVoterSetup.sol";
+import {Lock, Clock, VotingEscrow, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, IEscrowCurveIncreasing, IEscrowCurveTokenStorage} from "../../../versions.sol";
 
 contract TestCreateLock is EscrowBase, IEscrowCurveTokenStorage {
     function setUp() public override {

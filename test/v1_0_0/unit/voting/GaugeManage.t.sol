@@ -14,11 +14,6 @@ import {MockERC20} from "@mocks/MockERC20.sol";
 
 import "@helpers/OSxHelpers.sol";
 
-import {IEscrowCurveTokenStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
-import {IWithdrawalQueueErrors} from "src/escrow/increasing/interfaces/IVotingEscrowIncreasing.sol";
-import {IGaugeVote} from "src/voting/ISimpleGaugeVoter.sol";
-import {VotingEscrow, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams} from "src/voting/SimpleGaugeVoterSetup.sol";
-
 import {GaugeVotingBase} from "./GaugeVotingBase.sol";
 
 contract TestGaugeManage is GaugeVotingBase {

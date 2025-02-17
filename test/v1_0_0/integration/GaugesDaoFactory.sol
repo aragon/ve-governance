@@ -3,7 +3,6 @@ pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
 import {MockERC20} from "@solmate/test/utils/mocks/MockERC20.sol";
-import {GaugesDaoFactory, Deployment, DeploymentParameters, TokenParameters} from "../../src/factory/GaugesDaoFactory.sol";
 import {MockPluginSetupProcessor} from "@mocks/osx/MockPSP.sol";
 import {MockPluginSetupProcessorMulti} from "@mocks/osx/MockPSPMulti.sol";
 import {MockPluginRepoRegistry} from "@mocks/osx/MockPluginRepoRegistry.sol";
@@ -16,7 +15,9 @@ import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {Addresslist} from "@aragon/osx/plugins/utils/Addresslist.sol";
 import {MultisigSetup as MultisigPluginSetup} from "@aragon/osx/plugins/governance/multisig/MultisigSetup.sol";
-import {SimpleGaugeVoterSetup, VotingEscrow, Clock, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter} from "../../src/voting/SimpleGaugeVoterSetup.sol";
+
+import {GaugesDaoFactory, Deployment, DeploymentParameters, TokenParameters} from "src/factory/GaugesDaoFactory.sol";
+import {SimpleGaugeVoterSetup, VotingEscrow, Clock, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter} from "../versions.sol";
 
 contract GaugesDaoFactoryTest is Test {
     function test_ShouldStoreTheSettings_1() public {

@@ -5,8 +5,7 @@ import {console2 as console} from "forge-std/console2.sol";
 import {ProxyLib} from "@libs/ProxyLib.sol";
 import {DAO, createTestDAO} from "@mocks/MockDAO.sol";
 import {DaoUnauthorized} from "@aragon/osx/core/utils/auth.sol";
-import {IExitQueue, ExitQueue} from "@escrow/ExitQueue.sol";
-import {ExitQueueBase} from "./ExitQueueBase.sol";
+import {ExitQueueBase, ExitQueue, IExitQueue} from "./ExitQueueBase.sol";
 
 contract TestExitQueueWithdrawals is ExitQueueBase {
     function setUp() public override {

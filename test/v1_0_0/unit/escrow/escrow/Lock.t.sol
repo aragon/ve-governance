@@ -9,13 +9,7 @@ import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
-import {IEscrowCurveTokenStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
-import {VotingEscrow} from "@escrow/VotingEscrowIncreasing.sol";
-import {Lock} from "@escrow/Lock.sol";
-
-import {SimpleGaugeVoter, SimpleGaugeVoterSetup} from "src/voting/SimpleGaugeVoterSetup.sol";
-import {IGaugeVote} from "src/voting/ISimpleGaugeVoter.sol";
-import {ILock} from "@escrow-interfaces/ILock.sol";
+import {Lock, Clock, VotingEscrow, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, IEscrowCurveTokenStorage, IGaugeVote, ILock} from "../../../versions.sol";
 
 contract TestLockMintBurn is EscrowBase, IEscrowCurveTokenStorage, IGaugeVote {
     function testDeploy(

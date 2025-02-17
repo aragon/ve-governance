@@ -9,12 +9,7 @@ import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
-import {IEscrowCurveTokenStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
-import {VotingEscrow} from "@escrow/VotingEscrowIncreasing.sol";
-
-import {SimpleGaugeVoter, SimpleGaugeVoterSetup} from "@voting/SimpleGaugeVoterSetup.sol";
-import {IGaugeVote} from "@voting/ISimpleGaugeVoter.sol";
-import {ITicket} from "@escrow-interfaces/IExitQueue.sol";
+import {Lock, Clock, VotingEscrow, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, IEscrowCurveTokenStorage, IGaugeVote, ITicket} from "../../../versions.sol";
 
 contract TestWithdraw is EscrowBase, IEscrowCurveTokenStorage, IGaugeVote, ITicket {
     address gauge = address(1);

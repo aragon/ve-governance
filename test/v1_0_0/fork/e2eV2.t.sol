@@ -2,20 +2,18 @@ pragma solidity ^0.8.17;
 
 import {AragonTest} from "../base/AragonTest.sol";
 import {console2 as console} from "forge-std/console2.sol";
+import "test/helpers/OSxHelpers.sol";
 
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
 import {UUPSUpgradeable as UUPS} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {VotingEscrow, Clock, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams} from "src/voting/SimpleGaugeVoterSetup.sol";
 
-import "../helpers/OSxHelpers.sol";
-
-import {Clock} from "@clock/Clock.sol";
 import {IEscrowCurveTokenStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
 import {IWithdrawalQueueErrors} from "src/escrow/increasing/interfaces/IVotingEscrowIncreasing.sol";
 import {IGaugeVote} from "src/voting/ISimpleGaugeVoter.sol";
-import {VotingEscrow, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams} from "src/voting/SimpleGaugeVoterSetup.sol";
 
 import {GaugesDaoFactory, GaugePluginSet, Deployment} from "src/factory/GaugesDaoFactory.sol";
 import {DeployGauges, DeploymentParameters} from "script/DeployGauges.s.sol";

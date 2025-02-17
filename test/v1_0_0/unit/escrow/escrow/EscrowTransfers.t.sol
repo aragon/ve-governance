@@ -9,10 +9,7 @@ import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
-import {IEscrowCurveTokenStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
-import {VotingEscrow} from "@escrow/VotingEscrowIncreasing.sol";
-
-import {SimpleGaugeVoter, SimpleGaugeVoterSetup} from "src/voting/SimpleGaugeVoterSetup.sol";
+import {Lock, Clock, VotingEscrow, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, IEscrowCurveTokenStorage} from "../../../versions.sol";
 
 contract TestEscrowTransfers is EscrowBase, IEscrowCurveTokenStorage {
     uint deposit = 100e18;
