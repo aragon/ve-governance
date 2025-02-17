@@ -10,9 +10,13 @@ install :; make allow-scripts && forge build
 
 # create an HTML coverage report in ./report (requires lcov & genhtml)
 coverage:; ./coverage.sh
-	#
+	
 # run unit tests
-test-unit :; forge test --no-match-path "test/fork/**/*.sol"
+test-unit :; forge test --match-path "test/**/unit/**/*.sol"
+
+# run unit tests for specific version
+test-unit-100 :; forge test --match-path "test/v1_0_0/unit/**/*.sol" 
+test-unit-110 :; forge test --match-path "test/v1_1_0/unit/**/*.sol" 
 
 #### Fork testing ####
 

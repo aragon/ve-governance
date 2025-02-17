@@ -77,7 +77,7 @@ contract TestGaugeVote is GaugeVotingBase {
         voter.voteMultiple(ids, votes);
     }
 
-    function testFuzz_canResetInDistributionPeriod() public {
+    function testFuzz_cannotResetInDistributionPeriod() public {
         // create the vote
         votes.push(GaugeVote(1, gauge));
 
@@ -98,65 +98,11 @@ contract TestGaugeVote is GaugeVotingBase {
         // try to reset
         vm.startPrank(owner);
         {
+            vm.expectRevert(VotingInactive.selector);
             voter.reset(tokenId);
         }
         vm.stopPrank();
-
-        // check the vote
-        assertEq(voter.isVoting(tokenId), false);
-        assertEq(voter.gaugesVotedFor(tokenId).length, 0);
-        assertEq(voter.votes(tokenId, gauge), 0);
-        assertEq(voter.usedVotingPower(tokenId), 0);
-
-        // global state
-        assertEq(voter.totalVotingPowerCast(), 0);
-        assertEq(voter.gaugeVotes(gauge), 0);
     }
-
-    function testFuzz_canResetAnytime(uint48 _time) public {
-        // create the vote
-        votes.push(GaugeVote(1, gauge));
-
-        // vote
-        vm.startPrank(owner);
-        {
-            voter.vote(tokenId, votes);
-        }
-        vm.stopPrank();
-
-        // check the vote
-        uint newVotingPower = escrow.votingPower(tokenId);
-        assertEq(voter.isVoting(tokenId), true);
-        assertEq(voter.gaugesVotedFor(tokenId).length, 1);
-        assertEq(voter.gaugesVotedFor(tokenId)[0], gauge);
-        assertEq(voter.votes(tokenId, gauge), newVotingPower);
-        assertEq(voter.usedVotingPower(tokenId), newVotingPower);
-
-        // global state
-        assertEq(voter.totalVotingPowerCast(), newVotingPower);
-        assertEq(voter.gaugeVotes(gauge), newVotingPower);
-
-        // warp to the next distribution period
-        _increaseTime(_time);
-
-        // try to reset
-        vm.startPrank(owner);
-        {
-            voter.reset(tokenId);
-        }
-        vm.stopPrank();
-
-        // check the vote
-        assertEq(voter.isVoting(tokenId), false);
-        assertEq(voter.gaugesVotedFor(tokenId).length, 0);
-        assertEq(voter.votes(tokenId, gauge), 0);
-        assertEq(voter.usedVotingPower(tokenId), 0);
-
-        // global state
-        assertEq(voter.totalVotingPowerCast(), 0);
-        assertEq(voter.gaugeVotes(gauge), 0);
-    }
-
     // can't vote if you don't own the token
     function testCannotVoteIfYouDontOwnTheToken() public {
         // try to vote as this address (not the holder)
