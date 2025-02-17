@@ -85,7 +85,7 @@ struct Deployment {
 }
 
 /// @notice A singleton contract designed to run the deployment once and become a read-only store of the contracts deployed
-contract GaugesDaoFactory {
+contract GaugesDaoFactoryV1_1_0 {
     /// @notice Thrown when attempting to call deployOnce() when the DAO is already deployed.
     error AlreadyDeployed();
 

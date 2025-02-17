@@ -9,9 +9,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
 import {UUPSUpgradeable as UUPS} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {VotingEscrow, Clock, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveTokenStorage, GaugesDaoFactory, GaugePluginSet, Deployment} from "../versions.sol";
-
-import {DeployGauges, DeploymentParameters} from "script/DeployGauges.s.sol";
+import {VotingEscrow, Clock, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveTokenStorage, GaugesDaoFactory, GaugePluginSet, Deployment, DeploymentParameters, DeployGauges} from "../versions.sol";
 
 interface IERC20Mint is IERC20 {
     function mint(address _to, uint256 _amount) external;
