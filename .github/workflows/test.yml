@@ -1,7 +1,11 @@
-name: CI
+name: Tests
 
 on:
   push:
+    branches:
+      - "main"
+      - "develop"
+      - "deploy/**"
   pull_request:
   workflow_dispatch:
 
@@ -9,25 +13,21 @@ env:
   FOUNDRY_PROFILE: ci
 
 jobs:
-  check:
+  test-unit:
     strategy:
       fail-fast: true
-
-    name: Foundry project
+    name: Test Unit
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: true
 
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
-        with:
-          version: nightly
+      - name: foundry-toolchain
+        uses: foundry-rs/foundry-toolchain@v1.3.1
 
       - name: Show Forge version
-        run: |
-          forge --version
+        run: forge --version
 
       - name: Run Forge build
         run: |
@@ -38,3 +38,83 @@ jobs:
         run: |
           forge test --match-path "test/**/unit/**/*.sol"
         id: test
+
+  test-upgrade:
+    strategy:
+      fail-fast: true
+    name: Test Upgrade
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: foundry-toolchain
+        uses: foundry-rs/foundry-toolchain@v1.3.1
+
+      - name: Show Forge version
+        run: forge --version
+
+      - name: Run Forge build
+        run: |
+          forge build --sizes
+        id: build
+
+      - name: Run Forge tests
+        run: |
+          forge test --match-path "test/**/upgrade/**/*.sol" --force
+        id: test
+
+  test-fork:
+    strategy:
+      fail-fast: true
+    name: Test Fork
+    runs-on: ubuntu-latest
+    env:
+      NETWORK: "sepolia"
+      FORK_TEST_MODE: "new-factory"
+      DEPLOY_AS_PRODUCTION: false
+      TOKEN_TEST_WHALE: "0x"
+      FACTORY_ADDRESS: "0x"
+      MULTISIG_MEMBERS_JSON_FILE_NAME: "/script/multisig-members.json"
+      MIN_APPROVALS: 1
+      MULTISIG_PROPOSAL_EXPIRATION_PERIOD: "864000"
+      MINT_TEST_TOKENS: true
+      TOKEN1_ADDRESS: "0x0000000000000000000000000000000000000000"
+      VE_TOKEN1_NAME: "Voting Escrow Token 1"
+      VE_TOKEN1_SYMBOL: "veTK1"
+      TOKEN2_ADDRESS: "0x0000000000000000000000000000000000000000"
+      VE_TOKEN2_NAME: "Voting Escrow Token 2"
+      VE_TOKEN2_SYMBOL: "veTK2"
+      FEE_PERCENT: "0" # 10_000 = 100%
+      WARMUP_PERIOD: "259200" # 3 days
+      COOLDOWN_PERIOD: "259200" # 3 days
+      MIN_LOCK_DURATION: "1"
+      VOTING_PAUSED: true
+      MIN_DEPOSIT: "10000000000000000" # 0.01 ETH
+      MULTISIG_PLUGIN_REPO_ADDRESS: "0x9e7956C8758470dE159481e5DD0d08F8B59217A2"
+      MULTISIG_PLUGIN_RELEASE: "1"
+      MULTISIG_PLUGIN_BUILD: "2"
+      SIMPLE_GAUGE_VOTER_REPO_ENS_SUBDOMAIN: "gauge-voter-${{ vars.GITHUB_RUN_ID }}"
+      DAO_FACTORY: "0x7a62da7B56fB3bfCdF70E900787010Bc4c9Ca42e"
+      PLUGIN_SETUP_PROCESSOR: "0xC24188a73dc09aA7C721f96Ad8857B469C01dC9f"
+      PLUGIN_REPO_FACTORY: "0x07f49c49Ce2A99CF7C28F66673d406386BDD8Ff4"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: foundry-toolchain
+        uses: foundry-rs/foundry-toolchain@v1.3.1
+
+      - name: Show Forge version
+        run: forge --version
+
+      - name: Run Forge build
+        run: |
+          forge build --sizes
+        id: build
+
+      - name: Run Forge tests
+        run: |
+          forge test --match-path "test/**/fork/**/*.sol" --rpc-url https://sepolia.drpc.org -vvv
