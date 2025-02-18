@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.17;
 
-import {AragonTest} from "../../base/AragonTest.sol";
+import {AragonTest} from "../base/AragonTest.sol";
 
 import {Upgrades} from "@foundry-upgrades/LegacyUpgrades.sol";
 import {Options} from "@foundry-upgrades/Options.sol";
 
-contract TestUpgrades is AragonTest {
+contract TestUpgradeFrom1_0_0 is AragonTest {
     function testValidateUpgradeGaugeVoter__v1_0_0__v1_1_0() public {
         Options memory options;
 
@@ -17,5 +17,12 @@ contract TestUpgrades is AragonTest {
 
         options.referenceContract = "SimpleGaugeVoter.sol";
         Upgrades.validateUpgrade("SimpleGaugeVoter_v1_1_0.sol:SimpleGaugeVoterV1_1_0", options);
+    }
+
+    function testValidateUpgradeLock__v1_0_0__v1_1_0() public {
+        Options memory options;
+
+        options.referenceContract = "Lock.sol";
+        Upgrades.validateUpgrade("Lock_v1_1_0.sol:LockV1_1_0", options);
     }
 }
