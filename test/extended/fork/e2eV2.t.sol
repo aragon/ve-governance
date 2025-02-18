@@ -9,7 +9,21 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
 import {UUPSUpgradeable as UUPS} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+<<<<<<<< HEAD:test/v1_0_0/fork/e2e.t.sol
 import {VotingEscrow, Clock, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveTokenStorage, GaugesDaoFactory, GaugePluginSet, Deployment, DeployGauges, DeploymentParameters} from "../versions.sol";
+========
+
+import "../../helpers/OSxHelpers.sol";
+
+import {Clock} from "@clock/Clock.sol";
+import {IEscrowCurveTokenStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
+import {IWithdrawalQueueErrors} from "src/escrow/increasing/interfaces/IVotingEscrowIncreasing.sol";
+import {IGaugeVote} from "src/voting/ISimpleGaugeVoter.sol";
+import {VotingEscrow, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams} from "src/voting/SimpleGaugeVoterSetup.sol";
+
+import {GaugesDaoFactory, GaugePluginSet, Deployment} from "src/factory/GaugesDaoFactory.sol";
+import {DeployGauges, DeploymentParameters} from "script/DeployGauges.s.sol";
+>>>>>>>> f/rd-1193-foundry-upgrades-no-submodules:test/extended/fork/e2eV2.t.sol
 
 interface IERC20Mint is IERC20 {
     function mint(address _to, uint256 _amount) external;
