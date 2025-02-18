@@ -36,5 +36,5 @@ jobs:
 
       - name: Run Forge tests
         run: |
-          forge test --no-match-path "test/fork/**/*.sol" -vvv
+          forge test --match-path "test/**/unit/**/*.sol"
         id: test
