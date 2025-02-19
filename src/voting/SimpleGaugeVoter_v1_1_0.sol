@@ -45,6 +45,7 @@ contract SimpleGaugeVoterV1_1_0 is
                             Initialization
     //////////////////////////////////////////////////////////////*/
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }
@@ -55,9 +56,9 @@ contract SimpleGaugeVoterV1_1_0 is
         bool _startPaused,
         address _clock
     ) external initializer {
-        __PluginUUPSUpgradeable_init(IDAO(_dao));
         __ReentrancyGuard_init();
         __Pausable_init();
+        __PluginUUPSUpgradeable_init(IDAO(_dao));
         escrow = _escrow;
         clock = _clock;
         if (_startPaused) _pause();

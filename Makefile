@@ -18,6 +18,9 @@ test-unit :; forge test --match-path "test/**/unit/**/*.sol"
 test-unit-100 :; forge test --match-path "test/v1_0_0/unit/**/*.sol" 
 test-unit-110 :; forge test --match-path "test/v1_1_0/unit/**/*.sol" 
 
+# regression and upgrade tests
+test-upgrade-110 :; forge test --match-path "test/v1_1_0/upgrade/**/*.sol" --force
+
 #### Fork testing ####
 
 # Fork testing - mode sepolia
