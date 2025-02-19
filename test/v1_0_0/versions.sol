@@ -15,4 +15,4 @@ import {ILock, IWhitelistErrors, IWhitelistEvents} from "@escrow-interfaces/ILoc
 import {IVotingEscrowIncreasing, IWithdrawalQueueErrors, ILockedBalanceIncreasing, IVotingEscrowEventsStorageErrorsEvents} from "@escrow-interfaces/IVotingEscrowIncreasing.sol";
 import {IGaugeVote, ISimpleGaugeVoterStorageEventsErrors} from "@voting/ISimpleGaugeVoter.sol";
 
-import {DeployGauges} from "script/DeployGauges.s.sol";
+import {DeployGauges} from "script/deploy/DeployGauges.s.sol";
