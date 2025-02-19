@@ -309,11 +309,12 @@ contract QuadraticIncreasingEscrow is
     /// @param _newLocked New locked amount / end lock time for the user
     function _checkpoint(
         uint256 _tokenId,
-        IVotingEscrow.LockedBalance memory /* _oldLocked */,
         IVotingEscrow.LockedBalance memory _newLocked
     ) internal {
         // this implementation doesn't yet support manual checkpointing
         if (_tokenId == 0) revert InvalidTokenId();
+
+        uint48 currentTime = uint48(block.timestamp);
 
         uint256 _epoch = epoch;
         UserPoint memory uNew;
@@ -321,53 +322,36 @@ contract QuadraticIncreasingEscrow is
         UserPoint memory lastPoint = UserPoint({
             bias: 0,
             slope: 0,
-            ts: block.timestamp.toUint48(),
-            start: _newLocked.start
+            ts: currentTime,
+            start: _newLocked.start // rounded to prev week
         });
 
         if (_epoch > 0) {
-            lastPoint = pointHistory[_epoch];
-
-            if(lastPoint.start > _newLocked.start) {
-                revert("NotPossible");
-            }
-
-            // TODO: think if "start" match.
+            lastPoint = pointHistory[_epoch];       
         }
-
-        // Calculate slope and bias for the `_newLocked`.
-        uNew.slope = (_newLocked.amount / CurveConstantLib.MAX_TIME).toUint128();
-        uNew.bias = _newLocked.amount;
-        uNew.start = _newLocked.start;
-        uNew.ts = block.timestamp.toUint48();
-        uint128 currentDSlope = slopeChanges[_newLocked.end];
-
+        
         {
-            // Time points..
-            uint256 lastPointCheckpoint = lastPoint.start; // This will get modified in a loop.
-            uint256 lastPointTs = lastPoint.start; // This stays the same as we need this value to calculate the bias for our point.
-            uint256 currentPointStart = _newLocked.start;
-
+            uint256 lastPointCheckpoint = lastPoint.ts;
             uint256 t_i = (lastPointCheckpoint / WEEK) * WEEK;
-
-            uint128 dSlope;
+            
             for (uint256 i = 0; i < 255; ++i) {
                 t_i += WEEK;
-                
-                if (t_i > currentPointStart) {
-                    t_i = lastPointTs;
+                uint128 dSlope;
+
+                if (t_i > block.timestamp) {
+                    t_i = block.timestamp;
                 } else {
                     dSlope = slopeChanges[t_i];
                 }
 
                 lastPoint.bias += lastPoint.slope * (t_i - lastPointCheckpoint).toUint128();
                 lastPoint.slope -= dSlope;
-
+                
                 lastPointCheckpoint = t_i;
                 lastPoint.ts = t_i.toUint48();
                 _epoch += 1;
 
-                if (t_i == currentPointStart) {
+                if (t_i == block.timestamp) {
                     break;
                 } else {
                     pointHistory[_epoch] = lastPoint;
@@ -375,29 +359,71 @@ contract QuadraticIncreasingEscrow is
             }
         }
         
-        uint256 userEpoch = userPointEpoch[_tokenId];
+        {
+            // It's a merge...
+            if(_fromLocked.end != 0) {
+                uint128 slope = (_fromLocked.amount / CurveConstantLib.MAX_TIME).toUint128();
+                if(currentTime > _fromLocked.end){
+                    uNew.bias = _fromLocked.amount + slope * (_fromLocked.end - _fromLocked.start);
+                } else {
+                    uNew.bias = _fromLocked.amount + slope * (currentTime - _fromLocked.start);
+                    uNew.slope = slope;
+                }
+            } else {
+                // Calculate slope and bias for the `_newLocked`.
+                uNew.slope = (_newLocked.amount / CurveConstantLib.MAX_TIME).toUint128();
+                uNew.bias = _newLocked.amount + uNew.slope * (currentTime - _newLocked.start);
+            }
+
+            uNew.start = _newLocked.start;
+            uNew.ts = currentTime;
+        }
 
         uint128 newSlope = lastPoint.slope + uNew.slope;
         uint208 newBias = lastPoint.bias + uNew.bias;
-        if(userEpoch > 0 && _newLocked.amount == 0) {
+        uint128 newDSlope = slopeChanges[_newLocked.end] + uNew.slope;
+
+        uint256 userEpoch = userPointEpoch[_tokenId];
+
+        // The `tokenId` already exists..
+        if(userEpoch > 0) {
             UserPoint storage p = userPointHistory[_tokenId][userEpoch];
-            
             uint48 endOld = (p.start + CurveConstantLib.MAX_TIME).toUint48();
 
-            if(endOld > uNew.start) {
-                newSlope -= p.slope;
-                newBias = newBias - ((uNew.start - p.start) * p.slope + p.bias);
+            if(_newLocked.amount == 0) {
+                if(endOld <= uNew.ts) {
+                    // we already subtracted p.slope in the above for loop,
+                    // because we encounter slopeChanges[endOld] before uNew.ts.
+                    newBias -= (p.bias + p.slope * (endOld - p.ts));
+                } else {
+                    newSlope -= p.slope;
+                    newBias -= (p.bias + p.slope * (currentTime - p.ts));
+                }
             } else {
-                // we already subtracted p.slope in the above for loop,
-                // because we encounter slopeChanges[endOld] before newLocked.start. 
-                newBias = newBias - ((endOld - p.start) * p.slope + p.bias);
+                // User already had locked `x` amount on `tokenId=y` and 
+                // tries to add more amount on the same `tokenId=y`.
+                if(endOld <= uNew.ts) {
+                    // Previous point already ends before new point. This means
+                    // from newPoint, old slope must not be included anymore.
+                    // bias still must be as after end, it doesn't get 0, 
+                    // but maxed out constant. 
+                    uNew.bias += (p.bias + (endOld - p.ts) * p.slope);
+                } else {
+                    // Previous point hasn't ended yet, so from newPoint, 
+                    // old slope must still be added.
+                    uNew.slope += p.slope;
+                    uNew.bias += (p.bias + (currentTime - p.ts) * p.slope);
+                    if(endOld != _newLocked.end) newDSlope += p.slope;
+                }
             }
 
-            if(endOld >= uNew.start) {
+            // If the end date has not changed and is in future, 
+            // we must not clear out slope changes.
+            if(endOld != _newLocked.end && endOld >= uNew.ts) {
                 slopeChanges[endOld] -= p.slope;
             }
         }
-
+        
         lastPoint.slope = newSlope;
         lastPoint.bias = newBias;
         lastPoint.start = _newLocked.start;
@@ -406,9 +432,8 @@ contract QuadraticIncreasingEscrow is
         epoch = _epoch;
         pointHistory[_epoch] = lastPoint;
 
-        currentDSlope += uNew.slope;
-        slopeChanges[_newLocked.end] = currentDSlope;
-        
+        slopeChanges[_newLocked.end] = newDSlope;
+
         if (userEpoch != 0 && userPointHistory[_tokenId][userEpoch].ts == block.timestamp) {
             userPointHistory[_tokenId][userEpoch] = uNew;
         } else {

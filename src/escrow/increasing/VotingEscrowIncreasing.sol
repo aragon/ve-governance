@@ -165,7 +165,7 @@ contract VotingEscrow is
                       Getters: ERC721 Functions
     //////////////////////////////////////////////////////////////*/
 
-    function isApprovedOrOwner(address _spender, uint256 _tokenId) external view returns (bool) {
+    function isApprovedOrOwner(address _spender, uint256 _tokenId) public view returns (bool) {
         return IERC721EMB(lockNFT).isApprovedOrOwner(_spender, _tokenId);
     }
 
@@ -255,7 +255,7 @@ contract VotingEscrow is
         if (_value < minDeposit) revert AmountTooSmall();
 
         // query the duration lib to get the next time we can deposit
-        uint256 startTime = IClock(clock).epochNextCheckpointTs();
+        uint256 startTime = (block.timestamp / 1 weeks) * 1 weeks; // TODO: function like epochNextCheckpointTs
         uint256 endTime = startTime + CurveConstantLib.MAX_TIME;
 
         // increment the total locked supply and get the new tokenId
@@ -263,11 +263,15 @@ contract VotingEscrow is
         uint256 newTokenId = ++lastLockId;
 
         // write the lock and checkpoint the voting power
-        LockedBalance memory lock = LockedBalance(_value.toUint208(), startTime.toUint48(), endTime.toUint48());
+        LockedBalance memory lock = LockedBalance(
+            _value.toUint208(),
+            startTime.toUint48(),
+            endTime.toUint48()
+        );
         _locked[newTokenId] = lock;
 
         // we don't allow edits in this implementation, so only the new lock is used
-        _checkpoint(newTokenId, lock);
+        _checkpoint(newTokenId, LockedBalance(0,0,0), lock);
 
         uint256 balanceBefore = IERC20(token).balanceOf(address(this));
 
@@ -285,36 +289,105 @@ contract VotingEscrow is
         return newTokenId;
     }
 
-    // function merge(uint256 _from,  uint256 _to) public {
-    //     // query the duration lib to get the next time we can deposit
-    //     uint256 startTime = IClock(clock).epochNextCheckpointTs();
-    //     uint256 endTime = startTime + CurveConstantLib.MAX_TIME;
+    function increaseAmountFor(uint256 _tokenId, uint256 _value, bool _changeEndDate) public {
+        if (!isApprovedOrOwner(_msgSender(), _tokenId)) {
+            revert("token not owned or approved for msg sender");
+        }
 
-    //     LockedBalance memory oldLockedTo = _locked[_to];
-    //     if (oldLockedTo.end <= block.timestamp) revert LockExpired();
+        if (_value == 0) {
+            revert("amount can not be 0");
+        }
 
-    //     LockedBalance memory oldLockedFrom = _locked[_from];
-    //     uint256 end = oldLockedFrom.end >= oldLockedTo.end ? oldLockedFrom.end : oldLockedTo.end;
+        uint256 startTime = (block.timestamp / 1 weeks) * 1 weeks;
 
-    //     _burn(_from);
-    //     _locked[_from] = LockedBalance(0, 0, 0);
-    //     _checkpoint(_from, LockedBalance(0, 0, 0), LockedBalance(0, startTime, endTime));
+        LockedBalance memory oldLocked = _locked[_tokenId];
 
-    //     LockedBalance memory newLockedTo;
-    //     newLockedTo.amount = oldLockedTo.amount + oldLockedFrom.amount;
-    //     newLockedTo.end = end; // TODO: make `end` round to the prev week start.
-    //     newLockedTo.start = startTime;
+        // If the tokenId is mature, doesn't make much sense 
+        // to add more amount for the increase.
+        if(oldLocked.end <= block.timestamp) {
+            revert("LockExpired");
+        }
 
-    //     _checkpoint(_to, LockedBalance(0, 0, 0), newLockedTo);
-    //     _locked[_to] = newLockedTo;
-    // }
+        LockedBalance memory newLocked;
+        newLocked.amount = _value.toUint208();
+        newLocked.start = uint48(startTime);
+        newLocked.end = _changeEndDate
+            ? uint48(startTime + CurveConstantLib.MAX_TIME)
+            : oldLocked.end;
+
+        // transfer the tokens into the contract
+        IERC20(token).safeTransferFrom(_msgSender(), address(this), _value);
+
+        _locked[_tokenId] = newLocked;
+        totalLocked += _value;
+
+        _checkpoint(_tokenId, LockedBalance(0, 0, 0), newLocked);
+    }
+
+    function makeIt0(uint256 _tokenId) public {
+        if (!isApprovedOrOwner(_msgSender(), _tokenId)) {
+            revert("token not owned or approved for msg sender");
+        }
+
+        uint256 startTime = (block.timestamp / 1 weeks) * 1 weeks;
+
+        LockedBalance memory newLocked = LockedBalance(
+            0,
+            uint48(startTime),
+            uint48(startTime + CurveConstantLib.MAX_TIME)
+        );
+
+        _locked[_tokenId] = newLocked;
+
+        _checkpoint(_tokenId, LockedBalance(0, 0, 0), newLocked);
+    }
+
+    function merge(uint256 _from, uint256 _to) public {
+        LockedBalance memory emptyLocked = LockedBalance(0, 0, 0);
+
+        LockedBalance memory oldLockedFrom = _locked[_from];
+        LockedBalance memory oldLockedTo = _locked[_to];
+
+        if (
+            (oldLockedTo.start != oldLockedFrom.start) &&
+            (block.timestamp <= oldLockedTo.end || block.timestamp <= oldLockedFrom.end)
+        ) {
+            revert("Tokens either must be mature or start dates must match");
+        }
+
+        // query the duration lib to get the next time we can deposit
+        uint256 startTime = (block.timestamp / 1 weeks) * 1 weeks; // TODO: function like epochNextCheckpointTs
+        uint256 endTime = startTime + CurveConstantLib.MAX_TIME;
+
+        // Update for `_from`.
+        IERC721EMB(lockNFT).burn(_from);
+        _locked[_from] = emptyLocked;
+        LockedBalance memory newLockedFrom = LockedBalance({
+            start: uint48(startTime),
+            amount: 0,
+            end: uint48(endTime)
+        });
+
+        _checkpoint(_from, emptyLocked, newLockedFrom);
+
+        // Update for `_to`.
+        LockedBalance memory newLockedTo = LockedBalance({
+            start: uint48(startTime),
+            amount: oldLockedFrom.amount,
+            end: uint48(endTime)
+        });
+
+        _checkpoint(_to, oldLockedFrom, newLockedTo);
+        _locked[_to] = newLockedTo;
+    }
 
     /// @notice Record per-user data to checkpoints. Used by VotingEscrow system.
     /// @param _tokenId NFT token ID
     /// @dev Old locked balance is unused in the increasing case, at least in this implementation
+    /// @param _fromLocked New locked amount / start lock time for the user // TODO:
     /// @param _newLocked New locked amount / start lock time for the user
-    function _checkpoint(uint256 _tokenId, LockedBalance memory _newLocked) private {
-        IEscrowCurve(curve).checkpoint(_tokenId, LockedBalance(0, 0, 0), _newLocked);
+    function _checkpoint(uint256 _tokenId, LockedBalance memory _fromLocked, LockedBalance memory _newLocked) private {
+        IEscrowCurve(curve).checkpoint(_tokenId, _fromLocked, _newLocked);
     }
 
     /// @dev resets the voting power for a given tokenId. Checkpoint is written to the end of the epoch.

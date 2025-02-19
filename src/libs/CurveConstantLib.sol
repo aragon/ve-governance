@@ -23,7 +23,7 @@ library CurveConstantLib {
     /// @notice Helps to define how the curve should be changing.
     /// @dev `lockAmount/MAX_TIME` is the rate of change. 
     // uint256 internal constant MAX_TIME = 4 * 365 * 86400;
-    uint256 internal constant MAX_TIME = 12 * 7 * 24 * 60 * 60;
+    uint256 internal constant MAX_TIME = 12 * 7 * 24 * 60 * 60; // 12 weeks
 
     uint256 public constant WEEK = 1 weeks;
 }
