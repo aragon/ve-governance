@@ -6,7 +6,6 @@ import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 
 import {GaugesDaoFactory, GaugePluginSet, DeploymentParameters, Deployment, TokenParameters, DAO, IGaugeVote} from "@factory/GaugesDaoFactory.sol";
 import {VotingEscrow, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams} from "@voting/SimpleGaugeVoterSetup.sol";
-import {LockV1_1_0} from "@escrow/Lock_v1_1_0.sol";
 import {SimpleGaugeVoterV1_1_0} from "@voting/SimpleGaugeVoter_v1_1_0.sol";
 
 import {Upgrades} from "@foundry-upgrades/LegacyUpgrades.sol";
@@ -114,37 +113,21 @@ contract UpgradeModeTo110 is Script, Test {
 
         options.referenceContract = "SimpleGaugeVoter.sol";
         Upgrades.validateUpgrade("SimpleGaugeVoter_v1_1_0.sol:SimpleGaugeVoterV1_1_0", options);
-
-        options.referenceContract = "Lock.sol";
-        // Upgrades.validateUpgrade("Lock_v1_1_0.sol:LockV1_1_0", options);
     }
 
     function buildActions() internal returns (IDAO.Action[] memory) {
         // action 1: deploy new impls
-        address lockImplNew = address(new LockV1_1_0());
         address voterImplNew = address(new SimpleGaugeVoterV1_1_0());
 
         // action 2: upgradeTo
-        IDAO.Action[] memory actions = new IDAO.Action[](4);
+        IDAO.Action[] memory actions = new IDAO.Action[](2);
         actions[0] = IDAO.Action({
-            to: address(lockMode),
-            value: 0,
-            data: abi.encodeCall(lockMode.upgradeTo, (lockImplNew))
-        });
-
-        actions[1] = IDAO.Action({
             to: address(voterMode),
             value: 0,
             data: abi.encodeCall(voterMode.upgradeTo, (voterImplNew))
         });
 
-        actions[2] = IDAO.Action({
-            to: address(lockBPT),
-            value: 0,
-            data: abi.encodeCall(lockBPT.upgradeTo, (lockImplNew))
-        });
-
-        actions[3] = IDAO.Action({
+        actions[1] = IDAO.Action({
             to: address(voterBPT),
             value: 0,
             data: abi.encodeCall(voterBPT.upgradeTo, (voterImplNew))
@@ -184,23 +167,8 @@ contract UpgradeModeTo110 is Script, Test {
         string memory network = vm.envString("NETWORK");
 
         // save the old impls
-        address lockImplOld = lockMode.implementation();
         address voterImplOld = voterMode.implementation();
-        address lockBPTImplOld = lockBPT.implementation();
         address voterBPTImplOld = voterBPT.implementation();
-
-        // check the uri is not currently there and reverts if we call
-        vm.startPrank(address(modeDAO));
-        {
-            try LockV1_1_0(address(lockMode)).setBaseURI("should revert") {
-                revert("should revert");
-            } catch {}
-
-            try LockV1_1_0(address(lockBPT)).setBaseURI("should revert") {
-                revert("should revert");
-            } catch {}
-        }
-        vm.stopPrank();
 
         _executeAragonProposal(_aragonProposalId);
 
@@ -209,23 +177,11 @@ contract UpgradeModeTo110 is Script, Test {
         _signExecuteMultisigProposal(proposalId, modeSigners, modeMultisig);
 
         // begin the test
-        address lockImplNew = lockMode.implementation();
         address voterImplNew = voterMode.implementation();
-        address lockBPTImplNew = lockBPT.implementation();
         address voterBPTImplNew = voterBPT.implementation();
 
-        assertNotEq(lockImplOld, lockImplNew);
         assertNotEq(voterImplOld, voterImplNew);
-        assertNotEq(lockBPTImplOld, lockImplNew);
         assertNotEq(voterBPTImplOld, voterImplNew);
-
-        // uri is there on the new locks
-        vm.startPrank(address(modeDAO));
-        {
-            LockV1_1_0(address(lockMode)).setBaseURI("https://lockmode.com/");
-            LockV1_1_0(address(lockBPT)).setBaseURI("https://lockbpt.com/");
-        }
-        vm.stopPrank();
 
         // check that reset is allowed during a voting window
 
