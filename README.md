@@ -99,6 +99,7 @@ Check the available make targets to simulate and deploy the smart contracts:
 
 ### Deployment Checklist
 
+
 - [ ] I have cloned the official repository on my computer and I have checked out the corresponding branch
 - [ ] I am using the latest official docker engine, running a Debian Linux (stable) image
   - [ ] I have run `docker run --rm -it -v .:/deployment debian:bookworm-slim`

@@ -24,6 +24,7 @@ test-upgrade-110 :; forge test --match-path "test/v1_1_0/upgrade/**/*.sol" --for
 #### Fork testing ####
 
 # Fork testing - mode sepolia
+
 ft-mode-sepolia-fork-100 :; forge test --match-contract TestE2E \
 	--rpc-url https://sepolia.mode.network \
 	-vv
@@ -53,7 +54,6 @@ ft-mode-sepolia-upgrade-fork :; forge test --match-contract UpgradeModeTo110 \
 	--fork-block-number 26050695 \
 	--force \
 	-vvvv
-
 
 upgrade-preview-mode-sepolia :; forge script UpgradeModeTo110 \
 	--rpc-url https://sepolia.mode.network \
