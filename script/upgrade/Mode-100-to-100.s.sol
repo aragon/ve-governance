@@ -11,21 +11,13 @@ import {SimpleGaugeVoterV1_1_0} from "@voting/SimpleGaugeVoter_v1_1_0.sol";
 import {Upgrades} from "@foundry-upgrades/LegacyUpgrades.sol";
 import {Options} from "@foundry-upgrades/Options.sol";
 
-// todo:
-// push!
-// pin new ipfs
-// fetch latest proposal id on the mode multisig for dev and test at the current blocks - done on test
-// amend the makefile w. runner && blocks - done on test
-// add validate upgrade to the upgrade script - done
-// split the internal functions - done
-
 contract UpgradeModeTo110 is Script, Test {
     /////////////////////////////////////////////
 
     /////////////////////////////////////////////
 
     /// @dev metadata for the proposal, pinned to pinata
-    bytes ipfsURI = bytes("ipfs://bafkreifbolvifin7oomrsdxnf6nej46mwka6oh3yon4yxdwkpdq7ku62wq");
+    bytes ipfsURI = bytes("ipfs://bafkreicqy5hgf6izqha6hoa6cudup4or5clfnilegyavwuhbr34xlihsea");
 
     function setAragonSigners() internal {
         aragonSigners.push(address(0x946138B088524414EEDaf0699BA10d7Fb5673A34));

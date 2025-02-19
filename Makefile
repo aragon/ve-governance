@@ -55,12 +55,12 @@ ft-mode-sepolia-upgrade-fork :; forge test --match-contract UpgradeModeTo110 \
 	-vvvv
 
 
-upgrade-preview-mode-sepolia :; export TRY_EXECUTE=true && forge script UpgradeModeTo110 \
+upgrade-preview-mode-sepolia :; forge script UpgradeModeTo110 \
 	--rpc-url https://sepolia.mode.network \
 	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
 	-vvvvv
 
-upgrade-mode-sepolia :; export TRY_EXECUTE=true && forge script UpgradeModeTo110 \
+upgrade-mode-sepolia :; forge script UpgradeModeTo110 \
 	--rpc-url https://sepolia.mode.network \
 	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
 	--broadcast \
@@ -71,18 +71,18 @@ upgrade-mode-sepolia :; export TRY_EXECUTE=true && forge script UpgradeModeTo110
 
 # on an anvil fork will run the upgrade script
 anvil-fork-mode :; anvil -f https://mainnet.mode.network --fork-block-number 18697900 # --auto-impersonate
-upgrade-fork-mode :; export TRY_EXECUTE=false && forge script UpgradeModeTo110 \
+upgrade-fork-mode :; forge script UpgradeModeTo110 \
 	--rpc-url http://localhost:8545 \
 	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
 	--broadcast \
 	-vvvvv
 
-upgrade-preview-mode :; export TRY_EXECUTE=true && forge script UpgradeModeTo110 \
+upgrade-preview-mode :; forge script UpgradeModeTo110 \
 	--rpc-url https://mainnet.mode.network \
 	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
 	-vvvvv
 
-upgrade-mode :; export TRY_EXECUTE=true && forge script UpgradeModeTo110 \
+upgrade-mode :; forge script UpgradeModeTo110 \
 	--rpc-url https://mainnet.mode.network \
 	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
 	--broadcast \
