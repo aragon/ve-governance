@@ -1,17 +1,3 @@
-// setup state:
-// Locked Not Voting
-// Locked Voting
-// Exiting pending
-// Exiting ready to exit
-// Ensure the initial state is as expected
-// Upgrade
-// Ensure the state is the same
-// Create a lock
-// Move locked not voting -> locked voting
-// Move locked voting -> exiting pending
-// Move exiting pending -> exiting ready to exit by fast forwarding time
-// Move exiting ready to exit -> exited
-// Validate the state is the same
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.17;
 
