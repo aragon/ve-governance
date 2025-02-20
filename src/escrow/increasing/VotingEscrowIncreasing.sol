@@ -255,7 +255,7 @@ contract VotingEscrow is
         if (_value < minDeposit) revert AmountTooSmall();
 
         // query the duration lib to get the next time we can deposit
-        uint256 startTime = (block.timestamp / 1 weeks) * 1 weeks; // TODO: function like epochNextCheckpointTs
+        uint256 startTime = IClock(clock).epochCurrentWeekTs();
         uint256 endTime = startTime + CurveConstantLib.MAX_TIME;
 
         // increment the total locked supply and get the new tokenId
@@ -271,7 +271,7 @@ contract VotingEscrow is
         _locked[newTokenId] = lock;
 
         // we don't allow edits in this implementation, so only the new lock is used
-        _checkpoint(newTokenId, LockedBalance(0,0,0), lock);
+        _checkpoint(newTokenId, LockedBalance(0, 0, 0), lock, uint48(block.timestamp - lock.start));
 
         uint256 balanceBefore = IERC20(token).balanceOf(address(this));
 
@@ -294,17 +294,15 @@ contract VotingEscrow is
             revert("token not owned or approved for msg sender");
         }
 
-        if (_value == 0) {
-            revert("amount can not be 0");
-        }
+        if (_value == 0) revert ZeroAmount();
 
-        uint256 startTime = (block.timestamp / 1 weeks) * 1 weeks;
+        uint256 startTime = IClock(clock).epochCurrentWeekTs();
 
         LockedBalance memory oldLocked = _locked[_tokenId];
 
-        // If the tokenId is mature, doesn't make much sense 
+        // If the tokenId is mature, doesn't make much sense
         // to add more amount for the increase.
-        if(oldLocked.end <= block.timestamp) {
+        if (oldLocked.end <= block.timestamp) {
             revert("LockExpired");
         }
 
@@ -321,7 +319,12 @@ contract VotingEscrow is
         _locked[_tokenId] = newLocked;
         totalLocked += _value;
 
-        _checkpoint(_tokenId, LockedBalance(0, 0, 0), newLocked);
+        _checkpoint(
+            _tokenId,
+            LockedBalance(0, 0, 0),
+            newLocked,
+            uint48(block.timestamp - newLocked.start)
+        );
     }
 
     function makeIt0(uint256 _tokenId) public {
@@ -329,7 +332,7 @@ contract VotingEscrow is
             revert("token not owned or approved for msg sender");
         }
 
-        uint256 startTime = (block.timestamp / 1 weeks) * 1 weeks;
+        uint256 startTime = IClock(clock).epochCurrentWeekTs();
 
         LockedBalance memory newLocked = LockedBalance(
             0,
@@ -339,12 +342,15 @@ contract VotingEscrow is
 
         _locked[_tokenId] = newLocked;
 
-        _checkpoint(_tokenId, LockedBalance(0, 0, 0), newLocked);
+        _checkpoint(
+            _tokenId,
+            LockedBalance(0, 0, 0),
+            newLocked,
+            uint48(block.timestamp - newLocked.start)
+        );
     }
 
     function merge(uint256 _from, uint256 _to) public {
-        LockedBalance memory emptyLocked = LockedBalance(0, 0, 0);
-
         LockedBalance memory oldLockedFrom = _locked[_from];
         LockedBalance memory oldLockedTo = _locked[_to];
 
@@ -356,19 +362,24 @@ contract VotingEscrow is
         }
 
         // query the duration lib to get the next time we can deposit
-        uint256 startTime = (block.timestamp / 1 weeks) * 1 weeks; // TODO: function like epochNextCheckpointTs
+        uint256 startTime = IClock(clock).epochCurrentWeekTs();
         uint256 endTime = startTime + CurveConstantLib.MAX_TIME;
 
         // Update for `_from`.
         IERC721EMB(lockNFT).burn(_from);
-        _locked[_from] = emptyLocked;
+        _locked[_from] = LockedBalance(0, 0, 0);
         LockedBalance memory newLockedFrom = LockedBalance({
             start: uint48(startTime),
             amount: 0,
             end: uint48(endTime)
         });
 
-        _checkpoint(_from, emptyLocked, newLockedFrom);
+        _checkpoint(
+            _from,
+            LockedBalance(0, 0, 0),
+            newLockedFrom,
+            uint48(block.timestamp - newLockedFrom.start)
+        );
 
         // Update for `_to`.
         LockedBalance memory newLockedTo = LockedBalance({
@@ -377,28 +388,38 @@ contract VotingEscrow is
             end: uint48(endTime)
         });
 
-        _checkpoint(_to, oldLockedFrom, newLockedTo);
+        uint256 duration = block.timestamp >= oldLockedFrom.end
+            ? oldLockedFrom.end - oldLockedFrom.start
+            : block.timestamp - oldLockedFrom.start;
+
+        _checkpoint(_to, LockedBalance(0, 0, 0), newLockedTo, uint48(duration));
         _locked[_to] = newLockedTo;
     }
 
     /// @notice Record per-user data to checkpoints. Used by VotingEscrow system.
     /// @param _tokenId NFT token ID
     /// @dev Old locked balance is unused in the increasing case, at least in this implementation
-    /// @param _fromLocked New locked amount / start lock time for the user // TODO:
+    /// @param _fromLocked New locked amount / start lock time for the user // TODO: needs removal
     /// @param _newLocked New locked amount / start lock time for the user
-    function _checkpoint(uint256 _tokenId, LockedBalance memory _fromLocked, LockedBalance memory _newLocked) private {
-        IEscrowCurve(curve).checkpoint(_tokenId, _fromLocked, _newLocked);
+    function _checkpoint(
+        uint256 _tokenId,
+        LockedBalance memory _fromLocked,
+        LockedBalance memory _newLocked,
+        uint48 dur
+    ) private {
+        IEscrowCurve(curve).checkpoint(_tokenId, _fromLocked, _newLocked, dur);
     }
 
     /// @dev resets the voting power for a given tokenId. Checkpoint is written to the end of the epoch.
     /// @param _tokenId The tokenId to reset the voting power for
     /// @dev We don't need to fetch the old locked balance as it's not used in this implementation
     function _checkpointClear(uint256 _tokenId) private {
-        uint256 checkpointClearTime = IClock(clock).epochNextCheckpointTs();
+        uint256 checkpointClearTime = IClock(clock).epochCurrentWeekTs();
         IEscrowCurve(curve).checkpoint(
             _tokenId,
             LockedBalance(0, 0, 0),
-            LockedBalance(0, checkpointClearTime.toUint48(), 0)
+            LockedBalance(0, checkpointClearTime.toUint48(), 0),
+            uint48(block.timestamp - checkpointClearTime)
         );
     }
 

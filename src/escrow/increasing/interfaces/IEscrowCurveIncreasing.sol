@@ -88,10 +88,12 @@ interface IEscrowCurveCore is IEscrowCurveErrorsAndEvents {
     /// @param _tokenId Snapshot a specific token
     /// @param _oldLocked The token's previous locked balance
     /// @param _newLocked The token's new locked balance
+    /// @param _dur TODO HERE
     function checkpoint(
         uint256 _tokenId,
         ILockedBalanceIncreasing.LockedBalance memory _oldLocked,
-        ILockedBalanceIncreasing.LockedBalance memory _newLocked
+        ILockedBalanceIncreasing.LockedBalance memory _newLocked,
+        uint48 _dur
     ) external;
 }
 

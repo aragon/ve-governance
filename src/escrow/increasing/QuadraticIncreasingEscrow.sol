@@ -292,11 +292,12 @@ contract QuadraticIncreasingEscrow is
     function checkpoint(
         uint256 _tokenId,
         IVotingEscrow.LockedBalance memory _oldLocked,
-        IVotingEscrow.LockedBalance memory _newLocked
+        IVotingEscrow.LockedBalance memory _newLocked,
+        uint48 _dur
     ) external nonReentrant {
         // TODO: GIORGI uncomment later...
         // if (msg.sender != escrow) revert OnlyEscrow();
-        _checkpoint(_tokenId, _oldLocked, _newLocked);
+        _checkpoint(_tokenId, _oldLocked, _newLocked, _dur);
     }
 
     function supplyAt(uint256 _timestamp) public view override returns (uint256) {
@@ -309,7 +310,9 @@ contract QuadraticIncreasingEscrow is
     /// @param _newLocked New locked amount / end lock time for the user
     function _checkpoint(
         uint256 _tokenId,
-        IVotingEscrow.LockedBalance memory _newLocked
+        IVotingEscrow.LockedBalance memory _fromLocked,
+        IVotingEscrow.LockedBalance memory _newLocked,
+        uint48 accumulationDur
     ) internal {
         // this implementation doesn't yet support manual checkpointing
         if (_tokenId == 0) revert InvalidTokenId();
@@ -358,26 +361,12 @@ contract QuadraticIncreasingEscrow is
                 }
             }
         }
-        
-        {
-            // It's a merge...
-            if(_fromLocked.end != 0) {
-                uint128 slope = (_fromLocked.amount / CurveConstantLib.MAX_TIME).toUint128();
-                if(currentTime > _fromLocked.end){
-                    uNew.bias = _fromLocked.amount + slope * (_fromLocked.end - _fromLocked.start);
-                } else {
-                    uNew.bias = _fromLocked.amount + slope * (currentTime - _fromLocked.start);
-                    uNew.slope = slope;
-                }
-            } else {
-                // Calculate slope and bias for the `_newLocked`.
-                uNew.slope = (_newLocked.amount / CurveConstantLib.MAX_TIME).toUint128();
-                uNew.bias = _newLocked.amount + uNew.slope * (currentTime - _newLocked.start);
-            }
 
-            uNew.start = _newLocked.start;
-            uNew.ts = currentTime;
-        }
+        uNew.slope = (_newLocked.amount / CurveConstantLib.MAX_TIME).toUint128();
+        uNew.bias = _newLocked.amount + uNew.slope * accumulationDur;
+        
+        uNew.start = _newLocked.start;
+        uNew.ts = currentTime;
 
         uint128 newSlope = lastPoint.slope + uNew.slope;
         uint208 newBias = lastPoint.bias + uNew.bias;

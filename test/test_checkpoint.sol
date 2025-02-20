@@ -56,7 +56,8 @@ contract TestCheckpoint is Test {
         b.checkpoint(
             1, 
             lockedBalance(0, 0, 0),
-            lockedBalance(TOKEN_10K, startTime.toUint48(), endTime.toUint48())
+            lockedBalance(TOKEN_10K, startTime.toUint48(), endTime.toUint48()),
+            uint48(block.timestamp - startTime)
         );
 
         assertEq(b.supplyAt(firstDepositTime - 1), 0);
@@ -71,7 +72,8 @@ contract TestCheckpoint is Test {
         b.checkpoint(
             1, 
             lockedBalance(0, 0, 0),
-            lockedBalance(TOKEN_10K, startTime.toUint48(), endTime.toUint48())
+            lockedBalance(TOKEN_10K, startTime.toUint48(), endTime.toUint48()),
+            uint48(block.timestamp - startTime)
         );
 
         assertEq(b.supplyAt(firstDepositTime - 1), 0);
@@ -90,7 +92,8 @@ contract TestCheckpoint is Test {
         b.checkpoint(
             1, 
             lockedBalance(0, 0, 0),
-            lockedBalance(TOKEN_10K, newStartTime.toUint48(), newEndTime.toUint48())
+            lockedBalance(TOKEN_10K, newStartTime.toUint48(), newEndTime.toUint48()),
+            uint48(block.timestamp - newStartTime)
         );
 
         // supply before third deposit must not include third deposit.
@@ -117,7 +120,8 @@ contract TestCheckpoint is Test {
         b.checkpoint(
             1, 
             lockedBalance(0, 0, 0),
-            lockedBalance(TOKEN_10K, startTime.toUint48(), endTime.toUint48())
+            lockedBalance(TOKEN_10K, startTime.toUint48(), endTime.toUint48()),
+            uint48(block.timestamp - startTime)
         );
 
         uint256 a1 = b.supplyAt(endTime - 10);
@@ -147,7 +151,8 @@ contract TestCheckpoint is Test {
         b.checkpoint(
             1, 
             lockedBalance(0, 0, 0),
-            lockedBalance(TOKEN_10K, startTime.toUint48(), endTime.toUint48())
+            lockedBalance(TOKEN_10K, startTime.toUint48(), endTime.toUint48()),
+            uint48(block.timestamp - startTime)
         );
 
         uint256 newDepositTime = firstDepositTime + WEEK;
@@ -159,7 +164,8 @@ contract TestCheckpoint is Test {
         b.checkpoint(
             1, 
             lockedBalance(0, 0, 0),
-            lockedBalance(0, newStartTime.toUint48(), newEndTime.toUint48())
+            lockedBalance(0, newStartTime.toUint48(), newEndTime.toUint48()),
+            uint48(block.timestamp - newStartTime)
         );
 
         assertEq(
@@ -173,7 +179,8 @@ contract TestCheckpoint is Test {
         b.checkpoint(
             1, 
             lockedBalance(0, 0, 0),
-            lockedBalance(TOKEN_10K, newStartTime.toUint48(), newEndTime.toUint48())
+            lockedBalance(TOKEN_10K, newStartTime.toUint48(), newEndTime.toUint48()),
+            uint48(block.timestamp - newStartTime)
         );
 
         // when we deposited 0 above, `slopeChanges` must have updated to remove 
@@ -198,7 +205,8 @@ contract TestCheckpoint is Test {
         b.checkpoint(
             1, 
             lockedBalance(0, 0, 0),
-            lockedBalance(50e18, startTime.toUint48(), endTime.toUint48())
+            lockedBalance(50e18, startTime.toUint48(), endTime.toUint48()),
+            uint48(block.timestamp - startTime)
         );
 
         uint256 newDepositTime = firstDepositTime + WEEK;
@@ -210,7 +218,8 @@ contract TestCheckpoint is Test {
         b.checkpoint(
             1, 
             lockedBalance(0, 0, 0),
-            lockedBalance(30e18, newStartTime.toUint48(), newEndTime.toUint48()) 
+            lockedBalance(30e18, newStartTime.toUint48(), newEndTime.toUint48()) ,
+            uint48(block.timestamp - newStartTime)
         );
 
         assertEq(
@@ -225,7 +234,8 @@ contract TestCheckpoint is Test {
         b.checkpoint(
             1, 
             lockedBalance(0, 0, 0),
-            lockedBalance(0, newStartTime.toUint48(), newEndTime.toUint48())
+            lockedBalance(0, newStartTime.toUint48(), newEndTime.toUint48()),
+            uint48(block.timestamp - newStartTime)
         );
 
         assertEq(b.supplyAt(newDepositTime), 0);
@@ -246,7 +256,8 @@ contract TestCheckpoint is Test {
         b.checkpoint(
             1, 
             lockedBalance(0, 0, 0),
-            lockedBalance(50e18, startTime.toUint48(), endTime.toUint48())
+            lockedBalance(50e18, startTime.toUint48(), endTime.toUint48()),
+            uint48(block.timestamp - startTime)
         );
 
         uint256 newDepositTime = firstDepositTime + WEEK;
@@ -259,7 +270,8 @@ contract TestCheckpoint is Test {
         b.checkpoint(
             1, 
             lockedBalance(0, 0, 0),
-            lockedBalance(30e18, newStartTime.toUint48(), endTime.toUint48()) 
+            lockedBalance(30e18, newStartTime.toUint48(), endTime.toUint48()) ,
+            uint48(block.timestamp - newStartTime)
         );
 
         assertEq(
@@ -274,7 +286,8 @@ contract TestCheckpoint is Test {
         b.checkpoint(
             1, 
             lockedBalance(0, 0, 0),
-            lockedBalance(0, newStartTime.toUint48(), newEndTime.toUint48())
+            lockedBalance(0, newStartTime.toUint48(), newEndTime.toUint48()),
+            uint48(block.timestamp - newStartTime)
         );
 
         assertEq(b.supplyAt(newDepositTime), 0);
@@ -291,7 +304,8 @@ contract TestCheckpoint is Test {
         b.checkpoint(
             1, 
             lockedBalance(0, 0, 0),
-            lockedBalance(TOKEN_10K, startTime.toUint48(), endTime.toUint48())
+            lockedBalance(TOKEN_10K, startTime.toUint48(), endTime.toUint48()),
+            uint48(block.timestamp - startTime)
         );
 
         uint g2 = gasleft();
@@ -307,7 +321,8 @@ contract TestCheckpoint is Test {
         b.checkpoint(
             1, 
             lockedBalance(0, 0, 0),
-            lockedBalance(TOKEN_10K, startTime.toUint48(), endTime.toUint48())
+            lockedBalance(TOKEN_10K, startTime.toUint48(), endTime.toUint48()),
+            uint48(block.timestamp - startTime)
         );
         g2 = gasleft();
         console.log("some time after gas cost", g1 - g2);

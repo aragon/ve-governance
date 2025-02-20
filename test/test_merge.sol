@@ -33,6 +33,9 @@ contract TestMerge is Test {
     uint256 MAX_TIME = CurveConstantLib.MAX_TIME;
     MockERC20 internal token;
 
+    address internal giorgi = address(123);
+    address internal jordan = address(456);
+
     address public sender = address(123);
 
     function lockedBalance(uint208 amount, uint48 start, uint48 end) public pure returns(ILockedBalanceIncreasing.LockedBalance memory){
@@ -81,12 +84,6 @@ contract TestMerge is Test {
                 )
             )
         );
-    }
-
-
-    function test_oe() public {
-        address giorgi = address(123);
-        address jordan = address(456);
 
         token.mint(giorgi, TOKEN_10K);
         token.mint(jordan, TOKEN_10K);
@@ -96,7 +93,23 @@ contract TestMerge is Test {
 
         vm.prank(jordan);
         token.approve(address(escrow), TOKEN_10K);
+    }
+
+
+    function test_1() public {
+        vm.prank(giorgi);
+        uint256 from = escrow.createLock(50e18);
+
+        vm.prank(jordan);
+        vm.warp(block.timestamp + WEEK);
+        uint256 to = escrow.createLock(50e18);
         
+        vm.expectRevert(); //reverts as start dates are different and tokens are not mature.
+        escrow.merge(from, to);
+    }
+    
+
+    function test_2() public {
         uint256 lockTime = block.timestamp;
         uint256 lockWeekStart = (block.timestamp / WEEK) * WEEK;
         vm.prank(giorgi);
@@ -105,212 +118,38 @@ contract TestMerge is Test {
         vm.prank(jordan);
         uint256 to = escrow.createLock(30e18); // 2
 
-        // vm.expectRevert(); // reverts as tokens are not mature
-        // escrow.merge(from, to);
-
-        uint256 mergeWeekStart = lockWeekStart + MAX_TIME;
-        uint256 mergeTime = mergeWeekStart + 10;
+        uint256 endTime = lockWeekStart + MAX_TIME;
+        uint256 mergeTime = endTime + 10;
         vm.warp(mergeTime);
 
         escrow.merge(from, to);
 
         assertEq(
             b.supplyAt(mergeTime), 
-            30e18 + (30e18 / MAX_TIME) * (mergeWeekStart - lockWeekStart) +
-            50e18 + (50e18 / MAX_TIME) * (mergeWeekStart - lockWeekStart)
+            30e18 + (30e18 / MAX_TIME) * (endTime - lockWeekStart) +
+            50e18 + (50e18 / MAX_TIME) * (endTime - lockWeekStart)
         );
-
-
     }
-    
 
-    // // 1. Deposit 10k where `startTime` rounds to prev week start.
-    // //    1.a check that totalSupply is 0 before depositTime.
-    // //    1.b check that totalSupply is 10k + slope * (depositTime - startTime) at `depositTime`.
-    // //    1.c check that totalSupply at `depositTime + 2 days` is equal to 10k + slope * (depositTime + 2 days - startTime)
-    // // 2. Deposit another 10k where `depositTime` is the same as before.
-    // //    2.a check that totalSupply is still 0 before the `depositTime`.
-    // //    2.b check that toalSupply at depositTime is 2 * (10k + slope * (depositTime - startTime))
-    // //    2.c check that totalSupply at `depositTime + 2 days` is equal to  2 * (10k + slope * (depositTime + 2 days - startTime))
-    // // 3. Deposit another 10k where `depositTime` is in the next week and startTime of this is next week exactly.
-    // //    3.a check that totalSupply at thirdDepositTime - 1 is not including the third deposit's calculation.
-    // //    3.b check that totalSupply at `thirdDepositTime` is  TOKEN_10K * 2 + 2 * slope * (thirdDepositTime - startTime) + TOKEN_10K + slope * (thirdDepositTime - newStartTime)
-    // function test_1() public {
-    //     vm.startPrank(sender);
-    //     uint256 firstDepositTime = block.timestamp;
-    //     uint256 startTime = (firstDepositTime / WEEK) * WEEK;        
-    //     uint256 endTime = startTime + MAX_TIME;
-    //     uint256 twoDaysAfterFirstDeposit = firstDepositTime + 2 days;
+    function test_3() public {
+        uint256 lockTime = block.timestamp;
+        uint256 lockWeekStart = (block.timestamp / WEEK) * WEEK;
+        vm.prank(giorgi);
+        uint256 from = escrow.createLock(50e18); // 1
 
-    //     uint256 slope = TOKEN_10K / MAX_TIME;
+        vm.prank(jordan);
+        uint256 to = escrow.createLock(30e18); // 2
 
-    //     // Deposit 10k token.
-    //     escrow.createLock(TOKEN_10K);
+        uint256 mergeWeekStart = lockWeekStart + 2 weeks;
+        uint256 mergeTime = mergeWeekStart + 20 minutes;
+        vm.warp(mergeTime);
 
-    //     assertEq(b.supplyAt(firstDepositTime - 1), 0);
-    //     assertEq(b.supplyAt(firstDepositTime), TOKEN_10K + slope * (firstDepositTime - startTime));
-    //     assertEq(
-    //         b.supplyAt(twoDaysAfterFirstDeposit), 
-    //         TOKEN_10K + slope * (twoDaysAfterFirstDeposit - startTime)
-    //     );
+        escrow.merge(from, to);
 
-    //     // Deposit another 10k at `firstDepositTime`, which must create a new `UserPoint` 
-    //     // which includes previous deposit's bias and slope as well.
-    //    escrow.createLock(TOKEN_10K);
-
-    //     assertEq(b.supplyAt(firstDepositTime - 1), 0);
-    //     assertEq(b.supplyAt(firstDepositTime), TOKEN_10K * 2 + 2 * slope * (firstDepositTime - startTime));
-    //     assertEq(
-    //         b.supplyAt(twoDaysAfterFirstDeposit), 
-    //         TOKEN_10K * 2 + 2 * slope * (twoDaysAfterFirstDeposit - startTime)
-    //     );
-        
-    //     uint256 thirdDepositTime = firstDepositTime + WEEK;
-    //     vm.warp(thirdDepositTime);
-    //     uint256 newStartTime = (thirdDepositTime / WEEK) * WEEK;      
-    //     uint256 newEndTime = newStartTime + MAX_TIME;
-        
-    //     // Deposit again 10k
-    //     escrow.createLock(TOKEN_10K);
-
-    //     // supply before third deposit must not include third deposit.
-    //     assertEq(
-    //         b.supplyAt(thirdDepositTime - 1), 
-    //         TOKEN_10K * 2 + 2 * slope * (thirdDepositTime - 1 - startTime) 
-    //     );
-
-    //     assertEq(
-    //         b.supplyAt(thirdDepositTime), 
-    //         TOKEN_10K * 2 + 2 * slope * (thirdDepositTime - startTime) + TOKEN_10K + slope * (thirdDepositTime - newStartTime)
-    //     );
-    // }
-
-    // // 1. Deposit 10k at `depositTime = block.timestamp`
-    // //    1.a check that totalSupply at `endTime - 10` and `endTime - 5` are different and increasing.
-    // //    1.b check that whatever totalSupply is at `endTime`, it stays the same at `endTime + x`.
-    // function test_2() public {
-    //     vm.startPrank(sender);
-    //     uint256 firstDepositTime = block.timestamp;
-    //     uint256 startTime = (firstDepositTime / WEEK) * WEEK;        
-    //     uint256 endTime = startTime + MAX_TIME;
-
-    //     // Deposit 10k token at `startTime`
-    //     escrow.createLock(TOKEN_10K);
-
-    //     uint256 a1 = b.supplyAt(endTime - 10);
-    //     uint256 b1 = b.supplyAt(endTime - 5);
-    //     assertGt(b1, a1);
-
-    //     uint256 c1 = b.supplyAt(endTime);
-    //     uint256 c2 = b.supplyAt(endTime + 10);
-    //     uint256 c3 = b.supplyAt(endTime + 300000);
-    //     assertEq(c1, c2);
-    //     assertEq(c2, c3);
-    // }
-
-    // // 1. Deposit 10k at `startTime`
-    // // 2. Deposit 10k at `newStartTime = startTime + WEEK`.
-    // //    2.a check that `newStartTime - 1`, totalSupply is 10k + (10k / MAX_TIME) * (newStartTime - 1 - startTime)
-    // //    2.b check that totalSupply is 0 at `newStartTime`.
-    // // 3. Deposit 10k again at `newStartTime = startTime + WEEK`
-    // //    3.a see below what we test...
-    // function test_3() public {
-    //     vm.startPrank(sender);
-    //     uint256 firstDepositTime = block.timestamp;
-    //     uint256 startTime = (firstDepositTime / WEEK) * WEEK;        
-    //     uint256 endTime = startTime + MAX_TIME;
-    //     uint256 slope = TOKEN_10K / MAX_TIME;
-
-    //     // Deposit 10k token
-    //     uint256 tokenId = escrow.createLock(TOKEN_10K);
-
-    //     uint256 newDepositTime = firstDepositTime + WEEK;
-    //     vm.warp(newDepositTime);
-    //     uint256 newStartTime = (newDepositTime / WEEK) * WEEK;        
-    //     uint256 newEndTime = newStartTime + MAX_TIME;
-        
-    //     escrow.makeIt0(tokenId);
-        
-    //     assertEq(
-    //         b.supplyAt(newDepositTime - 1),
-    //         TOKEN_10K + slope * (newDepositTime - 1 - startTime)
-    //     );
-
-    //     assertEq(b.supplyAt(newDepositTime), 0);
-
-    //     // Deposit 10k token at `newStartTime`
-    //     b.checkpoint(
-    //         1, 
-    //         lockedBalance(0, 0, 0),
-    //         lockedBalance(TOKEN_10K, newStartTime.toUint48(), newEndTime.toUint48())
-    //     );
-
-    //     // when we deposited 0 above, `slopeChanges` must have updated to remove 
-    //     // that slope from it. Otherwise, below will fail.
-    //     assertEq(
-    //         b.supplyAt(endTime + 1),
-    //         TOKEN_10K + slope * (endTime + 1 - newStartTime)
-    //     );
-    // }
-
-
-    // // 1. Deposit 50. 
-    // // 2. deposit 30.
-    // // 2. Deposit 0.
-    // // 3. see if it succeeds
-    // function test_4() public {
-    //     vm.startPrank(sender);
-    //     uint256 firstDepositTime = block.timestamp;
-    //     uint256 startTime = (firstDepositTime / WEEK) * WEEK;        
-    //     uint256 endTime = startTime + MAX_TIME;
-    //     uint256 slope = 50e18 / MAX_TIME;
-
-    //     uint256 tokenId = escrow.createLock(50e18);
-
-    //     uint256 newDepositTime = firstDepositTime + WEEK;
-    //     vm.warp(newDepositTime);
-    //     uint256 newStartTime = (newDepositTime / WEEK) * WEEK;        
-    //     uint256 newEndTime = newStartTime + MAX_TIME;
-
-    //     escrow.increaseAmountFor(tokenId, 30e18, true);
-
-    //     newDepositTime = newDepositTime + 20 minutes;
-    //     vm.warp(newDepositTime);
-    //     newStartTime = (newDepositTime / WEEK) * WEEK;        
-    //     newEndTime = newStartTime + MAX_TIME;
-    //     escrow.makeIt0(tokenId);
-
-    //     assertEq(b.supplyAt(newDepositTime), 0);
-    // }
-
-    // // NOTE: on the 2nd deposit, end date doesn't change..
-    // // 1. Deposit 50
-    // // 2. Deposit 30
-    // // 3. deposit 0
-    // // 3. see if it succeeds
-    // function test_5() public {
-    //     vm.startPrank(sender);
-    //     uint256 firstDepositTime = block.timestamp;
-    //     uint256 startTime = (firstDepositTime / WEEK) * WEEK;        
-    //     uint256 endTime = startTime + MAX_TIME;
-    //     uint256 slope = 50e18 / MAX_TIME;
-
-    //     // Deposit 10k token
-    //     uint256 tokenId = escrow.createLock(50e18);
-
-    //     uint256 newDepositTime = firstDepositTime + WEEK;
-    //     vm.warp(newDepositTime);
-    //     uint256 newStartTime = (newDepositTime / WEEK) * WEEK;        
-    //     uint256 newEndTime = newStartTime + MAX_TIME;
-
-    //     escrow.increaseAmountFor(tokenId, 30e18, false);
-    
-    //     newDepositTime = newDepositTime + 20 minutes;
-    //     vm.warp(newDepositTime);
-    //     newStartTime = (newDepositTime / WEEK) * WEEK;        
-    //     newEndTime = newStartTime + MAX_TIME;
-    //     escrow.makeIt0(tokenId);
-        
-    //     assertEq(b.supplyAt(newDepositTime), 0);
-    // }
+        assertEq(
+            b.supplyAt(mergeTime), 
+            30e18 + (30e18 / MAX_TIME) * (mergeTime - lockWeekStart) +
+            50e18 + (50e18 / MAX_TIME) * (mergeTime - lockWeekStart)
+        );
+    }
 }
