@@ -1,3 +1,4 @@
+pragma solidity ^0.8.17;
 import {Script} from "forge-std/Script.sol";
 import {Test, console2 as console} from "forge-std/Test.sol";
 
@@ -79,7 +80,7 @@ contract UpgradeModeTo110 is Script, Test {
     address[] modeSigners;
 
     /////////////////////////////////////////////
-    // -------------- RUN FUNCTION ------------//
+    // -------------- RUN FUNCTION ------------
     /////////////////////////////////////////////
 
     function run() public {
