@@ -978,9 +978,6 @@ contract TestE2EV1_1_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
             // alice tries to exit
             vm.startPrank(alice);
             {
-                // vm.expectRevert(VotingInactive.selector);
-                // escrow.resetVotesAndBeginWithdrawal(1);
-
                 vm.expectRevert(CannotExit.selector);
                 escrow.beginWithdrawal(1);
             }

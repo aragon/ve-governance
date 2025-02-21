@@ -13,8 +13,16 @@ import {Options} from "@foundry-upgrades/Options.sol";
 
 contract UpgradeModeTo110 is Script, Test {
     /////////////////////////////////////////////
-
+    // ----------- FIXED CONSTANTS ------------//
     /////////////////////////////////////////////
+
+    string network = vm.envString("NETWORK");
+
+    address factoryAddress = vm.envAddress("FACTORY_ADDRESS");
+
+    address signer = vm.envAddress("SIGNER_ADDRESS");
+
+    string membersFilePath = vm.envString("MULTISIG_MEMBERS_JSON_FILE_NAME");
 
     /// @dev metadata for the proposal, pinned to pinata
     bytes ipfsURI = bytes("ipfs://bafkreicqy5hgf6izqha6hoa6cudup4or5clfnilegyavwuhbr34xlihsea");
@@ -76,23 +84,28 @@ contract UpgradeModeTo110 is Script, Test {
 
     function run() public {
         bool isTestMode = false;
-        uint256 aragonProposalId = _actionUpgrade(isTestMode);
+        (uint256 aragonProposalId, ) = _actionUpgrade(isTestMode);
         console.log("Aragon Proposal ID: ", aragonProposalId);
     }
 
-    function _actionUpgrade(bool isTestMode) internal returns (uint aragonProposalId) {
+    function _actionUpgrade(
+        bool isTestMode
+    ) internal returns (uint aragonProposalId, address voterImplNew) {
         setModeSigners();
         setAragonSigners();
-        _retrieveDeployment(vm.envAddress("FACTORY_ADDRESS"));
+        _retrieveDeployment(factoryAddress);
 
         _validateUpgrade();
 
         _startBroadcastOrPrank(isTestMode);
         {
-            IDAO.Action[] memory actions = buildActions();
+            IDAO.Action[] memory actions;
+            (actions, voterImplNew) = buildActions();
             aragonProposalId = _createAragonMsigProposal(actions);
         }
         _stopBroadcastOrPrank(isTestMode);
+
+        return (aragonProposalId, voterImplNew);
     }
 
     function _validateUpgrade() internal {
@@ -107,7 +120,7 @@ contract UpgradeModeTo110 is Script, Test {
         Upgrades.validateUpgrade("SimpleGaugeVoter_v1_1_0.sol:SimpleGaugeVoterV1_1_0", options);
     }
 
-    function buildActions() internal returns (IDAO.Action[] memory) {
+    function buildActions() internal returns (IDAO.Action[] memory, address) {
         // action 1: deploy new impls
         address voterImplNew = address(new SimpleGaugeVoterV1_1_0());
 
@@ -125,11 +138,10 @@ contract UpgradeModeTo110 is Script, Test {
             data: abi.encodeCall(voterBPT.upgradeTo, (voterImplNew))
         });
 
-        return actions;
+        return (actions, voterImplNew);
     }
 
     function _startBroadcastOrPrank(bool isTestMode) internal {
-        address signer = vm.envAddress("SIGNER_ADDRESS");
         if (isTestMode) {
             vm.startPrank(signer);
         } else {
@@ -151,13 +163,11 @@ contract UpgradeModeTo110 is Script, Test {
 
     function testUpgrade() public {
         bool isTestMode = true;
-        uint256 aragonProposalId = _actionUpgrade(isTestMode);
-        _testUpgrade(aragonProposalId);
+        (uint256 aragonProposalId, address voterImplNew) = _actionUpgrade(isTestMode);
+        _testUpgrade(aragonProposalId, voterImplNew);
     }
 
-    function _testUpgrade(uint _aragonProposalId) internal {
-        string memory network = vm.envString("NETWORK");
-
+    function _testUpgrade(uint _aragonProposalId, address _voterImplNew) internal {
         // save the old impls
         address voterImplOld = voterMode.implementation();
         address voterBPTImplOld = voterBPT.implementation();
@@ -174,6 +184,9 @@ contract UpgradeModeTo110 is Script, Test {
 
         assertNotEq(voterImplOld, voterImplNew);
         assertNotEq(voterBPTImplOld, voterImplNew);
+
+        assertEq(voterImplNew, _voterImplNew);
+        assertEq(voterBPTImplNew, _voterImplNew);
 
         // check that reset is allowed during a voting window
 
@@ -239,7 +252,6 @@ contract UpgradeModeTo110 is Script, Test {
 
     function readMultisigMembers() public view returns (address[] memory result) {
         // JSON list of members
-        string memory membersFilePath = vm.envString("MULTISIG_MEMBERS_JSON_FILE_NAME");
         string memory path = string.concat(vm.projectRoot(), membersFilePath);
         string memory strJson = vm.readFile(path);
 
@@ -282,17 +294,17 @@ contract UpgradeModeTo110 is Script, Test {
         });
 
         // need to build on aragon first
-        Multisig aragonMultisig = getAragonMultisig(vm.envString("NETWORK"));
-        proposalId = _buildMsigProposal(outerAction, aragonSigners, aragonMultisig, false);
+        Multisig aragonMultisig = getAragonMultisig(network);
+        proposalId = _buildMsigProposal(outerAction, aragonMultisig, false);
     }
 
     function _executeAragonProposal(uint outerId) internal {
-        Multisig aragonMultisig = getAragonMultisig(vm.envString("NETWORK"));
+        Multisig aragonMultisig = getAragonMultisig(network);
         _signExecuteMultisigProposal(outerId, aragonSigners, aragonMultisig);
     }
+
     function _buildMsigProposal(
         IDAO.Action[] memory _actions,
-        address[] memory _signers,
         Multisig _multisig,
         bool _tryExecution
     ) internal returns (uint256 proposalId) {
