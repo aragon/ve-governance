@@ -396,6 +396,53 @@ contract VotingEscrow is
         _locked[_to] = newLockedTo;
     }
 
+    // function split(
+    //     uint256 _from,
+    //     uint256 _value
+    // ) public returns (uint256 _tokenId1, uint256 _tokenId2) {
+    //     LockedBalance memory locked = _locked[_from];
+    //     address owner = _msgSender();
+
+    //     if (_value == 0) revert ZeroAmount();
+    //     if (locked.amount <= _value) revert("value too big");
+
+    //     _value = _value.toUint208();
+
+    //     uint256 startTime = IClock(clock).epochCurrentWeekTs();
+    //     uint256 endTime = startTime + CurveConstantLib.MAX_TIME;
+
+    //     IERC721EMB(lockNFT).burn(_from);
+    //     _locked[_from] = LockedBalance(0, 0, false);
+    //     _checkpoint(
+    //         _from,
+    //         LockedBalance(0, 0, 0),
+    //         LockedBalance(0, startTime, endTime),
+    //         uint48(block.timestamp - startTime)
+    //     );
+
+    //     locked.amount -= _value;
+    //     _tokenId1 = _createSplitNFT(owner, locked);
+
+    //     locked.amount = _value;
+    //     _tokenId2 = _createSplitNFT(owner, locked);
+    // }
+
+    // function _createSplitNFT(
+    //     address _to,
+    //     LockedBalance memory _newLocked,
+    //     uint48 _startTime
+    // ) private returns (uint256 _tokenId) {
+    //     _tokenId = ++lastLockId;
+    //     _locked[_tokenId] = _newLocked;
+    //     _checkpoint(
+    //         _tokenId,
+    //         LockedBalance(0, 0, 0),
+    //         _newLocked,
+    //         uint48(block.timestamp - _startTime)
+    //     );
+    //     IERC721EMB(lockNFT).mint(_to, _tokenId);
+    // }
+
     /// @notice Record per-user data to checkpoints. Used by VotingEscrow system.
     /// @param _tokenId NFT token ID
     /// @dev Old locked balance is unused in the increasing case, at least in this implementation

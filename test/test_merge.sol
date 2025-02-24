@@ -129,6 +129,9 @@ contract TestMerge is Test {
             30e18 + (30e18 / MAX_TIME) * (endTime - lockWeekStart) +
             50e18 + (50e18 / MAX_TIME) * (endTime - lockWeekStart)
         );
+
+        console.log("blaxoe10", b.supplyAt(mergeTime));
+        console.log("blaxoe20", b.supplyAt(mergeTime + 10));
     }
 
     function test_3() public {
