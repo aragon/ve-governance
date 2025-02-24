@@ -873,11 +873,11 @@ contract TestE2EV2 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCur
 
                 // check the gauge votes
                 assertEq(
-                    voter.gaugeVotes(0, gauge0),
+                    voter.gaugeVotes(gauge0),
                     escrow.votingPower(2) + escrow.votingPower(1) / 2 + escrow.votingPower(3) / 2
                 );
                 assertEq(
-                    voter.gaugeVotes(0, gauge1),
+                    voter.gaugeVotes(gauge1),
                     escrow.votingPower(1) / 2 + escrow.votingPower(3) / 2
                 );
             }
@@ -962,12 +962,12 @@ contract TestE2EV2 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCur
 
             // check the gauge votes
             assertEq(
-                voter.gaugeVotes(0, gauge0),
+                voter.gaugeVotes(gauge0),
                 escrow.votingPower(1) / 2 + escrow.votingPower(3) / 2
             );
 
             assertEq(
-                voter.gaugeVotes(0, gauge1),
+                voter.gaugeVotes(gauge1),
                 escrow.votingPower(2) + escrow.votingPower(1) / 2 + escrow.votingPower(3) / 2
             );
         }
@@ -1274,9 +1274,9 @@ contract TestE2EV2 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCur
         // we check the end state of the contracts
         {
             // no votes
-            assertEq(voter.totalVotingPowerCast(0), 0, "Voter should have no votes");
-            assertEq(voter.gaugeVotes(0, gauge0), 0, "Gauge 0 should have no votes");
-            assertEq(voter.gaugeVotes(0, gauge1), 0, "Gauge 1 should have no votes");
+            assertEq(voter.totalVotingPowerCast(), 0, "Voter should have no votes");
+            assertEq(voter.gaugeVotes(gauge0), 0, "Gauge 0 should have no votes");
+            assertEq(voter.gaugeVotes(gauge1), 0, "Gauge 1 should have no votes");
 
             // no tokens
             assertEq(token.balanceOf(address(escrow)), 0, "Escrow should have no tokens");
@@ -1304,7 +1304,10 @@ contract TestE2EV2 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCur
         vm.warp(nextEpoch);
         epochStartTime = block.timestamp;
 
-        assertEq(0, clock.currentSeason(), "Season should be 0");
+        assertEq(0, clock.currentSeasonIndex(), "SeasonIndex should be 0");
+        (uint start, uint end) = clock.currentSeason();
+        assertEq(0, start, "Season start timestamp should be 0");
+        assertEq(0, end, "Season end timestamp should be 0");
 
         // first we give alice and carol some tokens of the underlying
         {
@@ -1330,7 +1333,7 @@ contract TestE2EV2 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCur
 
             _startNewSeason();
 
-            assertEq(0, clock.currentSeason(), "Season should still be 0");
+            assertEq(0, clock.currentSeasonIndex(), "SeasonIndex should still be 0");
 
             // check the token points written
             TokenPoint memory tp1_1 = curve.tokenPointHistory(1, 1);
@@ -1398,7 +1401,8 @@ contract TestE2EV2 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCur
             // fast forward to the checkpoint interval alice is warm and has voting power, carol is not
             goToEpochStartPlus(clock.checkpointInterval());
 
-            assertEq(1, clock.currentSeason(), "Season should be 1");
+            assertEq(1, clock.currentSeasonIndex(), "SeasonIndex should be 1");
+
 
             assertEq(escrow.votingPower(1), depositAlice0, "Alice should have voting power");
             assertTrue(curve.isWarm(1), "Alice should be warm");
@@ -1447,7 +1451,7 @@ contract TestE2EV2 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCur
 
             goToEpochStartPlus(clock.checkpointInterval() * 3);
 
-            assertEq(2, clock.currentSeason(), "Season should be 2");
+            assertEq(2, clock.currentSeasonIndex(), "SeasonIndex should be 2");
 
             assertEq(escrow.votingPower(2), 0, "Carol should have no voting power");
 

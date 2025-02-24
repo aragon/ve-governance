@@ -70,13 +70,17 @@ interface ISeasonErrors {
 }
 
 interface IClockSeason is ISeasonEvents, ISeasonErrors {
-    function currentSeason() external view returns (uint16);
+    function currentSeasonTs() external view returns (uint48 startTimestamp, uint48 endTimestamp);
 
-    function season(
+    function currentSeasonIndex() external view returns (uint16 seasonIndex);
+
+    function seasonTs(
         uint16 seasonIndex
     ) external view returns (uint48 startTimestamp, uint48 endTimestamp);
 
-    function seasonAt(uint48 _timestamp) external view returns (uint16 season);
+    function seasonTsAt(uint48 _timestamp) external view returns (uint48 startTimestamp, uint48 endTimestamp);
+
+    function seasonIndexAt(uint48 _timestamp) external view returns (uint16 seasonIndex);
 
     function newSeason() external;
 }

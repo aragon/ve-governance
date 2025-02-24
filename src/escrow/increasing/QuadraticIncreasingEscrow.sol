@@ -256,8 +256,7 @@ contract QuadraticIncreasingEscrow is
         if (!_isWarm(lastPoint)) return 0;
 
         // get season at time
-        uint16 season = IClockSeason(clock).seasonAt(uint48(_t));
-        (uint48 start, ) = IClockSeason(clock).season(season);
+        (uint48 start, ) = IClockSeason(clock).seasonTsAt(uint48(_t));
 
         // if the last point is before the season start, use last season start
         uint256 timeElapsed;

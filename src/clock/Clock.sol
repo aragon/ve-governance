@@ -26,7 +26,7 @@ contract Clock is IClock, DaoAuthorizable, UUPSUpgradeable, IClockSeason {
     uint256 internal constant VOTE_WINDOW_BUFFER = 1 hours;
 
     /// @dev Seasons array
-    uint48[] private seasons;
+    uint48[] private seasonTimestamps;
 
     /*///////////////////////////////////////////////////////////////
                             Initialization
@@ -220,49 +220,64 @@ contract Clock is IClock, DaoAuthorizable, UUPSUpgradeable, IClockSeason {
                             Seasons
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Returns the current season
+    /// @dev The startTimestamp of the first season is always 0
+    ///      The endTimestamp of the current season is always 0
+    function currentSeasonTs() public view returns (uint48 startTimestamp, uint48 endTimestamp) {
+        return seasonTsAt(uint48(block.timestamp));
+    }
+
     /// @notice Returns the current season index
     /// @dev The season index starts at 0
-    function currentSeason() external view returns (uint16) {
-        return IClockSeason(this).seasonAt(uint48(block.timestamp));
+    function currentSeasonIndex() public view returns (uint16 seasonIndex) {
+        return seasonIndexAt(uint48(block.timestamp));
     }
 
     /// @notice Returns a season's start and end timestamps by index
     /// @dev The startTimestamp of the first season is always 0
-    /// @dev The endTimestamp of the current season is always 0
-    function season(uint16 seasonIndex) external view returns (uint48 startTimestamp, uint48 endTimestamp) {
-        if (seasonIndex > seasons.length) {
+    ///      The endTimestamp of the current season is always 0
+    function seasonTs(uint16 seasonIndex) public view returns (uint48 startTimestamp, uint48 endTimestamp) {
+        if (seasonIndex > seasonTimestamps.length) {
             revert SeasonNotFound();
         }
-        startTimestamp = seasonIndex == 0 ? 0 : seasons[seasonIndex - 1];
-        endTimestamp = seasonIndex < seasons.length ? seasons[seasonIndex] : 0;
+        startTimestamp = seasonIndex == 0 ? 0 : seasonTimestamps[seasonIndex - 1];
+        endTimestamp = seasonIndex < seasonTimestamps.length ? seasonTimestamps[seasonIndex] : 0;
+    }
+
+    /// @notice Returns the season at a given timestamp
+    /// @dev The startTimestamp of the first season is always 0
+    ///      The endTimestamp of the current season is always 0
+    function seasonTsAt(uint48 _timestamp) public view returns (uint48 startTimestamp, uint48 endTimestamp) {
+        uint16 seasonIndex = seasonIndexAt(_timestamp);
+        return seasonTs(seasonIndex);
     }
 
     /// @notice Returns the season index at a given timestamp
     /// @dev The season index starts at 0 but the season index as 1 is indexed as 0 in the array
-    /// @dev If the timestamp is after the last season, returns the length of the seasons array
-    function seasonAt(uint48 _timestamp) external view returns (uint16) {
-        for (uint16 i = 0; i < seasons.length; i++) {
-            if (_timestamp < seasons[i]) {
+    ///      If the timestamp is after the last season, returns the length of the seasons array
+    function seasonIndexAt(uint48 _timestamp) public view returns (uint16 seasonIndex) {
+        for (uint16 i = uint16(seasonTimestamps.length); i > 0; i--) {
+            if (_timestamp >= seasonTimestamps[i - 1]) {
                 return i;
             }
         }
-        return uint16(seasons.length);
+        return 0;
     }
 
     /// @notice Creates a new season
     /// @dev The season duration must be greater than EPOCH_DURATION
-    function newSeason() external auth(CLOCK_ADMIN_ROLE) {
+    function newSeason() public auth(CLOCK_ADMIN_ROLE) {
         uint256 startTime = IClock(this).epochNextCheckpointTs();
 
-        if (seasons.length > 0) {
-            uint48 lastSeason = seasons[seasons.length - 1];
+        if (seasonTimestamps.length > 0) {
+            uint48 lastSeason = seasonTimestamps[seasonTimestamps.length - 1];
             if (startTime < lastSeason + EPOCH_DURATION) {
                 revert SeasonTooShort();
             }
         }
-        seasons.push(uint48(startTime));
+        seasonTimestamps.push(uint48(startTime));
 
-        emit SeasonStarted(uint16(seasons.length), uint48(startTime));
+        emit SeasonStarted(uint16(seasonTimestamps.length), uint48(startTime));
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -275,5 +290,5 @@ contract Clock is IClock, DaoAuthorizable, UUPSUpgradeable, IClockSeason {
         return _getImplementation();
     }
 
-    uint256[50] private __gap;
+    uint256[49] private __gap;
 }
