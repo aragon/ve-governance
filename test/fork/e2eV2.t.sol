@@ -1305,7 +1305,7 @@ contract TestE2EV2 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCur
         epochStartTime = block.timestamp;
 
         assertEq(0, clock.currentSeasonIndex(), "SeasonIndex should be 0");
-        (uint start, uint end) = clock.currentSeason();
+        (uint start, uint end) = clock.currentSeasonTs();
         assertEq(0, start, "Season start timestamp should be 0");
         assertEq(0, end, "Season end timestamp should be 0");
 

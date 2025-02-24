@@ -102,7 +102,7 @@ contract TestGaugeTime is GaugeVotingBase {
     function testSeasonTooShort() public {
         uint start = block.timestamp;
 
-        (uint48 seasonStart, uint48 seasonEnd) = clock.currentSeason();
+        (uint48 seasonStart, uint48 seasonEnd) = clock.currentSeasonTs();
         assertEq(seasonStart, 0);
         assertEq(seasonEnd, 0);
         assertEq(clock.currentSeasonIndex(), 0);
@@ -143,7 +143,7 @@ contract TestGaugeTime is GaugeVotingBase {
     function testSeasonTimes() public {
         uint start = block.timestamp;
 
-        (uint48 seasonStart, uint48 seasonEnd) = clock.season(0);
+        (uint48 seasonStart, uint48 seasonEnd) = clock.seasonTs(0);
         assertEq(seasonStart, 0);
         assertEq(seasonEnd, 0);
         assertEq(clock.currentSeasonIndex(), 0);
@@ -153,7 +153,7 @@ contract TestGaugeTime is GaugeVotingBase {
         clock.newSeason();        
 
         assertEq(clock.currentSeasonIndex(), 0);
-        (seasonStart, seasonEnd) = clock.season(0);
+        (seasonStart, seasonEnd) = clock.seasonTs(0);
         assertEq(seasonStart, 0);
         assertEq(seasonEnd, 2 weeks);
 
@@ -162,7 +162,7 @@ contract TestGaugeTime is GaugeVotingBase {
 
         assertEq(clock.currentSeasonIndex(), 1);
 
-        (seasonStart, seasonEnd) = clock.season(1);
+        (seasonStart, seasonEnd) = clock.seasonTs(1);
         assertEq(seasonStart, 2 weeks);
         assertEq(seasonEnd, 0);
 
@@ -173,7 +173,7 @@ contract TestGaugeTime is GaugeVotingBase {
 
         assertEq(clock.currentSeasonIndex(), 1);
 
-        (seasonStart, seasonEnd) = clock.season(2);
+        (seasonStart, seasonEnd) = clock.seasonTs(2);
         assertEq(seasonStart, 4 weeks);
         assertEq(seasonEnd, 0);
 
