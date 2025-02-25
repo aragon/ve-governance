@@ -256,7 +256,6 @@ contract VotingEscrow is
 
         // query the duration lib to get the next time we can deposit
         uint256 startTime = IClock(clock).epochCurrentWeekTs();
-        uint256 endTime = startTime + CurveConstantLib.MAX_TIME;
 
         // increment the total locked supply and get the new tokenId
         totalLocked += _value;
@@ -265,13 +264,12 @@ contract VotingEscrow is
         // write the lock and checkpoint the voting power
         LockedBalance memory lock = LockedBalance(
             _value.toUint208(),
-            startTime.toUint48(),
-            endTime.toUint48()
+            startTime.toUint48()
         );
         _locked[newTokenId] = lock;
 
         // we don't allow edits in this implementation, so only the new lock is used
-        _checkpoint(newTokenId, LockedBalance(0, 0, 0), lock, uint48(block.timestamp - lock.start));
+        _checkpoint(newTokenId, LockedBalance(0, 0), lock, uint48(block.timestamp - lock.start));
 
         uint256 balanceBefore = IERC20(token).balanceOf(address(this));
 
@@ -289,62 +287,21 @@ contract VotingEscrow is
         return newTokenId;
     }
 
-    function increaseAmountFor(uint256 _tokenId, uint256 _value, bool _changeEndDate) public {
-        if (!isApprovedOrOwner(_msgSender(), _tokenId)) {
-            revert("token not owned or approved for msg sender");
-        }
-
-        if (_value == 0) revert ZeroAmount();
-
-        uint256 startTime = IClock(clock).epochCurrentWeekTs();
-
-        LockedBalance memory oldLocked = _locked[_tokenId];
-
-        // If the tokenId is mature, doesn't make much sense
-        // to add more amount for the increase.
-        if (oldLocked.end <= block.timestamp) {
-            revert("LockExpired");
-        }
-
-        LockedBalance memory newLocked;
-        newLocked.amount = _value.toUint208();
-        newLocked.start = uint48(startTime);
-        newLocked.end = _changeEndDate
-            ? uint48(startTime + CurveConstantLib.MAX_TIME)
-            : oldLocked.end;
-
-        // transfer the tokens into the contract
-        IERC20(token).safeTransferFrom(_msgSender(), address(this), _value);
-
-        _locked[_tokenId] = newLocked;
-        totalLocked += _value;
-
-        _checkpoint(
-            _tokenId,
-            LockedBalance(0, 0, 0),
-            newLocked,
-            uint48(block.timestamp - newLocked.start)
-        );
-    }
-
     function makeIt0(uint256 _tokenId) public {
         if (!isApprovedOrOwner(_msgSender(), _tokenId)) {
             revert("token not owned or approved for msg sender");
         }
 
-        uint256 startTime = IClock(clock).epochCurrentWeekTs();
-
         LockedBalance memory newLocked = LockedBalance(
             0,
-            uint48(startTime),
-            uint48(startTime + CurveConstantLib.MAX_TIME)
+            _locked[_tokenId].start
         );
 
         _locked[_tokenId] = newLocked;
 
         _checkpoint(
             _tokenId,
-            LockedBalance(0, 0, 0),
+            LockedBalance(0, 0),
             newLocked,
             uint48(block.timestamp - newLocked.start)
         );
@@ -354,94 +311,92 @@ contract VotingEscrow is
         LockedBalance memory oldLockedFrom = _locked[_from];
         LockedBalance memory oldLockedTo = _locked[_to];
 
+        uint48 oldLockedFromEnd = (oldLockedFrom.start + CurveConstantLib.MAX_TIME).toUint48();
+        uint48 oldLockedToEnd = (oldLockedTo.start + CurveConstantLib.MAX_TIME).toUint48();
+        
         if (
             (oldLockedTo.start != oldLockedFrom.start) &&
-            (block.timestamp <= oldLockedTo.end || block.timestamp <= oldLockedFrom.end)
+            (block.timestamp <= oldLockedToEnd || block.timestamp <= oldLockedFromEnd)
         ) {
             revert("Tokens either must be mature or start dates must match");
         }
 
         // query the duration lib to get the next time we can deposit
         uint256 startTime = IClock(clock).epochCurrentWeekTs();
-        uint256 endTime = startTime + CurveConstantLib.MAX_TIME;
 
         // Update for `_from`.
         IERC721EMB(lockNFT).burn(_from);
-        _locked[_from] = LockedBalance(0, 0, 0);
+        _locked[_from] = LockedBalance(0, 0);
         LockedBalance memory newLockedFrom = LockedBalance({
-            start: uint48(startTime),
-            amount: 0,
-            end: uint48(endTime)
+            start: oldLockedFrom.start,
+            amount: 0
         });
 
         _checkpoint(
             _from,
-            LockedBalance(0, 0, 0),
+            LockedBalance(0, 0),
             newLockedFrom,
             uint48(block.timestamp - newLockedFrom.start)
         );
 
         // Update for `_to`.
         LockedBalance memory newLockedTo = LockedBalance({
-            start: uint48(startTime),
-            amount: oldLockedFrom.amount,
-            end: uint48(endTime)
+            start: oldLockedTo.start,
+            amount: oldLockedFrom.amount
         });
 
-        uint256 duration = block.timestamp >= oldLockedFrom.end
-            ? oldLockedFrom.end - oldLockedFrom.start
+        uint256 duration = block.timestamp >= oldLockedFromEnd
+            ? oldLockedFromEnd - oldLockedFrom.start
             : block.timestamp - oldLockedFrom.start;
 
-        _checkpoint(_to, LockedBalance(0, 0, 0), newLockedTo, uint48(duration));
+        _checkpoint(_to, LockedBalance(0, 0), newLockedTo, uint48(duration));
         _locked[_to] = newLockedTo;
     }
 
-    // function split(
-    //     uint256 _from,
-    //     uint256 _value
-    // ) public returns (uint256 _tokenId1, uint256 _tokenId2) {
-    //     LockedBalance memory locked = _locked[_from];
-    //     address owner = _msgSender();
+    function split(
+        uint256 _from,
+        uint256 _value
+    ) public returns (uint256 _tokenId1, uint256 _tokenId2) {
+        LockedBalance memory locked_ = _locked[_from];
+        address owner = _msgSender();
 
-    //     if (_value == 0) revert ZeroAmount();
-    //     if (locked.amount <= _value) revert("value too big");
+        if (_value == 0) revert ZeroAmount();
+        if (locked_.amount <= _value) revert("value too big");
+        
+        IERC721EMB(lockNFT).burn(_from);
+        _locked[_from] = LockedBalance(0, 0);
+        _checkpoint(
+            _from,
+            LockedBalance(0, 0),
+            LockedBalance(0, locked_.start),
+            0
+        );
+        
+        uint48 lockEnd = (locked_.start + CurveConstantLib.MAX_TIME).toUint48();
+        uint48 duration = block.timestamp >= lockEnd ? uint48(lockEnd - locked_.start) : uint48(block.timestamp - locked_.start);
 
-    //     _value = _value.toUint208();
+        locked_.amount -= _value.toUint208();
+        _tokenId1 = _createSplitNFT(owner, locked_, duration);
 
-    //     uint256 startTime = IClock(clock).epochCurrentWeekTs();
-    //     uint256 endTime = startTime + CurveConstantLib.MAX_TIME;
+        locked_.amount = _value.toUint208();
+        _tokenId2 = _createSplitNFT(owner, locked_, duration);
+    }
 
-    //     IERC721EMB(lockNFT).burn(_from);
-    //     _locked[_from] = LockedBalance(0, 0, false);
-    //     _checkpoint(
-    //         _from,
-    //         LockedBalance(0, 0, 0),
-    //         LockedBalance(0, startTime, endTime),
-    //         uint48(block.timestamp - startTime)
-    //     );
-
-    //     locked.amount -= _value;
-    //     _tokenId1 = _createSplitNFT(owner, locked);
-
-    //     locked.amount = _value;
-    //     _tokenId2 = _createSplitNFT(owner, locked);
-    // }
-
-    // function _createSplitNFT(
-    //     address _to,
-    //     LockedBalance memory _newLocked,
-    //     uint48 _startTime
-    // ) private returns (uint256 _tokenId) {
-    //     _tokenId = ++lastLockId;
-    //     _locked[_tokenId] = _newLocked;
-    //     _checkpoint(
-    //         _tokenId,
-    //         LockedBalance(0, 0, 0),
-    //         _newLocked,
-    //         uint48(block.timestamp - _startTime)
-    //     );
-    //     IERC721EMB(lockNFT).mint(_to, _tokenId);
-    // }
+    function _createSplitNFT(
+        address _to,
+        LockedBalance memory _newLocked,
+        uint48 _duration
+    ) private returns (uint256 _tokenId) {
+        _tokenId = ++lastLockId;
+        _locked[_tokenId] = _newLocked;
+        _checkpoint(
+            _tokenId,
+            LockedBalance(0, 0),
+            _newLocked,
+            uint48(_duration)
+        );
+        IERC721EMB(lockNFT).mint(_to, _tokenId);
+    }
 
     /// @notice Record per-user data to checkpoints. Used by VotingEscrow system.
     /// @param _tokenId NFT token ID
@@ -464,8 +419,8 @@ contract VotingEscrow is
         uint256 checkpointClearTime = IClock(clock).epochCurrentWeekTs();
         IEscrowCurve(curve).checkpoint(
             _tokenId,
-            LockedBalance(0, 0, 0),
-            LockedBalance(0, checkpointClearTime.toUint48(), 0),
+            LockedBalance(0, 0),
+            LockedBalance(0, checkpointClearTime.toUint48()),
             uint48(block.timestamp - checkpointClearTime)
         );
     }
@@ -522,7 +477,7 @@ contract VotingEscrow is
         }
 
         // clear out the token data
-        _locked[_tokenId] = LockedBalance(0, 0, 0);
+        _locked[_tokenId] = LockedBalance(0, 0);
         totalLocked -= value;
 
         // Burn the NFT and transfer the tokens to the user

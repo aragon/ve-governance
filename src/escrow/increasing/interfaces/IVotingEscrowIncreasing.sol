@@ -9,7 +9,6 @@ interface ILockedBalanceIncreasing {
     struct LockedBalance {
         uint208 amount;
         uint48 start; // mirrors oz ERC20 timestamp clocks
-        uint48 end; // mirrors oz ERC20 timestamp clocks
     }
 
 }

@@ -74,16 +74,11 @@ contract QuadraticIncreasingEscrow is
     // endTime => summed up slopes at that endTime
     mapping(uint256 => uint128) public slopeChanges;
 
-    mapping(uint256 => UserPoint) internal pointHistory;
-    mapping(uint256 => UserPoint[1000000000]) internal userPointHistory;
+    mapping(uint256 => UserPoint) internal _pointHistory;
+    mapping(uint256 => UserPoint[1000000000]) internal _userPointHistory;
     mapping(uint256 => uint256) public userPointEpoch;
 
     // ============GIORGI===============
-
-
-    /*//////////////////////////////////////////////////////////////
-                                MATH
-    //////////////////////////////////////////////////////////////*/
 
     /// @dev precomputed coefficients of the quadratic curve
     int256 private constant SHARED_QUADRATIC_COEFFICIENT =
@@ -227,7 +222,7 @@ contract QuadraticIncreasingEscrow is
                               BALANCE
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Returns the TokenPoint at the passed interval
+    /// @notice Returns the TokenPoint at the passed user epoch.
     /// @param _tokenId The NFT to return the TokenPoint for
     /// @param _tokenInterval The epoch to return the TokenPoint at
     function tokenPointHistory(
@@ -235,6 +230,16 @@ contract QuadraticIncreasingEscrow is
         uint256 _tokenInterval
     ) external view returns (TokenPoint memory) {
         return _tokenPointHistory[_tokenId][_tokenInterval];
+    }
+
+    /// @notice Returns the global point at the passed epoch
+    /// @param _epoch The epoch to return the point for
+    function pointHistory(uint256 _epoch) external view returns (UserPoint memory) {
+        return _pointHistory[_epoch];
+    }
+
+    function totalSupply(uint256 _ts) external view returns(uint256) {
+        return BalanceLogicLibrary.supplyAt(slopeChanges, _pointHistory, epoch, _ts);
     }
 
     /// @notice Binary search to get the token point interval for a token id at or prior to a given timestamp
@@ -301,7 +306,7 @@ contract QuadraticIncreasingEscrow is
     }
 
     function supplyAt(uint256 _timestamp) public view override returns (uint256) {
-        return BalanceLogicLibrary.supplyAt(slopeChanges, pointHistory, epoch, _timestamp);
+        return BalanceLogicLibrary.supplyAt(slopeChanges, _pointHistory, epoch, _timestamp);
     }
 
     /// @notice Record gper-user data to checkpoints. Used by VotingEscrow system.
@@ -330,7 +335,7 @@ contract QuadraticIncreasingEscrow is
         });
 
         if (_epoch > 0) {
-            lastPoint = pointHistory[_epoch];       
+            lastPoint = _pointHistory[_epoch];       
         }
         
         {
@@ -357,26 +362,30 @@ contract QuadraticIncreasingEscrow is
                 if (t_i == block.timestamp) {
                     break;
                 } else {
-                    pointHistory[_epoch] = lastPoint;
+                    _pointHistory[_epoch] = lastPoint;
                 }
             }
         }
 
         uNew.slope = (_newLocked.amount / CurveConstantLib.MAX_TIME).toUint128();
         uNew.bias = _newLocked.amount + uNew.slope * accumulationDur;
-        
         uNew.start = _newLocked.start;
         uNew.ts = currentTime;
 
+        if(currentTime - _newLocked.start >= CurveConstantLib.MAX_TIME) {
+            uNew.slope = 0;
+        }
+
+        uint48 newEnd = (_newLocked.start + CurveConstantLib.MAX_TIME).toUint48();
         uint128 newSlope = lastPoint.slope + uNew.slope;
         uint208 newBias = lastPoint.bias + uNew.bias;
-        uint128 newDSlope = slopeChanges[_newLocked.end] + uNew.slope;
+        uint128 newDSlope = slopeChanges[newEnd] + uNew.slope;
 
         uint256 userEpoch = userPointEpoch[_tokenId];
 
         // The `tokenId` already exists..
         if(userEpoch > 0) {
-            UserPoint storage p = userPointHistory[_tokenId][userEpoch];
+            UserPoint storage p = _userPointHistory[_tokenId][userEpoch];
             uint48 endOld = (p.start + CurveConstantLib.MAX_TIME).toUint48();
 
             if(_newLocked.amount == 0) {
@@ -402,13 +411,13 @@ contract QuadraticIncreasingEscrow is
                     // old slope must still be added.
                     uNew.slope += p.slope;
                     uNew.bias += (p.bias + (currentTime - p.ts) * p.slope);
-                    if(endOld != _newLocked.end) newDSlope += p.slope;
+                    if(endOld != newEnd) newDSlope += p.slope;
                 }
             }
 
             // If the end date has not changed and is in future, 
             // we must not clear out slope changes.
-            if(endOld != _newLocked.end && endOld >= uNew.ts) {
+            if(endOld != newEnd && endOld >= uNew.ts) {
                 slopeChanges[endOld] -= p.slope;
             }
         }
@@ -419,15 +428,15 @@ contract QuadraticIncreasingEscrow is
 
         // TODO: see aerodome..
         epoch = _epoch;
-        pointHistory[_epoch] = lastPoint;
+        _pointHistory[_epoch] = lastPoint;
 
-        slopeChanges[_newLocked.end] = newDSlope;
+        slopeChanges[newEnd] = newDSlope;
 
-        if (userEpoch != 0 && userPointHistory[_tokenId][userEpoch].ts == block.timestamp) {
-            userPointHistory[_tokenId][userEpoch] = uNew;
+        if (userEpoch != 0 && _userPointHistory[_tokenId][userEpoch].ts == block.timestamp) {
+            _userPointHistory[_tokenId][userEpoch] = uNew;
         } else {
             userPointEpoch[_tokenId] = ++userEpoch;
-            userPointHistory[_tokenId][userEpoch] = uNew;
+            _userPointHistory[_tokenId][userEpoch] = uNew;
         }
     }
 
