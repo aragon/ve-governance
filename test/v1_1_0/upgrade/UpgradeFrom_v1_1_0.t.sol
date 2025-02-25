@@ -18,7 +18,7 @@ import {Addresslist} from "@aragon/osx/plugins/utils/Addresslist.sol";
 import {Multisig, MultisigSetup as MultisigPluginSetup} from "@aragon/osx/plugins/governance/multisig/MultisigSetup.sol";
 
 import {SimpleGaugeVoterSetup, IGaugeVote, VotingEscrow, Clock, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, GaugesDaoFactory as GaugesDaoFactoryV1_0_0, Deployment, DeploymentParameters, TokenParameters, GaugePluginSet} from "test/v1_0_0/versions.sol";
-import {Lock as LockV1_1_0, SimpleGaugeVoter as SimpleGaugeVoterV1_1_0} from "test/v1_1_0/versions.sol";
+import {SimpleGaugeVoter as SimpleGaugeVoterV1_1_0} from "test/v1_1_0/versions.sol";
 
 import {Upgrades} from "@foundry-upgrades/LegacyUpgrades.sol";
 import {Options} from "@foundry-upgrades/Options.sol";
@@ -125,13 +125,6 @@ contract RegressionV1_0_0__to__V1_1_0 is Test, IGaugeVote {
         Upgrades.validateUpgrade("SimpleGaugeVoter_v1_1_0.sol:SimpleGaugeVoterV1_1_0", options);
     }
 
-    function testValidateUpgradeLock__v1_0_0__v1_1_0() public {
-        Options memory options;
-
-        options.referenceContract = "Lock.sol";
-        Upgrades.validateUpgrade("Lock_v1_1_0.sol:LockV1_1_0", options);
-    }
-
     function testInitialState() public view {
         // alice is locked and has voting power
         assertEq(escrow.locked(aliceToken).amount, 1_000 ether);
@@ -155,8 +148,6 @@ contract RegressionV1_0_0__to__V1_1_0 is Test, IGaugeVote {
     function testUpgrade() public {
         // simple upgrade for testing
         // deploy the new implementations
-        // LockV1_1_0 lockV1_1_0 = new LockV1_1_0();
-        // Lock lockV1_1_0 = new Lock();
         // SimpleGaugeVoterV1_1_0 voterV1_1_0 = new SimpleGaugeVoterV1_1_0();
 
         // upgrade the contracts
@@ -168,7 +159,6 @@ contract RegressionV1_0_0__to__V1_1_0 is Test, IGaugeVote {
 
             // safe upgrade
             _safeUpgradeVoter(address(voter));
-            _safeUpgradeLock(address(lock));
         }
         vm.stopPrank();
 
@@ -248,12 +238,6 @@ contract RegressionV1_0_0__to__V1_1_0 is Test, IGaugeVote {
             "",
             options
         );
-    }
-
-    function _safeUpgradeLock(address _lock) internal {
-        Options memory options;
-        options.referenceContract = "Lock.sol";
-        Upgrades.upgradeProxy(_lock, "Lock_v1_1_0.sol:LockV1_1_0", "", options);
     }
 
     function _deployViaFactory() internal returns (GaugesDaoFactoryV1_0_0) {
