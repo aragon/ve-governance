@@ -1,5 +1,9 @@
-^.env.example
 .env*
+!.env.example
+!.env.test.example
+
+# Logs
+*.log
 
 # Foundry
 cache/
