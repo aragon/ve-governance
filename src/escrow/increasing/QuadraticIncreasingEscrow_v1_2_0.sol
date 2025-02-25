@@ -6,7 +6,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {IVotingEscrowIncreasing as IVotingEscrow} from "@escrow-interfaces/IVotingEscrowIncreasing.sol";
 import {IEscrowCurveIncreasing as IEscrowCurve} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
-import {IClockUser, IClock} from "@clock/IClock.sol";
+import {IClockUser, IClock, IClockSeason} from "@clock/IClock.sol";
 
 // libraries
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -244,6 +244,8 @@ contract QuadraticIncreasingEscrow is
         return lower;
     }
 
+    /// @notice Get the voting power at a specific timestamp
+    /// @dev The voting power is computed since the last point or last season whatever happen after
     function votingPowerAt(uint256 _tokenId, uint256 _t) external view returns (uint256) {
         uint256 interval = _getPastTokenPointInterval(_tokenId, _t);
 
@@ -252,8 +254,17 @@ contract QuadraticIncreasingEscrow is
         TokenPoint memory lastPoint = _tokenPointHistory[_tokenId][interval];
 
         if (!_isWarm(lastPoint)) return 0;
-        uint256 timeElapsed = _t - lastPoint.checkpointTs;
 
+        // get season at time
+        (uint48 start, ) = IClockSeason(clock).seasonTsAt(uint48(_t));
+
+        // if the last point is before the season start, use last season start
+        uint256 timeElapsed;
+        if (lastPoint.checkpointTs < start) {
+            timeElapsed = _t - start;
+        } else {
+            timeElapsed = _t - lastPoint.checkpointTs;
+        }
         return _getBias(timeElapsed, lastPoint.coefficients);
     }
 

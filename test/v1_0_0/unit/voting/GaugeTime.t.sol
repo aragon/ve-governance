@@ -26,7 +26,7 @@ contract TestGaugeTime is GaugeVotingBase {
         return clock.epochNextCheckpointTs();
     }
 
-    function testEpochTimes() public {
+    function testEpochTimess() public {
         for (uint i = 0; i < 10; ++i) {
             uint start = block.timestamp;
 
@@ -92,93 +92,5 @@ contract TestGaugeTime is GaugeVotingBase {
             // +1 week + 2 hours: next epoch starts
             vm.warp(start + 2 weeks);
         }
-    }
-
-    function testSeasonTooShort() public {
-        uint start = block.timestamp;
-
-        (uint48 seasonStart, uint48 seasonEnd) = clock.currentSeasonTs();
-        assertEq(seasonStart, 0);
-        assertEq(seasonEnd, 0);
-        assertEq(clock.currentSeasonIndex(), 0);
-
-        vm.warp(block.timestamp + 1 hours);
-
-        clock.newSeason();
-
-        assertEq(clock.currentSeasonIndex(), 0);
-
-        // +2 weeks: right on the edge of the min duration
-        vm.warp(block.timestamp + 2 weeks - 1 hours - 1);
-
-        assertEq(clock.currentSeasonIndex(), 1);
-
-        // 1 sec too early
-        vm.expectRevert(SeasonTooShort.selector);
-        clock.newSeason();
-
-        // +1 sec: new season can starts
-        vm.warp(block.timestamp + 1);
-
-        clock.newSeason();
-
-        vm.warp(block.timestamp + 1 weeks);
-
-        assertEq(clock.currentSeasonIndex(), 2);
-
-        assertEq(clock.seasonIndexAt(uint48(0)), 0);
-        assertEq(clock.seasonIndexAt(uint48(start + 1 hours)), 0);
-        assertEq(clock.seasonIndexAt(uint48(start + 1 weeks - 1)), 0);
-        assertEq(clock.seasonIndexAt(uint48(start + 1 weeks)), 1);
-        assertEq(clock.seasonIndexAt(uint48(start + 3 weeks - 1)), 1);
-        assertEq(clock.seasonIndexAt(uint48(start + 3 weeks)), 2);
-        assertEq(clock.seasonIndexAt(uint48(block.timestamp)), 2);
-    }
-
-    function testSeasonTimes() public {
-        uint start = block.timestamp;
-
-        (uint48 seasonStart, uint48 seasonEnd) = clock.seasonTs(0);
-        assertEq(seasonStart, 0);
-        assertEq(seasonEnd, 0);
-        assertEq(clock.currentSeasonIndex(), 0);
-
-        vm.warp(block.timestamp + 1 weeks);
-
-        clock.newSeason();        
-
-        assertEq(clock.currentSeasonIndex(), 0);
-        (seasonStart, seasonEnd) = clock.seasonTs(0);
-        assertEq(seasonStart, 0);
-        assertEq(seasonEnd, 2 weeks);
-
-        // +1 week: next season starts
-        vm.warp(block.timestamp + 1 weeks);
-
-        assertEq(clock.currentSeasonIndex(), 1);
-
-        (seasonStart, seasonEnd) = clock.seasonTs(1);
-        assertEq(seasonStart, 2 weeks);
-        assertEq(seasonEnd, 0);
-
-        // +1 week: next season starts
-        vm.warp(block.timestamp + 1 weeks);
-
-        clock.newSeason();
-
-        assertEq(clock.currentSeasonIndex(), 1);
-
-        (seasonStart, seasonEnd) = clock.seasonTs(2);
-        assertEq(seasonStart, 4 weeks);
-        assertEq(seasonEnd, 0);
-
-        vm.warp(block.timestamp + 1 weeks);
-
-        assertEq(clock.seasonIndexAt(uint48(0)), 0);
-        assertEq(clock.seasonIndexAt(uint48(start + 2 weeks - 1)), 0);
-        assertEq(clock.seasonIndexAt(uint48(start + 2 weeks)), 1);
-        assertEq(clock.seasonIndexAt(uint48(start + 4 weeks - 1)), 1);
-        assertEq(clock.seasonIndexAt(uint48(start + 4 weeks)), 2);
-        assertEq(clock.seasonIndexAt(uint48(block.timestamp)), 2);
     }
 }

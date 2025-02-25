@@ -16,20 +16,13 @@ import {ProxyLib} from "@libs/ProxyLib.sol";
 
 import "@helpers/OSxHelpers.sol";
 
-import {ISeasonErrors} from "src/clock/IClock.sol";
-import {ISimpleGaugeVoterStorageEventsErrors} from "src/voting/ISimpleGaugeVoter.sol";
-import {IEscrowCurveTokenStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
-import {IWithdrawalQueueErrors} from "src/escrow/increasing/interfaces/IVotingEscrowIncreasing.sol";
-import {IGaugeVote} from "src/voting/ISimpleGaugeVoter.sol";
-import {VotingEscrow, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams} from "src/voting/SimpleGaugeVoterSetup.sol";
 import {Clock, VotingEscrow, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams, IGaugeVote, IEscrowCurveTokenStorage, ISimpleGaugeVoterStorageEventsErrors} from "../../versions.sol";
 
 contract GaugeVotingBase is
     Test,
     IGaugeVote,
     IEscrowCurveTokenStorage,
-    ISimpleGaugeVoterStorageEventsErrors,
-    ISeasonErrors
+    ISimpleGaugeVoterStorageEventsErrors
 {
     using ProxyLib for address;
 
@@ -156,7 +149,7 @@ contract GaugeVotingBase is
     }
 
     function _actions() internal view returns (IDAO.Action[] memory) {
-        IDAO.Action[] memory actions = new IDAO.Action[](10);
+        IDAO.Action[] memory actions = new IDAO.Action[](9);
 
         // action 0: apply the ve installation
         actions[0] = IDAO.Action({
@@ -230,15 +223,6 @@ contract GaugeVotingBase is
             data: abi.encodeCall(
                 PermissionManager.grant,
                 (address(curve), address(this), curve.CURVE_ADMIN_ROLE())
-            )
-        });
-
-        actions[9] = IDAO.Action({
-            to: address(dao),
-            value: 0,
-            data: abi.encodeCall(
-                PermissionManager.grant,
-                (address(clock), address(this), clock.CLOCK_ADMIN_ROLE())
             )
         });
 
