@@ -6,6 +6,8 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {IVotingEscrowIncreasing as IVotingEscrow} from "@escrow-interfaces/IVotingEscrowIncreasing.sol";
 import {IEscrowCurveIncreasing as IEscrowCurve} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
+import {IEscrowCurveCore} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
+
 import {IClockUser, IClock} from "@clock/IClock.sol";
 
 // libraries
@@ -232,14 +234,15 @@ contract QuadraticIncreasingEscrow is
         return _tokenPointHistory[_tokenId][_tokenInterval];
     }
 
+    // TODO:GIORGI it's better to name it as tokenPointHistory, but it matches the above function which uses different structure.
+    function userPointHistory_1(uint256 _tokenId, uint256 _tokenInterval) external view returns (UserPoint memory) {
+        return _userPointHistory[_tokenId][_tokenInterval];
+    }
+
     /// @notice Returns the global point at the passed epoch
     /// @param _epoch The epoch to return the point for
     function pointHistory(uint256 _epoch) external view returns (UserPoint memory) {
         return _pointHistory[_epoch];
-    }
-
-    function totalSupply(uint256 _ts) external view returns(uint256) {
-        return BalanceLogicLibrary.supplyAt(slopeChanges, _pointHistory, epoch, _ts);
     }
 
     /// @notice Binary search to get the token point interval for a token id at or prior to a given timestamp
@@ -275,7 +278,8 @@ contract QuadraticIncreasingEscrow is
         }
         return lower;
     }
-
+    
+    /// @inheritdoc IEscrowCurveCore
     function votingPowerAt(uint256 _tokenId, uint256 _t) external view returns (uint256) {
         uint256 interval = _getPastTokenPointInterval(_tokenId, _t);
 
@@ -287,6 +291,11 @@ contract QuadraticIncreasingEscrow is
         uint256 timeElapsed = _t - lastPoint.checkpointTs;
 
         return _getBias(timeElapsed, lastPoint.coefficients);
+    }
+
+    /// @inheritdoc IEscrowCurveCore
+    function supplyAt(uint256 _ts) external view returns(uint256) {
+        return BalanceLogicLibrary.supplyAt(slopeChanges, _pointHistory, epoch, _ts);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -303,10 +312,6 @@ contract QuadraticIncreasingEscrow is
         // TODO: GIORGI uncomment later...
         // if (msg.sender != escrow) revert OnlyEscrow();
         _checkpoint(_tokenId, _oldLocked, _newLocked, _dur);
-    }
-
-    function supplyAt(uint256 _timestamp) public view override returns (uint256) {
-        return BalanceLogicLibrary.supplyAt(slopeChanges, _pointHistory, epoch, _timestamp);
     }
 
     /// @notice Record gper-user data to checkpoints. Used by VotingEscrow system.
@@ -395,6 +400,7 @@ contract QuadraticIncreasingEscrow is
                     newBias -= (p.bias + p.slope * (endOld - p.ts));
                 } else {
                     newSlope -= p.slope;
+                    newDSlope -= p.slope;
                     newBias -= (p.bias + p.slope * (currentTime - p.ts));
                 }
             } else {
