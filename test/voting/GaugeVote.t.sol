@@ -712,4 +712,18 @@ contract TestGaugeVote is GaugeVotingBase {
         assertEq(voter.totalVotingPowerCast(), votingPowerBeforeVoting);
         assertEq(voter.gaugeVotes(gauge), votingPowerBeforeVoting);
     }
+
+    // Test for gas consumption
+    function testVoteFor20Gauges() public {
+        for (uint160 i = 1; i <= 20; i++) {
+            voter.createGauge(address(i), string(abi.encodePacked("metadata", i)));
+            votes.push(GaugeVote(1, address(i)));
+        }
+
+        vm.startPrank(owner);
+        {
+            voter.vote(tokenId, votes);
+        }
+        vm.stopPrank();
+    }
 }
