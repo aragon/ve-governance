@@ -20,7 +20,7 @@ import {ReentrancyGuardUpgradeable as ReentrancyGuard} from "@openzeppelin/contr
 import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
 
 /// @title Quadratic Increasing Escrow
-contract QuadraticIncreasingEscrow is
+contract QuadraticIncreasingEscrowV1_2_0 is
     IEscrowCurve,
     IClockUser,
     ReentrancyGuard,

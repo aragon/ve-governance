@@ -10,7 +10,7 @@ import {ReentrancyGuardUpgradeable as ReentrancyGuard} from "@openzeppelin/contr
 import {PausableUpgradeable as Pausable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import {PluginUUPSUpgradeable} from "@aragon/osx/core/plugin/PluginUUPSUpgradeable.sol";
 
-contract SimpleGaugeVoter is
+contract SimpleGaugeVoterV1_2_0 is
     ISimpleGaugeVoter,
     IClockUser,
     ReentrancyGuard,

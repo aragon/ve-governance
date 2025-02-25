@@ -14,11 +14,6 @@ import {MockERC20} from "@mocks/MockERC20.sol";
 
 import "@helpers/OSxHelpers.sol";
 
-import {IEscrowCurveTokenStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
-import {IWithdrawalQueueErrors} from "src/escrow/increasing/interfaces/IVotingEscrowIncreasing.sol";
-import {IGaugeVote} from "src/voting/ISimpleGaugeVoter.sol";
-import {Clock, VotingEscrow, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams} from "src/voting/SimpleGaugeVoterSetup.sol";
-
 import {GaugeVotingBase} from "./GaugeVotingBase.sol";
 
 contract TestGaugeVote is GaugeVotingBase {
@@ -607,122 +602,6 @@ contract TestGaugeVote is GaugeVotingBase {
             });
 
             voter.reset(tokenIdA);
-        }
-        vm.stopPrank();
-    }
-
-    function testVoteWithSeasons(uint128 _weight) public {
-        vm.assume(_weight > 0);
-
-        // create the vote
-        votes.push(GaugeVote(_weight, gauge));
-
-        uint votingPower = escrow.votingPower(tokenId);
-
-        // vote
-        vm.startPrank(owner);
-        {
-            vm.expectEmit(true, true, true, true);
-            emit Voted({
-                voter: owner,
-                gauge: gauge,
-                epoch: voter.epochId(),
-                tokenId: tokenId,
-                votingPowerCastForGauge: votingPower,
-                totalVotingPowerInGauge: votingPower,
-                totalVotingPowerInContract: votingPower,
-                timestamp: block.timestamp
-            });
-            voter.vote(tokenId, votes);
-        }
-        vm.stopPrank();
-
-        // check the vote
-        assertEq(voter.isVoting(tokenId), true);
-        assertEq(voter.gaugesVotedFor(tokenId).length, 1);
-        assertEq(voter.gaugesVotedFor(tokenId)[0], gauge);
-        assertEq(voter.votes(tokenId, gauge), votingPower);
-        assertEq(voter.usedVotingPower(tokenId), votingPower);
-
-        // global state
-        assertEq(voter.totalVotingPowerCast(), votingPower);
-        assertEq(voter.gaugeVotes(gauge), votingPower);
-
-        clock.newSeason();
-
-        vm.warp(block.timestamp + clock.epochNextCheckpointIn() - 1);
-
-        // check the vote right before the season ends
-        assertEq(voter.isVoting(tokenId), true);
-        assertEq(voter.gaugesVotedFor(tokenId).length, 1);
-        assertEq(voter.gaugesVotedFor(tokenId)[0], gauge);
-        assertEq(voter.votes(tokenId, gauge), votingPower);
-        assertEq(voter.usedVotingPower(tokenId), votingPower);
-
-        // global state
-        assertEq(voter.totalVotingPowerCast(), votingPower);
-        assertEq(voter.gaugeVotes(gauge), votingPower);
-
-
-        // check the vote after the season ends
-        vm.warp(block.timestamp + 1);
-
-        assertEq(voter.isVoting(tokenId), false);
-        assertEq(voter.gaugesVotedFor(tokenId).length, 0);
-        assertEq(voter.votes(tokenId, gauge), 0);
-        assertEq(voter.usedVotingPower(tokenId), 0);
-        assertEq(voter.seasonTotalVotingPowerCast(0), votingPower);
-        assertEq(voter.seasonTotalVotingPowerCast(1), 0);
-        assertEq(voter.totalVotingPowerCast(), 0);
-
-        uint votingPowerAfterNewSeason = escrow.votingPower(tokenId);
-        assertEq(votingPowerAfterNewSeason, lockDeposit);
-
-        // warp to the next voting period
-        vm.warp(block.timestamp + 1 weeks + 1 hours + 1);
-
-        uint votingPowerBeforeVoting = escrow.votingPower(tokenId);
-
-        // vote
-        vm.startPrank(owner);
-        {
-            vm.expectEmit(true, true, true, true);
-            emit Voted({
-                voter: owner,
-                gauge: gauge,
-                epoch: voter.epochId(),
-                tokenId: tokenId,
-                votingPowerCastForGauge: votingPowerBeforeVoting,
-                totalVotingPowerInGauge: votingPowerBeforeVoting,
-                totalVotingPowerInContract: votingPowerBeforeVoting,
-                timestamp: block.timestamp
-            });
-            voter.vote(tokenId, votes);
-        }
-        vm.stopPrank();
-
-        // check the vote
-        assertEq(voter.isVoting(tokenId), true);
-        assertEq(voter.gaugesVotedFor(tokenId).length, 1);
-        assertEq(voter.gaugesVotedFor(tokenId)[0], gauge);
-        assertEq(voter.votes(tokenId, gauge), votingPowerBeforeVoting);
-        assertEq(voter.usedVotingPower(tokenId), votingPowerBeforeVoting);
-
-        // global state
-        assertEq(voter.totalVotingPowerCast(), votingPowerBeforeVoting);
-        assertEq(voter.gaugeVotes(gauge), votingPowerBeforeVoting);
-    }
-
-    // Test for gas consumption
-    function testVoteFor20Gauges() public {
-        for (uint160 i = 1; i <= 20; i++) {
-            voter.createGauge(address(i), string(abi.encodePacked("metadata", i)));
-            votes.push(GaugeVote(1, address(i)));
-        }
-
-        vm.startPrank(owner);
-        {
-            voter.vote(tokenId, votes);
         }
         vm.stopPrank();
     }

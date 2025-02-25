@@ -26,7 +26,7 @@ contract TestGaugeTime is GaugeVotingBase {
         return clock.epochNextCheckpointTs();
     }
 
-    function testEpochTimess() public {
+    function testEpochTimes() public {
         for (uint i = 0; i < 10; ++i) {
             uint start = block.timestamp;
 
