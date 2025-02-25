@@ -2,4 +2,11 @@
 
 == Core
 
-{{VotingEscrowIncreasing}}
+{{VotingEscrow}}
+{{ExitQueue}}
+{{QuadraticIncreasingEscrow}}
+{{SimpleGaugeVoter}}
+{{SimpleGaugeVoterSetup}}
+{{GaugesDAOFactory}}
+{{Lock}}
+{{Clock}}

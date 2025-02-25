@@ -108,7 +108,6 @@ async function main() {
 
   const o = await output;
   console.log("Generating docs...");
-  console.log("Output", o);
   await docgen.main([{ input, output: o }], config);
 
   const navOutput = execSync(`${RUNTIME} script/gen-nav.js ${apiPath}/pages`, {
@@ -118,7 +117,6 @@ async function main() {
   // Write the output to the target file
   const targetFilePath = `${apiPath}/nav.adoc`;
   console.log("Writing nav to", targetFilePath);
-  console.log(navOutput);
   fs.writeFileSync(targetFilePath, navOutput, "utf8");
 
   fs.rm(templatesPath, { recursive: true, force: true }, () => {});

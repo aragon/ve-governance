@@ -8,7 +8,7 @@
     "solc": "0.8.17"
   },
   "scripts": {
-    "docs": "script/prepare-docs.sh && node ./script/prepare-docs.js"
+    "docs": "script/prepare-docs.sh && bun ./script/prepare-docs.js"
   },
   "repository": {
     "type": "git",
