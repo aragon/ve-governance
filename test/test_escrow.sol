@@ -374,6 +374,8 @@ contract TestEscrow is Test {
         assertEq(fromP.ts, currentTs);
 
         // 2
+        // since merge occured in the same block as `createLock`,
+        // it should not cause extra epoch for user.
         uint256 toLatestEpoch = curve.userPointEpoch(to);
         assertEq(toLatestEpoch, 1);
 
@@ -448,6 +450,8 @@ contract TestEscrow is Test {
         assertEq(fromP.ts, currentTs);
 
         // 2
+        // since merge occured in the different block than `createLock`,
+        // it should  cause extra epoch for user.
         uint256 toLatestEpoch = curve.userPointEpoch(to);
         assertEq(toLatestEpoch, 2);
 
@@ -476,7 +480,7 @@ contract TestEscrow is Test {
         assertEq(lastPoint.ts, currentTs);
         // assertEq(lastPoint.start, (currentTs / WEEK) * WEEK); // TODO:GIORGI on the global points, we also store something like lastPoint.start = _newLocked.start
         // in this specific scenario, lastPoint.start becomes the `to` token's start which is in the past. does this make sense at all ?
-    
+
         // 6
         assertEq(curve.slopeChanges(end), Slope_1 + Slope_2);
     }
@@ -506,7 +510,7 @@ contract TestEscrow is Test {
         {
             uint256 fromLatestEpoch = curve.userPointEpoch(from);
             assertEq(fromLatestEpoch, 2);
-            
+
             QuadraticIncreasingEscrow.UserPoint memory fromP = curve.userPointHistory_1(
                 from,
                 fromLatestEpoch
@@ -548,18 +552,120 @@ contract TestEscrow is Test {
         assertEq(curve.supplyAt(currentTs + 1), currentBias);
 
         // 5
-        QuadraticIncreasingEscrow.UserPoint memory lastPoint = curve.pointHistory(
-            curve.epoch()
-        );
+        QuadraticIncreasingEscrow.UserPoint memory lastPoint = curve.pointHistory(curve.epoch());
 
         assertEq(lastPoint.slope, 0);
         assertEq(lastPoint.bias, currentBias);
         assertEq(lastPoint.ts, currentTs);
         // assertEq(lastPoint.start, (currentTs / WEEK) * WEEK); // TODO:GIORGI on the global points, we also store something like lastPoint.start = _newLocked.start
         // in this specific scenario, lastPoint.start becomes the `to` token's start which is in the past. does this make sense at all ?
-    
+
         // 6
         assertEq(curve.slopeChanges(fromLockEnd), Slope_1);
         assertEq(curve.slopeChanges(toLockEnd), Slope_2);
+    }
+
+    // TODO: remaining tests...
+
+    // ====================SPLIT TESTS==========================
+    function test_Split_TokenNotMature() public {
+        // 1. the tokenId's point must become 0
+        // 2. we should have 2 new tokenIds with `value` and `Lock_1_Amount - value` with their according bias and slope.
+        // 3. total supply at current timestamp must be both of the token's bias summed up till that point.
+        // 4. check that after the original token's end, the total supply doesn't increase.
+        // 5. slope changes must still include the original token's slope at the same original end.
+        uint256 value = 20e18;
+        uint256 tokenId = escrow.createLock(Lock_1_Amount);
+        (uint256 weekStartTs, uint256 endTs, ) = getTimes();
+
+        // Still warp just to ensure that we changed the current timestamp
+        // but not wrap after the end.
+        vm.warp(block.timestamp + WEEK);
+
+        escrow.split(tokenId, value);
+        uint256 currentTs = block.timestamp;
+
+        uint256 slope1 = (Lock_1_Amount - value) / CurveConstantLib.MAX_TIME;
+        uint256 slope2 = value / CurveConstantLib.MAX_TIME;
+
+        // 1
+        uint256 mainTokenIdEpoch = curve.userPointEpoch(tokenId);
+        assertEq(mainTokenIdEpoch, 2);
+
+        QuadraticIncreasingEscrow.UserPoint memory mainP = curve.userPointHistory_1(
+            tokenId,
+            mainTokenIdEpoch
+        );
+
+        assertEq(mainP.bias, 0);
+        assertEq(mainP.slope, 0);
+        assertEq(mainP.start, weekStartTs);
+        assertEq(mainP.ts, block.timestamp);
+
+        // 2
+        {
+            uint256 token1Epoch = curve.userPointEpoch(2);
+            assertEq(token1Epoch, 1);
+            QuadraticIncreasingEscrow.UserPoint memory token1P = curve.userPointHistory_1(
+                2, // tokenId
+                token1Epoch
+            );
+
+            assertEq(
+                token1P.bias,
+                (Lock_1_Amount - value) + slope1 * (block.timestamp - weekStartTs)
+            );
+            assertEq(token1P.slope, slope1);
+            assertEq(token1P.start, weekStartTs);
+            assertEq(token1P.ts, block.timestamp);
+
+            uint256 token2Epoch = curve.userPointEpoch(3);
+            assertEq(token2Epoch, 1);
+            QuadraticIncreasingEscrow.UserPoint memory token2P = curve.userPointHistory_1(
+                3, // tokenId
+                token2Epoch
+            );
+
+            assertEq(token2P.bias, value + slope2 * (block.timestamp - weekStartTs));
+            assertEq(token2P.slope, slope2);
+            assertEq(token2P.start, weekStartTs);
+            assertEq(token2P.ts, block.timestamp);
+        }
+
+        // 3.
+        assertEq(
+            curve.supplyAt(currentTs),
+            (Lock_1_Amount - value) +
+                slope1 *
+                (currentTs - weekStartTs) +
+                value +
+                slope2 *
+                (currentTs - weekStartTs)
+        );
+
+        // 4.
+        assertEq(
+            curve.supplyAt(endTs),
+            (Lock_1_Amount - value) +
+                slope1 *
+                (endTs - weekStartTs) +
+                value +
+                slope2 *
+                (endTs - weekStartTs)
+        );
+
+        assertEq(
+            curve.supplyAt(endTs + 5),
+            (Lock_1_Amount - value) +
+                slope1 *
+                (endTs - weekStartTs) +
+                value +
+                slope2 *
+                (endTs - weekStartTs)
+        );
+
+        assertEq(curve.supplyAt(endTs), Lock_1_Amount  + (Lock_1_Amount / CurveConstantLib.MAX_TIME) * endTs - weekStartTs);
+
+        // assertEq(curve.slopeChanges(endTs), Lock_1_Amount / CurveConstantLib.MAX_TIME);
     }
 }
