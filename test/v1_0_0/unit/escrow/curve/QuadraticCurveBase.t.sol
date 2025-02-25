@@ -30,11 +30,16 @@ contract MockEscrow {
 contract QuadraticCurveBase is TestHelpers, ILockedBalanceIncreasing {
     using ProxyLib for address;
     QuadraticIncreasingEscrow internal curve;
+    Clock internal clock;
     MockEscrow internal escrow;
 
     function setUp() public virtual override {
         super.setUp();
         escrow = new MockEscrow();
+
+        address clockImpl = address(new Clock());
+        bytes memory initClockCalldata = abi.encodeWithSelector(Clock.initialize.selector, dao);
+        clock = Clock(clockImpl.deployUUPSProxy(initClockCalldata));
 
         address impl = address(new QuadraticIncreasingEscrow());
 
