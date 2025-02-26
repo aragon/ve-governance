@@ -307,7 +307,6 @@ contract SimpleGaugeVoterSetup is PluginSetup {
             operation: _grantOrRevoke,
             condition: PermissionLib.NO_CONDITION
         });
-
         return permissions;
     }
 
