@@ -16,4 +16,4 @@ import {IVotingEscrowIncreasing, IWithdrawalQueueErrors, ILockedBalanceIncreasin
 import {IGaugeVote, ISimpleGaugeVoterStorageEventsErrors} from "@voting/ISimpleGaugeVoter.sol";
 
 // other
-import {DeployGaugesV1_1_0 as DeployGauges} from "script/deploy/DeployGauges_v1_2_0.s.sol";
+import {DeployGaugesV1_2_0 as DeployGauges} from "script/deploy/DeployGauges_v1_2_0.s.sol";

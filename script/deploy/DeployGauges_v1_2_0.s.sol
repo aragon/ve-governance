@@ -13,7 +13,7 @@ import {PluginSetupProcessor} from "@aragon/osx/framework/plugin/setup/PluginSet
 import {MockERC20} from "@mocks/MockERC20.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
-contract DeployGaugesV1_1_0 is Script {
+contract DeployGaugesV1_2_0 is Script {
     using SafeCast for uint256;
 
     SimpleGaugeVoterSetup simpleGaugeVoterSetup;
