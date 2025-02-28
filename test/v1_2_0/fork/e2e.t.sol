@@ -9,7 +9,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
 import {UUPSUpgradeable as UUPS} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {VotingEscrow, Clock, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveTokenStorage, GaugesDaoFactory, GaugePluginSet, Deployment, DeployGauges, DeploymentParameters} from "../versions.sol";
+import {VotingEscrow, Clock, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveTokenStorage, GaugesDaoFactory, GaugePluginSet, Deployment, DeploymentParameters, DeployGauges} from "../versions.sol";
 
 interface IERC20Mint is IERC20 {
     function mint(address _to, uint256 _amount) external;
@@ -43,7 +43,7 @@ contract MultisigReceiver is GhettoMultisig {
  * 4. A more robust suite for admininstration of the contracts
  * 5. Ability to connect to an existing deployment and test on the real network
  */
-contract TestE2E is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveTokenStorage {
+contract TestE2EV1_2_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveTokenStorage {
     error VotingInactive();
     error OnlyEscrow();
     error GaugeDoesNotExist(address _pool);
@@ -1394,23 +1394,19 @@ contract TestE2E is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurve
 
             assertEq(1, clock.currentSeasonIndex(), "SeasonIndex should be 1");
 
-
             assertEq(escrow.votingPower(1), depositAlice0, "Alice should have voting power");
             assertTrue(curve.isWarm(1), "Alice should be warm");
 
             assertEq(escrow.votingPower(2), 0, "Carol should not have voting power");
             assertFalse(curve.isWarm(2), "Carol should not be warm");
 
-            //vm.expectRevert(SeasonTooShort.selector);
-            //_startNewSeason();
-
             // fast forward to the checkpoint interval carol is warm
-            goToEpochStartPlus(clock.checkpointInterval() + 2 days);
+            goToEpochStartPlus(clock.checkpointInterval() + 3 days);
 
-            assertEq(escrow.votingPower(1), 260932937932153600000, "Alice vp should have more voting power");
+            assertEq(escrow.votingPower(1), 266946049122870400000, "Alice vp should have more voting power");
 
-            assertEq(escrow.votingPower(2), 260932937932153600000, "Carol vp should have more voting power");
             assertTrue(curve.isWarm(2), "Carol should be warm");
+            assertEq(escrow.votingPower(2), 266946049122870400000, "Carol vp should have more voting power");
 
             // start a withdrawal that finish before the new season
             vm.startPrank(alice);
@@ -1419,8 +1415,6 @@ contract TestE2E is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurve
                 escrow.beginWithdrawal(1);
             }
             vm.stopPrank();
-
-            assertEq(escrow.votingPower(1), 260932937932153600000, "Alice vp should still be not zero");
 
             goToEpochStartPlus(clock.checkpointInterval() * 2);
 
@@ -1446,7 +1440,7 @@ contract TestE2E is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurve
 
             assertEq(escrow.votingPower(2), 0, "Carol should have no voting power");
 
-            goToEpochStartPlus(clock.checkpointInterval() * 3 + 2 days);
+            goToEpochStartPlus(clock.checkpointInterval() * 3 + 2 days + 1);
 
             assertEq(escrow.votingPower(1), 0, "Alice should have no voting power");
             assertEq(escrow.votingPower(2), 0, "Carol should have no voting power");

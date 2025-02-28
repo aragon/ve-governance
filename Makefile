@@ -33,6 +33,10 @@ ft-mode-sepolia-fork-110 :; forge test --match-contract TestE2EV1_1_0 \
 	--rpc-url https://sepolia.mode.network \
 	-vvvvv
 
+ft-mode-sepolia-fork-120 :; forge test --match-contract TestE2EV1_2_0 \
+	--rpc-url https://sepolia.mode.network \
+	-vvvvv
+
 # Fork testing - mode mainnet
 ft-mode-fork-100 :;  forge test --match-contract TestE2E \
 	--rpc-url https://mainnet.mode.network/ \
@@ -41,7 +45,23 @@ ft-mode-fork-100 :;  forge test --match-contract TestE2E \
 ft-mode-fork-110 :; forge test --match-contract TestE2EV1_1_0 \
 	--rpc-url https://mainnet.mode.network/ \
 	-vvvvv
-	
+
+ft-mode-fork-120 :; forge test --match-contract TestE2EV1_2_0 \
+	--rpc-url https://mainnet.mode.network/ \
+	-vvvvv
+
+# Fork testing - sepolia
+ft-sepolia-fork-100 :;  forge test --match-contract TestE2E \
+	--rpc-url $(RPC_URL) \
+	-vvvvv
+
+ft-sepolia-fork-110 :; forge test --match-contract TestE2EV1_1_0 \
+	--rpc-url $(RPC_URL) \
+	-vvvvv
+
+ft-sepolia-fork-120 :; forge test --match-contract TestE2EV1_2_0 \
+	--rpc-url $(RPC_URL) \
+	-vvvvv
 
 ## Upgrade testing
 ft-mode-upgrade-fork :; forge test --match-contract UpgradeModeTo110 \
