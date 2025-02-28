@@ -89,8 +89,8 @@ contract QuadraticIncreasingEscrowV1_2_0 is
         warmupPeriod = _warmupPeriod;
         clock = _clock;
 
-        __DaoAuthorizableUpgradeable_init(IDAO(_dao));
         __ReentrancyGuard_init();
+        __DaoAuthorizableUpgradeable_init(IDAO(_dao));
 
         // other initializers are empty
     }
