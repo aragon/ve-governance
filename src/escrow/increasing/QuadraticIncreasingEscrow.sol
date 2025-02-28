@@ -372,8 +372,8 @@ contract QuadraticIncreasingEscrow is
             }
         }
 
-        uNew.slope = (_newLocked.amount / CurveConstantLib.MAX_TIME).toUint128();
-        uNew.bias = _newLocked.amount + uNew.slope * accumulationDur;
+        uNew.slope = ((_newLocked.amount * 1e18 / CurveConstantLib.MAX_TIME).toUint128());
+        uNew.bias = _newLocked.amount * 1e18 + uNew.slope * accumulationDur;
         uNew.start = _newLocked.start;
         uNew.ts = currentTime;
 
@@ -392,7 +392,7 @@ contract QuadraticIncreasingEscrow is
         if(userEpoch > 0) {
             UserPoint storage p = _userPointHistory[_tokenId][userEpoch];
             uint48 endOld = (p.start + CurveConstantLib.MAX_TIME).toUint48();
-
+            
             if(_newLocked.amount == 0) {
                 if(endOld <= uNew.ts) {
                     // we already subtracted p.slope in the above for loop,

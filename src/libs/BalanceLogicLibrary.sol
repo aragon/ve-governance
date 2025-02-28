@@ -128,7 +128,7 @@ library BalanceLogicLibrary {
         uint128 slope = _point.slope;
         uint256 ts = _point.ts; // changes in for loop.
         uint256 t_i = (ts / WEEK) * WEEK;
-
+        
         for (uint256 i = 0; i < 255; ++i) {
             t_i += WEEK;
             uint128 dSlope = 0;
@@ -149,6 +149,6 @@ library BalanceLogicLibrary {
         if (bias < 0) {
             bias = 0;
         }
-        return uint256(bias); // TODO: USE safe cast
+        return uint256(bias / 1e18); // TODO: USE safe cast
     }
 }
