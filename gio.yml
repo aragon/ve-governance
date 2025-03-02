@@ -20,7 +20,7 @@ EscrowTest:
           - it: totalSupply must be the same at start + MAX_TIME and start + MAX_TIME + t
           - it: totalSupply at start + t must be amountT1 + amountT2 + slopeT1 * (t - weekStart) + slopeT2 * (t - weekStart)
           - it: should increase a slope change at weekStart + MAX_TIME by slopeT2
-      - - given: prior lock at same timestamp
+      - - given: prior lock at different timestamp
 
   - when 
 

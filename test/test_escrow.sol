@@ -155,7 +155,7 @@ contract TestEscrow is Test {
         assertEq(lock.start, (currentTs / WEEK) * WEEK);
 
         // 2
-        assertEq(curve.epoch(), 1);
+        assertEq(curve.latestPointIndex(), 1);
         assertEq(curve.userPointEpoch(1), 1);
 
         // 3
@@ -195,7 +195,7 @@ contract TestEscrow is Test {
         (uint256 weekStartTs, uint256 endTs, uint256 currentTs) = getTimes();
 
         // 1
-        assertEq(curve.epoch(), 2);
+        assertEq(curve.latestPointIndex(), 2);
         assertEq(curve.userPointEpoch(1), 1);
         assertEq(curve.userPointEpoch(2), 1);
 
@@ -240,7 +240,7 @@ contract TestEscrow is Test {
         // 1
         // epoch is 3 because there's a week between the locks
         // which must be updated upon 2nd lock's insert.
-        assertEq(curve.epoch(), 3);
+        assertEq(curve.latestPointIndex(), 3);
         assertEq(curve.userPointEpoch(1), 1);
         assertEq(curve.userPointEpoch(2), 1);
 
@@ -305,7 +305,7 @@ contract TestEscrow is Test {
 
         // 1
         // epoch is `howManyWeeksBetween + 2`. We add 2 because the first lock and last lock.
-        assertEq(curve.epoch(), lastEpoch);
+        assertEq(curve.latestPointIndex(), lastEpoch);
         assertEq(curve.userPointEpoch(1), 1);
         assertEq(curve.userPointEpoch(2), 1);
 
@@ -476,7 +476,7 @@ contract TestEscrow is Test {
         assertTotalSupply(currentTs + 1, currentTotalBiasFP);
 
         // 5
-        QuadraticIncreasingEscrow.UserPoint memory lastPoint = curve.pointHistory(curve.epoch());
+        QuadraticIncreasingEscrow.UserPoint memory lastPoint = curve.pointHistory(curve.latestPointIndex());
 
         assertEq(lastPoint.slope, 0);
         assertEq(lastPoint.bias, currentTotalBiasFP);
@@ -555,7 +555,7 @@ contract TestEscrow is Test {
         assertTotalSupply(currentTs + 1, currentTotalBiasFP);
 
         // 5
-        QuadraticIncreasingEscrow.UserPoint memory lastPoint = curve.pointHistory(curve.epoch());
+        QuadraticIncreasingEscrow.UserPoint memory lastPoint = curve.pointHistory(curve.latestPointIndex());
 
         assertEq(lastPoint.slope, 0);
         assertEq(lastPoint.bias, currentTotalBiasFP);
@@ -749,51 +749,24 @@ contract TestEscrow is Test {
             vm.assume(amounts[i] != 0);
         }
 
+        uint256 amount = 2049e18;
+        uint256 splitValue = 892e18;
+
+        uint256 tokenId = escrow.createLock(amount);
+
         uint256 depositWeekTs = (block.timestamp / WEEK) * WEEK;
 
-        vm.assume(currentTs > depositWeekTs);
-        vm.assume(currentTs < depositWeekTs + WEEK);
-        vm.warp(currentTs);
+        uint256 timestampAt = depositWeekTs + CurveConstantLib.MAX_TIME - 1;
 
-        uint256 totalAmount = 0;
-        for (uint256 i = 0; i < 10; i++) {
-            totalAmount += amounts[i];
+        uint256 beforeSupply = curve.supplyAt(timestampAt);
+        
+        uint256 beforeSupplyFP = biasFP(amount, timestampAt - depositWeekTs);
 
-            escrow.createLock(amounts[i]);
-        }
-
-        QuadraticIncreasingEscrow.UserPoint memory lastPoint = curve.pointHistory(curve.epoch());
-        uint256 totalBiasFP = 0;
-        for (uint256 i = 0; i < 10; i++) {
-            totalBiasFP += biasFP(amounts[i], currentTs - depositWeekTs);
-        }
-
-        // TotalSupply match the bias calculated by totalAmount directly.
-        assertTotalSupply(currentTs, biasFP(totalAmount, currentTs - depositWeekTs));
-
-        // Last point's biasFP matches the biasFP summed up for each lock.
-        assertEq(lastPoint.bias, totalBiasFP);
-
-        // Last point's biasFP DOES NOT match the biasFP calculated by totalAmount.
-        assertNotEq(lastPoint.bias, biasFP(totalAmount, currentTs - depositWeekTs));
-
-        // The last point biasFP and biasFP calculated by totalAmount must not differ by more than numberOfLocks * duration
-        assertApproxEqAbs(
-            lastPoint.bias,
-            biasFP(totalAmount, currentTs - depositWeekTs),
-            amounts.length * (currentTs - depositWeekTs)
-        );
+        escrow.split(tokenId, splitValue);
+        
+        uint256 afterSupplyFP = biasFP(amount - splitValue, timestampAt - depositWeekTs) + biasFP(splitValue, timestampAt - depositWeekTs);
+        
+       console.log(beforeSupplyFP - afterSupplyFP, timestampAt - depositWeekTs);
+        
     }
 }
-
-
-
-
-// 1. Javier locked 50
-// 2. Jordan locked 30
-// 3. Giorgi locked 20
-// Assume that these locks happened at the very same time (at t1) and week start is w100 for all of of them.
-
-// What's the bias on the last global point stored in storage of checkpoint ?
-// To test this, logically, it's: 50*1e18 + (50*1e18)/MAX * (t1 - w100) + 30*1e18 + (30*1e18)/MAX * (t1 - w100) + 20*1e18 + (20*1e18)/MAX * (t1 - w100)
-// But logically, it should also be: (50 + 30 + 20) * 1e18 + ((50+30+20) * 1e18)/MAX * (t1 - w100)

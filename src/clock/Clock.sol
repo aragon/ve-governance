@@ -200,7 +200,8 @@ contract Clock is IClock, DaoAuthorizable, UUPSUpgradeable {
             return CHECKPOINT_INTERVAL - elapsed;
         }
     }
-
+    
+    /// @notice The number of seconds till the current week's start timestamp.
     function epochCurrentWeekTs() external view returns(uint256) {
        return (block.timestamp / 1 weeks) * 1 weeks;
     }

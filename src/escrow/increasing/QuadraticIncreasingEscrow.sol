@@ -58,12 +58,15 @@ contract QuadraticIncreasingEscrow is
     /// This implementation means that very short intervals may be challenging
     mapping(uint256 => TokenPoint[1_000_000_000]) internal _tokenPointHistory;
 
+    /*//////////////////////////////////////////////////////////////
+                                ADDED: 0.2.0
+    //////////////////////////////////////////////////////////////*/
+
+    /// @dev The latest global point index.
+    uint256 public latestPointIndex;
+
     // ============GIORGI===============
     uint256 public constant WEEK = 1 weeks;
-    uint256 internal constant MAXTIME = 4 * 365 * 86400;
-
-    uint256 public epoch;
-
 
     struct UserPoint {
         uint208 bias;
@@ -76,7 +79,7 @@ contract QuadraticIncreasingEscrow is
     // endTime => summed up slopes at that endTime
     mapping(uint256 => uint128) public slopeChanges;
 
-    mapping(uint256 => UserPoint) internal _pointHistory;
+    mapping(uint256 => UserPoint) internal _globalPointHistory;
     mapping(uint256 => UserPoint[1000000000]) internal _userPointHistory;
     mapping(uint256 => uint256) public userPointEpoch;
 
@@ -242,7 +245,7 @@ contract QuadraticIncreasingEscrow is
     /// @notice Returns the global point at the passed epoch
     /// @param _epoch The epoch to return the point for
     function pointHistory(uint256 _epoch) external view returns (UserPoint memory) {
-        return _pointHistory[_epoch];
+        return _globalPointHistory[_epoch];
     }
 
     /// @notice Binary search to get the token point interval for a token id at or prior to a given timestamp
@@ -295,7 +298,7 @@ contract QuadraticIncreasingEscrow is
 
     /// @inheritdoc IEscrowCurveCore
     function supplyAt(uint256 _ts) external view returns(uint256) {
-        return BalanceLogicLibrary.supplyAt(slopeChanges, _pointHistory, epoch, _ts);
+        return BalanceLogicLibrary.supplyAt(slopeChanges, _globalPointHistory, latestPointIndex, _ts);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -329,7 +332,7 @@ contract QuadraticIncreasingEscrow is
 
         uint48 currentTime = uint48(block.timestamp);
 
-        uint256 _epoch = epoch;
+        uint256 _latestPointIndex = latestPointIndex;
         UserPoint memory uNew;
         
         UserPoint memory lastPoint = UserPoint({
@@ -339,8 +342,8 @@ contract QuadraticIncreasingEscrow is
             start: _newLocked.start // rounded to prev week
         });
 
-        if (_epoch > 0) {
-            lastPoint = _pointHistory[_epoch];       
+        if (_latestPointIndex > 0) {
+            lastPoint = _globalPointHistory[_latestPointIndex];       
         }
         
         {
@@ -362,12 +365,12 @@ contract QuadraticIncreasingEscrow is
                 
                 lastPointCheckpoint = t_i;
                 lastPoint.ts = t_i.toUint48();
-                _epoch += 1;
+                _latestPointIndex += 1;
 
                 if (t_i == block.timestamp) {
                     break;
                 } else {
-                    _pointHistory[_epoch] = lastPoint;
+                    _globalPointHistory[_latestPointIndex] = lastPoint;
                 }
             }
         }
@@ -433,8 +436,8 @@ contract QuadraticIncreasingEscrow is
         lastPoint.start = _newLocked.start;
 
         // TODO: see aerodome..
-        epoch = _epoch;
-        _pointHistory[_epoch] = lastPoint;
+        latestPointIndex = _latestPointIndex;
+        _globalPointHistory[_latestPointIndex] = lastPoint;
 
         slopeChanges[newEnd] = newDSlope;
 
