@@ -738,8 +738,43 @@ contract TestEscrow is Test {
         // 5
         assertEq(curve.slopeChanges(endTs), slopeFP(Lock_1_Amount));
     }
-    
-    
+
+
+    function test_multipleMergeAndSplit(uint208[10] memory _amounts) public {
+        uint256 totalAmount = 0;
+        for (uint256 i = 0; i < _amounts.length; i++) {
+            _amounts[i] = uint208(bound(_amounts[i], 1, 1000));
+            _amounts[i] *= 1e18;
+
+            totalAmount += _amounts[i];
+        }
+
+        // will produce from tokenId = 1 to tokenId = amounts.length
+        for (uint256 i = 0; i < _amounts.length; i++) {
+            escrow.createLock(_amounts[i]);
+        }
+
+        vm.warp(block.timestamp + 1 hours);
+
+
+        uint256 totalSupplyBefore = curve.supplyAt(block.timestamp);
+
+        // merge 1 into 2, 3 into 4, 5 into 6, 7 into 8, 9 into 10
+        for (uint256 i = 0; i < _amounts.length; i += 2) {
+            escrow.merge(i + 1, i + 2);
+        }   
+
+        // split 2, 4, 6, 8
+        for(uint256 i = 2; i < _amounts.length; i += 2) {
+            escrow.split(i, (_amounts[i - 1] * 30) / 100);
+        }
+
+        uint256 totalSupplyAfter = curve.supplyAt(block.timestamp);
+        assertEq(totalSupplyBefore, totalSupplyAfter); 
+
+        // TODO: we need to check deviations. 
+    }
+
     // ======= Deviation Tests =========
 
     function testFuzz_global(uint208[10] memory amounts, uint256 currentTs) public {
