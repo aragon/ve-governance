@@ -99,11 +99,17 @@ contract DeployGaugesV1_2_0 is Script {
     function deploySimpleGaugeVoterPluginSetup() internal returns (SimpleGaugeVoterSetup result) {
         result = new SimpleGaugeVoterSetup(
             address(new SimpleGaugeVoter()),
+            false,
             address(new QuadraticIncreasingEscrow()),
+            false,
             address(new ExitQueue()),
+            false,
             address(new VotingEscrow()),
+            false,
             address(new Clock()),
-            address(new Lock())
+            false,
+            address(new Lock()),
+            false
         );
     }
 

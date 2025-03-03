@@ -159,11 +159,17 @@ contract VoterSetupTest is GaugeVotingBase {
     function testConstructor() public {
         new SimpleGaugeVoterSetup(
             address(0),
+            false,
             address(0),
+            false,
             address(0),
+            false,
             address(0),
+            false,
             address(0),
-            address(0)
+            false,
+            address(0),
+            false
         );
     }
 }

@@ -27,11 +27,17 @@ contract GaugesDaoFactoryTest is Test {
 
         SimpleGaugeVoterSetup gaugeVoterPluginSetup = new SimpleGaugeVoterSetup(
             address(new SimpleGaugeVoter()),
+            false,
             address(new QuadraticIncreasingEscrow()),
+            false,
             address(new ExitQueue()),
+            false,
             address(new VotingEscrow()),
+            false,
             address(new Clock()),
-            address(new Lock())
+            false,
+            address(new Lock()),
+            false
         );
 
         MockPluginRepoRegistry pRepoRegistry = new MockPluginRepoRegistry();
@@ -193,11 +199,17 @@ contract GaugesDaoFactoryTest is Test {
 
         SimpleGaugeVoterSetup gaugeVoterPluginSetup = new SimpleGaugeVoterSetup(
             address(new SimpleGaugeVoter()),
+            false,
             address(new QuadraticIncreasingEscrow()),
+            false,
             address(new ExitQueue()),
+            false,
             address(new VotingEscrow()),
+            false,
             address(new Clock()),
-            address(new Lock())
+            false,
+            address(new Lock()),
+            false
         );
 
         MockPluginRepoRegistry pRepoRegistry = new MockPluginRepoRegistry();
@@ -374,11 +386,17 @@ contract GaugesDaoFactoryTest is Test {
 
         SimpleGaugeVoterSetup gaugeVoterPluginSetup = new SimpleGaugeVoterSetup(
             address(new SimpleGaugeVoter()),
+            false,
             address(new QuadraticIncreasingEscrow()),
+            false,
             address(new ExitQueue()),
+            false,
             address(new VotingEscrow()),
+            false,
             address(new Clock()),
-            address(new Lock())
+            false,
+            address(new Lock()),
+            false
         );
 
         TokenParameters[] memory tokenParameters = new TokenParameters[](2);
@@ -759,11 +777,17 @@ contract GaugesDaoFactoryTest is Test {
 
         SimpleGaugeVoterSetup gaugeVoterPluginSetup = new SimpleGaugeVoterSetup(
             address(new SimpleGaugeVoter()),
+            false,
             address(new QuadraticIncreasingEscrow()),
+            false,
             address(new ExitQueue()),
+            false,
             address(new VotingEscrow()),
+            false,
             address(new Clock()),
-            address(new Lock())
+            false,
+            address(new Lock()),
+            false
         );
 
         TokenParameters[] memory tokenParameters = new TokenParameters[](3);
@@ -1253,11 +1277,17 @@ contract GaugesDaoFactoryTest is Test {
 
         SimpleGaugeVoterSetup gaugeVoterPluginSetup = new SimpleGaugeVoterSetup(
             address(new SimpleGaugeVoter()),
+            false,
             address(new QuadraticIncreasingEscrow()),
+            false,
             address(new ExitQueue()),
+            false,
             address(new VotingEscrow()),
+            false,
             address(new Clock()),
-            address(new Lock())
+            false,
+            address(new Lock()),
+            false
         );
 
         TokenParameters[] memory tokenParameters = new TokenParameters[](3);
