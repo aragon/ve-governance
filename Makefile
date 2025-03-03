@@ -126,6 +126,32 @@ deploy-mode-sepolia :; forge script DeployGauges \
 	--verifier-url https://sepolia.explorer.mode.network/api\? \
 	-vvvvv
 
+deploy-preview-ethereum-sepolia :; forge script DeployGauges \
+  --rpc-url $(RPC_URL) \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	-vvvvv
+
+deploy-ethereum-sepolia-120 :; forge script DeployGaugesV1_2_0 \
+	--slow \
+	--rpc-url $(RPC_URL) \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	--broadcast \
+	--verify \
+	--verifier blockscout \
+	--etherscan-api-key $(ETHERSCAN_API_KEY) \
+	-vvvvv
+
+deploy-ethereum-sepolia-120 :; forge script DeployGaugesV1_2_0 \
+	--slow \
+	--rpc-url $(RPC_URL) \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	--broadcast \
+	--verify \
+	--verifier blockscout \
+	--etherscan-api-key $(ETHERSCAN_API_KEY) \
+	-vvvvv
+
+
 ### Other scripts ###
 seed-preview-mode-sepolia :; forge script SeedState \
 	--rpc-url https://sepolia.mode.network \
@@ -137,19 +163,5 @@ seed-mode-sepolia :; forge script SeedState \
 	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
 	--broadcast \
 	--verify \
-	--etherscan-api-key $(ETHERSCAN_API_KEY) \
-	-vvvvv
-
-deploy-preview-ethereum-sepolia :; forge script DeployGauges \
-  --rpc-url $(RPC_URL) \
-	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
-	-vvvvv	
-
-deploy-ethereum-sepolia :; forge script DeployGauges \
-	--rpc-url $(RPC_URL) \
-	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
-	--broadcast \
-	--verify \
-	--verifier blockscout \
 	--etherscan-api-key $(ETHERSCAN_API_KEY) \
 	-vvvvv
