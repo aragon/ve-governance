@@ -190,7 +190,6 @@ contract TestEscrow is Test {
         escrow.createLock(Lock_2_Amount);
 
         uint256 totalLockAmount = Lock_1_Amount + Lock_2_Amount;
-        uint256 totalSlope = Slope_1 + Slope_2;
 
         (uint256 weekStartTs, uint256 endTs, uint256 currentTs) = getTimes();
 
@@ -476,7 +475,9 @@ contract TestEscrow is Test {
         assertTotalSupply(currentTs + 1, currentTotalBiasFP);
 
         // 5
-        QuadraticIncreasingEscrow.UserPoint memory lastPoint = curve.pointHistory(curve.latestPointIndex());
+        QuadraticIncreasingEscrow.UserPoint memory lastPoint = curve.pointHistory(
+            curve.latestPointIndex()
+        );
 
         assertEq(lastPoint.slope, 0);
         assertEq(lastPoint.bias, currentTotalBiasFP);
@@ -525,13 +526,8 @@ contract TestEscrow is Test {
             assertEq(fromP.ts, currentTs);
         }
 
-        uint256 currentTotalBiasFP;
-
-        {
-            uint256 LOCK_1_MAX = biasFP(Lock_1_Amount, fromLockEnd - fromLockWeekStart);
-            uint256 LOCK_2_MAX = biasFP(Lock_2_Amount, toLockEnd - toLockWeekStart);
-            currentTotalBiasFP = LOCK_1_MAX + LOCK_2_MAX;
-        }
+        uint256 currentTotalBiasFP = biasFP(Lock_1_Amount, fromLockEnd - fromLockWeekStart) +
+            biasFP(Lock_2_Amount, toLockEnd - toLockWeekStart);
 
         // 2
         {
@@ -555,7 +551,9 @@ contract TestEscrow is Test {
         assertTotalSupply(currentTs + 1, currentTotalBiasFP);
 
         // 5
-        QuadraticIncreasingEscrow.UserPoint memory lastPoint = curve.pointHistory(curve.latestPointIndex());
+        QuadraticIncreasingEscrow.UserPoint memory lastPoint = curve.pointHistory(
+            curve.latestPointIndex()
+        );
 
         assertEq(lastPoint.slope, 0);
         assertEq(lastPoint.bias, currentTotalBiasFP);
@@ -740,7 +738,8 @@ contract TestEscrow is Test {
         // 5
         assertEq(curve.slopeChanges(endTs), slopeFP(Lock_1_Amount));
     }
-
+    
+    
     // ======= Deviation Tests =========
 
     function testFuzz_global(uint208[10] memory amounts, uint256 currentTs) public {
@@ -759,14 +758,14 @@ contract TestEscrow is Test {
         uint256 timestampAt = depositWeekTs + CurveConstantLib.MAX_TIME - 1;
 
         uint256 beforeSupply = curve.supplyAt(timestampAt);
-        
+
         uint256 beforeSupplyFP = biasFP(amount, timestampAt - depositWeekTs);
 
         escrow.split(tokenId, splitValue);
-        
-        uint256 afterSupplyFP = biasFP(amount - splitValue, timestampAt - depositWeekTs) + biasFP(splitValue, timestampAt - depositWeekTs);
-        
-       console.log(beforeSupplyFP - afterSupplyFP, timestampAt - depositWeekTs);
-        
+
+        uint256 afterSupplyFP = biasFP(amount - splitValue, timestampAt - depositWeekTs) +
+            biasFP(splitValue, timestampAt - depositWeekTs);
+
+        console.log(beforeSupplyFP - afterSupplyFP, timestampAt - depositWeekTs);
     }
 }

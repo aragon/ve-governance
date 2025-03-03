@@ -5,6 +5,7 @@ pragma solidity ^0.8.17;
 import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import {IERC20MetadataUpgradeable as IERC20Metadata} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
 import {IERC721EnumerableMintableBurnable as IERC721EMB} from "./interfaces/IERC721EMB.sol";
+import {console2 as console} from "forge-std/console2.sol";
 
 // veGovernance
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
@@ -297,14 +298,16 @@ contract VotingEscrow is
             _locked[_tokenId].start
         );
 
-        _locked[_tokenId] = newLocked;
+        
 
         _checkpoint(
             _tokenId,
-            LockedBalance(0, 0),
+            _locked[_tokenId],
             newLocked,
             uint48(block.timestamp - newLocked.start)
         );
+
+        _locked[_tokenId] = newLocked;
     }
 
     function merge(uint256 _from, uint256 _to) public {
@@ -334,23 +337,23 @@ contract VotingEscrow is
 
         _checkpoint(
             _from,
-            LockedBalance(0, 0),
+            oldLockedFrom,
             newLockedFrom,
             uint48(block.timestamp - newLockedFrom.start)
         );
 
         // Update for `_to`.
-        LockedBalance memory newLockedTo = LockedBalance({
-            start: oldLockedTo.start,
-            amount: oldLockedFrom.amount
-        });
-
         uint256 duration = block.timestamp >= oldLockedFromEnd
             ? oldLockedFromEnd - oldLockedFrom.start
             : block.timestamp - oldLockedFrom.start;
 
-        _checkpoint(_to, LockedBalance(0, 0), newLockedTo, uint48(duration));
-        _locked[_to] = newLockedTo;
+        oldLockedFrom.start = oldLockedTo.start;
+        _checkpoint(_to, oldLockedTo, oldLockedFrom, uint48(duration));
+
+        _locked[_to] = LockedBalance({
+            start: oldLockedTo.start,
+            amount: oldLockedFrom.amount + oldLockedTo.amount
+        });
     }
 
     function split(
@@ -367,7 +370,7 @@ contract VotingEscrow is
         _locked[_from] = LockedBalance(0, 0);
         _checkpoint(
             _from,
-            LockedBalance(0, 0),
+            locked_,
             LockedBalance(0, locked_.start),
             0
         );

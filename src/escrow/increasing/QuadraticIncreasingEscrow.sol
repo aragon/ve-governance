@@ -69,15 +69,15 @@ contract QuadraticIncreasingEscrow is
     uint256 public constant WEEK = 1 weeks;
 
     struct UserPoint {
-        uint208 bias;
-        uint128 slope; // TODO: maybe int128 ? can it get negative values ?
+        uint256 bias;
+        uint256 slope; // TODO: maybe int128 ? can it get negative values ?
         uint48 ts;
         uint48 start;
     }
 
 
     // endTime => summed up slopes at that endTime
-    mapping(uint256 => uint128) public slopeChanges;
+    mapping(uint256 => uint256) public slopeChanges;
 
     mapping(uint256 => UserPoint) internal _globalPointHistory;
     mapping(uint256 => UserPoint[1000000000]) internal _userPointHistory;
@@ -330,15 +330,13 @@ contract QuadraticIncreasingEscrow is
         // this implementation doesn't yet support manual checkpointing
         if (_tokenId == 0) revert InvalidTokenId();
 
-        uint48 currentTime = uint48(block.timestamp);
-
         uint256 _latestPointIndex = latestPointIndex;
         UserPoint memory uNew;
         
         UserPoint memory lastPoint = UserPoint({
             bias: 0,
             slope: 0,
-            ts: currentTime,
+            ts: uint48(block.timestamp),
             start: _newLocked.start // rounded to prev week
         });
 
@@ -352,7 +350,7 @@ contract QuadraticIncreasingEscrow is
             
             for (uint256 i = 0; i < 255; ++i) {
                 t_i += WEEK;
-                uint128 dSlope;
+                uint256 dSlope;
 
                 if (t_i > block.timestamp) {
                     t_i = block.timestamp;
@@ -360,7 +358,7 @@ contract QuadraticIncreasingEscrow is
                     dSlope = slopeChanges[t_i];
                 }
 
-                lastPoint.bias += lastPoint.slope * (t_i - lastPointCheckpoint).toUint128();
+                lastPoint.bias += lastPoint.slope * (t_i - lastPointCheckpoint);
                 lastPoint.slope -= dSlope;
                 
                 lastPointCheckpoint = t_i;
@@ -375,59 +373,66 @@ contract QuadraticIncreasingEscrow is
             }
         }
 
-        uNew.slope = ((_newLocked.amount * 1e18 / CurveConstantLib.MAX_TIME).toUint128());
-        uNew.bias = _newLocked.amount * 1e18 + uNew.slope * accumulationDur;
-        uNew.start = _newLocked.start;
-        uNew.ts = currentTime;
+        // Transform amounts into fixed points.
+        _fromLocked.amount *= 1e18;
+        _newLocked.amount *= 1e18;
 
-        if(currentTime - _newLocked.start >= CurveConstantLib.MAX_TIME) {
+        uNew.slope = (_newLocked.amount / CurveConstantLib.MAX_TIME);
+        uNew.bias = _newLocked.amount + uNew.slope * accumulationDur;
+        uNew.start = _newLocked.start;
+        uNew.ts = uint48(block.timestamp);
+
+        if(uint48(block.timestamp) - _newLocked.start >= CurveConstantLib.MAX_TIME) {
             uNew.slope = 0;
         }
 
         uint48 newEnd = (_newLocked.start + CurveConstantLib.MAX_TIME).toUint48();
-        uint128 newSlope = lastPoint.slope + uNew.slope;
-        uint208 newBias = lastPoint.bias + uNew.bias;
-        uint128 newDSlope = slopeChanges[newEnd] + uNew.slope;
+        uint256 newSlope = lastPoint.slope + uNew.slope;
+        uint256 newBias = lastPoint.bias + uNew.bias;
+        uint256 newDSlope = slopeChanges[newEnd] + uNew.slope;
 
         uint256 userEpoch = userPointEpoch[_tokenId];
 
         // The `tokenId` already exists..
         if(userEpoch > 0) {
-            UserPoint storage p = _userPointHistory[_tokenId][userEpoch];
-            uint48 endOld = (p.start + CurveConstantLib.MAX_TIME).toUint48();
+            uint48 _fromLockedEnd = uint48(_fromLocked.start + CurveConstantLib.MAX_TIME);
+            uint48 ts = _fromLockedEnd <= uNew.ts ? _fromLockedEnd : uint48(block.timestamp);
             
+            uint256 oldSlope = (_fromLocked.amount  / CurveConstantLib.MAX_TIME);
+            uint256 oldBias = _fromLocked.amount + oldSlope * (ts - _fromLocked.start);
+
             if(_newLocked.amount == 0) {
-                if(endOld <= uNew.ts) {
+                if(_fromLockedEnd <= uNew.ts) {
                     // we already subtracted p.slope in the above for loop,
-                    // because we encounter slopeChanges[endOld] before uNew.ts.
-                    newBias -= (p.bias + p.slope * (endOld - p.ts));
+                    // because we encounter slopeChanges[_fromLockedEnd] before uNew.ts.
+                    newBias = oldBias > newBias ? 0  : newBias - oldBias;
                 } else {
-                    newSlope -= p.slope;
-                    newDSlope -= p.slope;
-                    newBias -= (p.bias + p.slope * (currentTime - p.ts));
+                    newBias = oldBias > newBias ? 0  : newBias - oldBias;
+                    newSlope = oldSlope > newSlope ? 0 : newSlope - oldSlope;
+                    newDSlope = oldSlope > newDSlope ? 0 : newDSlope - oldSlope;
                 }
             } else {
                 // User already had locked `x` amount on `tokenId=y` and 
                 // tries to add more amount on the same `tokenId=y`.
-                if(endOld <= uNew.ts) {
+                if(_fromLockedEnd <= uNew.ts) {
                     // Previous point already ends before new point. This means
                     // from newPoint, old slope must not be included anymore.
                     // bias still must be as after end, it doesn't get 0, 
                     // but maxed out constant. 
-                    uNew.bias += (p.bias + (endOld - p.ts) * p.slope);
+                    uNew.bias += oldBias;
                 } else {
                     // Previous point hasn't ended yet, so from newPoint, 
                     // old slope must still be added.
-                    uNew.slope += p.slope;
-                    uNew.bias += (p.bias + (currentTime - p.ts) * p.slope);
-                    if(endOld != newEnd) newDSlope += p.slope;
+                    uNew.slope += oldSlope;
+                    uNew.bias += oldBias;
+                    if(_fromLockedEnd != newEnd) newDSlope += oldSlope;
                 }
             }
 
             // If the end date has not changed and is in future, 
             // we must not clear out slope changes.
-            if(endOld != newEnd && endOld >= uNew.ts) {
-                slopeChanges[endOld] -= p.slope;
+            if(_fromLockedEnd != newEnd && _fromLockedEnd >= uNew.ts) {
+                slopeChanges[_fromLockedEnd] = oldSlope > slopeChanges[_fromLockedEnd] ? 0 : slopeChanges[_fromLockedEnd] - oldSlope;
             }
         }
         

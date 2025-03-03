@@ -4,6 +4,7 @@ pragma solidity ^0.8.17;
 import {QuadraticIncreasingEscrow} from "../escrow/increasing/QuadraticIncreasingEscrow.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {console2 as console} from "forge-std/console2.sol";
+import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 
 library BalanceLogicLibrary {
 
@@ -101,10 +102,17 @@ library BalanceLogicLibrary {
         if (_epoch == 0) return 0;
         QuadraticIncreasingEscrow.UserPoint memory lastPoint = _userPointHistory[_tokenId][_epoch];
         
-        lastPoint.bias -= lastPoint.slope * (_t - lastPoint.ts).toUint208();
-        if (lastPoint.bias < 0) {
-            lastPoint.bias = 0;
+        uint48 end = uint48(lastPoint.start + CurveConstantLib.MAX_TIME);
+        uint48 duration;
+        
+        if(lastPoint.ts <= end && uint48(_t) >= end) {
+            duration = end - lastPoint.ts;
+        } else {
+            duration = uint48(_t) - lastPoint.ts;
         }
+
+        lastPoint.bias += lastPoint.slope * duration;
+
         return lastPoint.bias;
     }
 
@@ -115,7 +123,7 @@ library BalanceLogicLibrary {
     /// @param _t Time to calculate the total voting power at
     /// @return Total voting power at that time
     function supplyAt(
-        mapping(uint256 => uint128) storage _slopeChanges,
+        mapping(uint256 => uint256) storage _slopeChanges,
         mapping(uint256 => QuadraticIncreasingEscrow.UserPoint) storage _pointHistory,
         uint256 _epoch,
         uint256 _t
@@ -124,20 +132,20 @@ library BalanceLogicLibrary {
         // epoch 0 is an empty point
         if (epoch_ == 0) return 0;
         QuadraticIncreasingEscrow.UserPoint memory _point = _pointHistory[epoch_];
-        uint208 bias = _point.bias;
-        uint128 slope = _point.slope;
+        uint256 bias = _point.bias;
+        uint256 slope = _point.slope;
         uint256 ts = _point.ts; // changes in for loop.
         uint256 t_i = (ts / WEEK) * WEEK;
         
         for (uint256 i = 0; i < 255; ++i) {
             t_i += WEEK;
-            uint128 dSlope = 0;
+            uint256 dSlope = 0;
             if (t_i > _t) {
                 t_i = _t;
             } else {
                 dSlope = _slopeChanges[t_i];
             }
-            bias += slope * (t_i - ts).toUint208();
+            bias += slope * (t_i - ts);
 
             if (t_i == _t) {
                 break;
@@ -146,9 +154,6 @@ library BalanceLogicLibrary {
             ts = t_i;
         }
 
-        if (bias < 0) {
-            bias = 0;
-        }
         return uint256(bias / 1e18); // TODO: USE safe cast
     }
 }
