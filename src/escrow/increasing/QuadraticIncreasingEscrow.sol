@@ -71,7 +71,7 @@ contract QuadraticIncreasingEscrow is
     // TODO: update interface for TokenPointV2
     mapping(uint256 => GlobalPoint) internal _globalPointHistory;
     mapping(uint256 => TokenPointV2[1000000000]) internal _userPointHistory;
-    
+
     /// @dev precomputed coefficients of the quadratic curve
     int256 private constant SHARED_QUADRATIC_COEFFICIENT =
         CurveConstantLib.SHARED_QUADRATIC_COEFFICIENT;
@@ -319,6 +319,7 @@ contract QuadraticIncreasingEscrow is
     /// @notice Record gper-user data to checkpoints. Used by VotingEscrow system.
     /// @dev Curve finance style but just for users at this stage
     /// @param _tokenId NFT token ID.
+    /// @param _fromLocked The locked from which we're moving.
     /// @param _newLocked New locked amount / end lock time for the user
     function _checkpoint(
         uint256 _tokenId,
@@ -329,7 +330,7 @@ contract QuadraticIncreasingEscrow is
         if (_tokenId == 0) revert InvalidTokenId();
 
         uint256 _globalPointLatestIndex = globalPointLatestIndex;
-        TokenPointV2 memory uNew;
+        TokenPointV2 memory tNew;
 
         GlobalPoint memory lastPoint = GlobalPoint({
             bias: 0,
@@ -361,7 +362,7 @@ contract QuadraticIncreasingEscrow is
                 lastPoint.slope -= dSlope;
 
                 lastPointCheckpoint = t_i;
-                lastPoint.ts = t_i.toUint48();
+                lastPoint.ts = uint48(t_i);
                 _globalPointLatestIndex += 1;
 
                 if (t_i == block.timestamp) {
@@ -376,41 +377,41 @@ contract QuadraticIncreasingEscrow is
         _fromLocked.amount *= 1e18;
         _newLocked.amount *= 1e18;
 
-        uNew.slope = (_newLocked.amount / CurveConstantLib.MAX_TIME);
+        tNew.slope = (_newLocked.amount / CurveConstantLib.MAX_TIME);
 
         {
             uint256 elapsed = block.timestamp - _newLocked.start;
             if (elapsed > CurveConstantLib.MAX_TIME) {
                 elapsed = CurveConstantLib.MAX_TIME;
             }
-            uNew.bias = _newLocked.amount + uNew.slope * elapsed;
+            tNew.bias = _newLocked.amount + tNew.slope * elapsed;
         }
 
-        uNew.ts = uint48(block.timestamp);
+        tNew.ts = uint48(block.timestamp);
 
         if (uint48(block.timestamp) - _newLocked.start >= CurveConstantLib.MAX_TIME) {
-            uNew.slope = 0;
+            tNew.slope = 0;
         }
 
         uint48 newEnd = (_newLocked.start + CurveConstantLib.MAX_TIME).toUint48();
-        uint256 newSlope = lastPoint.slope + uNew.slope;
-        uint256 newBias = lastPoint.bias + uNew.bias;
-        uint256 newDSlope = slopeChanges[newEnd] + uNew.slope;
+        uint256 newSlope = lastPoint.slope + tNew.slope;
+        uint256 newBias = lastPoint.bias + tNew.bias;
+        uint256 newDSlope = slopeChanges[newEnd] + tNew.slope;
 
         uint256 tokenLatestIndex = tokenPointLatestIndex[_tokenId];
 
         // The `tokenId` already exists..
         if (tokenLatestIndex > 0) {
             uint48 _fromLockedEnd = uint48(_fromLocked.start + CurveConstantLib.MAX_TIME);
-            uint48 ts = _fromLockedEnd <= uNew.ts ? _fromLockedEnd : uint48(block.timestamp);
+            uint48 ts = _fromLockedEnd <= tNew.ts ? _fromLockedEnd : uint48(block.timestamp);
 
             uint256 oldSlope = (_fromLocked.amount / CurveConstantLib.MAX_TIME);
             uint256 oldBias = _fromLocked.amount + oldSlope * (ts - _fromLocked.start);
 
             if (_newLocked.amount == 0) {
-                if (_fromLockedEnd <= uNew.ts) {
+                if (_fromLockedEnd <= tNew.ts) {
                     // we already subtracted p.slope in the above for loop,
-                    // because we encounter slopeChanges[_fromLockedEnd] before uNew.ts.
+                    // because we encounter slopeChanges[_fromLockedEnd] before tNew.ts.
                     newBias = oldBias > newBias ? 0 : newBias - oldBias;
                 } else {
                     newBias = oldBias > newBias ? 0 : newBias - oldBias;
@@ -420,24 +421,24 @@ contract QuadraticIncreasingEscrow is
             } else {
                 // User already had locked `x` amount on `tokenId=y` and
                 // tries to add more amount on the same `tokenId=y`.
-                if (_fromLockedEnd <= uNew.ts) {
+                if (_fromLockedEnd <= tNew.ts) {
                     // Previous point already ends before new point. This means
                     // from newPoint, old slope must not be included anymore.
                     // bias still must be as after end, it doesn't get 0,
                     // but maxed out constant.
-                    uNew.bias += oldBias;
+                    tNew.bias += oldBias;
                 } else {
                     // Previous point hasn't ended yet, so from newPoint,
                     // old slope must still be added.
-                    uNew.slope += oldSlope;
-                    uNew.bias += oldBias;
+                    tNew.slope += oldSlope;
+                    tNew.bias += oldBias;
                     if (_fromLockedEnd != newEnd) newDSlope += oldSlope;
                 }
             }
 
             // If the end date has not changed and is in future,
             // we must not clear out slope changes.
-            if (_fromLockedEnd != newEnd && _fromLockedEnd >= uNew.ts) {
+            if (_fromLockedEnd != newEnd && _fromLockedEnd >= tNew.ts) {
                 slopeChanges[_fromLockedEnd] = oldSlope > slopeChanges[_fromLockedEnd]
                     ? 0
                     : slopeChanges[_fromLockedEnd] - oldSlope;
