@@ -4,6 +4,8 @@ import {console2 as console} from "forge-std/console2.sol";
 
 import {QuadraticIncreasingEscrow, IVotingEscrow, IEscrowCurve} from "src/escrow/increasing/QuadraticIncreasingEscrow.sol";
 import {IVotingEscrowIncreasing, IVotingEscrowCoreErrors, ILockedBalanceIncreasing} from "src/escrow/increasing/interfaces/IVotingEscrowIncreasing.sol";
+import {IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage} from "src/escrow/increasing/interfaces/IEscrowCurveIncreasing.sol";
+
 import {VotingEscrow} from "src/escrow/increasing/VotingEscrowIncreasing.sol";
 import {Lock} from "src/escrow/increasing/Lock.sol";
 
@@ -17,13 +19,12 @@ import {ProxyLib} from "@libs/ProxyLib.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
-contract TestEscrow is Test {
+contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage {
     using ProxyLib for address;
     using SafeCast for uint256;
 
     uint208 internal TOKEN_5K = 5e21;
 
-    uint256 internal WEEK = 604800;
     uint256 internal DAY = 86400;
 
     QuadraticIncreasingEscrow internal curve;
@@ -44,6 +45,8 @@ contract TestEscrow is Test {
 
     address public sender = address(123);
 
+    uint256 public checkpointInterval;
+
     function lockedBalance(
         uint208 amount,
         uint48 start
@@ -56,7 +59,7 @@ contract TestEscrow is Test {
         view
         returns (uint256 weekStartTs, uint256 endTs, uint256 currentTs)
     {
-        weekStartTs = (block.timestamp / WEEK) * WEEK;
+        weekStartTs = (block.timestamp / checkpointInterval) * checkpointInterval;
         endTs = weekStartTs + CurveConstantLib.MAX_TIME;
         currentTs = block.timestamp;
     }
@@ -88,6 +91,8 @@ contract TestEscrow is Test {
 
         
         clock = new Clock();
+        checkpointInterval = clock.checkpointInterval();
+
         MockERC20 token = new MockERC20();
 
         // deploy escrow proxy
@@ -140,7 +145,7 @@ contract TestEscrow is Test {
         uint256 tokenId = escrow.createLock(Lock_1_Amount);
 
         Lock_1_ts = block.timestamp;
-        Lock_1_start = (block.timestamp / WEEK) / WEEK;
+        Lock_1_start = (block.timestamp / checkpointInterval) / checkpointInterval;
         _;
     }
 
@@ -161,17 +166,16 @@ contract TestEscrow is Test {
         // 1
         ILockedBalanceIncreasing.LockedBalance memory lock = escrow.locked(tokenId);
         assertEq(lock.amount, Lock_1_Amount);
-        assertEq(lock.start, (currentTs / WEEK) * WEEK);
+        assertEq(lock.start, weekStartTs);
 
         // 2
-        assertEq(curve.latestPointIndex(), 1);
-        assertEq(curve.latestTokenPointIndex(1), 1);
+        assertEq(curve.globalPointLatestIndex(), 1);
+        assertEq(curve.tokenPointLatestIndex(1), 1);
 
         // 3
-        QuadraticIncreasingEscrow.UserPoint memory p = curve.pointHistory(1);
+        GlobalPoint memory p = curve.pointHistory(1);
         assertEq(p.ts, currentTs);
         assertEq(p.bias, biasFP(Lock_1_Amount, currentTs - weekStartTs));
-        assertEq(p.start, weekStartTs);
         assertEq(p.slope, Slope_1);
 
         // 4,5,6
@@ -203,12 +207,12 @@ contract TestEscrow is Test {
         (uint256 weekStartTs, uint256 endTs, uint256 currentTs) = getTimes();
 
         // 1
-        assertEq(curve.latestPointIndex(), 2);
-        assertEq(curve.latestTokenPointIndex(1), 1);
-        assertEq(curve.latestTokenPointIndex(2), 1);
+        assertEq(curve.globalPointLatestIndex(), 2);
+        assertEq(curve.tokenPointLatestIndex(1), 1);
+        assertEq(curve.tokenPointLatestIndex(2), 1);
 
         // 2, 3
-        QuadraticIncreasingEscrow.UserPoint memory p = curve.pointHistory(2);
+        GlobalPoint memory p = curve.pointHistory(2);
         assertEq(p.ts, currentTs);
         assertEq(
             p.bias,
@@ -216,7 +220,7 @@ contract TestEscrow is Test {
                 biasFP(Lock_2_Amount, currentTs - weekStartTs)
         );
 
-        assertEq(p.start, weekStartTs);
+        // assertEq(p.start, weekStartTs); TODO: check it on `locked()`
         assertEq(p.slope, Slope_1 + Slope_2);
 
         // 4, 5, 6
@@ -239,7 +243,7 @@ contract TestEscrow is Test {
         // 6. total supply shouldn't include the increase of first lock's bias after first lock's end.
         // 7. total supply shouldn't include the increase of second lock's bias after its end.
         // 8. should schedule slope changes at their according end dates.
-        vm.warp(block.timestamp + WEEK);
+        vm.warp(block.timestamp + checkpointInterval);
 
         escrow.createLock(Lock_2_Amount);
 
@@ -248,18 +252,18 @@ contract TestEscrow is Test {
         // 1
         // epoch is 3 because there's a week between the locks
         // which must be updated upon 2nd lock's insert.
-        assertEq(curve.latestPointIndex(), 3);
-        assertEq(curve.latestTokenPointIndex(1), 1);
-        assertEq(curve.latestTokenPointIndex(2), 1);
+        assertEq(curve.globalPointLatestIndex(), 3);
+        assertEq(curve.tokenPointLatestIndex(1), 1);
+        assertEq(curve.tokenPointLatestIndex(2), 1);
 
         uint256 currentTotalBiasFP = biasFP(Lock_1_Amount, currentTs - Lock_1_start) +
             biasFP(Lock_2_Amount, currentTs - weekStartTs);
 
         // 2, 3
-        QuadraticIncreasingEscrow.UserPoint memory p = curve.pointHistory(3);
+        GlobalPoint memory p = curve.pointHistory(3);
         assertEq(p.ts, currentTs);
         assertEq(p.bias, currentTotalBiasFP);
-        assertEq(p.start, weekStartTs);
+        // assertEq(p.start, weekStartTs); TODO: check it on `locked()`
         assertEq(p.slope, Slope_1 + Slope_2);
 
         // 4, 5
@@ -306,25 +310,25 @@ contract TestEscrow is Test {
         (uint256 weekStartTs, uint256 endTs, uint256 currentTs) = getTimes();
 
         // Calculate how many weeks between our locks + 2 as last lock's record and new lock's record.
-        uint256 lastEpoch = (currentTime - Lock_1_start) / WEEK + 2;
+        uint256 lastEpoch = (currentTime - Lock_1_start) / checkpointInterval + 2;
 
         uint256 Lock_1_end = Lock_1_start + CurveConstantLib.MAX_TIME;
         uint256 Lock_2_end = weekStartTs + CurveConstantLib.MAX_TIME;
 
         // 1
         // epoch is `howManyWeeksBetween + 2`. We add 2 because the first lock and last lock.
-        assertEq(curve.latestPointIndex(), lastEpoch);
-        assertEq(curve.latestTokenPointIndex(1), 1);
-        assertEq(curve.latestTokenPointIndex(2), 1);
+        assertEq(curve.globalPointLatestIndex(), lastEpoch);
+        assertEq(curve.tokenPointLatestIndex(1), 1);
+        assertEq(curve.tokenPointLatestIndex(2), 1);
 
         uint256 currentTotalBiasFP = biasFP(Lock_1_Amount, Lock_1_end - Lock_1_start) +
             biasFP(Lock_2_Amount, currentTs - weekStartTs);
 
         // 2, 3
-        QuadraticIncreasingEscrow.UserPoint memory p = curve.pointHistory(lastEpoch);
+        GlobalPoint memory p = curve.pointHistory(lastEpoch);
         assertEq(p.ts, currentTs);
         assertEq(p.bias, currentTotalBiasFP);
-        assertEq(p.start, weekStartTs);
+        // assertEq(p.start, weekStartTs); TODO: check it on `locked()`
         assertEq(p.slope, Slope_2);
 
         uint256 Lock_1_MAX = biasFP(Lock_1_Amount, Lock_1_end - Lock_1_start);
@@ -352,7 +356,7 @@ contract TestEscrow is Test {
         uint256 from = escrow.createLock(Lock_1_Amount);
 
         // Warp so start dates end up different..
-        vm.warp(block.timestamp + WEEK);
+        vm.warp(block.timestamp + checkpointInterval);
         uint256 to = escrow.createLock(Lock_2_Amount);
 
         vm.expectRevert(); //reverts as start dates are different and tokens are not mature.
@@ -373,27 +377,27 @@ contract TestEscrow is Test {
 
         escrow.merge(from, to);
 
-        uint256 fromLatestEpoch = curve.latestTokenPointIndex(from);
+        uint256 fromLatestEpoch = curve.tokenPointLatestIndex(from);
         assertEq(fromLatestEpoch, 1);
 
         // 1
-        QuadraticIncreasingEscrow.UserPoint memory fromP = curve.userPointHistory_1(
+        TokenPointV2 memory fromP = curve.userPointHistory_1(
             from,
             fromLatestEpoch
         );
 
         assertEq(fromP.bias, 0);
         assertEq(fromP.slope, 0);
-        assertEq(fromP.start, weekStartTs);
+        // assertEq(fromP.start, weekStartTs); TODO: check it on `locked()`
         assertEq(fromP.ts, currentTs);
 
         // 2
         // since merge occured in the same block as `createLock`,
         // it should not cause extra epoch for user.
-        uint256 toLatestEpoch = curve.latestTokenPointIndex(to);
+        uint256 toLatestEpoch = curve.tokenPointLatestIndex(to);
         assertEq(toLatestEpoch, 1);
 
-        QuadraticIncreasingEscrow.UserPoint memory toP = curve.userPointHistory_1(
+        TokenPointV2 memory toP = curve.userPointHistory_1(
             to,
             toLatestEpoch
         );
@@ -403,7 +407,7 @@ contract TestEscrow is Test {
 
         assertEq(toP.bias, currentTotalBiasFP);
         assertEq(toP.slope, Slope_1 + Slope_2);
-        assertEq(toP.start, weekStartTs);
+        // assertEq(toP.start, weekStartTs); TODO: check it on `locked()`
         assertEq(toP.ts, currentTs);
 
         uint256 end = weekStartTs + CurveConstantLib.MAX_TIME;
@@ -446,27 +450,27 @@ contract TestEscrow is Test {
 
         uint256 currentTs = block.timestamp;
 
-        uint256 fromLatestEpoch = curve.latestTokenPointIndex(from);
+        uint256 fromLatestEpoch = curve.tokenPointLatestIndex(from);
         assertEq(fromLatestEpoch, 2);
 
         // 1
-        QuadraticIncreasingEscrow.UserPoint memory fromP = curve.userPointHistory_1(
+        TokenPointV2 memory fromP = curve.userPointHistory_1(
             from,
             fromLatestEpoch
         );
 
         assertEq(fromP.bias, 0);
         assertEq(fromP.slope, 0);
-        assertEq(fromP.start, weekStartTs);
+        // assertEq(fromP.start, weekStartTs); TODO: check it on `locked()`
         assertEq(fromP.ts, currentTs);
 
         // 2
         // since merge occured in the different block than `createLock`,
         // it should  cause extra epoch for user.
-        uint256 toLatestEpoch = curve.latestTokenPointIndex(to);
+        uint256 toLatestEpoch = curve.tokenPointLatestIndex(to);
         assertEq(toLatestEpoch, 2);
 
-        QuadraticIncreasingEscrow.UserPoint memory toP = curve.userPointHistory_1(
+        TokenPointV2 memory toP = curve.userPointHistory_1(
             to,
             toLatestEpoch
         );
@@ -475,7 +479,7 @@ contract TestEscrow is Test {
 
         assertEq(toP.bias, currentTotalBiasFP);
         assertEq(toP.slope, 0);
-        assertEq(toP.start, weekStartTs);
+       // assertEq(toP.start, weekStartTs); TODO: check it on `locked()`
         assertEq(toP.ts, currentTs);
 
         // 3, 4
@@ -484,14 +488,14 @@ contract TestEscrow is Test {
         assertTotalSupply(currentTs + 1, currentTotalBiasFP);
 
         // 5
-        QuadraticIncreasingEscrow.UserPoint memory lastPoint = curve.pointHistory(
-            curve.latestPointIndex()
+        GlobalPoint memory lastPoint = curve.pointHistory(
+            curve.globalPointLatestIndex()
         );
 
         assertEq(lastPoint.slope, 0);
         assertEq(lastPoint.bias, currentTotalBiasFP);
         assertEq(lastPoint.ts, currentTs);
-        // assertEq(lastPoint.start, (currentTs / WEEK) * WEEK); // TODO:GIORGI on the global points, we also store something like lastPoint.start = _newLocked.start
+        // assertEq(lastPoint.start, (currentTs / checkpointInterval) * checkpointInterval); // TODO:GIORGI on the global points, we also store something like lastPoint.start = _newLocked.start
         // in this specific scenario, lastPoint.start becomes the `to` token's start which is in the past. does this make sense at all ?
 
         // 6
@@ -509,7 +513,7 @@ contract TestEscrow is Test {
         uint256 from = escrow.createLock(Lock_1_Amount);
         (uint256 fromLockWeekStart, uint256 fromLockEnd, uint256 fromLockCurrentTime) = getTimes();
 
-        vm.warp(block.timestamp + WEEK);
+        vm.warp(block.timestamp + checkpointInterval);
         uint256 to = escrow.createLock(Lock_2_Amount);
         (uint256 toLockWeekStart, uint256 toLockEnd, uint256 toLockCurrentTime) = getTimes();
 
@@ -521,17 +525,17 @@ contract TestEscrow is Test {
 
         // 1
         {
-            uint256 fromLatestEpoch = curve.latestTokenPointIndex(from);
+            uint256 fromLatestEpoch = curve.tokenPointLatestIndex(from);
             assertEq(fromLatestEpoch, 2);
 
-            QuadraticIncreasingEscrow.UserPoint memory fromP = curve.userPointHistory_1(
+            TokenPointV2 memory fromP = curve.userPointHistory_1(
                 from,
                 fromLatestEpoch
             );
 
             assertEq(fromP.bias, 0);
             assertEq(fromP.slope, 0);
-            assertEq(fromP.start, fromLockWeekStart);
+            // assertEq(fromP.start, weekStartTs); TODO: check it on `locked()`
             assertEq(fromP.ts, currentTs);
         }
 
@@ -540,17 +544,17 @@ contract TestEscrow is Test {
 
         // 2
         {
-            uint256 toLatestEpoch = curve.latestTokenPointIndex(to);
+            uint256 toLatestEpoch = curve.tokenPointLatestIndex(to);
             assertEq(toLatestEpoch, 2);
 
-            QuadraticIncreasingEscrow.UserPoint memory toP = curve.userPointHistory_1(
+            TokenPointV2 memory toP = curve.userPointHistory_1(
                 to,
                 toLatestEpoch
             );
 
             assertEq(toP.bias, currentTotalBiasFP);
             assertEq(toP.slope, 0);
-            assertEq(toP.start, toLockWeekStart);
+            // assertEq(toP.start, weekStartTs); TODO: check it on `locked()`
             assertEq(toP.ts, currentTs);
         }
 
@@ -560,14 +564,14 @@ contract TestEscrow is Test {
         assertTotalSupply(currentTs + 1, currentTotalBiasFP);
 
         // 5
-        QuadraticIncreasingEscrow.UserPoint memory lastPoint = curve.pointHistory(
-            curve.latestPointIndex()
+        GlobalPoint memory lastPoint = curve.pointHistory(
+            curve.globalPointLatestIndex()
         );
 
         assertEq(lastPoint.slope, 0);
         assertEq(lastPoint.bias, currentTotalBiasFP);
         assertEq(lastPoint.ts, currentTs);
-        // assertEq(lastPoint.start, (currentTs / WEEK) * WEEK); // TODO:GIORGI on the global points, we also store something like lastPoint.start = _newLocked.start
+        // assertEq(lastPoint.start, (currentTs / checkpointInterval) * checkpointInterval); // TODO:GIORGI on the global points, we also store something like lastPoint.start = _newLocked.start
         // in this specific scenario, lastPoint.start becomes the `to` token's start which is in the past. does this make sense at all ?
 
         // 6
@@ -602,7 +606,7 @@ contract TestEscrow is Test {
 
         // Still warp just to ensure that we changed the current timestamp
         // but not wrap after the end.
-        vm.warp(block.timestamp + WEEK);
+        vm.warp(block.timestamp + checkpointInterval);
 
         escrow.split(tokenId, value);
         uint256 currentTs = block.timestamp;
@@ -611,43 +615,43 @@ contract TestEscrow is Test {
         uint256 slope2 = slopeFP(value);
 
         // 1
-        uint256 mainTokenIdEpoch = curve.latestTokenPointIndex(tokenId);
+        uint256 mainTokenIdEpoch = curve.tokenPointLatestIndex(tokenId);
         assertEq(mainTokenIdEpoch, 2);
 
-        QuadraticIncreasingEscrow.UserPoint memory mainP = curve.userPointHistory_1(
+        TokenPointV2 memory mainP = curve.userPointHistory_1(
             tokenId,
             mainTokenIdEpoch
         );
 
         assertEq(mainP.bias, 0);
         assertEq(mainP.slope, 0);
-        assertEq(mainP.start, weekStartTs);
+        // assertEq(mainP.start, weekStartTs); TODO: check it on `locked()`
         assertEq(mainP.ts, block.timestamp);
 
         // 2
         {
-            uint256 token1Epoch = curve.latestTokenPointIndex(2);
+            uint256 token1Epoch = curve.tokenPointLatestIndex(2);
             assertEq(token1Epoch, 1);
-            QuadraticIncreasingEscrow.UserPoint memory token1P = curve.userPointHistory_1(
+            TokenPointV2 memory token1P = curve.userPointHistory_1(
                 2, // tokenId
                 token1Epoch
             );
 
             assertEq(token1P.bias, biasFP(Lock_1_Amount - value, block.timestamp - weekStartTs));
             assertEq(token1P.slope, slope1);
-            assertEq(token1P.start, weekStartTs);
+            // assertEq(token1P.start, weekStartTs); TODO: check it on `locked()`
             assertEq(token1P.ts, block.timestamp);
 
-            uint256 token2Epoch = curve.latestTokenPointIndex(3);
+            uint256 token2Epoch = curve.tokenPointLatestIndex(3);
             assertEq(token2Epoch, 1);
-            QuadraticIncreasingEscrow.UserPoint memory token2P = curve.userPointHistory_1(
+            TokenPointV2 memory token2P = curve.userPointHistory_1(
                 3, // tokenId
                 token2Epoch
             );
 
             assertEq(token2P.bias, biasFP(value, block.timestamp - weekStartTs));
             assertEq(token2P.slope, slope2);
-            assertEq(token2P.start, weekStartTs);
+            // assertEq(token2P.start, weekStartTs); TODO: check it on `locked()`
             assertEq(token2P.ts, block.timestamp);
         }
 
@@ -697,43 +701,43 @@ contract TestEscrow is Test {
         uint256 currentTs = block.timestamp;
 
         // 2
-        uint256 mainTokenIdEpoch = curve.latestTokenPointIndex(tokenId);
+        uint256 mainTokenIdEpoch = curve.tokenPointLatestIndex(tokenId);
         assertEq(mainTokenIdEpoch, 2);
 
-        QuadraticIncreasingEscrow.UserPoint memory mainP = curve.userPointHistory_1(
+        TokenPointV2 memory mainP = curve.userPointHistory_1(
             tokenId,
             mainTokenIdEpoch
         );
 
         assertEq(mainP.bias, 0);
         assertEq(mainP.slope, 0);
-        assertEq(mainP.start, weekStartTs);
+       // assertEq(mainP.start, weekStartTs); TODO: check it on `locked()`
         assertEq(mainP.ts, block.timestamp);
 
         // 2
         {
-            uint256 token1Epoch = curve.latestTokenPointIndex(2);
+            uint256 token1Epoch = curve.tokenPointLatestIndex(2);
             assertEq(token1Epoch, 1);
-            QuadraticIncreasingEscrow.UserPoint memory token1P = curve.userPointHistory_1(
+            TokenPointV2 memory token1P = curve.userPointHistory_1(
                 2, // tokenId
                 token1Epoch
             );
 
             assertEq(token1P.bias, biasFP(Lock_1_Amount - value, endTs - weekStartTs));
             assertEq(token1P.slope, 0);
-            assertEq(token1P.start, weekStartTs);
+            // assertEq(token1P.start, weekStartTs); TODO: check it on `locked()`
             assertEq(token1P.ts, block.timestamp);
 
-            uint256 token2Epoch = curve.latestTokenPointIndex(3);
+            uint256 token2Epoch = curve.tokenPointLatestIndex(3);
             assertEq(token2Epoch, 1);
-            QuadraticIncreasingEscrow.UserPoint memory token2P = curve.userPointHistory_1(
+            TokenPointV2 memory token2P = curve.userPointHistory_1(
                 3, // tokenId
                 token2Epoch
             );
 
             assertEq(token2P.bias, biasFP(value, endTs - weekStartTs));
             assertEq(token2P.slope, 0);
-            assertEq(token2P.start, weekStartTs);
+            // assertEq(token2P.start, weekStartTs); TODO: check it on `locked()`
             assertEq(token2P.ts, block.timestamp);
         }
 
@@ -810,7 +814,7 @@ contract TestEscrow is Test {
 
         uint256 tokenId = escrow.createLock(amount);
 
-        uint256 depositWeekTs = (block.timestamp / WEEK) * WEEK;
+        uint256 depositWeekTs = (block.timestamp / checkpointInterval) * checkpointInterval;
 
         uint256 timestampAt = depositWeekTs + CurveConstantLib.MAX_TIME - 1;
 

@@ -270,7 +270,7 @@ contract VotingEscrow is
         _locked[newTokenId] = lock;
 
         // we don't allow edits in this implementation, so only the new lock is used
-        _checkpoint(newTokenId, LockedBalance(0, 0), lock, uint48(block.timestamp - lock.start));
+        _checkpoint(newTokenId, LockedBalance(0, 0), lock);
 
         uint256 balanceBefore = IERC20(token).balanceOf(address(this));
 
@@ -298,13 +298,10 @@ contract VotingEscrow is
             _locked[_tokenId].start
         );
 
-        
-
         _checkpoint(
             _tokenId,
             _locked[_tokenId],
-            newLocked,
-            uint48(block.timestamp - newLocked.start)
+            newLocked
         );
 
         _locked[_tokenId] = newLocked;
@@ -323,10 +320,7 @@ contract VotingEscrow is
         ) {
             revert("Tokens either must be mature or start dates must match");
         }
-
-        // query the duration lib to get the next time we can deposit
-        uint256 startTime = IClock(clock).epochCurrentWeekTs();
-
+        
         // Update for `_from`.
         IERC721EMB(lockNFT).burn(_from);
         _locked[_from] = LockedBalance(0, 0);
@@ -338,17 +332,12 @@ contract VotingEscrow is
         _checkpoint(
             _from,
             oldLockedFrom,
-            newLockedFrom,
-            uint48(block.timestamp - newLockedFrom.start)
+            newLockedFrom
         );
 
         // Update for `_to`.
-        uint256 duration = block.timestamp >= oldLockedFromEnd
-            ? oldLockedFromEnd - oldLockedFrom.start
-            : block.timestamp - oldLockedFrom.start;
-
         oldLockedFrom.start = oldLockedTo.start;
-        _checkpoint(_to, oldLockedTo, oldLockedFrom, uint48(duration));
+        _checkpoint(_to, oldLockedTo, oldLockedFrom);
 
         _locked[_to] = LockedBalance({
             start: oldLockedTo.start,
@@ -371,32 +360,26 @@ contract VotingEscrow is
         _checkpoint(
             _from,
             locked_,
-            LockedBalance(0, locked_.start),
-            0
+            LockedBalance(0, locked_.start)
         );
         
-        uint48 lockEnd = uint48(locked_.start + CurveConstantLib.MAX_TIME);
-        uint48 duration = block.timestamp >= lockEnd ? uint48(lockEnd - locked_.start) : uint48(block.timestamp - locked_.start);
-
         locked_.amount -= _value.toUint208();
-        _tokenId1 = _createSplitNFT(owner, locked_, duration);
+        _tokenId1 = _createSplitNFT(owner, locked_);
 
         locked_.amount = _value.toUint208();
-        _tokenId2 = _createSplitNFT(owner, locked_, duration);
+        _tokenId2 = _createSplitNFT(owner, locked_);
     }
 
     function _createSplitNFT(
         address _to,
-        LockedBalance memory _newLocked,
-        uint48 _duration
+        LockedBalance memory _newLocked
     ) private returns (uint256 _tokenId) {
         _tokenId = ++lastLockId;
         _locked[_tokenId] = _newLocked;
         _checkpoint(
             _tokenId,
             LockedBalance(0, 0),
-            _newLocked,
-            uint48(_duration)
+            _newLocked
         );
         IERC721EMB(lockNFT).mint(_to, _tokenId);
     }
@@ -409,10 +392,9 @@ contract VotingEscrow is
     function _checkpoint(
         uint256 _tokenId,
         LockedBalance memory _fromLocked,
-        LockedBalance memory _newLocked,
-        uint48 dur
+        LockedBalance memory _newLocked
     ) private {
-        IEscrowCurve(curve).checkpoint(_tokenId, _fromLocked, _newLocked, dur);
+        IEscrowCurve(curve).checkpoint(_tokenId, _fromLocked, _newLocked);
     }
 
     /// @dev resets the voting power for a given tokenId. Checkpoint is written to the end of the epoch.
@@ -423,8 +405,7 @@ contract VotingEscrow is
         IEscrowCurve(curve).checkpoint(
             _tokenId,
             LockedBalance(0, 0),
-            LockedBalance(0, checkpointClearTime.toUint48()),
-            uint48(block.timestamp - checkpointClearTime)
+            LockedBalance(0, checkpointClearTime.toUint48())
         );
     }
 
