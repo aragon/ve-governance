@@ -3,7 +3,7 @@ pragma solidity ^0.8.17;
 import {console2 as console} from "forge-std/console2.sol";
 
 import {QuadraticIncreasingEscrow, IVotingEscrow, IEscrowCurve} from "src/escrow/increasing/QuadraticIncreasingEscrow.sol";
-import {IVotingEscrowIncreasing, ILockedBalanceIncreasing} from "src/escrow/increasing/interfaces/IVotingEscrowIncreasing.sol";
+import {IVotingEscrowIncreasing, IVotingEscrowCoreErrors, ILockedBalanceIncreasing} from "src/escrow/increasing/interfaces/IVotingEscrowIncreasing.sol";
 import {VotingEscrow} from "src/escrow/increasing/VotingEscrowIncreasing.sol";
 import {Lock} from "src/escrow/increasing/Lock.sol";
 
@@ -567,6 +567,20 @@ contract TestEscrow is Test {
     }
 
     // ====================SPLIT TESTS==========================
+    function test_Split_shouldRevert_ifAmountZero() public {
+        uint256 from = escrow.createLock(Lock_1_Amount);
+
+        vm.expectRevert(IVotingEscrowCoreErrors.ZeroAmount.selector); //reverts as start dates are different and tokens are not mature.
+        escrow.split(from, 0);
+    }
+
+    function test_Split_shouldRevert_ifAmountTooBig() public {
+        uint256 from = escrow.createLock(Lock_1_Amount);
+
+        vm.expectRevert(bytes("value too big")); //reverts as start dates are different and tokens are not mature.
+        escrow.split(from, Lock_1_Amount);
+    }
+
     function test_Split_TokenNotMature() public {
         // 1. the tokenId's point must become 0
         // 2. we should have 2 new tokenIds with `value` and `Lock_1_Amount - value` with their according bias and slope.
@@ -653,7 +667,6 @@ contract TestEscrow is Test {
         assertEq(curve.slopeChanges(endTs), slope1 + slope2);
     }
 
-    // ====================SPLIT TESTS==========================
     function test_Split_TokenAlreadyMature() public {
         // 1. TotalSupply before and after the split must not change.
         // 2. the tokenId's point must become 0

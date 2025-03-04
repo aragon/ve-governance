@@ -314,9 +314,9 @@ contract VotingEscrow is
         LockedBalance memory oldLockedFrom = _locked[_from];
         LockedBalance memory oldLockedTo = _locked[_to];
 
-        uint48 oldLockedFromEnd = (oldLockedFrom.start + CurveConstantLib.MAX_TIME).toUint48();
-        uint48 oldLockedToEnd = (oldLockedTo.start + CurveConstantLib.MAX_TIME).toUint48();
-        
+        uint48 oldLockedFromEnd = uint48(oldLockedFrom.start + CurveConstantLib.MAX_TIME);
+        uint48 oldLockedToEnd = uint48(oldLockedTo.start + CurveConstantLib.MAX_TIME);
+
         if (
             (oldLockedTo.start != oldLockedFrom.start) &&
             (block.timestamp <= oldLockedToEnd || block.timestamp <= oldLockedFromEnd)
@@ -375,7 +375,7 @@ contract VotingEscrow is
             0
         );
         
-        uint48 lockEnd = (locked_.start + CurveConstantLib.MAX_TIME).toUint48();
+        uint48 lockEnd = uint48(locked_.start + CurveConstantLib.MAX_TIME);
         uint48 duration = block.timestamp >= lockEnd ? uint48(lockEnd - locked_.start) : uint48(block.timestamp - locked_.start);
 
         locked_.amount -= _value.toUint208();
