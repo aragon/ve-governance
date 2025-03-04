@@ -165,7 +165,7 @@ contract TestEscrow is Test {
 
         // 2
         assertEq(curve.latestPointIndex(), 1);
-        assertEq(curve.userPointEpoch(1), 1);
+        assertEq(curve.latestTokenPointIndex(1), 1);
 
         // 3
         QuadraticIncreasingEscrow.UserPoint memory p = curve.pointHistory(1);
@@ -204,8 +204,8 @@ contract TestEscrow is Test {
 
         // 1
         assertEq(curve.latestPointIndex(), 2);
-        assertEq(curve.userPointEpoch(1), 1);
-        assertEq(curve.userPointEpoch(2), 1);
+        assertEq(curve.latestTokenPointIndex(1), 1);
+        assertEq(curve.latestTokenPointIndex(2), 1);
 
         // 2, 3
         QuadraticIncreasingEscrow.UserPoint memory p = curve.pointHistory(2);
@@ -249,8 +249,8 @@ contract TestEscrow is Test {
         // epoch is 3 because there's a week between the locks
         // which must be updated upon 2nd lock's insert.
         assertEq(curve.latestPointIndex(), 3);
-        assertEq(curve.userPointEpoch(1), 1);
-        assertEq(curve.userPointEpoch(2), 1);
+        assertEq(curve.latestTokenPointIndex(1), 1);
+        assertEq(curve.latestTokenPointIndex(2), 1);
 
         uint256 currentTotalBiasFP = biasFP(Lock_1_Amount, currentTs - Lock_1_start) +
             biasFP(Lock_2_Amount, currentTs - weekStartTs);
@@ -314,8 +314,8 @@ contract TestEscrow is Test {
         // 1
         // epoch is `howManyWeeksBetween + 2`. We add 2 because the first lock and last lock.
         assertEq(curve.latestPointIndex(), lastEpoch);
-        assertEq(curve.userPointEpoch(1), 1);
-        assertEq(curve.userPointEpoch(2), 1);
+        assertEq(curve.latestTokenPointIndex(1), 1);
+        assertEq(curve.latestTokenPointIndex(2), 1);
 
         uint256 currentTotalBiasFP = biasFP(Lock_1_Amount, Lock_1_end - Lock_1_start) +
             biasFP(Lock_2_Amount, currentTs - weekStartTs);
@@ -373,7 +373,7 @@ contract TestEscrow is Test {
 
         escrow.merge(from, to);
 
-        uint256 fromLatestEpoch = curve.userPointEpoch(from);
+        uint256 fromLatestEpoch = curve.latestTokenPointIndex(from);
         assertEq(fromLatestEpoch, 1);
 
         // 1
@@ -390,7 +390,7 @@ contract TestEscrow is Test {
         // 2
         // since merge occured in the same block as `createLock`,
         // it should not cause extra epoch for user.
-        uint256 toLatestEpoch = curve.userPointEpoch(to);
+        uint256 toLatestEpoch = curve.latestTokenPointIndex(to);
         assertEq(toLatestEpoch, 1);
 
         QuadraticIncreasingEscrow.UserPoint memory toP = curve.userPointHistory_1(
@@ -446,7 +446,7 @@ contract TestEscrow is Test {
 
         uint256 currentTs = block.timestamp;
 
-        uint256 fromLatestEpoch = curve.userPointEpoch(from);
+        uint256 fromLatestEpoch = curve.latestTokenPointIndex(from);
         assertEq(fromLatestEpoch, 2);
 
         // 1
@@ -463,7 +463,7 @@ contract TestEscrow is Test {
         // 2
         // since merge occured in the different block than `createLock`,
         // it should  cause extra epoch for user.
-        uint256 toLatestEpoch = curve.userPointEpoch(to);
+        uint256 toLatestEpoch = curve.latestTokenPointIndex(to);
         assertEq(toLatestEpoch, 2);
 
         QuadraticIncreasingEscrow.UserPoint memory toP = curve.userPointHistory_1(
@@ -521,7 +521,7 @@ contract TestEscrow is Test {
 
         // 1
         {
-            uint256 fromLatestEpoch = curve.userPointEpoch(from);
+            uint256 fromLatestEpoch = curve.latestTokenPointIndex(from);
             assertEq(fromLatestEpoch, 2);
 
             QuadraticIncreasingEscrow.UserPoint memory fromP = curve.userPointHistory_1(
@@ -540,7 +540,7 @@ contract TestEscrow is Test {
 
         // 2
         {
-            uint256 toLatestEpoch = curve.userPointEpoch(to);
+            uint256 toLatestEpoch = curve.latestTokenPointIndex(to);
             assertEq(toLatestEpoch, 2);
 
             QuadraticIncreasingEscrow.UserPoint memory toP = curve.userPointHistory_1(
@@ -611,7 +611,7 @@ contract TestEscrow is Test {
         uint256 slope2 = slopeFP(value);
 
         // 1
-        uint256 mainTokenIdEpoch = curve.userPointEpoch(tokenId);
+        uint256 mainTokenIdEpoch = curve.latestTokenPointIndex(tokenId);
         assertEq(mainTokenIdEpoch, 2);
 
         QuadraticIncreasingEscrow.UserPoint memory mainP = curve.userPointHistory_1(
@@ -626,7 +626,7 @@ contract TestEscrow is Test {
 
         // 2
         {
-            uint256 token1Epoch = curve.userPointEpoch(2);
+            uint256 token1Epoch = curve.latestTokenPointIndex(2);
             assertEq(token1Epoch, 1);
             QuadraticIncreasingEscrow.UserPoint memory token1P = curve.userPointHistory_1(
                 2, // tokenId
@@ -638,7 +638,7 @@ contract TestEscrow is Test {
             assertEq(token1P.start, weekStartTs);
             assertEq(token1P.ts, block.timestamp);
 
-            uint256 token2Epoch = curve.userPointEpoch(3);
+            uint256 token2Epoch = curve.latestTokenPointIndex(3);
             assertEq(token2Epoch, 1);
             QuadraticIncreasingEscrow.UserPoint memory token2P = curve.userPointHistory_1(
                 3, // tokenId
@@ -697,7 +697,7 @@ contract TestEscrow is Test {
         uint256 currentTs = block.timestamp;
 
         // 2
-        uint256 mainTokenIdEpoch = curve.userPointEpoch(tokenId);
+        uint256 mainTokenIdEpoch = curve.latestTokenPointIndex(tokenId);
         assertEq(mainTokenIdEpoch, 2);
 
         QuadraticIncreasingEscrow.UserPoint memory mainP = curve.userPointHistory_1(
@@ -712,7 +712,7 @@ contract TestEscrow is Test {
 
         // 2
         {
-            uint256 token1Epoch = curve.userPointEpoch(2);
+            uint256 token1Epoch = curve.latestTokenPointIndex(2);
             assertEq(token1Epoch, 1);
             QuadraticIncreasingEscrow.UserPoint memory token1P = curve.userPointHistory_1(
                 2, // tokenId
@@ -724,7 +724,7 @@ contract TestEscrow is Test {
             assertEq(token1P.start, weekStartTs);
             assertEq(token1P.ts, block.timestamp);
 
-            uint256 token2Epoch = curve.userPointEpoch(3);
+            uint256 token2Epoch = curve.latestTokenPointIndex(3);
             assertEq(token2Epoch, 1);
             QuadraticIncreasingEscrow.UserPoint memory token2P = curve.userPointHistory_1(
                 3, // tokenId

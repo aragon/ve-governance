@@ -70,7 +70,7 @@ contract QuadraticIncreasingEscrow is
 
     struct UserPoint {
         uint256 bias;
-        uint256 slope; // TODO: maybe int128 ? can it get negative values ?
+        uint256 slope;
         uint48 ts;
         uint48 start;
     }
@@ -81,7 +81,7 @@ contract QuadraticIncreasingEscrow is
 
     mapping(uint256 => UserPoint) internal _globalPointHistory;
     mapping(uint256 => UserPoint[1000000000]) internal _userPointHistory;
-    mapping(uint256 => uint256) public userPointEpoch;
+    mapping(uint256 => uint256) public latestTokenPointIndex;
 
     // ============GIORGI===============
 
@@ -243,9 +243,9 @@ contract QuadraticIncreasingEscrow is
     }
 
     /// @notice Returns the global point at the passed epoch
-    /// @param _epoch The epoch to return the point for
-    function pointHistory(uint256 _epoch) external view returns (UserPoint memory) {
-        return _globalPointHistory[_epoch];
+    /// @param _index The index in an array to return the point for
+    function pointHistory(uint256 _index) external view returns (UserPoint memory) {
+        return _globalPointHistory[_index];
     }
 
     /// @notice Binary search to get the token point interval for a token id at or prior to a given timestamp
@@ -390,10 +390,10 @@ contract QuadraticIncreasingEscrow is
         uint256 newBias = lastPoint.bias + uNew.bias;
         uint256 newDSlope = slopeChanges[newEnd] + uNew.slope;
 
-        uint256 userEpoch = userPointEpoch[_tokenId];
+        uint256 tokenLatestIndex = latestTokenPointIndex[_tokenId];
 
         // The `tokenId` already exists..
-        if(userEpoch > 0) {
+        if(tokenLatestIndex > 0) {
             uint48 _fromLockedEnd = uint48(_fromLocked.start + CurveConstantLib.MAX_TIME);
             uint48 ts = _fromLockedEnd <= uNew.ts ? _fromLockedEnd : uint48(block.timestamp);
             
@@ -445,11 +445,11 @@ contract QuadraticIncreasingEscrow is
 
         slopeChanges[newEnd] = newDSlope;
 
-        if (userEpoch != 0 && _userPointHistory[_tokenId][userEpoch].ts == block.timestamp) {
-            _userPointHistory[_tokenId][userEpoch] = uNew;
+        if (tokenLatestIndex != 0 && _userPointHistory[_tokenId][tokenLatestIndex].ts == block.timestamp) {
+            _userPointHistory[_tokenId][tokenLatestIndex] = uNew;
         } else {
-            userPointEpoch[_tokenId] = ++userEpoch;
-            _userPointHistory[_tokenId][userEpoch] = uNew;
+            latestTokenPointIndex[_tokenId] = ++tokenLatestIndex;
+            _userPointHistory[_tokenId][tokenLatestIndex] = uNew;
         }
     }
 
