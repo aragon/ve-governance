@@ -312,8 +312,7 @@ contract QuadraticIncreasingEscrow is
         IVotingEscrow.LockedBalance memory _newLocked,
         uint48 _dur
     ) external nonReentrant {
-        // TODO: GIORGI uncomment later...
-        // if (msg.sender != escrow) revert OnlyEscrow();
+        if (msg.sender != escrow) revert OnlyEscrow();
         _checkpoint(_tokenId, _oldLocked, _newLocked, _dur);
     }
 

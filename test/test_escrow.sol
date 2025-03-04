@@ -86,17 +86,26 @@ contract TestEscrow is Test {
             daoURI_: "ipfs://"
         });
 
-        curve = new QuadraticIncreasingEscrow();
+        
         clock = new Clock();
-        address impl = address(new VotingEscrow());
-
         MockERC20 token = new MockERC20();
 
+        // deploy escrow proxy
         escrow = VotingEscrow(
-            impl.deployUUPSProxy(
+            address(new VotingEscrow()).deployUUPSProxy(
                 abi.encodeCall(
                     VotingEscrow.initialize,
                     (address(token), address(_dao), address(clock), 0)
+                )
+            )
+        );
+
+        // deploy curve proxy
+        curve = QuadraticIncreasingEscrow(
+            address(new QuadraticIncreasingEscrow()).deployUUPSProxy(
+                abi.encodeCall(
+                    QuadraticIncreasingEscrow.initialize,
+                    (address(escrow), address(_dao), 0, address(clock))
                 )
             )
         );
