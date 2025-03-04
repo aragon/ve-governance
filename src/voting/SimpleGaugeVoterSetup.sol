@@ -14,7 +14,7 @@ import {PermissionLib} from "@aragon/osx/core/permission/PermissionLib.sol";
 import {PluginSetup} from "@aragon/osx/framework/plugin/setup/PluginSetup.sol";
 
 // these should be interfaces
-import {SimpleGaugeVoterV1_1_0 as SimpleGaugeVoter} from "@voting/SimpleGaugeVoter_v1_1_0.sol";
+import {SimpleGaugeVoter} from "@voting/SimpleGaugeVoter.sol";
 import {VotingEscrow} from "@escrow/VotingEscrowIncreasing.sol";
 import {ExitQueue} from "@escrow/ExitQueue.sol";
 import {QuadraticIncreasingEscrow} from "@escrow/QuadraticIncreasingEscrow.sol";
