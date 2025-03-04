@@ -9,15 +9,6 @@ import {QuadraticCurveBase} from "./QuadraticCurveBase.t.sol";
 
 contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
     function test_votingPowerComputesCorrect() public {
-        /**
-            Period	Result
-          1	1
-          2	1.428571429
-          3	2.142857143
-          4	3.142857143
-          5	4.428571429
-          6	6
-         */
         uint256 amount = 100e18;
 
         int256[3] memory coefficients = curve.getCoefficients(100e18);
@@ -30,8 +21,8 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
 
         console.log("Coefficients: %st^2 + %st + %s", quadratic, linear, const);
 
-        for (uint i; i <= 6; i++) {
-            uint period = 2 weeks * i;
+        for (uint i; i <= 52 * 3 + 2; i++) {
+            uint period = 1 weeks * i;
             console.log(
                 "Period: %d Voting Power      : %s",
                 i,
@@ -50,7 +41,6 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
         //     uint day = i * 1 days;
         //     uint week = day / 7 days;
         //     uint period = day / 2 weeks;
-
         //     console.log("[Day: %d | Week %d | Period %d]", i, week, period);
         //     console.log("Voting Power        : %s", curve.getBias(day, 100e18) / 1e18);
         //     console.log("Voting Power (raw): %s\n", curve.getBias(day, 100e18));
@@ -104,43 +94,57 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
         // warmup complete
         vm.warp(block.timestamp + 1);
 
-        // python:              449.206279554928541696
-        // solmate (optimized): 449.206254284606635135
+        // excel:              420.6904013
         assertEq(
             curve.votingPowerAt(tokenIdFirst, block.timestamp),
-            449206254284606635135,
+            420690414675862320286,
             "Balance incorrect after warmup"
         );
         assertEq(curve.isWarm(tokenIdFirst), true, "Still warming up");
 
-        // python:    1067784543380942056100724736
-        // solmate:   1067784483312193385000000000
+        // excel:    1000000.954
         assertEq(
             curve.votingPowerAt(tokenIdSecond, block.timestamp),
-            1067784483312193385000000000,
+            1000000985704110676000000000,
             "Balance incorrect after warmup II"
         );
 
         // warp to the start of period 2
         vm.warp(start + clock.epochDuration());
-        // excel:     600.985714300000000000
-        // PRB:       600.985163959347100568
-        // solmate:   600.985163959347101852
-        // python :   600.985714285714341888
-        // solmate2:  600.985163959347101952
+        // excel:     436.8703846
         assertEq(
             curve.votingPowerAt(tokenIdFirst, block.timestamp),
-            600985163959347101952,
+            436870384614923176704,
             "Balance incorrect after p1"
         );
 
-        uint256 expectedMaxI = 2524126241845405205760;
-        uint256 expectedMaxII = 5999967296216704000000000000;
+        // check at 6 months
+        vm.warp(start + 26 weeks);
+        // excel:     631.035
+        assertEq(
+            curve.votingPowerAt(tokenIdFirst, block.timestamp),
+            631034999994001297152,
+            "Balance incorrect after p1"
+        );
+
+        // check at 2 years
+        vm.warp(start + 104 weeks);
+        // excel:     1262.07
+        assertEq(
+            curve.votingPowerAt(tokenIdFirst, block.timestamp),
+            1262069999976005188608,
+            "Balance incorrect after p1"
+        );
+
+        // 1682.76
+        uint256 expectedMaxI = 1682759999964007782912;
+        // 4000000
+        uint256 expectedMaxII = 3999999999914444800000000000;
 
         // warp to the final period
         // TECHNICALLY, this should finish at exactly 5 periodd and 6 * voting power
         // but FP arithmetic has a small rounding error
-        vm.warp(start + clock.epochDuration() * 5);
+        vm.warp(start + 3 * 52 weeks);
         assertEq(
             curve.votingPowerAt(tokenIdFirst, block.timestamp),
             expectedMaxI,

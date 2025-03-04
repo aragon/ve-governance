@@ -9,11 +9,13 @@ import {VotingEscrow, Clock, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleG
 import {PluginRepo} from "@aragon/osx/framework/plugin/repo/PluginRepo.sol";
 import {PluginRepoFactory} from "@aragon/osx/framework/plugin/repo/PluginRepoFactory.sol";
 import {PluginSetupProcessor} from "@aragon/osx/framework/plugin/setup/PluginSetupProcessor.sol";
-import {MockERC20} from "@mocks/MockERC20.sol";
+import {MockERC20Upgradeable} from "@mocks/MockERC20Upgradeable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {ProxyLib} from "@libs/ProxyLib.sol";
 
 contract DeployGauges is Script {
     using SafeCast for uint256;
+    using ProxyLib for address;
 
     SimpleGaugeVoterSetup simpleGaugeVoterSetup;
 
@@ -151,7 +153,12 @@ contract DeployGauges is Script {
 
     function createTestToken(address[] memory holders) internal returns (address) {
         console.log("");
-        MockERC20 newToken = new MockERC20();
+        // deploy as a proxy
+
+        address tokenBase = address(new MockERC20Upgradeable());
+        MockERC20Upgradeable newToken = MockERC20Upgradeable(
+            tokenBase.deployUUPSProxy(abi.encodeCall(MockERC20Upgradeable.initialize, ()))
+        );
 
         for (uint i = 0; i < holders.length; ) {
             newToken.mint(holders[i], 5000 ether);

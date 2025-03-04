@@ -3,20 +3,15 @@ pragma solidity ^0.8.0;
 
 /// @title CurveConstantLib
 /// @notice Precomputed coefficients for escrow curve
-/// This curve implementation is a quadratic curve of the form y = (1/7)t^2 + (2/7)t + 1
-/// Which is a transformation of the quadratic curve y = (x^2 + 6)/7
-/// That starts with 1 unit of voting in period 1, and max 6 in period 6.
-/// To use this in zero indexed time, with a per-second rate of increase,
-/// we transform this to the polynomial y = (1/7)t^2 + (2/7)t + 1
-/// where t = timestamp / 2_weeks (2 weeks is one period)
-/// Below are the shared coefficients for the linear and quadratic terms
 library CurveConstantLib {
+    /// @dev voting power starts at 1x
     int256 internal constant SHARED_CONSTANT_COEFFICIENT = 1e18;
-    /// @dev 2 / (7 * 2_weeks) - expressed in fixed point
-    int256 internal constant SHARED_LINEAR_COEFFICIENT = 236205593348;
-    /// @dev 1 / (7 * (2_weeks)^2) - expressed in fixed point
-    int256 internal constant SHARED_QUADRATIC_COEFFICIENT = 97637;
+    /// @dev increase of 1x -> 4x over 3 years
+    int256 internal constant SHARED_LINEAR_COEFFICIENT = 31796906796;
+    /// @dev linear curve therefore quadratic coefficient is 0
+    int256 internal constant SHARED_QUADRATIC_COEFFICIENT = 0;
 
     /// @dev the maxiumum number of epochs the cure can keep increasing
-    uint256 internal constant MAX_EPOCHS = 5;
+    /// 3 years worth of epochs of 2 weeks is (52*3)/2 = 78
+    uint256 internal constant MAX_EPOCHS = 78;
 }

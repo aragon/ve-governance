@@ -42,7 +42,7 @@ contract QuadraticCurveBase is TestHelpers, ILockedBalanceIncreasing {
 
         bytes memory initCalldata = abi.encodeCall(
             QuadraticIncreasingEscrow.initialize,
-            (address(escrow), address(dao), 3 days, address(clock))
+            (address(escrow), address(dao), 30, address(clock))
         );
 
         curve = QuadraticIncreasingEscrow(impl.deployUUPSProxy(initCalldata));
