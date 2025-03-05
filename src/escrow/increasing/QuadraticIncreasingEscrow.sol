@@ -108,13 +108,20 @@ contract QuadraticIncreasingEscrow is
         // other initializers are empty
     }
 
+    function initializeFrom(...)  public {
+        // schedule the reset at next week's start.
+        // store global point at that time.
+        // pause all operations till that moment.
+        // 
+    }
+
     /*//////////////////////////////////////////////////////////////
                               CURVE COEFFICIENTS
     //////////////////////////////////////////////////////////////*/
 
     /// @return The coefficient for the linear term of the quadratic curve, for the given amount
     function _getLinearCoeff(uint256 amount) internal pure returns (int256) {
-        return int256(amount) * SHARED_LINEAR_COEFFICIENT;       
+        return int256(amount) * SHARED_LINEAR_COEFFICIENT;
     }
 
     /// @return The constant coefficient of the quadratic curve, for the given amount
@@ -136,23 +143,10 @@ contract QuadraticIncreasingEscrow is
         int256[3] memory coefficients = _getCoefficients(amount);
 
         return [
-            coefficients[0], // bias
+            coefficients[0],
             coefficients[1], // slope
             0
         ];
-    }
-
-    function getBias(uint256 amount) public view returns(int256) {
-        return _getConstantCoeff(amount);
-    }
-
-    function getSlope(uint256 amount) public view returns(int256) {
-        return _getLinearCoeff(amount);
-    }
-
-
-    function getBiasAndSlope(uint256 amount) public view returns(int256, int256) {
-        return (getBias(amount), getSlope(amount));
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -162,31 +156,38 @@ contract QuadraticIncreasingEscrow is
     /// @notice Returns the bias for the given time elapsed and amount, up to the maximum time
     function getBias(uint256 timeElapsed, uint256 amount) public view returns (uint256) {
         int256[3] memory coefficients = _getCoefficients(amount);
-        return _getBias(timeElapsed, coefficients);
+        return _getBias(timeElapsed, coefficients[0], coefficients[1]);
     }
 
+    /// @notice Returns the bias for the given time elapsed and amount, up to the maximum time
     function _getBias(
         uint256 timeElapsed,
-        int256[3] memory coefficients
+        int256 constantCoeff,
+        int256 slope
     ) internal view returns (uint256) {
-        int256 quadratic = coefficients[2];
-        int256 linear = coefficients[1];
-        int256 const = coefficients[0];
-
-        // bound the time elapsed to the maximum time
         uint256 MAX_TIME = _maxTime();
         timeElapsed = timeElapsed > MAX_TIME ? MAX_TIME : timeElapsed;
 
-        // convert the time to fixed point
-        int256 t = SignedFixedPointMath.toFP(timeElapsed.toInt256());
+        int256 bias = slope * int256(timeElapsed) + constantCoeff;
+        if (bias < 0) bias = 0;
 
-        // bias = a.t^2 + b.t + c
-        int256 tSquared = t.mul(t); // t*t much more gas efficient than t.pow(SD2)
-        int256 bias = quadratic.mul(tSquared).add(linear.mul(t)).add(const);
+        return bias.toUint256();
+    }
 
-        // never return negative values
-        // in the increasing case, this should never happen
-        return bias.lt((0)) ? uint256(0) : SignedFixedPointMath.fromFP((bias)).toUint256();
+    function _getBiasAndSlope(
+        uint256 timeElapsed,
+        uint256 amount
+    ) public view returns (int256, int256) {
+        int256 slope = _getLinearCoeff(amount);
+        uint256 bias = _getBias(timeElapsed, _getConstantCoeff(amount), slope);
+
+        // If max time already passed, slope must be 0 as 
+        // it should stop increasing.
+        if (timeElapsed >= _maxTime()) {
+            slope = 0;
+        }
+        
+        return (int256(bias), slope);
     }
 
     function _maxTime() internal view returns (uint256) {
@@ -296,7 +297,7 @@ contract QuadraticIncreasingEscrow is
         if (!_isWarm(lastPoint)) return 0;
         uint256 timeElapsed = _t - lastPoint.checkpointTs;
 
-        return _getBias(timeElapsed, lastPoint.coefficients);
+        return _getBias(timeElapsed, lastPoint.coefficients[0], lastPoint.coefficients[1]);
     }
 
     /// @inheritdoc IEscrowCurveCore
@@ -338,10 +339,13 @@ contract QuadraticIncreasingEscrow is
         if (_tokenId == 0) revert InvalidTokenId();
 
         uint256 _globalPointLatestIndex = globalPointLatestIndex;
-        
+
         // Get the slope and bias for `_newLocked`...
-        (int256 newLockBias, int256 newLockSlope) = getBiasAndSlope(_newLocked.amount);
-    
+        (int256 newLockBias, int256 newLockSlope) = _getBiasAndSlope(
+            block.timestamp - _newLocked.start,
+            _newLocked.amount
+        );
+
         GlobalPoint memory lastPoint = GlobalPoint({
             bias: 0,
             slope: 0,
@@ -371,8 +375,8 @@ contract QuadraticIncreasingEscrow is
                 lastPoint.bias += lastPoint.slope * int256(t_i - lastPointCheckpoint);
                 lastPoint.slope -= dSlope;
 
-                if(lastPoint.slope < 0) lastPoint.slope = 0;
-                if(lastPoint.bias < 0) lastPoint.bias = 0;
+                if (lastPoint.slope < 0) lastPoint.slope = 0;
+                if (lastPoint.bias < 0) lastPoint.bias = 0;
 
                 lastPointCheckpoint = t_i;
                 lastPoint.ts = uint48(t_i);
@@ -386,19 +390,6 @@ contract QuadraticIncreasingEscrow is
             }
         }
 
-        {
-            uint256 elapsed = block.timestamp - _newLocked.start;
-            if (elapsed > CurveConstantLib.MAX_TIME) {
-                elapsed = CurveConstantLib.MAX_TIME;
-            }
-
-            newLockBias += newLockSlope * int256(elapsed);
-        }
-
-        if (uint48(block.timestamp) - _newLocked.start >= CurveConstantLib.MAX_TIME) {
-            newLockSlope = 0;
-        }
-
         uint48 newEnd = uint48(_newLocked.start + CurveConstantLib.MAX_TIME);
         int256 newSlope = lastPoint.slope + newLockSlope;
         int256 newBias = lastPoint.bias + newLockBias;
@@ -409,12 +400,18 @@ contract QuadraticIncreasingEscrow is
         // The `tokenId` already exists..
         if (tokenLatestIndex > 0) {
             uint48 _fromLockedEnd = uint48(_fromLocked.start + CurveConstantLib.MAX_TIME);
-            uint48 ts = _fromLockedEnd <= uint48(block.timestamp) ? _fromLockedEnd : uint48(block.timestamp);
+
+            // uint48 ts = _fromLockedEnd <= uint48(block.timestamp)
+            //     ? _fromLockedEnd
+            //     : uint48(block.timestamp);
 
             // Get the slope and bias for `_fromLocked`...
-            (int256 oldLockBias, int256 oldLockSlope) = getBiasAndSlope(_fromLocked.amount);
-
-            oldLockBias +=  oldLockSlope * int48(ts - _fromLocked.start);
+            (int256 oldLockBias, int256 oldLockSlope) = _getBiasAndSlope(
+                _fromLockedEnd <= uint48(block.timestamp)
+                    ? _fromLockedEnd
+                    : uint48(block.timestamp - _fromLocked.start),
+                    _fromLocked.amount
+            );
 
             if (_newLocked.amount == 0) {
                 if (_fromLockedEnd <= uint48(block.timestamp)) {
@@ -448,14 +445,14 @@ contract QuadraticIncreasingEscrow is
             // we must not clear out slope changes.
             if (_fromLockedEnd != newEnd && _fromLockedEnd >= uint48(block.timestamp)) {
                 int256 oldOne = slopeChanges[_fromLockedEnd] - oldLockSlope;
-                if(oldOne < 0) oldOne = 0;
+                if (oldOne < 0) oldOne = 0;
                 slopeChanges[_fromLockedEnd] = oldOne;
             }
         }
 
-        if(newSlope < 0) newSlope = 0;
-        if(newBias < 0) newBias = 0;
-        if(newDSlope < 0) newDSlope = 0;
+        if (newSlope < 0) newSlope = 0;
+        if (newBias < 0) newBias = 0;
+        if (newDSlope < 0) newDSlope = 0;
 
         lastPoint.slope = newSlope;
         lastPoint.bias = newBias;
@@ -466,13 +463,12 @@ contract QuadraticIncreasingEscrow is
 
         slopeChanges[newEnd] = newDSlope;
 
-        TokenPoint memory tNew = (TokenPoint({
-            bias: 0,
-            ts: uint128(block.timestamp),
-            checkpointTs: uint128(block.timestamp),
-            coefficients: [newLockBias, newLockSlope, 0]
-        }));
-        
+        // Create new token point and store.
+        TokenPoint memory tNew;
+        tNew.ts = uint128(block.timestamp);
+        tNew.checkpointTs = uint128(block.timestamp);
+        tNew.coefficients = [newLockBias, newLockSlope, 0];
+
         if (
             tokenLatestIndex != 0 &&
             _userPointHistory[_tokenId][tokenLatestIndex].ts == block.timestamp
@@ -482,7 +478,7 @@ contract QuadraticIncreasingEscrow is
             tokenPointLatestIndex[_tokenId] = ++tokenLatestIndex;
             _userPointHistory[_tokenId][tokenLatestIndex] = tNew;
         }
-    }    
+    }
 
     /*///////////////////////////////////////////////////////////////
                             UUPS Upgrade
