@@ -7,8 +7,9 @@ import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {IVotingEscrowIncreasing as IVotingEscrow} from "@escrow-interfaces/IVotingEscrowIncreasing.sol";
 import {IEscrowCurveIncreasing as IEscrowCurve} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
 import {IEscrowCurveCore, IEscrowCurveToken} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
+import {IERC721EnumerableMintableBurnable as IERC721EMB} from "./interfaces/IERC721EMB.sol";
 
-import {IClockUser, IClock} from "@clock/IClock.sol";
+import {IClockUser, IClock, IClockSeason} from "@clock/IClock.sol";
 
 // libraries
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -108,12 +109,37 @@ contract QuadraticIncreasingEscrow is
         // other initializers are empty
     }
 
-    function initializeFrom(...)  public {
+    function initializeFrom(uint256 exitAmount) public {
         // schedule the reset at next week's start.
         // store global point at that time.
         // pause all operations till that moment.
         // 
+        // IClockSeason(clock).newSeason();
+
+        // uint256 totalLocked = IVotingEscrow(escrow).totalLocked();
+
+        // uint256 totalExiting = 0;
+        // address lockNFT = IVotingEscrow(escrow).lockNFT();
+        // IERC721EMB enumerable = IERC721EMB(lockNFT);
+        
+        // for (uint256 i = 0; i < balance; i++) {
+        //     uint256 tokenId = enumerable.tokenOfOwnerByIndex(_owner, i);
+        // }
+
+
+        // GlobalPoint memory lastPoint = GlobalPoint({
+        //     bias: _getConstantCoeff(totalLocked),
+        //     slope: _getLinearCoeff(totalLocked),
+        //     ts: uint48(block.timestamp)
+        // });
     }
+    
+    // before upgrading
+    // 50
+    // 30
+    // exit of 50
+
+
 
     /*//////////////////////////////////////////////////////////////
                               CURVE COEFFICIENTS
@@ -292,12 +318,22 @@ contract QuadraticIncreasingEscrow is
 
         // epoch 0 is an empty point
         if (interval == 0) return 0;
+
         TokenPoint memory lastPoint = _tokenPointHistory[_tokenId][interval];
 
         if (!_isWarm(lastPoint)) return 0;
-        uint256 timeElapsed = _t - lastPoint.checkpointTs;
 
-        return _getBias(timeElapsed, lastPoint.coefficients[0], lastPoint.coefficients[1]);
+        // get season at time
+        (uint48 start, ) = IClockSeason(clock).seasonTsAt(uint48(_t));
+
+        // if the last point is before the season start, use last season start
+        uint256 timeElapsed;
+        if (lastPoint.checkpointTs < start) {
+            timeElapsed = _t - start;
+        } else {
+            timeElapsed = _t - lastPoint.checkpointTs;
+        }
+        // return _getBias(timeElapsed, lastPoint.coefficients);
     }
 
     /// @inheritdoc IEscrowCurveCore
