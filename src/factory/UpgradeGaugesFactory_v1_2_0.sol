@@ -11,6 +11,7 @@ import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {Addresslist} from "@aragon/osx/plugins/utils/Addresslist.sol";
 import {IPluginSetup} from "@aragon/osx/framework/plugin/setup/IPluginSetup.sol";
+import {PermissionLib} from "@aragon/osx/core/permission/PermissionLib.sol";
 import {Multisig, MultisigSetup as MultisigPluginSetup} from "@aragon/osx/plugins/governance/multisig/MultisigSetup.sol";
 import {hashHelpers, PluginSetupRef} from "@aragon/osx/framework/plugin/setup/PluginSetupProcessorHelpers.sol";
 
@@ -56,39 +57,32 @@ contract UpgradeGaugesFactoryV1_2_0 {
 
     GaugesDaoFactoryV1_1_0 factory;
 
-    SimpleGaugeVoterV1_2_0 public voterV1_2_0;
-
-    // Old contracts
-    VotingEscrow escrow;
-    SimpleGaugeVoter voter;
-    Clock clock;
-    Lock lock;
-    ExitQueue queue;
-    QuadraticIncreasingEscrow curve;
-
     DAO dao;
     Multisig multisig;
 
     PluginRepoFactory pluginRepoFactory;
+    PluginRepo oldPluginRepo;
     PluginSetupProcessor pluginSetupProcessor;
+
+    Deployment deployment;
+    Deployment oldDeployment;
 
     constructor(GaugesDaoFactoryV1_1_0 _factory) {
         factory = _factory;
+
+        Deployment memory oldDeploymentAux = factory.getDeployment();
+        for (uint i = 0; i < oldDeploymentAux.gaugeVoterPluginSets.length; i++) {
+            oldDeployment.gaugeVoterPluginSets.push(oldDeploymentAux.gaugeVoterPluginSets[i]);
+        }
+        oldDeployment.dao = oldDeploymentAux.dao;
+        oldDeployment.multisigPlugin = oldDeploymentAux.multisigPlugin;
+        oldDeployment.gaugeVoterPluginRepo = oldDeploymentAux.gaugeVoterPluginRepo;
+
+        dao = DAO(oldDeployment.dao);
+        multisig = Multisig(oldDeployment.multisigPlugin);
+        oldPluginRepo = PluginRepo(oldDeployment.gaugeVoterPluginRepo);
+
         DeploymentParameters memory parameters = factory.getDeploymentParameters();
-        Deployment memory deployment = factory.getDeployment();
-        GaugePluginSet memory pluginSet = deployment.gaugeVoterPluginSets[0];
-
-        // deconstruct the plugin set
-        escrow = VotingEscrow(pluginSet.votingEscrow);
-        voter = SimpleGaugeVoter(pluginSet.plugin);
-        clock = Clock(pluginSet.clock);
-        lock = Lock(pluginSet.nftLock);
-        queue = ExitQueue(pluginSet.exitQueue);
-        curve = QuadraticIncreasingEscrow(pluginSet.curve);
-
-        dao = DAO(deployment.dao);
-        multisig = Multisig(deployment.multisigPlugin);
-
         pluginRepoFactory = PluginRepoFactory(parameters.pluginRepoFactory);
         pluginSetupProcessor = PluginSetupProcessor(address(parameters.pluginSetupProcessor));
     }
@@ -121,40 +115,10 @@ contract UpgradeGaugesFactoryV1_2_0 {
     ////////////////////////////////////////////////
 
     function _upgradeContracts() internal {
-        ClockV1_2_0 clockV1_2_0 = new ClockV1_2_0();
-        clock.upgradeTo(address(clockV1_2_0));
-
-        QuadraticIncreasingEscrowV1_2_0 curveV1_2_0 = new QuadraticIncreasingEscrowV1_2_0();
-        curve.upgradeTo(address(curveV1_2_0));
-
-        SimpleGaugeVoterSetupV1_2_0 voterPluginSetupV1_2_0 = new SimpleGaugeVoterSetupV1_2_0(
-            address(new SimpleGaugeVoterV1_2_0()),
-            false,
-            address(curve),
-            true,
-            address(queue),
-            true,
-            address(escrow),
-            true,
-            address(clock),
-            true,
-            address(lock),
-            true
-        );
-
-        // Publish repo
-        PluginRepo pluginRepo = PluginRepoFactory(pluginRepoFactory)
-            .createPluginRepoWithFirstVersion(
-                "simple-gauge-voter-v120",
-                address(voterPluginSetupV1_2_0),
-                address(dao),
-                " ",
-                " "
-            );
-
         // Get Permission IDs
         bytes32 rootPermissionID = dao.ROOT_PERMISSION_ID();
         bytes32 applyInstallationPermissionID = pluginSetupProcessor.APPLY_INSTALLATION_PERMISSION_ID();
+        bytes32 applyUninstallationPermissionID = pluginSetupProcessor.APPLY_UNINSTALLATION_PERMISSION_ID();
 
         // Grant the temporary permissions.
         // Grant Temporarly `ROOT_PERMISSION` to `pluginSetupProcessor`.
@@ -163,45 +127,95 @@ contract UpgradeGaugesFactoryV1_2_0 {
         // Grant Temporarly `APPLY_INSTALLATION_PERMISSION` on `pluginSetupProcessor` to this `DAOFactory`.
         dao.grant(address(pluginSetupProcessor), address(this), applyInstallationPermissionID);
 
-        DeploymentParameters memory parameters = factory.getDeploymentParameters();
-        PluginRepo.Tag memory repoTag = PluginRepo.Tag(1, 1);
+        // Grant Temporarly `APPLY_UNINSTALLATION_PERMISSION` on `pluginSetupProcessor` to this `DAOFactory`.
+        dao.grant(address(pluginSetupProcessor), address(this), applyUninstallationPermissionID);
 
-        // TODO: Uninstall old plugins
+        DeploymentParameters memory parameters = factory.getDeploymentParameters();
+
+        ClockV1_2_0 clockV1_2_0 = new ClockV1_2_0();
+        QuadraticIncreasingEscrowV1_2_0 curveV1_2_0 = new QuadraticIncreasingEscrowV1_2_0();
 
         for (uint i = 0; i < parameters.tokenParameters.length; i++) {
+            GaugePluginSet memory pluginSet = oldDeployment.gaugeVoterPluginSets[i];
+
+            pluginSet.clock.upgradeTo(address(clockV1_2_0));
+            pluginSet.curve.upgradeTo(address(curveV1_2_0));
+
+            SimpleGaugeVoterSetupV1_2_0 voterPluginSetupV1_2_0 = new SimpleGaugeVoterSetupV1_2_0(
+                address(new SimpleGaugeVoterV1_2_0()),
+                false,
+                address(pluginSet.curve),
+                true,
+                address(pluginSet.exitQueue),
+                true,
+                address(pluginSet.votingEscrow),
+                true,
+                address(pluginSet.clock),
+                true,
+                address(pluginSet.nftLock),
+                true
+            );            
+
+            // Publish repo
+            PluginRepo pluginRepo = PluginRepoFactory(pluginRepoFactory)
+                .createPluginRepoWithFirstVersion(
+                    "simple-gauge-voter-v120",
+                    address(voterPluginSetupV1_2_0),
+                    address(dao),
+                    " ",
+                    " "
+                );
+
+            
+            PluginRepo.Tag memory repoTag = PluginRepo.Tag(1, 1);
+
+            // Prepare old plugin for uninstallation
+            PermissionLib.MultiTargetPermission[] memory permissions = preparePluginUninstallation(
+                oldPluginRepo,
+                repoTag,
+                pluginSet
+            );
+
+            applyPluginUninstallation(
+                address(pluginSet.plugin),
+                oldPluginRepo,
+                repoTag,
+                permissions
+            );
+            
             // Prepare and apply plugin
-            GaugePluginSet memory pluginSet;
-            PluginRepo gaugeVoterPluginRepo;
+            GaugePluginSet memory newPluginSet;
             IPluginSetup.PreparedSetupData memory preparedVoterSetupData;
 
             // Prepare plugin
             (
-                pluginSet,
-                gaugeVoterPluginRepo,
+                newPluginSet,
                 preparedVoterSetupData
-            ) = prepareSimpleGaugeVoterPlugin(
+            ) = preparePluginInstallation(
                 parameters,
                 parameters.tokenParameters[i],
                 pluginRepo,
                 repoTag,
                 voterPluginSetupV1_2_0
-            );  // Token 1
+            );
 
             applyPluginInstallation(
-                parameters,
-                address(pluginSet.plugin),
-                gaugeVoterPluginRepo,
+                address(newPluginSet.plugin),
+                pluginRepo,
                 repoTag,
                 preparedVoterSetupData
             );
 
-            // Get the plugin instance for token 1
-            if(i == 0)
-                voterV1_2_0 = SimpleGaugeVoterV1_2_0(address(pluginSet.plugin));
+            deployment.gaugeVoterPluginSets.push(newPluginSet);
 
             // Activate the plugin
-            updateSimpleGaugeVoterInstallation(pluginSet);
+            updateSimpleGaugeVoterInstallation(newPluginSet);
         }
+
+        // Update deployment
+        deployment.dao = oldDeployment.dao;
+        deployment.multisigPlugin = oldDeployment.multisigPlugin;
+        deployment.gaugeVoterPluginRepo = oldDeployment.gaugeVoterPluginRepo;
 
         // Revoke the temporary permissions.
         // Revoke `ROOT_PERMISSION` from `pluginSetupProcessor`.
@@ -210,15 +224,19 @@ contract UpgradeGaugesFactoryV1_2_0 {
         // Revoke `APPLY_INSTALLATION_PERMISSION` from `pluginSetupProcessor`.
         dao.revoke(address(pluginSetupProcessor), address(this), applyInstallationPermissionID);
 
+        // Revoke `APPLY_UNINSTALLATION_PERMISSION` from `pluginSetupProcessor`.
+        dao.revoke(address(pluginSetupProcessor), address(this), applyUninstallationPermissionID);
+
+
     }
 
-    function prepareSimpleGaugeVoterPlugin(
+    function preparePluginInstallation(
         DeploymentParameters memory parameters,
         TokenParameters memory tokenParameters,
         PluginRepo pluginRepo,
         PluginRepo.Tag memory repoTag,
         SimpleGaugeVoterSetupV1_2_0 voterPluginSetupV1_2_0
-    ) internal returns (GaugePluginSet memory, PluginRepo, IPluginSetup.PreparedSetupData memory) {
+    ) internal returns (GaugePluginSet memory, IPluginSetup.PreparedSetupData memory) {
         // Plugin settings
         bytes memory settingsData = voterPluginSetupV1_2_0.encodeSetupData(
             ISimpleGaugeVoterSetupParamsV1_2_0({
@@ -253,18 +271,17 @@ contract UpgradeGaugesFactoryV1_2_0 {
             nftLock: Lock(helpers[4])
         });
 
-        return (pluginSet, pluginRepo, preparedSetupData);
+        return (pluginSet, preparedSetupData);
     }
 
 
     function applyPluginInstallation(
-        DeploymentParameters memory parameters,
         address plugin,
         PluginRepo pluginRepo,
         PluginRepo.Tag memory pluginRepoTag,
         IPluginSetup.PreparedSetupData memory preparedSetupData
     ) internal {
-        parameters.pluginSetupProcessor.applyInstallation(
+        pluginSetupProcessor.applyInstallation(
             address(dao),
             PluginSetupProcessor.ApplyInstallationParams(
                 PluginSetupRef(pluginRepoTag, pluginRepo),
@@ -275,73 +292,50 @@ contract UpgradeGaugesFactoryV1_2_0 {
         );
     }
 
-    /*
     function preparePluginUninstallation(
-        DeploymentParameters memory parameters,
-        TokenParameters memory tokenParameters,
         PluginRepo pluginRepo,
         PluginRepo.Tag memory repoTag,
-        SimpleGaugeVoterSetupV1_2_0 voterPluginSetupV1_2_0
-    ) internal returns (GaugePluginSet memory, PluginRepo, IPluginSetup.PreparedSetupData memory) {
-        // Plugin settings
-        bytes memory settingsData = voterPluginSetupV1_2_0.encodeSetupData(
-            ISimpleGaugeVoterSetupParamsV1_2_0({
-                isPaused: parameters.votingPaused,
-                token: tokenParameters.token,
-                veTokenName: tokenParameters.veTokenName,
-                veTokenSymbol: tokenParameters.veTokenSymbol,
-                feePercent: parameters.feePercent,
-                warmup: parameters.warmupPeriod,
-                cooldown: parameters.cooldownPeriod,
-                minLock: parameters.minLockDuration,
-                minDeposit: parameters.minDeposit
-            })
-        );
+        GaugePluginSet memory pluginSet
+    ) internal returns (PermissionLib.MultiTargetPermission[] memory permissions) {
 
-        //pluginSetupProcessor.queueSetup(
-        //    address(voterPluginSetupV1_2_0)
-        //);
+        address[] memory helpers = new address[](5);
+        helpers[0] = address(pluginSet.curve);
+        helpers[1] = address(pluginSet.exitQueue);
+        helpers[2] = address(pluginSet.votingEscrow);
+        helpers[3] = address(pluginSet.clock);
+        helpers[4] = address(pluginSet.nftLock);
+        
+        IPluginSetup.SetupPayload memory setupPayload = IPluginSetup.SetupPayload({
+            plugin: address(pluginSet.plugin),
+            currentHelpers: helpers,
+            data: abi.encodePacked(uint256(0))
+        });
 
-        (address plugin, IPluginSetup.PreparedSetupData memory preparedSetupData) = pluginSetupProcessor
+        permissions = pluginSetupProcessor
             .prepareUninstallation(
                 address(dao),
                 PluginSetupProcessor.PrepareUninstallationParams(
                     PluginSetupRef(repoTag, pluginRepo),
-                    settingsData
+                    setupPayload
                 )
             );
-
-        address[] memory helpers = preparedSetupData.helpers;
-        GaugePluginSet memory pluginSet = GaugePluginSet({
-            plugin: SimpleGaugeVoter(plugin),
-            curve: QuadraticIncreasingEscrow(helpers[0]),
-            exitQueue: ExitQueue(helpers[1]),
-            votingEscrow: VotingEscrow(helpers[2]),
-            clock: Clock(helpers[3]),
-            nftLock: Lock(helpers[4])
-        });
-
-        return (pluginSet, pluginRepo, preparedSetupData);
     }
 
     function applyPluginUninstallation(
-        DeploymentParameters memory parameters,
         address plugin,
         PluginRepo pluginRepo,
         PluginRepo.Tag memory pluginRepoTag,
-        IPluginSetup.PreparedSetupData memory preparedSetupData
+        PermissionLib.MultiTargetPermission[] memory permissions
     ) internal {
-        parameters.pluginSetupProcessor.applyUninstallation(
+        pluginSetupProcessor.applyUninstallation(
             address(dao),
             PluginSetupProcessor.ApplyUninstallationParams(
-                PluginSetupRef(pluginRepoTag, pluginRepo),
                 plugin,
-                preparedSetupData.permissions,
-                hashHelpers(preparedSetupData.helpers)
+                PluginSetupRef(pluginRepoTag, pluginRepo),
+                permissions
             )
         );
     }
-    */
 
     function updateSimpleGaugeVoterInstallation(
         GaugePluginSet memory pluginSet
@@ -359,5 +353,13 @@ contract UpgradeGaugesFactoryV1_2_0 {
             address(this),
             pluginSet.votingEscrow.ESCROW_ADMIN_ROLE()
         );
+    }
+
+    function getOldDeployment() public view returns (Deployment memory) {
+        return oldDeployment;
+    }
+
+    function getDeployment() public view returns (Deployment memory) {
+        return deployment;
     }
 }
