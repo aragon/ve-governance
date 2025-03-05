@@ -5,7 +5,7 @@ pragma solidity ^0.8.17;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {IVotingEscrowIncreasing as IVotingEscrow} from "@escrow-interfaces/IVotingEscrowIncreasing.sol";
-import {IEscrowCurveIncreasing as IEscrowCurve} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
+import {IEscrowCurveIncreasing as IEscrowCurve, IEscrowCurveGlobal} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
 import {IEscrowCurveCore, IEscrowCurveToken} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
 import {IERC721EnumerableMintableBurnable as IERC721EMB} from "./interfaces/IERC721EMB.sol";
 
@@ -22,6 +22,8 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {ReentrancyGuardUpgradeable as ReentrancyGuard} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
 import {BalanceLogicLibrary} from "../../libs/BalanceLogicLibrary.sol";
+import {PausableUpgradeable as Pausable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+
 import {console2 as console} from "forge-std/console2.sol";
 
 /// @title Quadratic Increasing Escrow
@@ -68,10 +70,7 @@ contract QuadraticIncreasingEscrow is
 
     // endTime => summed up slopes at that endTime
     mapping(uint256 => int256) public slopeChanges;
-
-    // TODO: update interface for TokenPoint
     mapping(uint256 => GlobalPoint) internal _globalPointHistory;
-    mapping(uint256 => TokenPoint[1000000000]) internal _userPointHistory;
 
     /// @dev precomputed coefficients of the quadratic curve
     int256 private constant SHARED_QUADRATIC_COEFFICIENT =
@@ -83,6 +82,8 @@ contract QuadraticIncreasingEscrow is
         CurveConstantLib.SHARED_CONSTANT_COEFFICIENT;
 
     uint256 private constant MAX_EPOCHS = CurveConstantLib.MAX_EPOCHS;
+
+    error UpgradeNotPossible();
 
     /*//////////////////////////////////////////////////////////////
                               INITIALIZATION
@@ -109,37 +110,37 @@ contract QuadraticIncreasingEscrow is
         // other initializers are empty
     }
 
-    function initializeFrom(uint256 exitAmount) public {
+    function initializeFrom(bool exitAmountIncluded, uint256 exitAmount) public {
         // schedule the reset at next week's start.
         // store global point at that time.
         // pause all operations till that moment.
-        // 
-        // IClockSeason(clock).newSeason();
+        //
+        if (!exitAmountIncluded) {
+            // If `exitAmount` is passed, make sure the escrow is paused
+            // so that incorrect upgrade doesn't go unnoticed. Otherwise,
+            // upgrade transaction might be front-run by `beginWithdrawal`
+            // causing the `exitAmount` to be wrong.
+            if (!Pausable(escrow).paused()) {
+                revert UpgradeNotPossible();
+            }
 
-        // uint256 totalLocked = IVotingEscrow(escrow).totalLocked();
+            exitAmount = IVotingEscrow(escrow).currentExittingAmount();
+        }
 
-        // uint256 totalExiting = 0;
-        // address lockNFT = IVotingEscrow(escrow).lockNFT();
-        // IERC721EMB enumerable = IERC721EMB(lockNFT);
-        
-        // for (uint256 i = 0; i < balance; i++) {
-        //     uint256 tokenId = enumerable.tokenOfOwnerByIndex(_owner, i);
-        // }
+        uint256 totalLocked = IVotingEscrow(escrow).totalLocked();
 
+        if (totalLocked < exitAmount) {
+            revert UpgradeNotPossible();
+        }
 
-        // GlobalPoint memory lastPoint = GlobalPoint({
-        //     bias: _getConstantCoeff(totalLocked),
-        //     slope: _getLinearCoeff(totalLocked),
-        //     ts: uint48(block.timestamp)
-        // });
+        IClockSeason(clock).newSeason();
+
+        GlobalPoint memory lastPoint = GlobalPoint({
+            bias: _getConstantCoeff(totalLocked - exitAmount),
+            slope: _getLinearCoeff(totalLocked - exitAmount),
+            ts: uint48(block.timestamp)
+        });
     }
-    
-    // before upgrading
-    // 50
-    // 30
-    // exit of 50
-
-
 
     /*//////////////////////////////////////////////////////////////
                               CURVE COEFFICIENTS
@@ -169,7 +170,7 @@ contract QuadraticIncreasingEscrow is
         int256[3] memory coefficients = _getCoefficients(amount);
 
         return [
-            coefficients[0],
+            coefficients[0], // amount
             coefficients[1], // slope
             0
         ];
@@ -207,12 +208,12 @@ contract QuadraticIncreasingEscrow is
         int256 slope = _getLinearCoeff(amount);
         uint256 bias = _getBias(timeElapsed, _getConstantCoeff(amount), slope);
 
-        // If max time already passed, slope must be 0 as 
+        // If max time already passed, slope must be 0 as
         // it should stop increasing.
         if (timeElapsed >= _maxTime()) {
             slope = 0;
         }
-        
+
         return (int256(bias), slope);
     }
 
@@ -249,9 +250,7 @@ contract QuadraticIncreasingEscrow is
                               BALANCE
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Returns the TokenPoint at the passed user epoch.
-    /// @param _tokenId The NFT to return the TokenPoint for
-    /// @param _index The index to return the TokenPoint at.
+    /// @inheritdoc IEscrowCurveToken
     function tokenPointHistory(
         uint256 _tokenId,
         uint256 _index
@@ -259,23 +258,14 @@ contract QuadraticIncreasingEscrow is
         return _tokenPointHistory[_tokenId][_index];
     }
 
+    /// @inheritdoc IEscrowCurveGlobal
+    function globalPointHistory(uint256 _index) external view returns (GlobalPoint memory) {
+        return _globalPointHistory[_index];
+    }
+
     /// @inheritdoc IEscrowCurveToken
     function tokenPointIntervals(uint256 _tokenId) external view returns (uint256) {
         return tokenPointLatestIndex[_tokenId];
-    }
-
-    // TODO:GIORGI it's better to name it as tokenPointHistory, but it matches the above function which uses different structure.
-    function userPointHistory_1(
-        uint256 _tokenId,
-        uint256 _tokenInterval
-    ) external view returns (TokenPoint memory) {
-        return _userPointHistory[_tokenId][_tokenInterval];
-    }
-
-    /// @notice Returns the global point at the passed epoch
-    /// @param _index The index in an array to return the point for
-    function pointHistory(uint256 _index) external view returns (GlobalPoint memory) {
-        return _globalPointHistory[_index];
     }
 
     /// @notice Binary search to get the token point interval for a token id at or prior to a given timestamp
@@ -331,9 +321,13 @@ contract QuadraticIncreasingEscrow is
         if (lastPoint.checkpointTs < start) {
             timeElapsed = _t - start;
         } else {
+            // TODO: GIORGI checkPointTs will stop existing on the point.
+            // We will still have writtenTs(i.e ts), but I guess the point
+            // of this was to use `checkPointTs` which is on week-basis.
             timeElapsed = _t - lastPoint.checkpointTs;
         }
-        // return _getBias(timeElapsed, lastPoint.coefficients);
+
+        return _getBias(timeElapsed, lastPoint.coefficients[0], lastPoint.coefficients[1]);
     }
 
     /// @inheritdoc IEscrowCurveCore
@@ -446,7 +440,7 @@ contract QuadraticIncreasingEscrow is
                 _fromLockedEnd <= uint48(block.timestamp)
                     ? _fromLockedEnd
                     : uint48(block.timestamp - _fromLocked.start),
-                    _fromLocked.amount
+                _fromLocked.amount
             );
 
             if (_newLocked.amount == 0) {
@@ -507,12 +501,12 @@ contract QuadraticIncreasingEscrow is
 
         if (
             tokenLatestIndex != 0 &&
-            _userPointHistory[_tokenId][tokenLatestIndex].ts == block.timestamp
+            _tokenPointHistory[_tokenId][tokenLatestIndex].ts == block.timestamp
         ) {
-            _userPointHistory[_tokenId][tokenLatestIndex] = tNew;
+            _tokenPointHistory[_tokenId][tokenLatestIndex] = tNew;
         } else {
             tokenPointLatestIndex[_tokenId] = ++tokenLatestIndex;
-            _userPointHistory[_tokenId][tokenLatestIndex] = tNew;
+            _tokenPointHistory[_tokenId][tokenLatestIndex] = tNew;
         }
     }
 

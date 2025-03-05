@@ -26,6 +26,9 @@ interface IVotingEscrowCoreErrors {
     error MustBe18Decimals();
     error TransferBalanceIncorrect();
     error AmountTooSmall();
+    error SameNFT();
+    error TokensNotMatureOrStartMismatch();
+    error AmountTooBig();
 }
 
 interface IVotingEscrowCoreEvents {
@@ -80,6 +83,11 @@ interface IVotingEscrowCore is
 
     /// @notice helper utility for NFT checks
     function isApprovedOrOwner(address spender, uint256 tokenId) external view returns (bool);
+
+    /// @notice How much amount has been exitting.
+    /// @return total The total amount for which beginWithdrawal has been called 
+    ///         but withdraw has not yet been executed.
+    function currentExittingAmount() external view returns (uint256);
 }
 
 /*///////////////////////////////////////////////////////////////

@@ -13,7 +13,7 @@ import {ISimpleGaugeVoter} from "@voting/ISimpleGaugeVoter.sol";
 import {IClock} from "@clock/IClock.sol";
 import {IEscrowCurveIncreasing as IEscrowCurve} from "./interfaces/IEscrowCurveIncreasing.sol";
 import {IExitQueue} from "./interfaces/IExitQueue.sol";
-import {IVotingEscrowIncreasing as IVotingEscrow} from "./interfaces/IVotingEscrowIncreasing.sol";
+import {IVotingEscrowIncreasing as IVotingEscrow, IVotingEscrowCore} from "./interfaces/IVotingEscrowIncreasing.sol";
 
 // libraries
 import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
@@ -210,7 +210,7 @@ contract VotingEscrow is
     }
 
     /// @return The details of the underlying lock for a given veNFT
-    function locked(uint256 _tokenId) external view returns (LockedBalance memory) {
+    function locked(uint256 _tokenId) public view returns (LockedBalance memory) {
         return _locked[_tokenId];
     }
 
@@ -263,10 +263,7 @@ contract VotingEscrow is
         uint256 newTokenId = ++lastLockId;
 
         // write the lock and checkpoint the voting power
-        LockedBalance memory lock = LockedBalance(
-            _value.toUint208(),
-            startTime.toUint48()
-        );
+        LockedBalance memory lock = LockedBalance(_value.toUint208(), startTime.toUint48());
         _locked[newTokenId] = lock;
 
         // we don't allow edits in this implementation, so only the new lock is used
@@ -293,21 +290,23 @@ contract VotingEscrow is
             revert("token not owned or approved for msg sender");
         }
 
-        LockedBalance memory newLocked = LockedBalance(
-            0,
-            _locked[_tokenId].start
-        );
+        LockedBalance memory newLocked = LockedBalance(0, _locked[_tokenId].start);
 
-        _checkpoint(
-            _tokenId,
-            _locked[_tokenId],
-            newLocked
-        );
+        _checkpoint(_tokenId, _locked[_tokenId], newLocked);
 
         _locked[_tokenId] = newLocked;
     }
 
+    /// @notice Merge two tokens - i.e  `from` into `_to`.
+    /// @param _from The token id from which merge is occuring
+    /// @param _to The token id to which `_from` is merging
     function merge(uint256 _from, uint256 _to) public {
+        address sender = _msgSender();
+
+        if (!isApprovedOrOwner(sender, _from)) revert NotApprovedOrOwner();
+        if (!isApprovedOrOwner(sender, _to)) revert NotApprovedOrOwner();
+        if (_from == _to) revert SameNFT();
+
         LockedBalance memory oldLockedFrom = _locked[_from];
         LockedBalance memory oldLockedTo = _locked[_to];
 
@@ -316,24 +315,18 @@ contract VotingEscrow is
 
         if (
             (oldLockedTo.start != oldLockedFrom.start) &&
+            // TODO: GIORGI <= sign or < ?
             (block.timestamp <= oldLockedToEnd || block.timestamp <= oldLockedFromEnd)
         ) {
-            revert("Tokens either must be mature or start dates must match");
+            revert TokensNotMatureOrStartMismatch();
         }
-        
+
         // Update for `_from`.
         IERC721EMB(lockNFT).burn(_from);
         _locked[_from] = LockedBalance(0, 0);
-        LockedBalance memory newLockedFrom = LockedBalance({
-            start: oldLockedFrom.start,
-            amount: 0
-        });
+        LockedBalance memory newLockedFrom = LockedBalance({start: oldLockedFrom.start, amount: 0});
 
-        _checkpoint(
-            _from,
-            oldLockedFrom,
-            newLockedFrom
-        );
+        _checkpoint(_from, oldLockedFrom, newLockedFrom);
 
         // Update for `_to`.
         oldLockedFrom.start = oldLockedTo.start;
@@ -345,49 +338,52 @@ contract VotingEscrow is
         });
     }
 
+    /// @notice Split token into two new, separate tokens.
+    /// @param _from The token id that should be split
+    /// @param _value The amount that determines how token is split
+    /// @return _tokenId1 The token id of first token after splitting
+    /// @return _tokenId2 The token id of second token after splitting
     function split(
         uint256 _from,
         uint256 _value
     ) public returns (uint256 _tokenId1, uint256 _tokenId2) {
         LockedBalance memory locked_ = _locked[_from];
-        address owner = _msgSender();
+
+        address sender = _msgSender();
+        if (!isApprovedOrOwner(sender, _from)) revert NotApprovedOrOwner();
 
         if (_value == 0) revert ZeroAmount();
-        if (locked_.amount <= _value) revert("value too big");
-        
+        if (locked_.amount <= _value) revert AmountTooBig();
+
         IERC721EMB(lockNFT).burn(_from);
         _locked[_from] = LockedBalance(0, 0);
-        _checkpoint(
-            _from,
-            locked_,
-            LockedBalance(0, locked_.start)
-        );
-        
+        _checkpoint(_from, locked_, LockedBalance(0, locked_.start));
+
         locked_.amount -= _value.toUint208();
-        _tokenId1 = _createSplitNFT(owner, locked_);
+        _tokenId1 = _createSplitNFT(sender, locked_);
 
         locked_.amount = _value.toUint208();
-        _tokenId2 = _createSplitNFT(owner, locked_);
+        _tokenId2 = _createSplitNFT(sender, locked_);
     }
 
+    /// @notice creates a new token in checkpoint and mint.
+    /// @param _to The address to which new token id will be minted
+    /// @param _newLocked New locked amount / start lock time for the new token
+    /// @return _tokenId The id of the newly created token.
     function _createSplitNFT(
         address _to,
         LockedBalance memory _newLocked
     ) private returns (uint256 _tokenId) {
         _tokenId = ++lastLockId;
         _locked[_tokenId] = _newLocked;
-        _checkpoint(
-            _tokenId,
-            LockedBalance(0, 0),
-            _newLocked
-        );
+        _checkpoint(_tokenId, LockedBalance(0, 0), _newLocked);
         IERC721EMB(lockNFT).mint(_to, _tokenId);
     }
 
     /// @notice Record per-user data to checkpoints. Used by VotingEscrow system.
-    /// @param _tokenId NFT token ID
-    /// @dev Old locked balance is unused in the increasing case, at least in this implementation
-    /// @param _fromLocked New locked amount / start lock time for the user // TODO: needs removal
+    /// @param _tokenId NFT token ID.
+    /// @dev Old locked balance is unused in the increasing case, at least in this implementation.
+    /// @param _fromLocked New locked amount / start lock time for the user
     /// @param _newLocked New locked amount / start lock time for the user
     function _checkpoint(
         uint256 _tokenId,
@@ -412,6 +408,17 @@ contract VotingEscrow is
     /*//////////////////////////////////////////////////////////////
                         Exit and Withdraw Logic
     //////////////////////////////////////////////////////////////*/
+
+    /// @inheritdoc IVotingEscrowCore
+    function currentExittingAmount() public view returns (uint256 total) {
+        IERC721EMB enumerable = IERC721EMB(lockNFT);
+        uint256 balance = enumerable.balanceOf(address(this));
+
+        for (uint256 i = 0; i < balance; i++) {
+            uint256 tokenId = enumerable.tokenOfOwnerByIndex(address(this), i);
+            total += locked(tokenId).amount;
+        }
+    }
 
     /// @notice Resets the votes and begins the withdrawal process for a given tokenId
     /// @dev Convenience function, the user must have authorized this contract to act on their behalf.

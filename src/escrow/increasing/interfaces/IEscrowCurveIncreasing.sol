@@ -24,9 +24,9 @@ interface IEscrowCurveGlobalStorage {
 }
 
 interface IEscrowCurveGlobal is IEscrowCurveGlobalStorage {
-    /// @notice Returns the GlobalPoint at the passed epoch
-    /// @param _loc The epoch to return the GlobalPoint at
-    function pointHistory(uint256 _loc) external view returns (GlobalPoint memory);
+    /// @notice Returns the global point at the passed epoch
+    /// @param _index The index in an array to return the point for
+    function globalPointHistory(uint256 _index) external view returns (GlobalPoint memory);
 }
 
 /*///////////////////////////////////////////////////////////////
@@ -98,12 +98,12 @@ interface IEscrowCurveToken is IEscrowCurveTokenStorage {
     /// @return The latest index of the token id.
     function tokenPointLatestIndex(uint256 _tokenId) external view returns(uint256);
 
-    /// @notice Returns the TokenPoint at the passed epoch
+    /// @notice Returns the TokenPoint at the passed `_index`.
     /// @param _tokenId The NFT to return the TokenPoint for
-    /// @param _loc The epoch to return the TokenPoint at
+    /// @param _index The index to return the TokenPoint at.
     function tokenPointHistory(
         uint256 _tokenId,
-        uint256 _loc
+        uint256 _index
     ) external view returns (TokenPoint memory);
 }
 

@@ -173,7 +173,7 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
         assertEq(curve.tokenPointLatestIndex(1), 1);
 
         // 3
-        GlobalPoint memory p = curve.pointHistory(1);
+        GlobalPoint memory p = curve.globalPointHistory(1);
         assertEq(p.ts, currentTs);
         assertEq(p.bias, biasFP(Lock_1_Amount, currentTs - weekStartTs));
         assertEq(p.slope, Slope_1);
@@ -212,7 +212,7 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
         assertEq(curve.tokenPointLatestIndex(2), 1);
 
         // 2, 3
-        GlobalPoint memory p = curve.pointHistory(2);
+        GlobalPoint memory p = curve.globalPointHistory(2);
         assertEq(p.ts, currentTs);
         assertEq(
             p.bias,
@@ -260,7 +260,7 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
             biasFP(Lock_2_Amount, currentTs - weekStartTs);
 
         // 2, 3
-        GlobalPoint memory p = curve.pointHistory(3);
+        GlobalPoint memory p = curve.globalPointHistory(3);
         assertEq(p.ts, currentTs);
         assertEq(p.bias, currentTotalBiasFP);
         // assertEq(p.start, weekStartTs); TODO: check it on `locked()`
@@ -325,7 +325,7 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
             biasFP(Lock_2_Amount, currentTs - weekStartTs);
 
         // 2, 3
-        GlobalPoint memory p = curve.pointHistory(lastEpoch);
+        GlobalPoint memory p = curve.globalPointHistory(lastEpoch);
         assertEq(p.ts, currentTs);
         assertEq(p.bias, currentTotalBiasFP);
         // assertEq(p.start, weekStartTs); TODO: check it on `locked()`
@@ -359,8 +359,25 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
         vm.warp(block.timestamp + checkpointInterval);
         uint256 to = escrow.createLock(Lock_2_Amount);
 
-        vm.expectRevert(); //reverts as start dates are different and tokens are not mature.
+        //reverts as start dates are different and tokens are not mature.
+        vm.expectRevert(IVotingEscrowCoreErrors.TokensNotMatureOrStartMismatch.selector); 
         escrow.merge(from, to);
+    }
+
+    function test_shouldRevert_IfSenderIsNotApprovedOrOwner() public {
+        uint256 from = escrow.createLock(Lock_1_Amount);
+        uint256 to = escrow.createLock(Lock_2_Amount);
+        
+        vm.startPrank(address(999));
+        vm.expectRevert(IVotingEscrowCoreErrors.NotApprovedOrOwner.selector);
+        escrow.merge(from, to);
+    }
+
+    function test_shouldRevert_BothNFTsAreSame() public {
+        uint256 from = escrow.createLock(Lock_1_Amount);
+        
+        vm.expectRevert(IVotingEscrowCoreErrors.SameNFT.selector);
+        escrow.merge(from, from);
     }
 
     function test_Merge_WhenNotMature_SameStartDate() public {
@@ -381,7 +398,7 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
         assertEq(fromLatestEpoch, 1);
 
         // 1
-        TokenPoint memory fromP = curve.userPointHistory_1(
+        TokenPoint memory fromP = curve.tokenPointHistory(
             from,
             fromLatestEpoch
         );
@@ -397,7 +414,7 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
         uint256 toLatestEpoch = curve.tokenPointLatestIndex(to);
         assertEq(toLatestEpoch, 1);
 
-        TokenPoint memory toP = curve.userPointHistory_1(
+        TokenPoint memory toP = curve.tokenPointHistory(
             to,
             toLatestEpoch
         );
@@ -454,7 +471,7 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
         assertEq(fromLatestEpoch, 2);
 
         // 1
-        TokenPoint memory fromP = curve.userPointHistory_1(
+        TokenPoint memory fromP = curve.tokenPointHistory(
             from,
             fromLatestEpoch
         );
@@ -470,7 +487,7 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
         uint256 toLatestEpoch = curve.tokenPointLatestIndex(to);
         assertEq(toLatestEpoch, 2);
 
-        TokenPoint memory toP = curve.userPointHistory_1(
+        TokenPoint memory toP = curve.tokenPointHistory(
             to,
             toLatestEpoch
         );
@@ -488,7 +505,7 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
         assertTotalSupply(currentTs + 1, currentTotalBiasFP);
 
         // 5
-        GlobalPoint memory lastPoint = curve.pointHistory(
+        GlobalPoint memory lastPoint = curve.globalPointHistory(
             curve.globalPointLatestIndex()
         );
 
@@ -528,7 +545,7 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
             uint256 fromLatestEpoch = curve.tokenPointLatestIndex(from);
             assertEq(fromLatestEpoch, 2);
 
-            TokenPoint memory fromP = curve.userPointHistory_1(
+            TokenPoint memory fromP = curve.tokenPointHistory(
                 from,
                 fromLatestEpoch
             );
@@ -547,7 +564,7 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
             uint256 toLatestEpoch = curve.tokenPointLatestIndex(to);
             assertEq(toLatestEpoch, 2);
 
-            TokenPoint memory toP = curve.userPointHistory_1(
+            TokenPoint memory toP = curve.tokenPointHistory(
                 to,
                 toLatestEpoch
             );
@@ -564,7 +581,7 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
         assertTotalSupply(currentTs + 1, currentTotalBiasFP);
 
         // 5
-        GlobalPoint memory lastPoint = curve.pointHistory(
+        GlobalPoint memory lastPoint = curve.globalPointHistory(
             curve.globalPointLatestIndex()
         );
 
@@ -580,17 +597,25 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
     }
 
     // ====================SPLIT TESTS==========================
+    function test_Split_shouldRevert_IfSenderIsNotApprovedOrOwner() public {
+        uint256 from = escrow.createLock(Lock_1_Amount);
+
+        vm.startPrank(address(999));
+        vm.expectRevert(IVotingEscrowCoreErrors.NotApprovedOrOwner.selector);
+        escrow.split(from, 10);
+    }
+
     function test_Split_shouldRevert_ifAmountZero() public {
         uint256 from = escrow.createLock(Lock_1_Amount);
 
-        vm.expectRevert(IVotingEscrowCoreErrors.ZeroAmount.selector); //reverts as start dates are different and tokens are not mature.
+        vm.expectRevert(IVotingEscrowCoreErrors.ZeroAmount.selector);
         escrow.split(from, 0);
     }
 
     function test_Split_shouldRevert_ifAmountTooBig() public {
         uint256 from = escrow.createLock(Lock_1_Amount);
 
-        vm.expectRevert(bytes("value too big")); //reverts as start dates are different and tokens are not mature.
+        vm.expectRevert(IVotingEscrowCoreErrors.AmountTooBig.selector); 
         escrow.split(from, Lock_1_Amount);
     }
 
@@ -618,7 +643,7 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
         uint256 mainTokenIdEpoch = curve.tokenPointLatestIndex(tokenId);
         assertEq(mainTokenIdEpoch, 2);
 
-        TokenPoint memory mainP = curve.userPointHistory_1(
+        TokenPoint memory mainP = curve.tokenPointHistory(
             tokenId,
             mainTokenIdEpoch
         );
@@ -632,7 +657,7 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
         {
             uint256 token1Epoch = curve.tokenPointLatestIndex(2);
             assertEq(token1Epoch, 1);
-            TokenPoint memory token1P = curve.userPointHistory_1(
+            TokenPoint memory token1P = curve.tokenPointHistory(
                 2, // tokenId
                 token1Epoch
             );
@@ -644,7 +669,7 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
 
             uint256 token2Epoch = curve.tokenPointLatestIndex(3);
             assertEq(token2Epoch, 1);
-            TokenPoint memory token2P = curve.userPointHistory_1(
+            TokenPoint memory token2P = curve.tokenPointHistory(
                 3, // tokenId
                 token2Epoch
             );
@@ -704,7 +729,7 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
         uint256 mainTokenIdEpoch = curve.tokenPointLatestIndex(tokenId);
         assertEq(mainTokenIdEpoch, 2);
 
-        TokenPoint memory mainP = curve.userPointHistory_1(
+        TokenPoint memory mainP = curve.tokenPointHistory(
             tokenId,
             mainTokenIdEpoch
         );
@@ -718,7 +743,7 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
         {
             uint256 token1Epoch = curve.tokenPointLatestIndex(2);
             assertEq(token1Epoch, 1);
-            TokenPoint memory token1P = curve.userPointHistory_1(
+            TokenPoint memory token1P = curve.tokenPointHistory(
                 2, // tokenId
                 token1Epoch
             );
@@ -730,7 +755,7 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
 
             uint256 token2Epoch = curve.tokenPointLatestIndex(3);
             assertEq(token2Epoch, 1);
-            TokenPoint memory token2P = curve.userPointHistory_1(
+            TokenPoint memory token2P = curve.tokenPointHistory(
                 3, // tokenId
                 token2Epoch
             );
