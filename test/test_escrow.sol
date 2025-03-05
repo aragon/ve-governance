@@ -34,8 +34,8 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
     uint208 internal Lock_1_Amount = 50e18;
     uint208 internal Lock_2_Amount = 30e18;
 
-    uint256 internal Slope_1 = ((Lock_1_Amount * 1e18) / CurveConstantLib.MAX_TIME);
-    uint256 internal Slope_2 = ((Lock_2_Amount * 1e18) / CurveConstantLib.MAX_TIME);
+    int256 internal Slope_1 = int256(Lock_1_Amount * (1e18 / CurveConstantLib.MAX_TIME));
+    int256 internal Slope_2 = int256(Lock_2_Amount * (1e18 / CurveConstantLib.MAX_TIME));
 
     uint256 internal Lock_1_ts;
     uint256 internal Lock_1_start;
@@ -64,20 +64,20 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
         currentTs = block.timestamp;
     }
 
-    function slopeFP(uint256 _amount) private pure returns (uint256) {
-        return ((_amount * 1e18) / CurveConstantLib.MAX_TIME);
+    function slopeFP(uint256 _amount) private pure returns (int256) {
+        return int256(_amount * (1e18 / CurveConstantLib.MAX_TIME));
     }
 
-    function biasFP(uint256 _amount, uint256 _duration) private pure returns (uint256) {
-        return _amount * 1e18 + ((_amount * 1e18) / CurveConstantLib.MAX_TIME) * _duration;
+    function biasFP(uint256 _amount, uint256 _duration) private pure returns (int256) {
+        return int256(_amount * 1e18 + ( (_amount * (1e18 / CurveConstantLib.MAX_TIME)) * _duration));
     }
 
-    function bias(uint256 _amount, uint256 _duration) private pure returns (uint256 bias_) {
+    function bias(uint256 _amount, uint256 _duration) private pure returns (int256 bias_) {
         return biasFP(_amount, _duration) / 1e18;
     }
 
-    function assertTotalSupply(uint256 _t, uint256 _amountFP) private view {
-        assertEq(curve.supplyAt(_t), _amountFP / 1e18);
+    function assertTotalSupply(uint256 _t, int256 _amountFP) private view {
+        assertEq(curve.supplyAt(_t), uint256(_amountFP / 1e18));
     }
 
     function setUp() public {
@@ -256,7 +256,7 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
         assertEq(curve.tokenPointLatestIndex(1), 1);
         assertEq(curve.tokenPointLatestIndex(2), 1);
 
-        uint256 currentTotalBiasFP = biasFP(Lock_1_Amount, currentTs - Lock_1_start) +
+        int256 currentTotalBiasFP = biasFP(Lock_1_Amount, currentTs - Lock_1_start) +
             biasFP(Lock_2_Amount, currentTs - weekStartTs);
 
         // 2, 3
@@ -273,8 +273,8 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
         uint256 Lock_1_end = Lock_1_start + CurveConstantLib.MAX_TIME;
         uint256 Lock_2_end = weekStartTs + CurveConstantLib.MAX_TIME;
 
-        uint256 Lock_1_MAX = biasFP(Lock_1_Amount, Lock_1_end - Lock_1_start);
-        uint256 LOCK_2_MAX = biasFP(Lock_2_Amount, Lock_2_end - weekStartTs);
+        int256 Lock_1_MAX = biasFP(Lock_1_Amount, Lock_1_end - Lock_1_start);
+        int256 LOCK_2_MAX = biasFP(Lock_2_Amount, Lock_2_end - weekStartTs);
 
         // 6
         assertTotalSupply(Lock_1_end, Lock_1_MAX + biasFP(Lock_2_Amount, Lock_1_end - weekStartTs));
@@ -321,7 +321,7 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
         assertEq(curve.tokenPointLatestIndex(1), 1);
         assertEq(curve.tokenPointLatestIndex(2), 1);
 
-        uint256 currentTotalBiasFP = biasFP(Lock_1_Amount, Lock_1_end - Lock_1_start) +
+        int256 currentTotalBiasFP = biasFP(Lock_1_Amount, Lock_1_end - Lock_1_start) +
             biasFP(Lock_2_Amount, currentTs - weekStartTs);
 
         // 2, 3
@@ -331,8 +331,8 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
         // assertEq(p.start, weekStartTs); TODO: check it on `locked()`
         assertEq(p.slope, Slope_2);
 
-        uint256 Lock_1_MAX = biasFP(Lock_1_Amount, Lock_1_end - Lock_1_start);
-        uint256 Lock_2_MAX = biasFP(Lock_2_Amount, Lock_2_end - weekStartTs);
+        int256 Lock_1_MAX = biasFP(Lock_1_Amount, Lock_1_end - Lock_1_start);
+        int256 Lock_2_MAX = biasFP(Lock_2_Amount, Lock_2_end - weekStartTs);
 
         // 4, 5
         assertTotalSupply(currentTs, currentTotalBiasFP);
@@ -381,13 +381,13 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
         assertEq(fromLatestEpoch, 1);
 
         // 1
-        TokenPointV2 memory fromP = curve.userPointHistory_1(
+        TokenPoint memory fromP = curve.userPointHistory_1(
             from,
             fromLatestEpoch
         );
 
-        assertEq(fromP.bias, 0);
-        assertEq(fromP.slope, 0);
+        assertEq(fromP.coefficients[0], 0);
+        assertEq(fromP.coefficients[1], 0);
         // assertEq(fromP.start, weekStartTs); TODO: check it on `locked()`
         assertEq(fromP.ts, currentTs);
 
@@ -397,22 +397,22 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
         uint256 toLatestEpoch = curve.tokenPointLatestIndex(to);
         assertEq(toLatestEpoch, 1);
 
-        TokenPointV2 memory toP = curve.userPointHistory_1(
+        TokenPoint memory toP = curve.userPointHistory_1(
             to,
             toLatestEpoch
         );
 
-        uint256 currentTotalBiasFP = biasFP(Lock_1_Amount, currentTs - weekStartTs) +
+        int256 currentTotalBiasFP = biasFP(Lock_1_Amount, currentTs - weekStartTs) +
             biasFP(Lock_2_Amount, currentTs - weekStartTs);
 
-        assertEq(toP.bias, currentTotalBiasFP);
-        assertEq(toP.slope, Slope_1 + Slope_2);
+        assertEq(toP.coefficients[0], currentTotalBiasFP);
+        assertEq(toP.coefficients[1], Slope_1 + Slope_2);
         // assertEq(toP.start, weekStartTs); TODO: check it on `locked()`
         assertEq(toP.ts, currentTs);
 
         uint256 end = weekStartTs + CurveConstantLib.MAX_TIME;
-        uint256 LOCK_1_MAX = biasFP(Lock_1_Amount, end - weekStartTs);
-        uint256 LOCK_2_MAX = biasFP(Lock_2_Amount, end - weekStartTs);
+        int256 LOCK_1_MAX = biasFP(Lock_1_Amount, end - weekStartTs);
+        int256 LOCK_2_MAX = biasFP(Lock_2_Amount, end - weekStartTs);
 
         // 3
         assertTotalSupply(currentTs, currentTotalBiasFP);
@@ -442,8 +442,8 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
         (uint256 weekStartTs, uint256 endTs, ) = getTimes();
 
         uint256 end = weekStartTs + CurveConstantLib.MAX_TIME;
-        uint256 LOCK_1_MAX = biasFP(Lock_1_Amount, end - weekStartTs);
-        uint256 LOCK_2_MAX = biasFP(Lock_2_Amount, end - weekStartTs);
+        int256 LOCK_1_MAX = biasFP(Lock_1_Amount, end - weekStartTs);
+        int256 LOCK_2_MAX = biasFP(Lock_2_Amount, end - weekStartTs);
 
         vm.warp(end + 1 hours);
         escrow.merge(from, to);
@@ -454,13 +454,13 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
         assertEq(fromLatestEpoch, 2);
 
         // 1
-        TokenPointV2 memory fromP = curve.userPointHistory_1(
+        TokenPoint memory fromP = curve.userPointHistory_1(
             from,
             fromLatestEpoch
         );
 
-        assertEq(fromP.bias, 0);
-        assertEq(fromP.slope, 0);
+        assertEq(fromP.coefficients[0], 0);
+        assertEq(fromP.coefficients[1], 0);
         // assertEq(fromP.start, weekStartTs); TODO: check it on `locked()`
         assertEq(fromP.ts, currentTs);
 
@@ -470,15 +470,15 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
         uint256 toLatestEpoch = curve.tokenPointLatestIndex(to);
         assertEq(toLatestEpoch, 2);
 
-        TokenPointV2 memory toP = curve.userPointHistory_1(
+        TokenPoint memory toP = curve.userPointHistory_1(
             to,
             toLatestEpoch
         );
 
-        uint256 currentTotalBiasFP = LOCK_1_MAX + LOCK_2_MAX;
+        int256 currentTotalBiasFP = LOCK_1_MAX + LOCK_2_MAX;
 
-        assertEq(toP.bias, currentTotalBiasFP);
-        assertEq(toP.slope, 0);
+        assertEq(toP.coefficients[0], currentTotalBiasFP);
+        assertEq(toP.coefficients[1], 0);
        // assertEq(toP.start, weekStartTs); TODO: check it on `locked()`
         assertEq(toP.ts, currentTs);
 
@@ -528,18 +528,18 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
             uint256 fromLatestEpoch = curve.tokenPointLatestIndex(from);
             assertEq(fromLatestEpoch, 2);
 
-            TokenPointV2 memory fromP = curve.userPointHistory_1(
+            TokenPoint memory fromP = curve.userPointHistory_1(
                 from,
                 fromLatestEpoch
             );
 
-            assertEq(fromP.bias, 0);
-            assertEq(fromP.slope, 0);
+            assertEq(fromP.coefficients[0], 0);
+            assertEq(fromP.coefficients[1], 0);
             // assertEq(fromP.start, weekStartTs); TODO: check it on `locked()`
             assertEq(fromP.ts, currentTs);
         }
 
-        uint256 currentTotalBiasFP = biasFP(Lock_1_Amount, fromLockEnd - fromLockWeekStart) +
+        int256 currentTotalBiasFP = biasFP(Lock_1_Amount, fromLockEnd - fromLockWeekStart) +
             biasFP(Lock_2_Amount, toLockEnd - toLockWeekStart);
 
         // 2
@@ -547,13 +547,13 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
             uint256 toLatestEpoch = curve.tokenPointLatestIndex(to);
             assertEq(toLatestEpoch, 2);
 
-            TokenPointV2 memory toP = curve.userPointHistory_1(
+            TokenPoint memory toP = curve.userPointHistory_1(
                 to,
                 toLatestEpoch
             );
 
-            assertEq(toP.bias, currentTotalBiasFP);
-            assertEq(toP.slope, 0);
+            assertEq(toP.coefficients[0], currentTotalBiasFP);
+            assertEq(toP.coefficients[1], 0);
             // assertEq(toP.start, weekStartTs); TODO: check it on `locked()`
             assertEq(toP.ts, currentTs);
         }
@@ -611,20 +611,20 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
         escrow.split(tokenId, value);
         uint256 currentTs = block.timestamp;
 
-        uint256 slope1 = slopeFP(Lock_1_Amount - value);
-        uint256 slope2 = slopeFP(value);
+        int256 slope1 = slopeFP(Lock_1_Amount - value);
+        int256 slope2 = slopeFP(value);
 
         // 1
         uint256 mainTokenIdEpoch = curve.tokenPointLatestIndex(tokenId);
         assertEq(mainTokenIdEpoch, 2);
 
-        TokenPointV2 memory mainP = curve.userPointHistory_1(
+        TokenPoint memory mainP = curve.userPointHistory_1(
             tokenId,
             mainTokenIdEpoch
         );
 
-        assertEq(mainP.bias, 0);
-        assertEq(mainP.slope, 0);
+        assertEq(mainP.coefficients[0], 0);
+        assertEq(mainP.coefficients[1], 0);
         // assertEq(mainP.start, weekStartTs); TODO: check it on `locked()`
         assertEq(mainP.ts, block.timestamp);
 
@@ -632,25 +632,25 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
         {
             uint256 token1Epoch = curve.tokenPointLatestIndex(2);
             assertEq(token1Epoch, 1);
-            TokenPointV2 memory token1P = curve.userPointHistory_1(
+            TokenPoint memory token1P = curve.userPointHistory_1(
                 2, // tokenId
                 token1Epoch
             );
 
-            assertEq(token1P.bias, biasFP(Lock_1_Amount - value, block.timestamp - weekStartTs));
-            assertEq(token1P.slope, slope1);
+            assertEq(token1P.coefficients[0], biasFP(Lock_1_Amount - value, block.timestamp - weekStartTs));
+            assertEq(token1P.coefficients[1], slope1);
             // assertEq(token1P.start, weekStartTs); TODO: check it on `locked()`
             assertEq(token1P.ts, block.timestamp);
 
             uint256 token2Epoch = curve.tokenPointLatestIndex(3);
             assertEq(token2Epoch, 1);
-            TokenPointV2 memory token2P = curve.userPointHistory_1(
+            TokenPoint memory token2P = curve.userPointHistory_1(
                 3, // tokenId
                 token2Epoch
             );
 
-            assertEq(token2P.bias, biasFP(value, block.timestamp - weekStartTs));
-            assertEq(token2P.slope, slope2);
+            assertEq(token2P.coefficients[0], biasFP(value, block.timestamp - weekStartTs));
+            assertEq(token2P.coefficients[1], slope2);
             // assertEq(token2P.start, weekStartTs); TODO: check it on `locked()`
             assertEq(token2P.ts, block.timestamp);
         }
@@ -704,13 +704,13 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
         uint256 mainTokenIdEpoch = curve.tokenPointLatestIndex(tokenId);
         assertEq(mainTokenIdEpoch, 2);
 
-        TokenPointV2 memory mainP = curve.userPointHistory_1(
+        TokenPoint memory mainP = curve.userPointHistory_1(
             tokenId,
             mainTokenIdEpoch
         );
 
-        assertEq(mainP.bias, 0);
-        assertEq(mainP.slope, 0);
+        assertEq(mainP.coefficients[0], 0);
+        assertEq(mainP.coefficients[1], 0);
        // assertEq(mainP.start, weekStartTs); TODO: check it on `locked()`
         assertEq(mainP.ts, block.timestamp);
 
@@ -718,25 +718,25 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
         {
             uint256 token1Epoch = curve.tokenPointLatestIndex(2);
             assertEq(token1Epoch, 1);
-            TokenPointV2 memory token1P = curve.userPointHistory_1(
+            TokenPoint memory token1P = curve.userPointHistory_1(
                 2, // tokenId
                 token1Epoch
             );
 
-            assertEq(token1P.bias, biasFP(Lock_1_Amount - value, endTs - weekStartTs));
-            assertEq(token1P.slope, 0);
+            assertEq(token1P.coefficients[0], biasFP(Lock_1_Amount - value, endTs - weekStartTs));
+            assertEq(token1P.coefficients[1], 0);
             // assertEq(token1P.start, weekStartTs); TODO: check it on `locked()`
             assertEq(token1P.ts, block.timestamp);
 
             uint256 token2Epoch = curve.tokenPointLatestIndex(3);
             assertEq(token2Epoch, 1);
-            TokenPointV2 memory token2P = curve.userPointHistory_1(
+            TokenPoint memory token2P = curve.userPointHistory_1(
                 3, // tokenId
                 token2Epoch
             );
 
-            assertEq(token2P.bias, biasFP(value, endTs - weekStartTs));
-            assertEq(token2P.slope, 0);
+            assertEq(token2P.coefficients[0], biasFP(value, endTs - weekStartTs));
+            assertEq(token2P.coefficients[1], 0);
             // assertEq(token2P.start, weekStartTs); TODO: check it on `locked()`
             assertEq(token2P.ts, block.timestamp);
         }
@@ -820,13 +820,13 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
 
         uint256 beforeSupply = curve.supplyAt(timestampAt);
 
-        uint256 beforeSupplyFP = biasFP(amount, timestampAt - depositWeekTs);
+        int256 beforeSupplyFP = biasFP(amount, timestampAt - depositWeekTs);
 
         escrow.split(tokenId, splitValue);
 
-        uint256 afterSupplyFP = biasFP(amount - splitValue, timestampAt - depositWeekTs) +
+        int256 afterSupplyFP = biasFP(amount - splitValue, timestampAt - depositWeekTs) +
             biasFP(splitValue, timestampAt - depositWeekTs);
 
-        console.log(beforeSupplyFP - afterSupplyFP, timestampAt - depositWeekTs);
+        // console.log(beforeSupplyFP - afterSupplyFP, timestampAt - depositWeekTs);
     }
 }

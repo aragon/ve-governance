@@ -128,7 +128,7 @@ library BalanceLogicLibrary {
     /// @param _t Time to calculate the total voting power at
     /// @return Total voting power at that time
     function supplyAt(
-        mapping(uint256 => uint256) storage _slopeChanges,
+        mapping(uint256 => int256) storage _slopeChanges,
         mapping(uint256 => IEscrowCurveGlobalStorage.GlobalPoint) storage _globalPointHistory,
         uint256 _globalPointLatestIndex,
         uint256 _t
@@ -137,20 +137,20 @@ library BalanceLogicLibrary {
         // epoch 0 is an empty point
         if (epoch_ == 0) return 0;
         IEscrowCurveGlobalStorage.GlobalPoint memory _point = _globalPointHistory[epoch_];
-        uint256 bias = _point.bias;
-        uint256 slope = _point.slope;
+        int256 bias = _point.bias;
+        int256 slope = _point.slope;
         uint256 ts = _point.ts; // changes in for loop.
         uint256 t_i = (ts / WEEK) * WEEK;
         
         for (uint256 i = 0; i < 255; ++i) {
             t_i += WEEK;
-            uint256 dSlope = 0;
+            int256 dSlope = 0;
             if (t_i > _t) {
                 t_i = _t;
             } else {
                 dSlope = _slopeChanges[t_i];
             }
-            bias += slope * (t_i - ts);
+            bias += slope * int256(t_i - ts);
 
             if (t_i == _t) {
                 break;
@@ -158,6 +158,8 @@ library BalanceLogicLibrary {
             slope -= dSlope;
             ts = t_i;
         }
+
+        if(bias < 0) bias = 0;
 
         return uint256(bias / 1e18); // TODO: USE safe cast
     }

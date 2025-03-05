@@ -66,11 +66,11 @@ contract QuadraticIncreasingEscrow is
     uint256 public globalPointLatestIndex;
 
     // endTime => summed up slopes at that endTime
-    mapping(uint256 => uint256) public slopeChanges;
+    mapping(uint256 => int256) public slopeChanges;
 
-    // TODO: update interface for TokenPointV2
+    // TODO: update interface for TokenPoint
     mapping(uint256 => GlobalPoint) internal _globalPointHistory;
-    mapping(uint256 => TokenPointV2[1000000000]) internal _userPointHistory;
+    mapping(uint256 => TokenPoint[1000000000]) internal _userPointHistory;
 
     /// @dev precomputed coefficients of the quadratic curve
     int256 private constant SHARED_QUADRATIC_COEFFICIENT =
@@ -112,26 +112,21 @@ contract QuadraticIncreasingEscrow is
                               CURVE COEFFICIENTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @return The coefficient for the quadratic term of the quadratic curve, for the given amount
-    function _getQuadraticCoeff(uint256 amount) internal pure returns (int256) {
-        return (SignedFixedPointMath.toFP(amount.toInt256()).mul(SHARED_QUADRATIC_COEFFICIENT));
-    }
-
     /// @return The coefficient for the linear term of the quadratic curve, for the given amount
     function _getLinearCoeff(uint256 amount) internal pure returns (int256) {
-        return (SignedFixedPointMath.toFP(amount.toInt256())).mul(SHARED_LINEAR_COEFFICIENT);
+        return int256(amount) * SHARED_LINEAR_COEFFICIENT;       
     }
 
     /// @return The constant coefficient of the quadratic curve, for the given amount
     /// @dev In this case, the constant term is 1 so we just case the amount
     function _getConstantCoeff(uint256 amount) public pure returns (int256) {
-        return (SignedFixedPointMath.toFP(amount.toInt256())).mul(SHARED_CONSTANT_COEFFICIENT);
+        return int256(amount) * SHARED_CONSTANT_COEFFICIENT;
     }
 
     /// @return The coefficients of the quadratic curve, for the given amount
     /// @dev The coefficients are returned in the order [constant, linear, quadratic]
     function _getCoefficients(uint256 amount) public pure returns (int256[3] memory) {
-        return [_getConstantCoeff(amount), _getLinearCoeff(amount), _getQuadraticCoeff(amount)];
+        return [_getConstantCoeff(amount), _getLinearCoeff(amount), 0];
     }
 
     /// @return The coefficients of the quadratic curve, for the given amount
@@ -141,10 +136,23 @@ contract QuadraticIncreasingEscrow is
         int256[3] memory coefficients = _getCoefficients(amount);
 
         return [
-            SignedFixedPointMath.fromFP(coefficients[0]),
-            SignedFixedPointMath.fromFP(coefficients[1]),
-            SignedFixedPointMath.fromFP(coefficients[2])
+            coefficients[0], // bias
+            coefficients[1], // slope
+            0
         ];
+    }
+
+    function getBias(uint256 amount) public view returns(int256) {
+        return _getConstantCoeff(amount);
+    }
+
+    function getSlope(uint256 amount) public view returns(int256) {
+        return _getLinearCoeff(amount);
+    }
+
+
+    function getBiasAndSlope(uint256 amount) public view returns(int256, int256) {
+        return (getBias(amount), getSlope(amount));
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -207,7 +215,7 @@ contract QuadraticIncreasingEscrow is
     }
 
     function _isWarm(TokenPoint memory _point) public view returns (bool) {
-        return block.timestamp > _point.writtenTs + warmupPeriod;
+        return block.timestamp > _point.ts + warmupPeriod;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -233,7 +241,7 @@ contract QuadraticIncreasingEscrow is
     function userPointHistory_1(
         uint256 _tokenId,
         uint256 _tokenInterval
-    ) external view returns (TokenPointV2 memory) {
+    ) external view returns (TokenPoint memory) {
         return _userPointHistory[_tokenId][_tokenInterval];
     }
 
@@ -330,8 +338,10 @@ contract QuadraticIncreasingEscrow is
         if (_tokenId == 0) revert InvalidTokenId();
 
         uint256 _globalPointLatestIndex = globalPointLatestIndex;
-        TokenPointV2 memory tNew;
-
+        
+        // Get the slope and bias for `_newLocked`...
+        (int256 newLockBias, int256 newLockSlope) = getBiasAndSlope(_newLocked.amount);
+    
         GlobalPoint memory lastPoint = GlobalPoint({
             bias: 0,
             slope: 0,
@@ -350,7 +360,7 @@ contract QuadraticIncreasingEscrow is
 
             for (uint256 i = 0; i < 255; ++i) {
                 t_i += checkpointInterval;
-                uint256 dSlope;
+                int256 dSlope;
 
                 if (t_i > block.timestamp) {
                     t_i = block.timestamp;
@@ -358,8 +368,11 @@ contract QuadraticIncreasingEscrow is
                     dSlope = slopeChanges[t_i];
                 }
 
-                lastPoint.bias += lastPoint.slope * (t_i - lastPointCheckpoint);
+                lastPoint.bias += lastPoint.slope * int256(t_i - lastPointCheckpoint);
                 lastPoint.slope -= dSlope;
+
+                if(lastPoint.slope < 0) lastPoint.slope = 0;
+                if(lastPoint.bias < 0) lastPoint.bias = 0;
 
                 lastPointCheckpoint = t_i;
                 lastPoint.ts = uint48(t_i);
@@ -373,77 +386,76 @@ contract QuadraticIncreasingEscrow is
             }
         }
 
-        // Transform amounts into fixed points.
-        _fromLocked.amount *= 1e18;
-        _newLocked.amount *= 1e18;
-
-        tNew.slope = (_newLocked.amount / CurveConstantLib.MAX_TIME);
-
         {
             uint256 elapsed = block.timestamp - _newLocked.start;
             if (elapsed > CurveConstantLib.MAX_TIME) {
                 elapsed = CurveConstantLib.MAX_TIME;
             }
-            tNew.bias = _newLocked.amount + tNew.slope * elapsed;
-        }
 
-        tNew.ts = uint48(block.timestamp);
+            newLockBias += newLockSlope * int256(elapsed);
+        }
 
         if (uint48(block.timestamp) - _newLocked.start >= CurveConstantLib.MAX_TIME) {
-            tNew.slope = 0;
+            newLockSlope = 0;
         }
 
-        uint48 newEnd = (_newLocked.start + CurveConstantLib.MAX_TIME).toUint48();
-        uint256 newSlope = lastPoint.slope + tNew.slope;
-        uint256 newBias = lastPoint.bias + tNew.bias;
-        uint256 newDSlope = slopeChanges[newEnd] + tNew.slope;
+        uint48 newEnd = uint48(_newLocked.start + CurveConstantLib.MAX_TIME);
+        int256 newSlope = lastPoint.slope + newLockSlope;
+        int256 newBias = lastPoint.bias + newLockBias;
+        int256 newDSlope = slopeChanges[newEnd] + newLockSlope;
 
         uint256 tokenLatestIndex = tokenPointLatestIndex[_tokenId];
 
         // The `tokenId` already exists..
         if (tokenLatestIndex > 0) {
             uint48 _fromLockedEnd = uint48(_fromLocked.start + CurveConstantLib.MAX_TIME);
-            uint48 ts = _fromLockedEnd <= tNew.ts ? _fromLockedEnd : uint48(block.timestamp);
+            uint48 ts = _fromLockedEnd <= uint48(block.timestamp) ? _fromLockedEnd : uint48(block.timestamp);
 
-            uint256 oldSlope = (_fromLocked.amount / CurveConstantLib.MAX_TIME);
-            uint256 oldBias = _fromLocked.amount + oldSlope * (ts - _fromLocked.start);
+            // Get the slope and bias for `_fromLocked`...
+            (int256 oldLockBias, int256 oldLockSlope) = getBiasAndSlope(_fromLocked.amount);
+
+            oldLockBias +=  oldLockSlope * int48(ts - _fromLocked.start);
 
             if (_newLocked.amount == 0) {
-                if (_fromLockedEnd <= tNew.ts) {
+                if (_fromLockedEnd <= uint48(block.timestamp)) {
                     // we already subtracted p.slope in the above for loop,
-                    // because we encounter slopeChanges[_fromLockedEnd] before tNew.ts.
-                    newBias = oldBias > newBias ? 0 : newBias - oldBias;
+                    // because we encounter slopeChanges[_fromLockedEnd] before uint48(block.timestamp).
+                    newBias -= oldLockBias;
                 } else {
-                    newBias = oldBias > newBias ? 0 : newBias - oldBias;
-                    newSlope = oldSlope > newSlope ? 0 : newSlope - oldSlope;
-                    newDSlope = oldSlope > newDSlope ? 0 : newDSlope - oldSlope;
+                    newBias -= oldLockBias;
+                    newSlope -= oldLockSlope;
+                    newDSlope -= oldLockSlope;
                 }
             } else {
                 // User already had locked `x` amount on `tokenId=y` and
                 // tries to add more amount on the same `tokenId=y`.
-                if (_fromLockedEnd <= tNew.ts) {
+                if (_fromLockedEnd <= uint48(block.timestamp)) {
                     // Previous point already ends before new point. This means
                     // from newPoint, old slope must not be included anymore.
                     // bias still must be as after end, it doesn't get 0,
                     // but maxed out constant.
-                    tNew.bias += oldBias;
+                    newLockBias += oldLockBias;
                 } else {
                     // Previous point hasn't ended yet, so from newPoint,
                     // old slope must still be added.
-                    tNew.slope += oldSlope;
-                    tNew.bias += oldBias;
-                    if (_fromLockedEnd != newEnd) newDSlope += oldSlope;
+                    newLockBias += oldLockBias;
+                    newLockSlope += oldLockSlope;
+                    if (_fromLockedEnd != newEnd) newDSlope += oldLockSlope;
                 }
             }
 
             // If the end date has not changed and is in future,
             // we must not clear out slope changes.
-            if (_fromLockedEnd != newEnd && _fromLockedEnd >= tNew.ts) {
-                slopeChanges[_fromLockedEnd] = oldSlope > slopeChanges[_fromLockedEnd]
-                    ? 0
-                    : slopeChanges[_fromLockedEnd] - oldSlope;
+            if (_fromLockedEnd != newEnd && _fromLockedEnd >= uint48(block.timestamp)) {
+                int256 oldOne = slopeChanges[_fromLockedEnd] - oldLockSlope;
+                if(oldOne < 0) oldOne = 0;
+                slopeChanges[_fromLockedEnd] = oldOne;
             }
         }
+
+        if(newSlope < 0) newSlope = 0;
+        if(newBias < 0) newBias = 0;
+        if(newDSlope < 0) newDSlope = 0;
 
         lastPoint.slope = newSlope;
         lastPoint.bias = newBias;
@@ -454,14 +466,21 @@ contract QuadraticIncreasingEscrow is
 
         slopeChanges[newEnd] = newDSlope;
 
+        TokenPoint memory tNew = (TokenPoint({
+            bias: 0,
+            ts: uint128(block.timestamp),
+            checkpointTs: uint128(block.timestamp),
+            coefficients: [newLockBias, newLockSlope, 0]
+        }));
+        
         if (
             tokenLatestIndex != 0 &&
             _userPointHistory[_tokenId][tokenLatestIndex].ts == block.timestamp
         ) {
-            _userPointHistory[_tokenId][tokenLatestIndex] = uNew;
+            _userPointHistory[_tokenId][tokenLatestIndex] = tNew;
         } else {
             tokenPointLatestIndex[_tokenId] = ++tokenLatestIndex;
-            _userPointHistory[_tokenId][tokenLatestIndex] = uNew;
+            _userPointHistory[_tokenId][tokenLatestIndex] = tNew;
         }
     }    
 

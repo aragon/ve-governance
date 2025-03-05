@@ -16,8 +16,8 @@ interface IEscrowCurveGlobalStorage {
     /// @dev Coefficients are stored in the following order: [constant, linear, quadratic]
     /// and not all coefficients are used for all curves.
     struct GlobalPoint {
-        uint256 bias;
-        uint256 slope;
+        int256 bias;
+        int256 slope;
         uint48 ts;
     }
 
@@ -37,14 +37,14 @@ interface IEscrowCurveTokenStorage {
     /// @notice Captures the shape of the user's voting curve at a specific point in time
     /// @param bias The y intercept of the user's voting curve at the given time
     /// @param checkpointTs The checkpoint when the user voting curve is/was/will be updated
-    /// @param writtenTs The timestamp at which we locked the checkpoint
+    /// @param ts The timestamp at which we locked the checkpoint
     /// @param coefficients The coefficients of the curve, supports up to quadratic curves.
     /// @dev Coefficients are stored in the following order: [constant, linear, quadratic]
     /// and not all coefficients are used for all curves.
     struct TokenPoint {
         uint256 bias;
         uint128 checkpointTs;
-        uint128 writtenTs;
+        uint128 ts; // renamed from writtenTs to ts
         int256[3] coefficients;
     }
 
@@ -55,29 +55,29 @@ interface IEscrowCurveTokenStorage {
     }
 
 
-    struct TokenPoint {
-        // we need to think carefully if we need this, i'd argue no we dont
-        // uint256 bias; // this is the non fixed point bias
-        uint256 __deprecated0;
-        // this is equivalent to start which I also think we dont need
-        // uint128 checkpointTs;
-        uint128 __deprecated1;
-        // we can rename this to .ts
-        // uint128 writtenTs;
-        uint128 ts;
-        // this could be rewritten into 3 int256 slots:
-        uint256 bias; // this is fp bias
-        // int256 slope; // this is fp slope
-        uint256 slope;
-        uint256 __deprecated3;
-        // in the case of mode, we just need to be extremely careful how we fetch data
-        // after an upgrade:
-        // they are using quadratics, but each staker will only have a single deposit or exit
-        // so they could be migrated
-        // int256[3] coefficients;
+    // struct TokenPoint {
+    //     // we need to think carefully if we need this, i'd argue no we dont
+    //     // uint256 bias; // this is the non fixed point bias
+    //     uint256 __deprecated0;
+    //     // this is equivalent to start which I also think we dont need
+    //     // uint128 checkpointTs;
+    //     uint128 __deprecated1;
+    //     // we can rename this to .ts
+    //     // uint128 writtenTs;
+    //     uint128 ts;
+    //     // this could be rewritten into 3 int256 slots:
+    //     uint256 bias; // this is fp bias
+    //     // int256 slope; // this is fp slope
+    //     uint256 slope;
+    //     uint256 __deprecated3;
+    //     // in the case of mode, we just need to be extremely careful how we fetch data
+    //     // after an upgrade:
+    //     // they are using quadratics, but each staker will only have a single deposit or exit
+    //     // so they could be migrated
+    //     // int256[3] coefficients;
 
-        // we would use 6 slots in total, of which 3 are being used
-    }
+    //     // we would use 6 slots in total, of which 3 are being used
+    // }
 }
 
 interface IEscrowCurveToken is IEscrowCurveTokenStorage {

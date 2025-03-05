@@ -1,6 +1,7 @@
 /// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+
 /// @title CurveConstantLib
 /// @notice Precomputed coefficients for escrow curve
 /// This curve implementation is a quadratic curve of the form y = (1/7)t^2 + (2/7)t + 1
@@ -11,19 +12,17 @@ pragma solidity ^0.8.0;
 /// where t = timestamp / 2_weeks (2 weeks is one period)
 /// Below are the shared coefficients for the linear and quadratic terms
 library CurveConstantLib {
+    /// @notice Helps to define how the curve should be changing.
+    uint256 internal constant MAX_TIME = 12 * 7 * 24 * 60 * 60; // 12 weeks
+
     int256 internal constant SHARED_CONSTANT_COEFFICIENT = 1e18;
-    /// @dev 2 / (7 * 2_weeks) - expressed in fixed point
-    int256 internal constant SHARED_LINEAR_COEFFICIENT = 236205593348;
-    /// @dev 1 / (7 * (2_weeks)^2) - expressed in fixed point
-    int256 internal constant SHARED_QUADRATIC_COEFFICIENT = 97637;
+
+    int256 internal constant SHARED_LINEAR_COEFFICIENT = int256(1e18 / MAX_TIME);
+    
+    int256 internal constant SHARED_QUADRATIC_COEFFICIENT = 0;
 
     /// @dev the maxiumum number of epochs the cure can keep increasing
     uint256 internal constant MAX_EPOCHS = 5;
     
-    /// @notice Helps to define how the curve should be changing.
-    /// @dev `lockAmount/MAX_TIME` is the rate of change. 
-    // uint256 internal constant MAX_TIME = 4 * 365 * 86400;
-    uint256 internal constant MAX_TIME = 12 * 7 * 24 * 60 * 60; // 12 weeks
-
     uint256 public constant WEEK = 1 weeks;
 }
