@@ -183,11 +183,58 @@ interface IDynamicVoter is IDynamicVoterErrors {
     function setVoter(address _voter) external;
 }
 
+interface IMerge is ILockedBalanceIncreasing {
+    /// @notice Merge two tokens - i.e  `from` into `_to`.
+    /// @param _from The token id from which merge is occuring
+    /// @param _to The token id to which `_from` is merging
+    function merge(uint256 _from, uint256 _to) external;
+
+    /// @notice Whether 2 tokens can be merged.
+    /// @param _from The token id from which merge should occur.
+    /// @param _to The token id to which `_from` should merge.
+    function canMerge(LockedBalance memory _from, LockedBalance memory _to) external view returns (bool);
+
+    event Merged(
+        address indexed _sender,
+        uint256 indexed _from,
+        uint256 indexed _to,
+        uint208 _amountFrom,
+        uint208 _amountTo,
+        uint208 _amountFinal
+    );
+
+    error CannotMerge(uint256 _from, uint256 _to);
+}
+
+interface ISplit {
+    /// @notice Split token into two new, separate tokens.
+    /// @param _from The token id that should be split
+    /// @param _value The amount that determines how token is split
+    /// @return _tokenId1 The token id of first token after splitting
+    /// @return _tokenId2 The token id of second token after splitting
+    function split(
+        uint256 _from,
+        uint256 _value
+    ) external returns (uint256 _tokenId1, uint256 _tokenId2);
+    
+    event Split(
+        uint256 indexed _from,
+        uint256 indexed _tokenId1,
+        uint256 indexed _tokenId2,
+        address _sender,
+        uint208 _splitAmount1,
+        uint208 _splitAmount2
+    );
+
+    error SplitAmountTooBig();
+}
+
+
 /*///////////////////////////////////////////////////////////////
                         INCREASED ESCROW
 //////////////////////////////////////////////////////////////*/
 
-interface IVotingEscrowIncreasing is IVotingEscrowCore, IDynamicVoter, IWithdrawalQueue, ISweeper {}
+interface IVotingEscrowIncreasing is IVotingEscrowCore, IDynamicVoter, IWithdrawalQueue, ISweeper, IMerge, ISplit {}
 
 /// @dev useful for testing
 interface IVotingEscrowEventsStorageErrorsEvents is
