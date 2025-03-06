@@ -13,7 +13,7 @@ import {ISimpleGaugeVoter} from "@voting/ISimpleGaugeVoter.sol";
 import {IClock} from "@clock/IClock.sol";
 import {IEscrowCurveIncreasing as IEscrowCurve} from "./interfaces/IEscrowCurveIncreasing.sol";
 import {IExitQueue} from "./interfaces/IExitQueue.sol";
-import {IVotingEscrowIncreasing as IVotingEscrow, IVotingEscrowCore} from "./interfaces/IVotingEscrowIncreasing.sol";
+import {IVotingEscrowIncreasing as IVotingEscrow, IVotingEscrowCore, IMerge, ISplit} from "./interfaces/IVotingEscrowIncreasing.sol";
 
 // libraries
 import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
@@ -297,9 +297,7 @@ contract VotingEscrow is
         _locked[_tokenId] = newLocked;
     }
 
-    /// @notice Merge two tokens - i.e  `from` into `_to`.
-    /// @param _from The token id from which merge is occuring
-    /// @param _to The token id to which `_from` is merging
+    /// @inheritdoc IMerge
     function merge(uint256 _from, uint256 _to) public {
         address sender = _msgSender();
 
@@ -310,21 +308,14 @@ contract VotingEscrow is
         LockedBalance memory oldLockedFrom = _locked[_from];
         LockedBalance memory oldLockedTo = _locked[_to];
 
-        uint48 oldLockedFromEnd = uint48(oldLockedFrom.start + CurveConstantLib.MAX_TIME);
-        uint48 oldLockedToEnd = uint48(oldLockedTo.start + CurveConstantLib.MAX_TIME);
-
-        if (
-            (oldLockedTo.start != oldLockedFrom.start) &&
-            // TODO: GIORGI <= sign or < ?
-            (block.timestamp <= oldLockedToEnd || block.timestamp <= oldLockedFromEnd)
-        ) {
-            revert TokensNotMatureOrStartMismatch();
+        if (!canMerge(oldLockedFrom, oldLockedTo)) {
+            revert CannotMerge(_from, _to);
         }
 
         // Update for `_from`.
         IERC721EMB(lockNFT).burn(_from);
         _locked[_from] = LockedBalance(0, 0);
-        LockedBalance memory newLockedFrom = LockedBalance({start: oldLockedFrom.start, amount: 0});
+        LockedBalance memory newLockedFrom = LockedBalance(0, oldLockedFrom.start);
 
         _checkpoint(_from, oldLockedFrom, newLockedFrom);
 
@@ -332,17 +323,35 @@ contract VotingEscrow is
         oldLockedFrom.start = oldLockedTo.start;
         _checkpoint(_to, oldLockedTo, oldLockedFrom);
 
-        _locked[_to] = LockedBalance({
-            start: oldLockedTo.start,
-            amount: oldLockedFrom.amount + oldLockedTo.amount
-        });
+        uint208 newLockedAmount = oldLockedFrom.amount + oldLockedTo.amount;
+
+        _locked[_to] = LockedBalance({start: oldLockedTo.start, amount: newLockedAmount});
+
+        emit Merged(sender, _from, _to, oldLockedFrom.amount, oldLockedTo.amount, newLockedAmount);
     }
 
-    /// @notice Split token into two new, separate tokens.
-    /// @param _from The token id that should be split
-    /// @param _value The amount that determines how token is split
-    /// @return _tokenId1 The token id of first token after splitting
-    /// @return _tokenId2 The token id of second token after splitting
+    /// @inheritdoc IMerge
+    function canMerge(
+        LockedBalance memory _fromLocked,
+        LockedBalance memory _toLocked
+    ) public view returns (bool) {
+        uint256 maxTime = IEscrowCurve(curve).maxTime();
+
+        uint48 oldLockedFromEnd = uint48(_fromLocked.start + maxTime);
+        uint48 oldLockedToEnd = uint48(_toLocked.start + maxTime);
+
+        if (
+            (_toLocked.start != _fromLocked.start) &&
+            // TODO: GIORGI <= sign or < ?
+            (block.timestamp <= oldLockedToEnd || block.timestamp <= oldLockedFromEnd)
+        ) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /// @inheritdoc ISplit
     function split(
         uint256 _from,
         uint256 _value
@@ -353,17 +362,22 @@ contract VotingEscrow is
         if (!isApprovedOrOwner(sender, _from)) revert NotApprovedOrOwner();
 
         if (_value == 0) revert ZeroAmount();
-        if (locked_.amount <= _value) revert AmountTooBig();
+        if (locked_.amount <= _value) revert SplitAmountTooBig();
 
         IERC721EMB(lockNFT).burn(_from);
         _locked[_from] = LockedBalance(0, 0);
         _checkpoint(_from, locked_, LockedBalance(0, locked_.start));
 
-        locked_.amount -= _value.toUint208();
+        uint208 amount1 = locked_.amount - _value.toUint208();
+        uint208 amount2 = _value.toUint208();
+
+        locked_.amount = amount1;
         _tokenId1 = _createSplitNFT(sender, locked_);
 
-        locked_.amount = _value.toUint208();
+        locked_.amount = amount2;
         _tokenId2 = _createSplitNFT(sender, locked_);
+
+        emit Split(_from, _tokenId1, _tokenId2, sender, amount1, amount2);
     }
 
     /// @notice creates a new token in checkpoint and mint.
@@ -391,18 +405,6 @@ contract VotingEscrow is
         LockedBalance memory _newLocked
     ) private {
         IEscrowCurve(curve).checkpoint(_tokenId, _fromLocked, _newLocked);
-    }
-
-    /// @dev resets the voting power for a given tokenId. Checkpoint is written to the end of the epoch.
-    /// @param _tokenId The tokenId to reset the voting power for
-    /// @dev We don't need to fetch the old locked balance as it's not used in this implementation
-    function _checkpointClear(uint256 _tokenId) private {
-        uint256 checkpointClearTime = IClock(clock).epochCurrentWeekTs();
-        IEscrowCurve(curve).checkpoint(
-            _tokenId,
-            LockedBalance(0, 0),
-            LockedBalance(0, checkpointClearTime.toUint48())
-        );
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -440,7 +442,8 @@ contract VotingEscrow is
         address owner = IERC721EMB(lockNFT).ownerOf(_tokenId);
 
         // we can remove the user's voting power as it's no longer locked
-        _checkpointClear(_tokenId);
+        LockedBalance memory locked_ = _locked[_tokenId];
+        _checkpoint(_tokenId, locked_, LockedBalance(0, locked_.start));
 
         // transfer NFT to this and queue the exit
         IERC721EMB(lockNFT).transferFrom(_msgSender(), address(this), _tokenId);

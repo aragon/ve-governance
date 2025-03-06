@@ -139,6 +139,9 @@ interface IEscrowCurveCore is IEscrowCurveErrorsAndEvents {
         ILockedBalanceIncreasing.LockedBalance memory _oldLocked,
         ILockedBalanceIncreasing.LockedBalance memory _newLocked
     ) external;
+
+    /// @return The max time allowed for the lock duration.
+    function maxTime() external view returns (uint256);
 }
 
 interface IEscrowCurveMath {

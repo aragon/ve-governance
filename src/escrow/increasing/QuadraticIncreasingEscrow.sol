@@ -115,7 +115,8 @@ contract QuadraticIncreasingEscrow is
         // store global point at that time.
         // pause all operations till that moment.
         //
-        if (!exitAmountIncluded) {
+
+        if (exitAmountIncluded) {
             // If `exitAmount` is passed, make sure the escrow is paused
             // so that incorrect upgrade doesn't go unnoticed. Otherwise,
             // upgrade transaction might be front-run by `beginWithdrawal`
@@ -123,7 +124,7 @@ contract QuadraticIncreasingEscrow is
             if (!Pausable(escrow).paused()) {
                 revert UpgradeNotPossible();
             }
-
+        } else {
             exitAmount = IVotingEscrow(escrow).currentExittingAmount();
         }
 
@@ -135,11 +136,18 @@ contract QuadraticIncreasingEscrow is
 
         IClockSeason(clock).newSeason();
 
+        uint256 totalAmount = totalLocked - exitAmount;
+        int256 totalBias = _getConstantCoeff(totalAmount);
+        int256 totalSlope = _getLinearCoeff(totalAmount); 
+
         GlobalPoint memory lastPoint = GlobalPoint({
-            bias: _getConstantCoeff(totalLocked - exitAmount),
-            slope: _getLinearCoeff(totalLocked - exitAmount),
-            ts: uint48(block.timestamp)
+            bias: totalBias,
+            slope: totalSlope,
+            ts: uint48(block.timestamp) // TODO: use seasonStarTtIME (talk to Javi about whether newSeason should return timestamp or index)
         });
+
+        // make slopeChanges 2 dir mapping. 
+        // slopeChanges[seasonStarTtIME + maxTime()] = totalSlope;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -192,7 +200,7 @@ contract QuadraticIncreasingEscrow is
         int256 constantCoeff,
         int256 slope
     ) internal view returns (uint256) {
-        uint256 MAX_TIME = _maxTime();
+        uint256 MAX_TIME = maxTime();
         timeElapsed = timeElapsed > MAX_TIME ? MAX_TIME : timeElapsed;
 
         int256 bias = slope * int256(timeElapsed) + constantCoeff;
@@ -210,19 +218,19 @@ contract QuadraticIncreasingEscrow is
 
         // If max time already passed, slope must be 0 as
         // it should stop increasing.
-        if (timeElapsed >= _maxTime()) {
+        if (timeElapsed >= maxTime()) {
             slope = 0;
         }
 
         return (int256(bias), slope);
     }
 
-    function _maxTime() internal view returns (uint256) {
+    function maxTime() public view returns (uint256) {
         return IClock(clock).epochDuration() * MAX_EPOCHS;
     }
 
     function previewMaxBias(uint256 amount) external view returns (uint256) {
-        return getBias(_maxTime(), amount);
+        return getBias(maxTime(), amount);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -420,7 +428,7 @@ contract QuadraticIncreasingEscrow is
             }
         }
 
-        uint48 newEnd = uint48(_newLocked.start + CurveConstantLib.MAX_TIME);
+        uint48 newEnd = uint48(_newLocked.start + maxTime());
         int256 newSlope = lastPoint.slope + newLockSlope;
         int256 newBias = lastPoint.bias + newLockBias;
         int256 newDSlope = slopeChanges[newEnd] + newLockSlope;
@@ -429,7 +437,7 @@ contract QuadraticIncreasingEscrow is
 
         // The `tokenId` already exists..
         if (tokenLatestIndex > 0) {
-            uint48 _fromLockedEnd = uint48(_fromLocked.start + CurveConstantLib.MAX_TIME);
+            uint48 _fromLockedEnd = uint48(_fromLocked.start + maxTime());
 
             // uint48 ts = _fromLockedEnd <= uint48(block.timestamp)
             //     ? _fromLockedEnd
