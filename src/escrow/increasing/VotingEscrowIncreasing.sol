@@ -297,6 +297,11 @@ contract VotingEscrow is
         _locked[_tokenId] = newLocked;
     }
 
+    // TODO: import giorgi implementation
+    function isMature(uint256 _tokenId) public view returns (bool) {
+        return block.timestamp >= _locked[_tokenId].start + 104 weeks;
+    }
+
     /// @notice Merge two tokens - i.e  `from` into `_to`.
     /// @param _from The token id from which merge is occuring
     /// @param _to The token id to which `_from` is merging
@@ -310,13 +315,10 @@ contract VotingEscrow is
         LockedBalance memory oldLockedFrom = _locked[_from];
         LockedBalance memory oldLockedTo = _locked[_to];
 
-        uint48 oldLockedFromEnd = uint48(oldLockedFrom.start + CurveConstantLib.MAX_TIME);
-        uint48 oldLockedToEnd = uint48(oldLockedTo.start + CurveConstantLib.MAX_TIME);
-
         if (
-            (oldLockedTo.start != oldLockedFrom.start) &&
+            (oldLockedTo.start == oldLockedFrom.start) ||
             // TODO: GIORGI <= sign or < ?
-            (block.timestamp <= oldLockedToEnd || block.timestamp <= oldLockedFromEnd)
+            (isMature(_from) && isMature(_to))
         ) {
             revert TokensNotMatureOrStartMismatch();
         }

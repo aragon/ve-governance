@@ -367,6 +367,7 @@ contract QuadraticIncreasingEscrow is
     ) internal {
         // this implementation doesn't yet support manual checkpointing
         if (_tokenId == 0) revert InvalidTokenId();
+        uint maxTime = _maxTime();
 
         uint256 _globalPointLatestIndex = globalPointLatestIndex;
 
@@ -420,7 +421,7 @@ contract QuadraticIncreasingEscrow is
             }
         }
 
-        uint48 newEnd = uint48(_newLocked.start + CurveConstantLib.MAX_TIME);
+        uint48 newEnd = uint48(_newLocked.start + maxTime);
         int256 newSlope = lastPoint.slope + newLockSlope;
         int256 newBias = lastPoint.bias + newLockBias;
         int256 newDSlope = slopeChanges[newEnd] + newLockSlope;
@@ -429,7 +430,7 @@ contract QuadraticIncreasingEscrow is
 
         // The `tokenId` already exists..
         if (tokenLatestIndex > 0) {
-            uint48 _fromLockedEnd = uint48(_fromLocked.start + CurveConstantLib.MAX_TIME);
+            uint48 _fromLockedEnd = uint48(_fromLocked.start + maxTime);
 
             // uint48 ts = _fromLockedEnd <= uint48(block.timestamp)
             //     ? _fromLockedEnd

@@ -10,7 +10,6 @@ import {console2 as console} from "forge-std/console2.sol";
 import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 
 library BalanceLogicLibrary {
-
     using SafeCast for int256;
     using SafeCast for uint256;
     using SafeCast for int128;
@@ -26,7 +25,8 @@ library BalanceLogicLibrary {
     /// @return User point index
     function getPastUserPointIndex(
         mapping(uint256 => uint256) storage _tokenPointIndex,
-        mapping(uint256 => IEscrowCurveTokenStorage.TokenPointV2[1000000000]) storage _tokenPointHistory,
+        mapping(uint256 => IEscrowCurveTokenStorage.TokenPointV2[1000000000])
+            storage _tokenPointHistory,
         uint256 _tokenId,
         uint256 _timestamp
     ) internal view returns (uint256) {
@@ -41,7 +41,9 @@ library BalanceLogicLibrary {
         uint256 upper = _userEpoch;
         while (upper > lower) {
             uint256 center = upper - (upper - lower) / 2; // ceil, avoiding overflow
-            IEscrowCurveTokenStorage.TokenPointV2 storage userPoint = _tokenPointHistory[_tokenId][center];
+            IEscrowCurveTokenStorage.TokenPointV2 storage userPoint = _tokenPointHistory[_tokenId][
+                center
+            ];
             if (userPoint.ts == _timestamp) {
                 return center;
             } else if (userPoint.ts < _timestamp) {
@@ -66,7 +68,8 @@ library BalanceLogicLibrary {
     ) internal view returns (uint256) {
         if (_latestGlobalPointIndex == 0) return 0;
         // First check most recent balance
-        if (_globalPointHistory[_latestGlobalPointIndex].ts <= _timestamp) return (_latestGlobalPointIndex);
+        if (_globalPointHistory[_latestGlobalPointIndex].ts <= _timestamp)
+            return (_latestGlobalPointIndex);
         // Next check implicit zero balance
         if (_globalPointHistory[1].ts > _timestamp) return 0;
 
@@ -97,7 +100,8 @@ library BalanceLogicLibrary {
     /// @return User voting power
     function balanceOfNFTAt(
         mapping(uint256 => uint256) storage _tokenPointIndex,
-        mapping(uint256 => IEscrowCurveTokenStorage.TokenPointV2[1000000000]) storage _tokenPointHistory,
+        mapping(uint256 => IEscrowCurveTokenStorage.TokenPointV2[1000000000])
+            storage _tokenPointHistory,
         uint256 _tokenId,
         ILockedBalanceIncreasing.LockedBalance storage _locked,
         uint256 _t
@@ -105,12 +109,15 @@ library BalanceLogicLibrary {
         uint256 _epoch = getPastUserPointIndex(_tokenPointIndex, _tokenPointHistory, _tokenId, _t);
         // epoch 0 is an empty point
         if (_epoch == 0) return 0;
-        IEscrowCurveTokenStorage.TokenPointV2 memory lastPoint = _tokenPointHistory[_tokenId][_epoch];
-        
-        uint48 end = uint48(_locked.start + CurveConstantLib.MAX_TIME);
+        IEscrowCurveTokenStorage.TokenPointV2 memory lastPoint = _tokenPointHistory[_tokenId][
+            _epoch
+        ];
+
+        // TODO: parameterize the duration
+        uint48 end = uint48(_locked.start + 104 weeks);
         uint48 duration;
-        
-        if(lastPoint.ts <= end && uint48(_t) >= end) {
+
+        if (lastPoint.ts <= end && uint48(_t) >= end) {
             duration = end - lastPoint.ts;
         } else {
             duration = uint48(_t) - lastPoint.ts;
@@ -141,7 +148,7 @@ library BalanceLogicLibrary {
         int256 slope = _point.slope;
         uint256 ts = _point.ts; // changes in for loop.
         uint256 t_i = (ts / WEEK) * WEEK;
-        
+
         for (uint256 i = 0; i < 255; ++i) {
             t_i += WEEK;
             int256 dSlope = 0;
@@ -159,8 +166,9 @@ library BalanceLogicLibrary {
             ts = t_i;
         }
 
-        if(bias < 0) bias = 0;
+        if (bias < 0) bias = 0;
 
         return uint256(bias / 1e18); // TODO: USE safe cast
     }
 }
+
