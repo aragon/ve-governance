@@ -30,8 +30,8 @@ contract MockEscrow {
 contract QuadraticCurveBase is TestHelpers, ILockedBalanceIncreasing {
     using ProxyLib for address;
     QuadraticIncreasingEscrow internal curve;
-    Clock internal clock;
     MockEscrow internal escrow;
+    Clock internal clock;
 
     function setUp() public virtual override {
         super.setUp();
@@ -55,6 +55,12 @@ contract QuadraticCurveBase is TestHelpers, ILockedBalanceIncreasing {
             _who: address(this),
             _where: address(curve),
             _permissionId: curve.CURVE_ADMIN_ROLE()
+        });
+
+        DAO(payable(address(dao))).grant({
+            _who: address(this),
+            _where: address(clock),
+            _permissionId: clock.CLOCK_ADMIN_ROLE()
         });
 
         escrow.setCurve(curve);

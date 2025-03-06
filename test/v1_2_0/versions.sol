@@ -4,11 +4,11 @@ pragma solidity ^0.8.17;
 // import files here in your tests instead of from src
 
 // contracts
-import {QuadraticIncreasingEscrow, Clock, Lock, ExitQueue, VotingEscrow, SimpleGaugeVoter, SimpleGaugeVoterSetupV1_1_0 as SimpleGaugeVoterSetup} from "@voting/SimpleGaugeVoterSetup_v1_1_0.sol";
-import {GaugesDaoFactoryV1_1_0 as GaugesDaoFactory, Deployment, DeploymentParameters, TokenParameters, GaugePluginSet} from "@factory/GaugesDaoFactory_v1_1_0.sol";
+import {QuadraticIncreasingEscrow, Clock, Lock, ExitQueue, VotingEscrow, SimpleGaugeVoter, SimpleGaugeVoterSetupV1_2_0 as SimpleGaugeVoterSetup} from "@voting/SimpleGaugeVoterSetup_v1_2_0.sol";
+import {GaugesDaoFactoryV1_2_0 as GaugesDaoFactory, Deployment, DeploymentParameters, TokenParameters, GaugePluginSet} from "@factory/GaugesDaoFactory_v1_2_0.sol";
 
 // interfaces
-import {ISimpleGaugeVoterSetupParams} from "@voting/SimpleGaugeVoterSetup_v1_1_0.sol";
+import {ISimpleGaugeVoterSetupParams} from "@voting/SimpleGaugeVoterSetup_v1_2_0.sol";
 import {IEscrowCurveIncreasing, IEscrowCurveTokenStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
 import {IExitQueue, ITicket, IExitQueueErrorsAndEvents} from "@escrow-interfaces/IExitQueue.sol";
 import {ILock, IWhitelistErrors, IWhitelistEvents} from "@escrow-interfaces/ILock.sol";
@@ -16,4 +16,4 @@ import {IVotingEscrowIncreasing, IWithdrawalQueueErrors, ILockedBalanceIncreasin
 import {IGaugeVote, ISimpleGaugeVoterStorageEventsErrors} from "@voting/ISimpleGaugeVoter.sol";
 
 // other
-import {DeployGaugesV1_1_0 as DeployGauges} from "script/deploy/DeployGauges_v1_1_0.s.sol";
+import {DeployGaugesV1_2_0 as DeployGauges} from "script/deploy/DeployGauges_v1_2_0.s.sol";

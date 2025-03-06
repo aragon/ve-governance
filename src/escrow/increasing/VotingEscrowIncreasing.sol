@@ -69,7 +69,7 @@ contract VotingEscrow is
                               Helper Contracts
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Address of the underying ERC20 token.
+    /// @notice Address of the underlying ERC20 token.
     /// @dev Only tokens with 18 decimals and no transfer fees are supported
     address public token;
 

@@ -3,7 +3,6 @@ pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
 
-import {Clock} from "@clock/Clock.sol";
 import {DaoUnauthorized} from "@aragon/osx/core/utils/auth.sol";
 import {DAO} from "@mocks/MockDAO.sol";
 
@@ -15,7 +14,6 @@ contract TestHelpers is Test {
     using ProxyLib for address;
 
     DAO dao;
-    Clock clock;
 
     address constant OSX_ANY_ADDR = address(type(uint160).max);
 
@@ -24,13 +22,6 @@ contract TestHelpers is Test {
 
     function setUp() public virtual {
         dao = createTestDAO(address(this));
-        clock = _deployClock(address(dao));
-    }
-
-    function _deployClock(address _dao) internal returns (Clock) {
-        address impl = address(new Clock());
-        bytes memory initCalldata = abi.encodeWithSelector(Clock.initialize.selector, _dao);
-        return Clock(impl.deployUUPSProxy(initCalldata));
     }
 
     function _authErr(

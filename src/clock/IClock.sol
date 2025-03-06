@@ -56,7 +56,7 @@ interface IClock {
 
     function epochNextCheckpointTs() external view returns (uint256);
 
-    function epochCurrentWeekTs() external view returns(uint256);
+    function epochCurrentWeekTs() external view returns (uint256);
 
     function resolveEpochNextCheckpointTs(uint256 timestamp) external pure returns (uint256);
 }
@@ -80,9 +80,11 @@ interface IClockSeason is ISeasonEvents, ISeasonErrors {
         uint16 seasonIndex
     ) external view returns (uint48 startTimestamp, uint48 endTimestamp);
 
-    function seasonTsAt(uint48 _timestamp) external view returns (uint48 startTimestamp, uint48 endTimestamp);
+    function seasonTsAt(
+        uint48 _timestamp
+    ) external view returns (uint48 startTimestamp, uint48 endTimestamp);
 
     function seasonIndexAt(uint48 _timestamp) external view returns (uint16 seasonIndex);
 
-    function newSeason() external returns(uint48 startTimestamp, uint16 seasonIndex);
+    function newSeason() external returns (uint48 startTimestamp, uint16 seasonIndex);
 }

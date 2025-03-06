@@ -43,7 +43,7 @@ contract MultisigReceiver is GhettoMultisig {
  * 4. A more robust suite for admininstration of the contracts
  * 5. Ability to connect to an existing deployment and test on the real network
  */
-contract TestE2EV1_1_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveTokenStorage {
+contract TestE2EV1_2_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveTokenStorage {
     error VotingInactive();
     error OnlyEscrow();
     error GaugeDoesNotExist(address _pool);
@@ -51,6 +51,7 @@ contract TestE2EV1_1_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
     error NoVotingPower();
     error NotWhitelisted();
     error NothingToSweep();
+    error SeasonTooShort();
 
     GaugesDaoFactory factory;
 
@@ -1274,6 +1275,188 @@ contract TestE2EV1_1_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
 
             // no locks
             assertEq(lock.totalSupply(), 0, "Lock should have no tokens");
+        }
+    }
+
+    function _startNewSeason() public {
+        IDAO.Action[] memory actions = new IDAO.Action[](2);
+        actions[0] = IDAO.Action({
+            to: address(clock),
+            value: 0,
+            data: abi.encode(clock.newSeason.selector)
+        });
+
+        _buildSignProposal(actions);
+    }
+
+    function testSeasonsLifeCycle() public {
+        // we are in the voting period based on the pinned block so let's wait till the next epoch
+        uint nextEpoch = clock.epochStartTs();
+        vm.warp(nextEpoch);
+        epochStartTime = block.timestamp;
+
+        assertEq(0, clock.currentSeasonIndex(), "SeasonIndex should be 0");
+        (uint start, uint end) = clock.currentSeasonTs();
+        assertEq(0, start, "Season start timestamp should be 0");
+        assertEq(0, end, "Season end timestamp should be 0");
+
+        // first we give alice and carol some tokens of the underlying
+        {
+            vm.startPrank(distributor);
+            {
+                token.transfer(alice, balanceAlice);
+                token.transfer(carol, balanceCarol);
+            }
+            vm.stopPrank();
+        }
+
+        {
+            goToEpochStartPlus(1 days);
+
+            vm.startPrank(alice);
+            {
+                token.approve(address(escrow), balanceAlice);
+                escrow.createLock(depositAlice0);
+            }
+            vm.stopPrank();
+
+            goToEpochStartPlus(2 days);
+
+            _startNewSeason();
+
+            assertEq(0, clock.currentSeasonIndex(), "SeasonIndex should still be 0");
+
+            // check the token points written
+            TokenPoint memory tp1_1 = curve.tokenPointHistory(1, 1);
+
+            assertEq(tp1_1.bias, depositAlice0, "Alice point 1 should have the correct bias");
+
+            assertEq(
+                tp1_1.checkpointTs,
+                epochStartTime + clock.checkpointInterval(),
+                "Alice point should have the correct checkpoint"
+            );
+
+            assertEq(
+                tp1_1.writtenTs,
+                epochStartTime + 1 days,
+                "Alice point should have the correct written timestamp"
+            );
+
+            // start date in the future - alice will not be warm as his lock is not active yet
+            assertFalse(curve.isWarm(1), "Alice should not be warm");
+            assertEq(escrow.votingPower(1), 0, "Alice should have no voting power");
+
+            // 1 day before the end of the interval
+            goToEpochStartPlus(clock.checkpointInterval() - 1);
+
+
+            vm.startPrank(carol);
+            {
+                token.approve(address(escrow), balanceCarol);
+                escrow.createLock(depositAliceBob);
+            }
+            vm.stopPrank();
+
+            // check the token points written
+            TokenPoint memory tp2_1 = curve.tokenPointHistory(2, 1);
+
+            assertEq(tp2_1.bias, depositAliceBob, "Carol point 1 should have the correct bias");
+
+            assertEq(
+                tp2_1.checkpointTs,
+                epochStartTime + clock.checkpointInterval(),
+                "Carol point should have the correct checkpoint"
+            );
+
+            assertEq(
+                tp2_1.writtenTs,
+                epochStartTime + clock.checkpointInterval() - 1,
+                "Carol point should have the correct written timestamp"
+            );
+
+            assertFalse(curve.isWarm(2), "Carol should not be warm");
+            assertEq(escrow.votingPower(2), 0, "Carol should have no voting power");
+
+            assertEq(
+                escrow.locked(1).start,
+                epochStartTime + clock.checkpointInterval(),
+                "Alice should start at the next checkpoint"
+            );
+            assertEq(
+                escrow.locked(2).start,
+                epochStartTime + clock.checkpointInterval(),
+                "Carol should start at the next checkpoint"
+            );
+
+            // fast forward to the checkpoint interval alice is warm and has voting power, carol is not
+            goToEpochStartPlus(clock.checkpointInterval());
+
+            assertEq(1, clock.currentSeasonIndex(), "SeasonIndex should be 1");
+
+            assertEq(escrow.votingPower(1), depositAlice0, "Alice should have voting power");
+            assertTrue(curve.isWarm(1), "Alice should be warm");
+
+            assertEq(escrow.votingPower(2), 0, "Carol should not have voting power");
+            assertFalse(curve.isWarm(2), "Carol should not be warm");
+
+            // fast forward to the checkpoint interval carol is warm
+            goToEpochStartPlus(clock.checkpointInterval() + 3 days);
+
+            assertEq(escrow.votingPower(1), 266946049122870400000, "Alice vp should have more voting power");
+
+            assertTrue(curve.isWarm(2), "Carol should be warm");
+            assertEq(escrow.votingPower(2), 266946049122870400000, "Carol vp should have more voting power");
+
+            // start a withdrawal that finish before the new season
+            vm.startPrank(alice);
+            {
+                lock.approve(address(escrow), 1);
+                escrow.beginWithdrawal(1);
+            }
+            vm.stopPrank();
+
+            goToEpochStartPlus(clock.checkpointInterval() * 2);
+
+            assertEq(escrow.votingPower(1), 0, "Alice should have no voting power");
+
+            _startNewSeason();
+
+            goToEpochStartPlus(clock.checkpointInterval() * 2 + 6 days);
+            
+            // start a withdrawal that finish after the new season
+            vm.startPrank(carol);
+            {
+                lock.approve(address(escrow), 2);
+                escrow.beginWithdrawal(2);
+            }
+            vm.stopPrank();
+
+            assertEq(escrow.votingPower(2), 347120709266838400000, "Carol vp should still be not zero");
+
+            goToEpochStartPlus(clock.checkpointInterval() * 3);
+
+            assertEq(2, clock.currentSeasonIndex(), "SeasonIndex should be 2");
+
+            assertEq(escrow.votingPower(2), 0, "Carol should have no voting power");
+
+            goToEpochStartPlus(clock.checkpointInterval() * 3 + 2 days + 1);
+
+            assertEq(escrow.votingPower(1), 0, "Alice should have no voting power");
+            assertEq(escrow.votingPower(2), 0, "Carol should have no voting power");
+
+            vm.startPrank(alice);
+            {
+                escrow.withdraw(1);
+            }
+            vm.stopPrank();
+
+            vm.startPrank(carol);
+            {
+                escrow.withdraw(2);
+            }
+            vm.stopPrank();
+
         }
     }
 

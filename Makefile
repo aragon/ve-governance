@@ -24,11 +24,16 @@ test-upgrade-110 :; forge test --match-path "test/v1_1_0/upgrade/**/*.sol" --for
 #### Fork testing ####
 
 # Fork testing - mode sepolia
+
 ft-mode-sepolia-fork-100 :; forge test --match-contract TestE2E \
 	--rpc-url https://sepolia.mode.network \
 	-vv
 
 ft-mode-sepolia-fork-110 :; forge test --match-contract TestE2EV1_1_0 \
+	--rpc-url https://sepolia.mode.network \
+	-vvvvv
+
+ft-mode-sepolia-fork-120 :; forge test --match-contract TestE2EV1_2_0 \
 	--rpc-url https://sepolia.mode.network \
 	-vvvvv
 
@@ -41,15 +46,41 @@ ft-mode-fork-110 :; forge test --match-contract TestE2EV1_1_0 \
 	--rpc-url https://mainnet.mode.network/ \
 	-vvvvv
 
+ft-mode-fork-120 :; forge test --match-contract TestE2EV1_2_0 \
+	--rpc-url https://mainnet.mode.network/ \
+	-vvvvv
 
-#### Deployments ####
+# Fork testing - sepolia
+ft-sepolia-fork-100 :;  forge test --match-contract TestE2E \
+	--rpc-url $(RPC_URL) \
+	-vvvvv
 
-deploy-preview-mode-sepolia-110 :; forge script DeployGaugesV1_1_0 \
-  --rpc-url https://sepolia.mode.network \
+ft-sepolia-fork-110 :; forge test --match-contract TestE2EV1_1_0 \
+	--rpc-url $(RPC_URL) \
+	-vvvvv
+
+ft-sepolia-fork-120 :; forge test --match-contract TestE2EV1_2_0 \
+	--rpc-url $(RPC_URL) \
+	-vvvvv
+
+## Upgrade testing
+ft-mode-upgrade-fork :; forge test --match-contract UpgradeModeTo110 \
+	--rpc-url https://mainnet.mode.network/ \
+	--fork-block-number 18697900 \
+	-vvvv
+
+ft-mode-sepolia-upgrade-fork :; forge test --match-contract UpgradeModeTo110 \
+	--rpc-url https://sepolia.mode.network/ \
+	--fork-block-number 26050695 \
+	--force \
+	-vvvv
+
+upgrade-preview-mode-sepolia :; forge script UpgradeModeTo110 \
+	--rpc-url https://sepolia.mode.network \
 	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
-	-vvvvv	
+	-vvvvv
 
-deploy-mode-sepolia-110 :; forge script DeployGaugesV1_1_0 \
+upgrade-mode-sepolia :; forge script UpgradeModeTo110 \
 	--rpc-url https://sepolia.mode.network \
 	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
 	--broadcast \
@@ -58,3 +89,67 @@ deploy-mode-sepolia-110 :; forge script DeployGaugesV1_1_0 \
 	--verifier-url https://sepolia.explorer.mode.network/api\? \
 	-vvvvv
 
+# on an anvil fork will run the upgrade script
+anvil-fork-mode :; anvil -f https://mainnet.mode.network --fork-block-number 18697900 # --auto-impersonate
+upgrade-fork-mode :; forge script UpgradeModeTo110 \
+	--rpc-url http://localhost:8545 \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	--broadcast \
+	-vvvvv
+
+upgrade-preview-mode :; forge script UpgradeModeTo110 \
+	--rpc-url https://mainnet.mode.network \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	-vvvvv
+
+upgrade-mode :; forge script UpgradeModeTo110 \
+	--rpc-url https://mainnet.mode.network \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	--broadcast \
+	--verify \
+	--verifier blockscout \
+	--verifier-url https://explorer.mode.network/api\? \
+	-vvvvv
+
+#### Deployments ####
+deploy-preview-mode-sepolia-110 :; forge script DeployGaugesV1_1_0 \
+  --rpc-url https://sepolia.mode.network \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	-vvvvv	
+
+deploy-mode-sepolia :; forge script DeployGauges \
+	--rpc-url https://sepolia.mode.network \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	--broadcast \
+	--verify \
+	--verifier blockscout \
+	--verifier-url https://sepolia.explorer.mode.network/api\? \
+	-vvvvv
+
+### Other scripts ###
+seed-preview-mode-sepolia :; forge script SeedState \
+	--rpc-url https://sepolia.mode.network \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	-vvvvv
+
+seed-mode-sepolia :; forge script SeedState \
+	--rpc-url https://sepolia.mode.network \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	--broadcast \
+	--verify \
+	--etherscan-api-key $(ETHERSCAN_API_KEY) \
+	-vvvvv
+
+deploy-preview-ethereum-sepolia :; forge script DeployGauges \
+  --rpc-url $(RPC_URL) \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	-vvvvv	
+
+deploy-ethereum-sepolia :; forge script DeployGauges \
+	--rpc-url $(RPC_URL) \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	--broadcast \
+	--verify \
+	--verifier blockscout \
+	--etherscan-api-key $(ETHERSCAN_API_KEY) \
+	-vvvvv

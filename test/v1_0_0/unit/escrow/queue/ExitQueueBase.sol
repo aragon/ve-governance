@@ -9,7 +9,7 @@ import {DAO, createTestDAO} from "@mocks/MockDAO.sol";
 import {DaoUnauthorized} from "@aragon/osx/core/utils/auth.sol";
 import {MockERC20} from "@mocks/MockERC20.sol";
 
-import {ExitQueue, IExitQueue, ITicket, IExitQueueErrorsAndEvents} from "../../../versions.sol";
+import {Clock, ExitQueue, IExitQueue, ITicket, IExitQueueErrorsAndEvents} from "../../../versions.sol";
 
 contract MockEscrow {
     struct LockedBalance {
@@ -41,6 +41,7 @@ contract ExitQueueBase is TestHelpers, IExitQueueErrorsAndEvents {
     ExitQueue queue;
     MockERC20 token;
     MockEscrow escrow;
+    Clock clock;
 
     function _deployExitQueue(
         address _escrow,
@@ -63,6 +64,10 @@ contract ExitQueueBase is TestHelpers, IExitQueueErrorsAndEvents {
         super.setUp();
         token = new MockERC20();
         escrow = new MockEscrow(address(token));
+        address clockImpl = address(new Clock());
+        bytes memory initClockCalldata = abi.encodeWithSelector(Clock.initialize.selector, dao);
+        clock = Clock(clockImpl.deployUUPSProxy(initClockCalldata));
+
         queue = _deployExitQueue(address(escrow), 0, address(dao), 0, address(clock), 1);
         dao.grant({
             _who: address(this),
