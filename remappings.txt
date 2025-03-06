@@ -16,12 +16,14 @@ utils/=test/utils/
 @utils/=src/utils/
 @helpers/=test/helpers/
 @clock/=src/clock/
+@factory/=src/factory/
   
 @ensdomains/ens-contracts/=lib/ens-contracts/
 ens-contracts/=lib/ens-contracts/contracts/
 
 @openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/
 @openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/
+@foundry-upgrades/=lib/openzeppelin-foundry-upgrades/src/
 openzeppelin-contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/
 openzeppelin-contracts/=lib/openzeppelin-contracts/
 erc4626-tests/=lib/openzeppelin-contracts-upgradeable/lib/erc4626-tests/
