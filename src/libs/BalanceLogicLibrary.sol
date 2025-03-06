@@ -92,26 +92,25 @@ library BalanceLogicLibrary {
     /// @param _tokenPointIndex State of all token's latest indexes
     /// @param _tokenPointHistory State of all user point history
     /// @param _tokenId NFT for lock
-    /// @param _locked The current locked balance of the tokenId.
     /// @param _t Epoch time to return voting power at
+    /// @param _end The time at which lock ends.
     /// @return User voting power
     function balanceOfNFTAt(
         mapping(uint256 => uint256) storage _tokenPointIndex,
         mapping(uint256 => IEscrowCurveTokenStorage.TokenPointV2[1000000000]) storage _tokenPointHistory,
         uint256 _tokenId,
-        ILockedBalanceIncreasing.LockedBalance storage _locked,
-        uint256 _t
+        uint256 _t,
+        uint48 _end
     ) external view returns (uint256) {
         uint256 _epoch = getPastUserPointIndex(_tokenPointIndex, _tokenPointHistory, _tokenId, _t);
         // epoch 0 is an empty point
         if (_epoch == 0) return 0;
         IEscrowCurveTokenStorage.TokenPointV2 memory lastPoint = _tokenPointHistory[_tokenId][_epoch];
         
-        uint48 end = uint48(_locked.start + CurveConstantLib.MAX_TIME);
         uint48 duration;
         
-        if(lastPoint.ts <= end && uint48(_t) >= end) {
-            duration = end - lastPoint.ts;
+        if(lastPoint.ts <= _end && uint48(_t) >= _end) {
+            duration = _end - lastPoint.ts;
         } else {
             duration = uint48(_t) - lastPoint.ts;
         }

@@ -270,8 +270,8 @@ contract Clock is IClock, DaoAuthorizable, UUPSUpgradeable, IClockSeason {
 
     /// @notice Creates a new season
     /// @dev The season duration must be greater than EPOCH_DURATION
-    function newSeason() public auth(CLOCK_ADMIN_ROLE) {
-        uint256 startTime = IClock(this).epochNextCheckpointTs();
+    function newSeason() public auth(CLOCK_ADMIN_ROLE) returns(uint48, uint16) {
+        uint48 startTime = uint48(IClock(this).epochNextCheckpointTs());
 
         if (seasonTimestamps.length > 0) {
             uint48 lastSeason = seasonTimestamps[seasonTimestamps.length - 1];
@@ -279,9 +279,14 @@ contract Clock is IClock, DaoAuthorizable, UUPSUpgradeable, IClockSeason {
                 revert SeasonTooShort();
             }
         }
-        seasonTimestamps.push(uint48(startTime));
 
-        emit SeasonStarted(uint16(seasonTimestamps.length), uint48(startTime));
+        seasonTimestamps.push(startTime);
+
+        uint16 seasonIndex = uint16(seasonTimestamps.length);
+
+        emit SeasonStarted(seasonIndex, startTime);
+
+        return (startTime, seasonIndex);
     }
 
     /*///////////////////////////////////////////////////////////////

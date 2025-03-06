@@ -13,16 +13,13 @@ pragma solidity ^0.8.0;
 /// Below are the shared coefficients for the linear and quadratic terms
 library CurveConstantLib {
     /// @notice Helps to define how the curve should be changing.
-    uint256 internal constant MAX_TIME = 12 * 7 * 24 * 60 * 60; // 12 weeks
-
     int256 internal constant SHARED_CONSTANT_COEFFICIENT = 1e18;
 
-    int256 internal constant SHARED_LINEAR_COEFFICIENT = int256(1e18 / MAX_TIME);
+    /// 1 / (52 * SECONDS_IN_2_WEEKS)
+    int256 internal constant SHARED_LINEAR_COEFFICIENT = 15898453398;
     
     int256 internal constant SHARED_QUADRATIC_COEFFICIENT = 0;
 
     /// @dev the maxiumum number of epochs the cure can keep increasing
-    uint256 internal constant MAX_EPOCHS = 6;
-    
-    uint256 public constant WEEK = 1 weeks;
+    uint256 internal constant MAX_EPOCHS = 52;    
 }

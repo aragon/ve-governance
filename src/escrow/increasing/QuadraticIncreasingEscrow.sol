@@ -134,7 +134,7 @@ contract QuadraticIncreasingEscrow is
             revert UpgradeNotPossible();
         }
 
-        IClockSeason(clock).newSeason();
+        (uint48 seasonStartTime, ) = IClockSeason(clock).newSeason();
 
         uint256 totalAmount = totalLocked - exitAmount;
         int256 totalBias = _getConstantCoeff(totalAmount);
@@ -143,11 +143,11 @@ contract QuadraticIncreasingEscrow is
         GlobalPoint memory lastPoint = GlobalPoint({
             bias: totalBias,
             slope: totalSlope,
-            ts: uint48(block.timestamp) // TODO: use seasonStarTtIME (talk to Javi about whether newSeason should return timestamp or index)
+            ts: seasonStartTime     
         });
 
         // make slopeChanges 2 dir mapping. 
-        // slopeChanges[seasonStarTtIME + maxTime()] = totalSlope;
+        slopeChanges[seasonStartTime + maxTime()] = totalSlope;
     }
 
     /*//////////////////////////////////////////////////////////////
