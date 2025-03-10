@@ -1,0 +1,150 @@
+= Aragon VE Governance
+
+== Description
+
+Aragon's ve-governance system is a *tokenomics-first governance framework* designed for onchain organizations. It enables DAOs to *align user incentives with the protocol*, *reward long-term participants*, and *build an active ecosystem* using staking, dynamic voting power, emissions, and bribes.
+
+Previously, DAOs looking to implement VE mechanics needed to fork complex DeFi protocols, which can be *difficult to customize* and *risky to modify* without a rock-solid grasp of the complex, onchain mechanics. With Aragon VE, we provide:
+
+- *Customizable Contracts* – Tailor escrow, voting, and reward mechanisms to your DAO.
+- *Deployment Support* – Our team has hands-on experience from projects like link:https://gov.mode.network[Mode] and link:https://vote.puffer.fi[Puffer].
+- *UI Kit* – A ready-to-use governance UI that can be easily tweaked for a new organization.
+- *Process Integrations* – We have ready-to-go integrations with service providers to ease the operational burden of setting up and managing incentives.
+
+If you're interested in building a VE governance system for your organization, you can:
+
+- Follow the link:https://github.com/aragon/ve-governance/blob/develop/README.md[README] for local deployment (all contracts are FOSS).
+- link:https://www.aragon.org/get-assistance-form[Contact the Aragon R&D team] for a *fully managed deployment*.
+
+---
+
+== 📖 New to VE Governance?
+
+Vote-Escrow (VE) governance is a *proven model* for aligning user incentives in token-based communities. It was popularized in DeFi, allowing protocols to *reward long-term stakers with increasing governance power*.
+
+=== How it Works
+
+1. *Users lock tokens* in an escrow contract.
+2. *They receive veTokens*, which represent their voting power.
+3. *Voting power scales with lock duration* – longer locks mean *higher governance weight*.
+4. *Votes influence protocol incentives*, typically directing emissions toward specific pools or initiatives.
+
+To dive deeper into VE mechanics, check out these resources:
+
+- link:https://x.com/TheTakenUser/status/1884992651428340083[Why Tokenomics-Driven Governance via Gauges & VE Works]
+- link:https://x.com/AragonProject/status/1892621862540071244[Aragon’s Take on DAO Governance]
+- link:https://mode.mirror.xyz/p8IasF_R3wFhRZmmoP6bf8gHQ-ZfBK6O0pMXBQBOmOw[Mode Season 3: The History of VE Governance Protocols]
+- link:https://github.com/jordaniza/ve-explainer/blob/main/README.md[Mathematics of VE Tokens]
+
+---
+
+== 🛠 Understanding the VE System
+
+=== Core VE Concepts
+
+Vote-escrow systems share a set of common mechanics, which can be *customized* based on DAO requirements:
+
+- *🔒 Locking & Escrow* – Users deposit an ERC20 token in an escrow contract to mint veTokens (can be veNFT or veERC20).
+- *📊 Voting Power & Time* – Voting power is a function of the lock duration (longer locks often mean more influence).
+- *⏳ Epochs & Voting* – Governance decisions are made in fixed *voting cycles (epochs)*.
+- *📈 Gauges & Incentives* – veToken holders vote on "gauges," which direct *emissions, rewards, or protocol incentives*.
+- *🚪 Exit Queue (Optional)* – DAOs can define cooldown periods, minimum lock times, and exit fees for unstaking.
+
+---
+
+== 🏗 How Aragon’s VE System Works
+
+Unlike traditional ve implementations, Aragon’s system is:
+
+✅ *Modular & Customizable* – Each component (escrow, voting, rewards) is separate and configurable.  
+✅ *Designed for Progressive Decentralization* – DAOs can start with a multisig and evolve governance over time.  
+✅ *Production-Ready* – Used in *Mode* and *Puffer* (link:https://gov.mode.network[Mode Governance], link:https://vote.puffer.fi[Puffer Voting]).  
+✅ *Comes with a UI & Integrations* – Ready-to-use frontends and integrations for bribes & emissions.
+
+=== Governance Core
+
+- *Multisig Governance* – The DAO can start with a multisig and transition to full onchain governance.
+- *Aragon DAO Contract* – Flexible permission management, *supporting both token-based and multisig models*.
+- *Factory Contract* – Stores contract references for streamlined deployments.
+
+=== Voting & Escrow Contracts
+
+- *Voting Escrow* – Handles staking and computes voting power.
+- *Gauge Voter* – Allows veToken holders to vote on governance proposals (typically emissions).
+- *Escrow Curve* – Defines how voting power changes over time.
+- *Exit Queue* – Configurable unstaking mechanics (cooldowns, fees, min lock periods).
+- *Clock* – Standardizes voting epochs and voting windows.
+- *veNFT Lock* – ERC721 representation of staked positions.
+
+[NOTE]
+====
+*Need a ready-to-use UI?*  
+Aragon offers a *UI Kit for VE builds*, along with integrations for *bribes and reward distribution*.  
+link:https://www.aragon.org/get-assistance-form[Contact us] for more details.
+====
+
+---
+
+== ⚙️ Key Governance Parameters
+
+Your DAO can configure *governance mechanics* based on its needs. Below are the key parameters:
+
+=== Voting Power Curve
+
+[options="header"]
+|===
+| Parameter | Description | Considerations | Example
+| *Max Multiplier* | Max boost for long-term locks | Too large favors whales; too small reduces incentive | 5x
+| *Max Duration* | Time to reach max multiplier | Too fast removes incentive to hold, too slow discourages staking | 4 years
+| *Warmup Period* | Time after locking before voting is allowed | Prevents timing exploits | 24 hours
+|===
+
+=== Exit Queue
+
+[options="header"]
+|===
+| Parameter | Description | Considerations | Example
+| *Cooldown* | Delay before unstaking is allowed | Prevents last-minute vote manipulation | 3 days
+| *Min Lock* | Minimum staking duration | Helps prevent governance instability | 2 months
+| *Exit Fee* | Percentage tax on unstaking | Discourages short-term farming | 1%
+|===
+
+=== Epoch & Voting Configurations
+
+[options="header"]
+|===
+| Parameter | Description | Considerations | Example
+| *Epoch Duration* | Total voting cycle | Short epochs increase admin work; long epochs create voter apathy | 2 weeks
+| *Voting Period* | Duration of active voting | Needs to be long enough for participation | 1 week
+| *Distribution Period* | Time for emission allocation | Allows protocols to process rewards | 1 week
+| *Checkpoint Intervals* | Frequency of voting power updates | Recommended to keep fixed | 1 week
+|===
+
+---
+
+== 🔄 Workflow Breakdown
+
+=== Escrow Process
+
+. *Users lock tokens* into the escrow contract.
+. *A veNFT (or veERC20) is minted* representing the staked position.
+. *Voting power starts at a base level and increases over time*.
+. *Users must wait out a warmup period* before voting.
+. *To unstake, users enter the exit queue* and wait for the cooldown period before withdrawing.
+
+=== Voting Process
+
+. *Administrators define voting "gauges"*.
+. *Voting cycles follow fixed epochs*:
+  .. *Voting Phase* (e.g., 1 week) – Users vote on gauges.
+  .. *Distribution Phase* (e.g., 1 week) – Votes are locked, and emissions are distributed.
+. *Users can reset votes* to unlock their stake.
+. *Voting power updates happen at fixed intervals*.
+
+---
+
+== 🔗 Next Steps
+
+- *Developers:* Follow the link:https://github.com/aragon/ve-governance/blob/develop/README.md[README] to deploy the contracts locally.
+- *Projects & DAOs:* link:https://www.aragon.org/get-assistance-form[Contact the Aragon R&D team] for managed deployment and governance design.
+- *Community:* Join our link:https://discord.gg/aragonorg[Discord] for support and discussions.
