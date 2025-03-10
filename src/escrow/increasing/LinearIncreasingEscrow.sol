@@ -4,12 +4,11 @@ pragma solidity ^0.8.17;
 // interfaces
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
-import {IVotingEscrowIncreasing as IVotingEscrow} from "@escrow-interfaces/IVotingEscrowIncreasing.sol";
-import {IEscrowCurveIncreasing as IEscrowCurve, IEscrowCurveGlobal} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
-import {IEscrowCurveCore, IEscrowCurveToken} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
+import {IVotingEscrowIncreasing as IVotingEscrow} from "@escrow-interfaces/IVotingEscrowIncreasing_v1_4_0.sol";
+import {IEscrowCurveIncreasing as IEscrowCurve, IEscrowCurveGlobal, IEscrowCurveCore, IEscrowCurveToken} from "@escrow-interfaces/IEscrowCurveIncreasing_v1_4_0.sol";
 import {IERC721EnumerableMintableBurnable as IERC721EMB} from "./interfaces/IERC721EMB.sol";
 
-import {IClockUser, IClock, IClockSeason} from "@clock/IClock.sol";
+import {IClockUser, IClock, IClockSeason} from "@clock/IClock_v1_4_0.sol";
 
 // libraries
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -26,8 +25,8 @@ import {PausableUpgradeable as Pausable} from "@openzeppelin/contracts-upgradeab
 
 import {console2 as console} from "forge-std/console2.sol";
 
-/// @title Quadratic Increasing Escrow
-contract QuadraticIncreasingEscrow is
+/// @title Linear Increasing Escrow
+contract LinearIncreasingEscrow is
     IEscrowCurve,
     IClockUser,
     ReentrancyGuard,

@@ -5,11 +5,8 @@ pragma solidity ^0.8.17;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {IVotingEscrowIncreasing as IVotingEscrow} from "@escrow-interfaces/IVotingEscrowIncreasing.sol";
-import {IEscrowCurveIncreasing as IEscrowCurve, IEscrowCurveGlobal} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
-import {IEscrowCurveCore, IEscrowCurveToken} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
-import {IERC721EnumerableMintableBurnable as IERC721EMB} from "./interfaces/IERC721EMB.sol";
-
-import {IClockUser, IClock, IClockSeason} from "@clock/IClock.sol";
+import {IEscrowCurveIncreasing as IEscrowCurve} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
+import {IClockUser, IClock} from "@clock/IClock.sol";
 
 // libraries
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -21,10 +18,6 @@ import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {ReentrancyGuardUpgradeable as ReentrancyGuard} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
-import {BalanceLogicLibrary} from "../../libs/BalanceLogicLibrary.sol";
-import {PausableUpgradeable as Pausable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
-
-import {console2 as console} from "forge-std/console2.sol";
 
 /// @title Quadratic Increasing Escrow
 contract QuadraticIncreasingEscrow is
@@ -50,8 +43,8 @@ contract QuadraticIncreasingEscrow is
     /// @notice The Clock contract address
     address public clock;
 
-    /// @notice tokenId => latest index: incremented on a per-tokenId basis
-    mapping(uint256 => uint256) public tokenPointLatestIndex;
+    /// @notice tokenId => point epoch: incremented on a per-tokenId basis
+    mapping(uint256 => uint256) public tokenPointIntervals;
 
     /// @notice The warmup period for the curve
     uint48 public warmupPeriod;
@@ -62,15 +55,8 @@ contract QuadraticIncreasingEscrow is
     mapping(uint256 => TokenPoint[1_000_000_000]) internal _tokenPointHistory;
 
     /*//////////////////////////////////////////////////////////////
-                                ADDED: 0.2.0
+                                MATH
     //////////////////////////////////////////////////////////////*/
-
-    /// @dev The latest global point index.
-    uint256 public globalPointLatestIndex;
-
-    // endTime => summed up slopes at that endTime
-    mapping(uint256 => int256) public slopeChanges;
-    mapping(uint256 => GlobalPoint) internal _globalPointHistory;
 
     /// @dev precomputed coefficients of the quadratic curve
     int256 private constant SHARED_QUADRATIC_COEFFICIENT =
@@ -82,8 +68,6 @@ contract QuadraticIncreasingEscrow is
         CurveConstantLib.SHARED_CONSTANT_COEFFICIENT;
 
     uint256 private constant MAX_EPOCHS = CurveConstantLib.MAX_EPOCHS;
-
-    error UpgradeNotPossible();
 
     /*//////////////////////////////////////////////////////////////
                               INITIALIZATION
@@ -110,65 +94,30 @@ contract QuadraticIncreasingEscrow is
         // other initializers are empty
     }
 
-    function initializeFrom(bool exitAmountIncluded, uint256 exitAmount) public {
-        // schedule the reset at next week's start.
-        // store global point at that time.
-        // pause all operations till that moment.
-        //
-
-        if (exitAmountIncluded) {
-            // If `exitAmount` is passed, make sure the escrow is paused
-            // so that incorrect upgrade doesn't go unnoticed. Otherwise,
-            // upgrade transaction might be front-run by `beginWithdrawal`
-            // causing the `exitAmount` to be wrong.
-            if (!Pausable(escrow).paused()) {
-                revert UpgradeNotPossible();
-            }
-        } else {
-            exitAmount = IVotingEscrow(escrow).currentExittingAmount();
-        }
-
-        uint256 totalLocked = IVotingEscrow(escrow).totalLocked();
-
-        if (totalLocked < exitAmount) {
-            revert UpgradeNotPossible();
-        }
-
-        (uint48 seasonStartTime, ) = IClockSeason(clock).newSeason();
-
-        uint256 totalAmount = totalLocked - exitAmount;
-        int256 totalBias = _getConstantCoeff(totalAmount);
-        int256 totalSlope = _getLinearCoeff(totalAmount);
-
-        GlobalPoint memory lastPoint = GlobalPoint({
-            bias: totalBias,
-            slope: totalSlope,
-            ts: seasonStartTime
-        });
-
-        // make slopeChanges 2 dir mapping.
-        slopeChanges[seasonStartTime + maxTime()] = totalSlope;
-    }
-
     /*//////////////////////////////////////////////////////////////
                               CURVE COEFFICIENTS
     //////////////////////////////////////////////////////////////*/
 
+    /// @return The coefficient for the quadratic term of the quadratic curve, for the given amount
+    function _getQuadraticCoeff(uint256 amount) internal pure returns (int256) {
+        return (SignedFixedPointMath.toFP(amount.toInt256()).mul(SHARED_QUADRATIC_COEFFICIENT));
+    }
+
     /// @return The coefficient for the linear term of the quadratic curve, for the given amount
     function _getLinearCoeff(uint256 amount) internal pure returns (int256) {
-        return int256(amount) * SHARED_LINEAR_COEFFICIENT;
+        return (SignedFixedPointMath.toFP(amount.toInt256())).mul(SHARED_LINEAR_COEFFICIENT);
     }
 
     /// @return The constant coefficient of the quadratic curve, for the given amount
     /// @dev In this case, the constant term is 1 so we just case the amount
     function _getConstantCoeff(uint256 amount) public pure returns (int256) {
-        return int256(amount) * SHARED_CONSTANT_COEFFICIENT;
+        return (SignedFixedPointMath.toFP(amount.toInt256())).mul(SHARED_CONSTANT_COEFFICIENT);
     }
 
     /// @return The coefficients of the quadratic curve, for the given amount
     /// @dev The coefficients are returned in the order [constant, linear, quadratic]
     function _getCoefficients(uint256 amount) public pure returns (int256[3] memory) {
-        return [_getConstantCoeff(amount), _getLinearCoeff(amount), 0];
+        return [_getConstantCoeff(amount), _getLinearCoeff(amount), _getQuadraticCoeff(amount)];
     }
 
     /// @return The coefficients of the quadratic curve, for the given amount
@@ -178,9 +127,9 @@ contract QuadraticIncreasingEscrow is
         int256[3] memory coefficients = _getCoefficients(amount);
 
         return [
-            coefficients[0], // amount
-            coefficients[1], // slope
-            0
+            SignedFixedPointMath.fromFP(coefficients[0]),
+            SignedFixedPointMath.fromFP(coefficients[1]),
+            SignedFixedPointMath.fromFP(coefficients[2])
         ];
     }
 
@@ -191,46 +140,39 @@ contract QuadraticIncreasingEscrow is
     /// @notice Returns the bias for the given time elapsed and amount, up to the maximum time
     function getBias(uint256 timeElapsed, uint256 amount) public view returns (uint256) {
         int256[3] memory coefficients = _getCoefficients(amount);
-        return _getBias(timeElapsed, coefficients[0], coefficients[1]);
+        return _getBias(timeElapsed, coefficients);
     }
 
-    /// @notice Returns the bias for the given time elapsed and amount, up to the maximum time
     function _getBias(
         uint256 timeElapsed,
-        int256 constantCoeff,
-        int256 slope
+        int256[3] memory coefficients
     ) internal view returns (uint256) {
-        uint256 MAX_TIME = maxTime();
+        int256 quadratic = coefficients[2];
+        int256 linear = coefficients[1];
+        int256 const = coefficients[0];
+
+        // bound the time elapsed to the maximum time
+        uint256 MAX_TIME = _maxTime();
         timeElapsed = timeElapsed > MAX_TIME ? MAX_TIME : timeElapsed;
 
-        int256 bias = slope * int256(timeElapsed) + constantCoeff;
-        if (bias < 0) bias = 0;
+        // convert the time to fixed point
+        int256 t = SignedFixedPointMath.toFP(timeElapsed.toInt256());
 
-        return bias.toUint256();
+        // bias = a.t^2 + b.t + c
+        int256 tSquared = t.mul(t); // t*t much more gas efficient than t.pow(SD2)
+        int256 bias = quadratic.mul(tSquared).add(linear.mul(t)).add(const);
+
+        // never return negative values
+        // in the increasing case, this should never happen
+        return bias.lt((0)) ? uint256(0) : SignedFixedPointMath.fromFP((bias)).toUint256();
     }
 
-    function _getBiasAndSlope(
-        uint256 timeElapsed,
-        uint256 amount
-    ) public view returns (int256, int256) {
-        int256 slope = _getLinearCoeff(amount);
-        uint256 bias = _getBias(timeElapsed, _getConstantCoeff(amount), slope);
-
-        // If max time already passed, slope must be 0 as
-        // it should stop increasing.
-        if (timeElapsed >= maxTime()) {
-            slope = 0;
-        }
-
-        return (int256(bias), slope);
-    }
-
-    function maxTime() public view returns (uint256) {
+    function _maxTime() internal view returns (uint256) {
         return IClock(clock).epochDuration() * MAX_EPOCHS;
     }
 
     function previewMaxBias(uint256 amount) external view returns (uint256) {
-        return getBias(maxTime(), amount);
+        return getBias(_maxTime(), amount);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -251,29 +193,21 @@ contract QuadraticIncreasingEscrow is
     }
 
     function _isWarm(TokenPoint memory _point) public view returns (bool) {
-        return block.timestamp > _point.ts + warmupPeriod;
+        return block.timestamp > _point.writtenTs + warmupPeriod;
     }
 
     /*//////////////////////////////////////////////////////////////
                               BALANCE
     //////////////////////////////////////////////////////////////*/
 
-    /// @inheritdoc IEscrowCurveToken
+    /// @notice Returns the TokenPoint at the passed interval
+    /// @param _tokenId The NFT to return the TokenPoint for
+    /// @param _tokenInterval The epoch to return the TokenPoint at
     function tokenPointHistory(
         uint256 _tokenId,
-        uint256 _index
+        uint256 _tokenInterval
     ) external view returns (TokenPoint memory) {
-        return _tokenPointHistory[_tokenId][_index];
-    }
-
-    /// @inheritdoc IEscrowCurveGlobal
-    function globalPointHistory(uint256 _index) external view returns (GlobalPoint memory) {
-        return _globalPointHistory[_index];
-    }
-
-    /// @inheritdoc IEscrowCurveToken
-    function tokenPointIntervals(uint256 _tokenId) external view returns (uint256) {
-        return tokenPointLatestIndex[_tokenId];
+        return _tokenPointHistory[_tokenId][_tokenInterval];
     }
 
     /// @notice Binary search to get the token point interval for a token id at or prior to a given timestamp
@@ -283,7 +217,7 @@ contract QuadraticIncreasingEscrow is
         uint256 _tokenId,
         uint256 _timestamp
     ) internal view returns (uint256) {
-        uint256 tokenInterval = tokenPointLatestIndex[_tokenId];
+        uint256 tokenInterval = tokenPointIntervals[_tokenId];
         if (tokenInterval == 0) return 0;
 
         // if the most recent point is before the timestamp, return it
@@ -310,43 +244,23 @@ contract QuadraticIncreasingEscrow is
         return lower;
     }
 
-    /// @inheritdoc IEscrowCurveCore
     function votingPowerAt(uint256 _tokenId, uint256 _t) external view returns (uint256) {
         uint256 interval = _getPastTokenPointInterval(_tokenId, _t);
 
         // epoch 0 is an empty point
         if (interval == 0) return 0;
-
         TokenPoint memory lastPoint = _tokenPointHistory[_tokenId][interval];
 
         if (!_isWarm(lastPoint)) return 0;
+        uint256 timeElapsed = _t - lastPoint.checkpointTs;
 
-        // get season at time
-        (uint48 start, ) = IClockSeason(clock).seasonTsAt(uint48(_t));
-
-        // if the last point is before the season start, use last season start
-        uint256 timeElapsed;
-        if (lastPoint.checkpointTs < start) {
-            timeElapsed = _t - start;
-        } else {
-            // TODO: GIORGI checkPointTs will stop existing on the point.
-            // We will still have writtenTs(i.e ts), but I guess the point
-            // of this was to use `checkPointTs` which is on week-basis.
-            timeElapsed = _t - lastPoint.checkpointTs;
-        }
-
-        return _getBias(timeElapsed, lastPoint.coefficients[0], lastPoint.coefficients[1]);
+        return _getBias(timeElapsed, lastPoint.coefficients);
     }
 
-    /// @inheritdoc IEscrowCurveCore
-    function supplyAt(uint256 _ts) external view returns (uint256) {
-        return
-            BalanceLogicLibrary.supplyAt(
-                slopeChanges,
-                _globalPointHistory,
-                globalPointLatestIndex,
-                _ts
-            );
+    /// @notice [NOT IMPLEMENTED] Calculate total voting power at some point in the past
+    /// @dev This function will be implemented in a future version of the contract
+    function supplyAt(uint256) external pure returns (uint256) {
+        revert("Supply Not Implemented");
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -366,155 +280,58 @@ contract QuadraticIncreasingEscrow is
     /// @notice Record gper-user data to checkpoints. Used by VotingEscrow system.
     /// @dev Curve finance style but just for users at this stage
     /// @param _tokenId NFT token ID.
-    /// @param _fromLocked The locked from which we're moving.
     /// @param _newLocked New locked amount / end lock time for the user
     function _checkpoint(
         uint256 _tokenId,
-        IVotingEscrow.LockedBalance memory _fromLocked,
+        IVotingEscrow.LockedBalance memory /* _oldLocked */,
         IVotingEscrow.LockedBalance memory _newLocked
     ) internal {
         // this implementation doesn't yet support manual checkpointing
         if (_tokenId == 0) revert InvalidTokenId();
 
-        uint256 _globalPointLatestIndex = globalPointLatestIndex;
+        // instantiate a new, empty token point
+        TokenPoint memory uNew;
+        uint amount = _newLocked.amount;
+        bool isExiting = amount == 0;
 
-        // Get the slope and bias for `_newLocked`...
-        (int256 newLockBias, int256 newLockSlope) = _getBiasAndSlope(
-            block.timestamp - _newLocked.start,
-            _newLocked.amount
-        );
-
-        GlobalPoint memory lastPoint = GlobalPoint({
-            bias: 0,
-            slope: 0,
-            ts: uint48(block.timestamp)
-        });
-
-        if (_globalPointLatestIndex > 0) {
-            lastPoint = _globalPointHistory[_globalPointLatestIndex];
+        if (!isExiting) {
+            int256[3] memory coefficients = _getCoefficients(amount);
+            // for a new lock, write the base bias (elapsed == 0)
+            uNew.coefficients = coefficients;
+            uNew.bias = _getBias(0, coefficients);
         }
+        // write the new timestamp - in the case of an increasing curve
+        // we align the checkpoint to the start of the upcoming deposit interval
+        // to ensure global slope changes can be scheduled
+        // NOTE: the above global functionality is not implemented in this version of the contracts
+        // safe to cast as .start is 48 bit unsigned
+        uNew.checkpointTs = uint128(_newLocked.start);
 
-        {
-            uint256 checkpointInterval = IClock(clock).checkpointInterval();
+        // log the written ts - this can be used to compute warmups and burn downs
+        uNew.writtenTs = block.timestamp.toUint128();
 
-            uint256 lastPointCheckpoint = lastPoint.ts;
-            uint256 t_i = (lastPointCheckpoint / checkpointInterval) * checkpointInterval;
+        // check to see if we have an existing interval for this token
+        uint256 tokenInterval = tokenPointIntervals[_tokenId];
 
-            for (uint256 i = 0; i < 255; ++i) {
-                t_i += checkpointInterval;
-                int256 dSlope;
+        // if we don't have a point, we can write to the first interval
+        if (tokenInterval == 0) {
+            tokenPointIntervals[_tokenId] = ++tokenInterval;
+        }
+        // else we need to check the last point
+        else {
+            TokenPoint memory lastPoint = _tokenPointHistory[_tokenId][tokenInterval];
 
-                if (t_i > block.timestamp) {
-                    t_i = block.timestamp;
-                } else {
-                    dSlope = slopeChanges[t_i];
-                }
+            // can't do this: we can only write to same point or future
+            if (lastPoint.checkpointTs > uNew.checkpointTs) revert InvalidCheckpoint();
 
-                lastPoint.bias += lastPoint.slope * int256(t_i - lastPointCheckpoint);
-                lastPoint.slope -= dSlope;
-
-                if (lastPoint.slope < 0) lastPoint.slope = 0;
-                if (lastPoint.bias < 0) lastPoint.bias = 0;
-
-                lastPointCheckpoint = t_i;
-                lastPoint.ts = uint48(t_i);
-                _globalPointLatestIndex += 1;
-
-                if (t_i == block.timestamp) {
-                    break;
-                } else {
-                    _globalPointHistory[_globalPointLatestIndex] = lastPoint;
-                }
+            // if we're writing to a new point, increment the interval
+            if (lastPoint.checkpointTs != uNew.checkpointTs) {
+                tokenPointIntervals[_tokenId] = ++tokenInterval;
             }
         }
 
-        uint48 newEnd = uint48(_newLocked.start + maxTime());
-        int256 newSlope = lastPoint.slope + newLockSlope;
-        int256 newBias = lastPoint.bias + newLockBias;
-        int256 newDSlope = slopeChanges[newEnd] + newLockSlope;
-
-        uint256 tokenLatestIndex = tokenPointLatestIndex[_tokenId];
-
-        // The `tokenId` already exists..
-        if (tokenLatestIndex > 0) {
-            uint48 _fromLockedEnd = uint48(_fromLocked.start + maxTime());
-            // uint48 ts = _fromLockedEnd <= uint48(block.timestamp)
-            //     ? _fromLockedEnd
-            //     : uint48(block.timestamp);
-
-            // Get the slope and bias for `_fromLocked`...
-            (int256 oldLockBias, int256 oldLockSlope) = _getBiasAndSlope(
-                _fromLockedEnd <= uint48(block.timestamp)
-                    ? _fromLockedEnd
-                    : uint48(block.timestamp - _fromLocked.start),
-                _fromLocked.amount
-            );
-
-            if (_newLocked.amount == 0) {
-                if (_fromLockedEnd <= uint48(block.timestamp)) {
-                    // we already subtracted p.slope in the above for loop,
-                    // because we encounter slopeChanges[_fromLockedEnd] before uint48(block.timestamp).
-                    newBias -= oldLockBias;
-                } else {
-                    newBias -= oldLockBias;
-                    newSlope -= oldLockSlope;
-                    newDSlope -= oldLockSlope;
-                }
-            } else {
-                // User already had locked `x` amount on `tokenId=y` and
-                // tries to add more amount on the same `tokenId=y`.
-                if (_fromLockedEnd <= uint48(block.timestamp)) {
-                    // Previous point already ends before new point. This means
-                    // from newPoint, old slope must not be included anymore.
-                    // bias still must be as after end, it doesn't get 0,
-                    // but maxed out constant.
-                    newLockBias += oldLockBias;
-                } else {
-                    // Previous point hasn't ended yet, so from newPoint,
-                    // old slope must still be added.
-                    newLockBias += oldLockBias;
-                    newLockSlope += oldLockSlope;
-                    if (_fromLockedEnd != newEnd) newDSlope += oldLockSlope;
-                }
-            }
-
-            // If the end date has not changed and is in future,
-            // we must not clear out slope changes.
-            if (_fromLockedEnd != newEnd && _fromLockedEnd >= uint48(block.timestamp)) {
-                int256 oldOne = slopeChanges[_fromLockedEnd] - oldLockSlope;
-                if (oldOne < 0) oldOne = 0;
-                slopeChanges[_fromLockedEnd] = oldOne;
-            }
-        }
-
-        if (newSlope < 0) newSlope = 0;
-        if (newBias < 0) newBias = 0;
-        if (newDSlope < 0) newDSlope = 0;
-
-        lastPoint.slope = newSlope;
-        lastPoint.bias = newBias;
-
-        // TODO: see aerodome..
-        globalPointLatestIndex = _globalPointLatestIndex;
-        _globalPointHistory[_globalPointLatestIndex] = lastPoint;
-
-        slopeChanges[newEnd] = newDSlope;
-
-        // Create new token point and store.
-        TokenPoint memory tNew;
-        tNew.ts = uint128(block.timestamp);
-        tNew.checkpointTs = uint128(block.timestamp);
-        tNew.coefficients = [newLockBias, newLockSlope, 0];
-
-        if (
-            tokenLatestIndex != 0 &&
-            _tokenPointHistory[_tokenId][tokenLatestIndex].ts == block.timestamp
-        ) {
-            _tokenPointHistory[_tokenId][tokenLatestIndex] = tNew;
-        } else {
-            tokenPointLatestIndex[_tokenId] = ++tokenLatestIndex;
-            _tokenPointHistory[_tokenId][tokenLatestIndex] = tNew;
-        }
+        // Record the new point
+        _tokenPointHistory[_tokenId][tokenInterval] = uNew;
     }
 
     /*///////////////////////////////////////////////////////////////

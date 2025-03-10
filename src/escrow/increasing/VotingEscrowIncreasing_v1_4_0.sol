@@ -13,7 +13,7 @@ import {ISimpleGaugeVoter} from "@voting/ISimpleGaugeVoter.sol";
 import {IClock} from "@clock/IClock.sol";
 import {IEscrowCurveIncreasing as IEscrowCurve} from "./interfaces/IEscrowCurveIncreasing.sol";
 import {IExitQueue} from "./interfaces/IExitQueue.sol";
-import {IVotingEscrowIncreasing as IVotingEscrow, IVotingEscrowCore, IMerge, ISplit} from "./interfaces/IVotingEscrowIncreasing.sol";
+import {IVotingEscrowIncreasing as IVotingEscrow, IVotingEscrowCore, IMerge, ISplit} from "./interfaces/IVotingEscrowIncreasing_v1_4_0.sol";
 
 // libraries
 import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
