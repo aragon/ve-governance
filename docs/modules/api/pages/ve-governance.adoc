@@ -1,0 +1,3229 @@
+:github-icon: pass:[<svg class="icon"><use href="#github-icon"/></svg>]
+:xref-VotingEscrow-constructor--: xref:ve-governance.adoc#VotingEscrow-constructor--
+:xref-VotingEscrow-initialize-address-address-address-uint256-: xref:ve-governance.adoc#VotingEscrow-initialize-address-address-address-uint256-
+:xref-VotingEscrow-setCurve-address-: xref:ve-governance.adoc#VotingEscrow-setCurve-address-
+:xref-VotingEscrow-setVoter-address-: xref:ve-governance.adoc#VotingEscrow-setVoter-address-
+:xref-VotingEscrow-setQueue-address-: xref:ve-governance.adoc#VotingEscrow-setQueue-address-
+:xref-VotingEscrow-setClock-address-: xref:ve-governance.adoc#VotingEscrow-setClock-address-
+:xref-VotingEscrow-setLockNFT-address-: xref:ve-governance.adoc#VotingEscrow-setLockNFT-address-
+:xref-VotingEscrow-pause--: xref:ve-governance.adoc#VotingEscrow-pause--
+:xref-VotingEscrow-unpause--: xref:ve-governance.adoc#VotingEscrow-unpause--
+:xref-VotingEscrow-setMinDeposit-uint256-: xref:ve-governance.adoc#VotingEscrow-setMinDeposit-uint256-
+:xref-VotingEscrow-isApprovedOrOwner-address-uint256-: xref:ve-governance.adoc#VotingEscrow-isApprovedOrOwner-address-uint256-
+:xref-VotingEscrow-ownedTokens-address-: xref:ve-governance.adoc#VotingEscrow-ownedTokens-address-
+:xref-VotingEscrow-votingPower-uint256-: xref:ve-governance.adoc#VotingEscrow-votingPower-uint256-
+:xref-VotingEscrow-votingPowerAt-uint256-uint256-: xref:ve-governance.adoc#VotingEscrow-votingPowerAt-uint256-uint256-
+:xref-VotingEscrow-totalVotingPower--: xref:ve-governance.adoc#VotingEscrow-totalVotingPower--
+:xref-VotingEscrow-totalVotingPowerAt-uint256-: xref:ve-governance.adoc#VotingEscrow-totalVotingPowerAt-uint256-
+:xref-VotingEscrow-locked-uint256-: xref:ve-governance.adoc#VotingEscrow-locked-uint256-
+:xref-VotingEscrow-votingPowerForAccount-address-: xref:ve-governance.adoc#VotingEscrow-votingPowerForAccount-address-
+:xref-VotingEscrow-isVoting-uint256-: xref:ve-governance.adoc#VotingEscrow-isVoting-uint256-
+:xref-VotingEscrow-createLock-uint256-: xref:ve-governance.adoc#VotingEscrow-createLock-uint256-
+:xref-VotingEscrow-createLockFor-uint256-address-: xref:ve-governance.adoc#VotingEscrow-createLockFor-uint256-address-
+:xref-VotingEscrow-_createLockFor-uint256-address-: xref:ve-governance.adoc#VotingEscrow-_createLockFor-uint256-address-
+:xref-VotingEscrow-resetVotesAndBeginWithdrawal-uint256-: xref:ve-governance.adoc#VotingEscrow-resetVotesAndBeginWithdrawal-uint256-
+:xref-VotingEscrow-beginWithdrawal-uint256-: xref:ve-governance.adoc#VotingEscrow-beginWithdrawal-uint256-
+:xref-VotingEscrow-withdraw-uint256-: xref:ve-governance.adoc#VotingEscrow-withdraw-uint256-
+:xref-VotingEscrow-sweep--: xref:ve-governance.adoc#VotingEscrow-sweep--
+:xref-VotingEscrow-sweepNFT-uint256-address-: xref:ve-governance.adoc#VotingEscrow-sweepNFT-uint256-address-
+:xref-VotingEscrow-implementation--: xref:ve-governance.adoc#VotingEscrow-implementation--
+:xref-VotingEscrow-_authorizeUpgrade-address-: xref:ve-governance.adoc#VotingEscrow-_authorizeUpgrade-address-
+:xref-VotingEscrow-ESCROW_ADMIN_ROLE-bytes32: xref:ve-governance.adoc#VotingEscrow-ESCROW_ADMIN_ROLE-bytes32
+:xref-VotingEscrow-PAUSER_ROLE-bytes32: xref:ve-governance.adoc#VotingEscrow-PAUSER_ROLE-bytes32
+:xref-VotingEscrow-SWEEPER_ROLE-bytes32: xref:ve-governance.adoc#VotingEscrow-SWEEPER_ROLE-bytes32
+:xref-VotingEscrow-decimals-uint8: xref:ve-governance.adoc#VotingEscrow-decimals-uint8
+:xref-VotingEscrow-minDeposit-uint256: xref:ve-governance.adoc#VotingEscrow-minDeposit-uint256
+:xref-VotingEscrow-lastLockId-uint256: xref:ve-governance.adoc#VotingEscrow-lastLockId-uint256
+:xref-VotingEscrow-totalLocked-uint256: xref:ve-governance.adoc#VotingEscrow-totalLocked-uint256
+:xref-VotingEscrow-token-address: xref:ve-governance.adoc#VotingEscrow-token-address
+:xref-VotingEscrow-voter-address: xref:ve-governance.adoc#VotingEscrow-voter-address
+:xref-VotingEscrow-curve-address: xref:ve-governance.adoc#VotingEscrow-curve-address
+:xref-VotingEscrow-queue-address: xref:ve-governance.adoc#VotingEscrow-queue-address
+:xref-VotingEscrow-clock-address: xref:ve-governance.adoc#VotingEscrow-clock-address
+:xref-VotingEscrow-lockNFT-address: xref:ve-governance.adoc#VotingEscrow-lockNFT-address
+:xref-ISweeperEvents-Sweep-address-uint256-: xref:ve-governance.adoc#ISweeperEvents-Sweep-address-uint256-
+:xref-ISweeperEvents-SweepNFT-address-uint256-: xref:ve-governance.adoc#ISweeperEvents-SweepNFT-address-uint256-
+:xref-IVotingEscrowCoreEvents-MinDepositSet-uint256-: xref:ve-governance.adoc#IVotingEscrowCoreEvents-MinDepositSet-uint256-
+:xref-IVotingEscrowCoreEvents-Deposit-address-uint256-uint256-uint256-uint256-: xref:ve-governance.adoc#IVotingEscrowCoreEvents-Deposit-address-uint256-uint256-uint256-uint256-
+:xref-IVotingEscrowCoreEvents-Withdraw-address-uint256-uint256-uint256-uint256-: xref:ve-governance.adoc#IVotingEscrowCoreEvents-Withdraw-address-uint256-uint256-uint256-uint256-
+:xref-ISweeperErrors-NothingToSweep--: xref:ve-governance.adoc#ISweeperErrors-NothingToSweep--
+:xref-IWithdrawalQueueErrors-NotTicketHolder--: xref:ve-governance.adoc#IWithdrawalQueueErrors-NotTicketHolder--
+:xref-IWithdrawalQueueErrors-CannotExit--: xref:ve-governance.adoc#IWithdrawalQueueErrors-CannotExit--
+:xref-IDynamicVoterErrors-NotVoter--: xref:ve-governance.adoc#IDynamicVoterErrors-NotVoter--
+:xref-IDynamicVoterErrors-OwnershipChange--: xref:ve-governance.adoc#IDynamicVoterErrors-OwnershipChange--
+:xref-IDynamicVoterErrors-AlreadyVoted--: xref:ve-governance.adoc#IDynamicVoterErrors-AlreadyVoted--
+:xref-IVotingEscrowCoreErrors-NoLockFound--: xref:ve-governance.adoc#IVotingEscrowCoreErrors-NoLockFound--
+:xref-IVotingEscrowCoreErrors-NotOwner--: xref:ve-governance.adoc#IVotingEscrowCoreErrors-NotOwner--
+:xref-IVotingEscrowCoreErrors-NonExistentToken--: xref:ve-governance.adoc#IVotingEscrowCoreErrors-NonExistentToken--
+:xref-IVotingEscrowCoreErrors-NotApprovedOrOwner--: xref:ve-governance.adoc#IVotingEscrowCoreErrors-NotApprovedOrOwner--
+:xref-IVotingEscrowCoreErrors-ZeroAddress--: xref:ve-governance.adoc#IVotingEscrowCoreErrors-ZeroAddress--
+:xref-IVotingEscrowCoreErrors-ZeroAmount--: xref:ve-governance.adoc#IVotingEscrowCoreErrors-ZeroAmount--
+:xref-IVotingEscrowCoreErrors-ZeroBalance--: xref:ve-governance.adoc#IVotingEscrowCoreErrors-ZeroBalance--
+:xref-IVotingEscrowCoreErrors-SameAddress--: xref:ve-governance.adoc#IVotingEscrowCoreErrors-SameAddress--
+:xref-IVotingEscrowCoreErrors-LockNFTAlreadySet--: xref:ve-governance.adoc#IVotingEscrowCoreErrors-LockNFTAlreadySet--
+:xref-IVotingEscrowCoreErrors-MustBe18Decimals--: xref:ve-governance.adoc#IVotingEscrowCoreErrors-MustBe18Decimals--
+:xref-IVotingEscrowCoreErrors-TransferBalanceIncorrect--: xref:ve-governance.adoc#IVotingEscrowCoreErrors-TransferBalanceIncorrect--
+:xref-IVotingEscrowCoreErrors-AmountTooSmall--: xref:ve-governance.adoc#IVotingEscrowCoreErrors-AmountTooSmall--
+:xref-ExitQueue-onlyEscrow--: xref:ve-governance.adoc#ExitQueue-onlyEscrow--
+:xref-ExitQueue-constructor--: xref:ve-governance.adoc#ExitQueue-constructor--
+:xref-ExitQueue-initialize-address-uint48-address-uint256-address-uint48-: xref:ve-governance.adoc#ExitQueue-initialize-address-uint48-address-uint256-address-uint48-
+:xref-ExitQueue-setCooldown-uint48-: xref:ve-governance.adoc#ExitQueue-setCooldown-uint48-
+:xref-ExitQueue-_setCooldown-uint48-: xref:ve-governance.adoc#ExitQueue-_setCooldown-uint48-
+:xref-ExitQueue-setFeePercent-uint256-: xref:ve-governance.adoc#ExitQueue-setFeePercent-uint256-
+:xref-ExitQueue-_setFeePercent-uint256-: xref:ve-governance.adoc#ExitQueue-_setFeePercent-uint256-
+:xref-ExitQueue-setMinLock-uint48-: xref:ve-governance.adoc#ExitQueue-setMinLock-uint48-
+:xref-ExitQueue-_setMinLock-uint48-: xref:ve-governance.adoc#ExitQueue-_setMinLock-uint48-
+:xref-ExitQueue-withdraw-uint256-: xref:ve-governance.adoc#ExitQueue-withdraw-uint256-
+:xref-ExitQueue-queueExit-uint256-address-: xref:ve-governance.adoc#ExitQueue-queueExit-uint256-address-
+:xref-ExitQueue-nextExitDate--: xref:ve-governance.adoc#ExitQueue-nextExitDate--
+:xref-ExitQueue-exit-uint256-: xref:ve-governance.adoc#ExitQueue-exit-uint256-
+:xref-ExitQueue-calculateFee-uint256-: xref:ve-governance.adoc#ExitQueue-calculateFee-uint256-
+:xref-ExitQueue-canExit-uint256-: xref:ve-governance.adoc#ExitQueue-canExit-uint256-
+:xref-ExitQueue-ticketHolder-uint256-: xref:ve-governance.adoc#ExitQueue-ticketHolder-uint256-
+:xref-ExitQueue-queue-uint256-: xref:ve-governance.adoc#ExitQueue-queue-uint256-
+:xref-ExitQueue-timeToMinLock-uint256-: xref:ve-governance.adoc#ExitQueue-timeToMinLock-uint256-
+:xref-ExitQueue-implementation--: xref:ve-governance.adoc#ExitQueue-implementation--
+:xref-ExitQueue-_authorizeUpgrade-address-: xref:ve-governance.adoc#ExitQueue-_authorizeUpgrade-address-
+:xref-ExitQueue-QUEUE_ADMIN_ROLE-bytes32: xref:ve-governance.adoc#ExitQueue-QUEUE_ADMIN_ROLE-bytes32
+:xref-ExitQueue-WITHDRAW_ROLE-bytes32: xref:ve-governance.adoc#ExitQueue-WITHDRAW_ROLE-bytes32
+:xref-ExitQueue-feePercent-uint256: xref:ve-governance.adoc#ExitQueue-feePercent-uint256
+:xref-ExitQueue-escrow-address: xref:ve-governance.adoc#ExitQueue-escrow-address
+:xref-ExitQueue-clock-address: xref:ve-governance.adoc#ExitQueue-clock-address
+:xref-ExitQueue-cooldown-uint48: xref:ve-governance.adoc#ExitQueue-cooldown-uint48
+:xref-ExitQueue-minLock-uint48: xref:ve-governance.adoc#ExitQueue-minLock-uint48
+:xref-IExitMinLockCooldownErrorsAndEvents-MinLockSet-uint48-: xref:ve-governance.adoc#IExitMinLockCooldownErrorsAndEvents-MinLockSet-uint48-
+:xref-IExitQueueCooldownErrorsAndEvents-CooldownSet-uint48-: xref:ve-governance.adoc#IExitQueueCooldownErrorsAndEvents-CooldownSet-uint48-
+:xref-IExitQueueFeeErrorsAndEvents-Withdraw-address-uint256-: xref:ve-governance.adoc#IExitQueueFeeErrorsAndEvents-Withdraw-address-uint256-
+:xref-IExitQueueFeeErrorsAndEvents-FeePercentSet-uint256-: xref:ve-governance.adoc#IExitQueueFeeErrorsAndEvents-FeePercentSet-uint256-
+:xref-IExitQueueCoreErrorsAndEvents-ExitQueued-uint256-address-uint256-: xref:ve-governance.adoc#IExitQueueCoreErrorsAndEvents-ExitQueued-uint256-address-uint256-
+:xref-IExitQueueCoreErrorsAndEvents-Exit-uint256-uint256-: xref:ve-governance.adoc#IExitQueueCoreErrorsAndEvents-Exit-uint256-uint256-
+:xref-IExitMinLockCooldownErrorsAndEvents-MinLockOutOfBounds--: xref:ve-governance.adoc#IExitMinLockCooldownErrorsAndEvents-MinLockOutOfBounds--
+:xref-IExitMinLockCooldownErrorsAndEvents-MinLockNotReached-uint256-uint48-uint48-: xref:ve-governance.adoc#IExitMinLockCooldownErrorsAndEvents-MinLockNotReached-uint256-uint48-uint48-
+:xref-IExitQueueCooldownErrorsAndEvents-CooldownTooHigh--: xref:ve-governance.adoc#IExitQueueCooldownErrorsAndEvents-CooldownTooHigh--
+:xref-IExitQueueFeeErrorsAndEvents-FeeTooHigh-uint256-: xref:ve-governance.adoc#IExitQueueFeeErrorsAndEvents-FeeTooHigh-uint256-
+:xref-IExitQueueCoreErrorsAndEvents-OnlyEscrow--: xref:ve-governance.adoc#IExitQueueCoreErrorsAndEvents-OnlyEscrow--
+:xref-IExitQueueCoreErrorsAndEvents-AlreadyQueued--: xref:ve-governance.adoc#IExitQueueCoreErrorsAndEvents-AlreadyQueued--
+:xref-IExitQueueCoreErrorsAndEvents-ZeroAddress--: xref:ve-governance.adoc#IExitQueueCoreErrorsAndEvents-ZeroAddress--
+:xref-IExitQueueCoreErrorsAndEvents-CannotExit--: xref:ve-governance.adoc#IExitQueueCoreErrorsAndEvents-CannotExit--
+:xref-IExitQueueCoreErrorsAndEvents-NoLockBalance--: xref:ve-governance.adoc#IExitQueueCoreErrorsAndEvents-NoLockBalance--
+:xref-ExitQueue-_queue-mapping-uint256----struct-ITicket-Ticket-: xref:ve-governance.adoc#ExitQueue-_queue-mapping-uint256----struct-ITicket-Ticket-
+:xref-QuadraticIncreasingEscrow-constructor--: xref:ve-governance.adoc#QuadraticIncreasingEscrow-constructor--
+:xref-QuadraticIncreasingEscrow-initialize-address-address-uint48-address-: xref:ve-governance.adoc#QuadraticIncreasingEscrow-initialize-address-address-uint48-address-
+:xref-QuadraticIncreasingEscrow-_getQuadraticCoeff-uint256-: xref:ve-governance.adoc#QuadraticIncreasingEscrow-_getQuadraticCoeff-uint256-
+:xref-QuadraticIncreasingEscrow-_getLinearCoeff-uint256-: xref:ve-governance.adoc#QuadraticIncreasingEscrow-_getLinearCoeff-uint256-
+:xref-QuadraticIncreasingEscrow-_getConstantCoeff-uint256-: xref:ve-governance.adoc#QuadraticIncreasingEscrow-_getConstantCoeff-uint256-
+:xref-QuadraticIncreasingEscrow-_getCoefficients-uint256-: xref:ve-governance.adoc#QuadraticIncreasingEscrow-_getCoefficients-uint256-
+:xref-QuadraticIncreasingEscrow-getCoefficients-uint256-: xref:ve-governance.adoc#QuadraticIncreasingEscrow-getCoefficients-uint256-
+:xref-QuadraticIncreasingEscrow-getBias-uint256-uint256-: xref:ve-governance.adoc#QuadraticIncreasingEscrow-getBias-uint256-uint256-
+:xref-QuadraticIncreasingEscrow-_getBias-uint256-int256-3--: xref:ve-governance.adoc#QuadraticIncreasingEscrow-_getBias-uint256-int256-3--
+:xref-QuadraticIncreasingEscrow-_maxTime--: xref:ve-governance.adoc#QuadraticIncreasingEscrow-_maxTime--
+:xref-QuadraticIncreasingEscrow-previewMaxBias-uint256-: xref:ve-governance.adoc#QuadraticIncreasingEscrow-previewMaxBias-uint256-
+:xref-QuadraticIncreasingEscrow-setWarmupPeriod-uint48-: xref:ve-governance.adoc#QuadraticIncreasingEscrow-setWarmupPeriod-uint48-
+:xref-QuadraticIncreasingEscrow-isWarm-uint256-: xref:ve-governance.adoc#QuadraticIncreasingEscrow-isWarm-uint256-
+:xref-QuadraticIncreasingEscrow-_isWarm-struct-IEscrowCurveTokenStorage-TokenPoint-: xref:ve-governance.adoc#QuadraticIncreasingEscrow-_isWarm-struct-IEscrowCurveTokenStorage-TokenPoint-
+:xref-QuadraticIncreasingEscrow-tokenPointHistory-uint256-uint256-: xref:ve-governance.adoc#QuadraticIncreasingEscrow-tokenPointHistory-uint256-uint256-
+:xref-QuadraticIncreasingEscrow-_getPastTokenPointInterval-uint256-uint256-: xref:ve-governance.adoc#QuadraticIncreasingEscrow-_getPastTokenPointInterval-uint256-uint256-
+:xref-QuadraticIncreasingEscrow-votingPowerAt-uint256-uint256-: xref:ve-governance.adoc#QuadraticIncreasingEscrow-votingPowerAt-uint256-uint256-
+:xref-QuadraticIncreasingEscrow-supplyAt-uint256-: xref:ve-governance.adoc#QuadraticIncreasingEscrow-supplyAt-uint256-
+:xref-QuadraticIncreasingEscrow-checkpoint-uint256-struct-ILockedBalanceIncreasing-LockedBalance-struct-ILockedBalanceIncreasing-LockedBalance-: xref:ve-governance.adoc#QuadraticIncreasingEscrow-checkpoint-uint256-struct-ILockedBalanceIncreasing-LockedBalance-struct-ILockedBalanceIncreasing-LockedBalance-
+:xref-QuadraticIncreasingEscrow-_checkpoint-uint256-struct-ILockedBalanceIncreasing-LockedBalance-struct-ILockedBalanceIncreasing-LockedBalance-: xref:ve-governance.adoc#QuadraticIncreasingEscrow-_checkpoint-uint256-struct-ILockedBalanceIncreasing-LockedBalance-struct-ILockedBalanceIncreasing-LockedBalance-
+:xref-QuadraticIncreasingEscrow-implementation--: xref:ve-governance.adoc#QuadraticIncreasingEscrow-implementation--
+:xref-QuadraticIncreasingEscrow-_authorizeUpgrade-address-: xref:ve-governance.adoc#QuadraticIncreasingEscrow-_authorizeUpgrade-address-
+:xref-QuadraticIncreasingEscrow-CURVE_ADMIN_ROLE-bytes32: xref:ve-governance.adoc#QuadraticIncreasingEscrow-CURVE_ADMIN_ROLE-bytes32
+:xref-QuadraticIncreasingEscrow-escrow-address: xref:ve-governance.adoc#QuadraticIncreasingEscrow-escrow-address
+:xref-QuadraticIncreasingEscrow-clock-address: xref:ve-governance.adoc#QuadraticIncreasingEscrow-clock-address
+:xref-QuadraticIncreasingEscrow-tokenPointIntervals-mapping-uint256----uint256-: xref:ve-governance.adoc#QuadraticIncreasingEscrow-tokenPointIntervals-mapping-uint256----uint256-
+:xref-QuadraticIncreasingEscrow-warmupPeriod-uint48: xref:ve-governance.adoc#QuadraticIncreasingEscrow-warmupPeriod-uint48
+:xref-IWarmupEvents-WarmupSet-uint48-: xref:ve-governance.adoc#IWarmupEvents-WarmupSet-uint48-
+:xref-QuadraticIncreasingEscrow-OnlyEscrow--: xref:ve-governance.adoc#QuadraticIncreasingEscrow-OnlyEscrow--
+:xref-IEscrowCurveErrorsAndEvents-InvalidTokenId--: xref:ve-governance.adoc#IEscrowCurveErrorsAndEvents-InvalidTokenId--
+:xref-IEscrowCurveErrorsAndEvents-InvalidCheckpoint--: xref:ve-governance.adoc#IEscrowCurveErrorsAndEvents-InvalidCheckpoint--
+:xref-QuadraticIncreasingEscrow-_tokenPointHistory-mapping-uint256----struct-IEscrowCurveTokenStorage-TokenPoint-1000000000--: xref:ve-governance.adoc#QuadraticIncreasingEscrow-_tokenPointHistory-mapping-uint256----struct-IEscrowCurveTokenStorage-TokenPoint-1000000000--
+:xref-SimpleGaugeVoter-whenVotingActive--: xref:ve-governance.adoc#SimpleGaugeVoter-whenVotingActive--
+:xref-SimpleGaugeVoter-constructor--: xref:ve-governance.adoc#SimpleGaugeVoter-constructor--
+:xref-SimpleGaugeVoter-initialize-address-address-bool-address-: xref:ve-governance.adoc#SimpleGaugeVoter-initialize-address-address-bool-address-
+:xref-SimpleGaugeVoter-pause--: xref:ve-governance.adoc#SimpleGaugeVoter-pause--
+:xref-SimpleGaugeVoter-unpause--: xref:ve-governance.adoc#SimpleGaugeVoter-unpause--
+:xref-SimpleGaugeVoter-voteMultiple-uint256---struct-IGaugeVote-GaugeVote---: xref:ve-governance.adoc#SimpleGaugeVoter-voteMultiple-uint256---struct-IGaugeVote-GaugeVote---
+:xref-SimpleGaugeVoter-vote-uint256-struct-IGaugeVote-GaugeVote---: xref:ve-governance.adoc#SimpleGaugeVoter-vote-uint256-struct-IGaugeVote-GaugeVote---
+:xref-SimpleGaugeVoter-_vote-uint256-struct-IGaugeVote-GaugeVote---: xref:ve-governance.adoc#SimpleGaugeVoter-_vote-uint256-struct-IGaugeVote-GaugeVote---
+:xref-SimpleGaugeVoter-reset-uint256-: xref:ve-governance.adoc#SimpleGaugeVoter-reset-uint256-
+:xref-SimpleGaugeVoter-_reset-uint256-: xref:ve-governance.adoc#SimpleGaugeVoter-_reset-uint256-
+:xref-SimpleGaugeVoter-gaugeExists-address-: xref:ve-governance.adoc#SimpleGaugeVoter-gaugeExists-address-
+:xref-SimpleGaugeVoter-isActive-address-: xref:ve-governance.adoc#SimpleGaugeVoter-isActive-address-
+:xref-SimpleGaugeVoter-createGauge-address-string-: xref:ve-governance.adoc#SimpleGaugeVoter-createGauge-address-string-
+:xref-SimpleGaugeVoter-deactivateGauge-address-: xref:ve-governance.adoc#SimpleGaugeVoter-deactivateGauge-address-
+:xref-SimpleGaugeVoter-activateGauge-address-: xref:ve-governance.adoc#SimpleGaugeVoter-activateGauge-address-
+:xref-SimpleGaugeVoter-updateGaugeMetadata-address-string-: xref:ve-governance.adoc#SimpleGaugeVoter-updateGaugeMetadata-address-string-
+:xref-SimpleGaugeVoter-epochId--: xref:ve-governance.adoc#SimpleGaugeVoter-epochId--
+:xref-SimpleGaugeVoter-votingActive--: xref:ve-governance.adoc#SimpleGaugeVoter-votingActive--
+:xref-SimpleGaugeVoter-epochStart--: xref:ve-governance.adoc#SimpleGaugeVoter-epochStart--
+:xref-SimpleGaugeVoter-epochVoteStart--: xref:ve-governance.adoc#SimpleGaugeVoter-epochVoteStart--
+:xref-SimpleGaugeVoter-epochVoteEnd--: xref:ve-governance.adoc#SimpleGaugeVoter-epochVoteEnd--
+:xref-SimpleGaugeVoter-getGauge-address-: xref:ve-governance.adoc#SimpleGaugeVoter-getGauge-address-
+:xref-SimpleGaugeVoter-getAllGauges--: xref:ve-governance.adoc#SimpleGaugeVoter-getAllGauges--
+:xref-SimpleGaugeVoter-isVoting-uint256-: xref:ve-governance.adoc#SimpleGaugeVoter-isVoting-uint256-
+:xref-SimpleGaugeVoter-votes-uint256-address-: xref:ve-governance.adoc#SimpleGaugeVoter-votes-uint256-address-
+:xref-SimpleGaugeVoter-gaugesVotedFor-uint256-: xref:ve-governance.adoc#SimpleGaugeVoter-gaugesVotedFor-uint256-
+:xref-SimpleGaugeVoter-usedVotingPower-uint256-: xref:ve-governance.adoc#SimpleGaugeVoter-usedVotingPower-uint256-
+:xref-SimpleGaugeVoter-GAUGE_ADMIN_ROLE-bytes32: xref:ve-governance.adoc#SimpleGaugeVoter-GAUGE_ADMIN_ROLE-bytes32
+:xref-SimpleGaugeVoter-escrow-address: xref:ve-governance.adoc#SimpleGaugeVoter-escrow-address
+:xref-SimpleGaugeVoter-clock-address: xref:ve-governance.adoc#SimpleGaugeVoter-clock-address
+:xref-SimpleGaugeVoter-totalVotingPowerCast-uint256: xref:ve-governance.adoc#SimpleGaugeVoter-totalVotingPowerCast-uint256
+:xref-SimpleGaugeVoter-gaugeList-address--: xref:ve-governance.adoc#SimpleGaugeVoter-gaugeList-address--
+:xref-SimpleGaugeVoter-gauges-mapping-address----struct-IGauge-Gauge-: xref:ve-governance.adoc#SimpleGaugeVoter-gauges-mapping-address----struct-IGauge-Gauge-
+:xref-SimpleGaugeVoter-gaugeVotes-mapping-address----uint256-: xref:ve-governance.adoc#SimpleGaugeVoter-gaugeVotes-mapping-address----uint256-
+:xref-IGaugeManagerEvents-GaugeCreated-address-address-string-: xref:ve-governance.adoc#IGaugeManagerEvents-GaugeCreated-address-address-string-
+:xref-IGaugeManagerEvents-GaugeDeactivated-address-: xref:ve-governance.adoc#IGaugeManagerEvents-GaugeDeactivated-address-
+:xref-IGaugeManagerEvents-GaugeActivated-address-: xref:ve-governance.adoc#IGaugeManagerEvents-GaugeActivated-address-
+:xref-IGaugeManagerEvents-GaugeMetadataUpdated-address-string-: xref:ve-governance.adoc#IGaugeManagerEvents-GaugeMetadataUpdated-address-string-
+:xref-IGaugeVoterEvents-Voted-address-address-uint256-uint256-uint256-uint256-uint256-uint256-: xref:ve-governance.adoc#IGaugeVoterEvents-Voted-address-address-uint256-uint256-uint256-uint256-uint256-uint256-
+:xref-IGaugeVoterEvents-Reset-address-address-uint256-uint256-uint256-uint256-uint256-uint256-: xref:ve-governance.adoc#IGaugeVoterEvents-Reset-address-address-uint256-uint256-uint256-uint256-uint256-uint256-
+:xref-IGaugeManagerErrors-ZeroGauge--: xref:ve-governance.adoc#IGaugeManagerErrors-ZeroGauge--
+:xref-IGaugeManagerErrors-GaugeActivationUnchanged--: xref:ve-governance.adoc#IGaugeManagerErrors-GaugeActivationUnchanged--
+:xref-IGaugeManagerErrors-GaugeExists--: xref:ve-governance.adoc#IGaugeManagerErrors-GaugeExists--
+:xref-IGaugeVoterErrors-AlreadyVoted-uint256-: xref:ve-governance.adoc#IGaugeVoterErrors-AlreadyVoted-uint256-
+:xref-IGaugeVoterErrors-VotingInactive--: xref:ve-governance.adoc#IGaugeVoterErrors-VotingInactive--
+:xref-IGaugeVoterErrors-NotApprovedOrOwner--: xref:ve-governance.adoc#IGaugeVoterErrors-NotApprovedOrOwner--
+:xref-IGaugeVoterErrors-GaugeDoesNotExist-address-: xref:ve-governance.adoc#IGaugeVoterErrors-GaugeDoesNotExist-address-
+:xref-IGaugeVoterErrors-GaugeInactive-address-: xref:ve-governance.adoc#IGaugeVoterErrors-GaugeInactive-address-
+:xref-IGaugeVoterErrors-DoubleVote--: xref:ve-governance.adoc#IGaugeVoterErrors-DoubleVote--
+:xref-IGaugeVoterErrors-NoVotes--: xref:ve-governance.adoc#IGaugeVoterErrors-NoVotes--
+:xref-IGaugeVoterErrors-NoVotingPower--: xref:ve-governance.adoc#IGaugeVoterErrors-NoVotingPower--
+:xref-IGaugeVoterErrors-NotCurrentlyVoting--: xref:ve-governance.adoc#IGaugeVoterErrors-NotCurrentlyVoting--
+:xref-SimpleGaugeVoter-tokenVoteData-mapping-uint256----struct-IGaugeVote-TokenVoteData-: xref:ve-governance.adoc#SimpleGaugeVoter-tokenVoteData-mapping-uint256----struct-IGaugeVote-TokenVoteData-
+:xref-SimpleGaugeVoterSetup-constructor-address-address-address-address-address-address-: xref:ve-governance.adoc#SimpleGaugeVoterSetup-constructor-address-address-address-address-address-address-
+:xref-SimpleGaugeVoterSetup-implementation--: xref:ve-governance.adoc#SimpleGaugeVoterSetup-implementation--
+:xref-SimpleGaugeVoterSetup-prepareInstallation-address-bytes-: xref:ve-governance.adoc#SimpleGaugeVoterSetup-prepareInstallation-address-bytes-
+:xref-SimpleGaugeVoterSetup-prepareUninstallation-address-struct-IPluginSetup-SetupPayload-: xref:ve-governance.adoc#SimpleGaugeVoterSetup-prepareUninstallation-address-struct-IPluginSetup-SetupPayload-
+:xref-SimpleGaugeVoterSetup-getPermissions-address-address-address-address-address-address-address-enum-PermissionLib-Operation-: xref:ve-governance.adoc#SimpleGaugeVoterSetup-getPermissions-address-address-address-address-address-address-address-enum-PermissionLib-Operation-
+:xref-SimpleGaugeVoterSetup-encodeSetupData-struct-ISimpleGaugeVoterSetupParams-: xref:ve-governance.adoc#SimpleGaugeVoterSetup-encodeSetupData-struct-ISimpleGaugeVoterSetupParams-
+:xref-SimpleGaugeVoterSetup-encodeSetupData-bool-string-string-address-uint48-uint48-uint256-uint48-uint256-: xref:ve-governance.adoc#SimpleGaugeVoterSetup-encodeSetupData-bool-string-string-address-uint48-uint48-uint256-uint48-uint256-
+:xref-SimpleGaugeVoterSetup-EXECUTE_PERMISSION_ID-bytes32: xref:ve-governance.adoc#SimpleGaugeVoterSetup-EXECUTE_PERMISSION_ID-bytes32
+:xref-SimpleGaugeVoterSetup-WrongHelpersArrayLength-uint256-: xref:ve-governance.adoc#SimpleGaugeVoterSetup-WrongHelpersArrayLength-uint256-
+:xref-SimpleGaugeVoterSetup-voterBase-address: xref:ve-governance.adoc#SimpleGaugeVoterSetup-voterBase-address
+:xref-SimpleGaugeVoterSetup-curveBase-address: xref:ve-governance.adoc#SimpleGaugeVoterSetup-curveBase-address
+:xref-SimpleGaugeVoterSetup-queueBase-address: xref:ve-governance.adoc#SimpleGaugeVoterSetup-queueBase-address
+:xref-SimpleGaugeVoterSetup-escrowBase-address: xref:ve-governance.adoc#SimpleGaugeVoterSetup-escrowBase-address
+:xref-SimpleGaugeVoterSetup-clockBase-address: xref:ve-governance.adoc#SimpleGaugeVoterSetup-clockBase-address
+:xref-SimpleGaugeVoterSetup-nftBase-address: xref:ve-governance.adoc#SimpleGaugeVoterSetup-nftBase-address
+:xref-Lock-onlyEscrow--: xref:ve-governance.adoc#Lock-onlyEscrow--
+:xref-Lock-supportsInterface-bytes4-: xref:ve-governance.adoc#Lock-supportsInterface-bytes4-
+:xref-Lock-constructor--: xref:ve-governance.adoc#Lock-constructor--
+:xref-Lock-initialize-address-string-string-address-: xref:ve-governance.adoc#Lock-initialize-address-string-string-address-
+:xref-Lock-setWhitelisted-address-bool-: xref:ve-governance.adoc#Lock-setWhitelisted-address-bool-
+:xref-Lock-enableTransfers--: xref:ve-governance.adoc#Lock-enableTransfers--
+:xref-Lock-_transfer-address-address-uint256-: xref:ve-governance.adoc#Lock-_transfer-address-address-uint256-
+:xref-Lock-isApprovedOrOwner-address-uint256-: xref:ve-governance.adoc#Lock-isApprovedOrOwner-address-uint256-
+:xref-Lock-mint-address-uint256-: xref:ve-governance.adoc#Lock-mint-address-uint256-
+:xref-Lock-burn-uint256-: xref:ve-governance.adoc#Lock-burn-uint256-
+:xref-Lock-implementation--: xref:ve-governance.adoc#Lock-implementation--
+:xref-Lock-_authorizeUpgrade-address-: xref:ve-governance.adoc#Lock-_authorizeUpgrade-address-
+:xref-Lock-WHITELIST_ANY_ADDRESS-address: xref:ve-governance.adoc#Lock-WHITELIST_ANY_ADDRESS-address
+:xref-Lock-LOCK_ADMIN_ROLE-bytes32: xref:ve-governance.adoc#Lock-LOCK_ADMIN_ROLE-bytes32
+:xref-Lock-escrow-address: xref:ve-governance.adoc#Lock-escrow-address
+:xref-Lock-whitelisted-mapping-address----bool-: xref:ve-governance.adoc#Lock-whitelisted-mapping-address----bool-
+:xref-IWhitelistEvents-WhitelistSet-address-bool-: xref:ve-governance.adoc#IWhitelistEvents-WhitelistSet-address-bool-
+:xref-ILock-OnlyEscrow--: xref:ve-governance.adoc#ILock-OnlyEscrow--
+:xref-IWhitelistErrors-NotWhitelisted--: xref:ve-governance.adoc#IWhitelistErrors-NotWhitelisted--
+:xref-IWhitelistErrors-ForbiddenWhitelistAddress--: xref:ve-governance.adoc#IWhitelistErrors-ForbiddenWhitelistAddress--
+:xref-Clock-constructor--: xref:ve-governance.adoc#Clock-constructor--
+:xref-Clock-initialize-address-: xref:ve-governance.adoc#Clock-initialize-address-
+:xref-Clock-epochDuration--: xref:ve-governance.adoc#Clock-epochDuration--
+:xref-Clock-checkpointInterval--: xref:ve-governance.adoc#Clock-checkpointInterval--
+:xref-Clock-voteDuration--: xref:ve-governance.adoc#Clock-voteDuration--
+:xref-Clock-voteWindowBuffer--: xref:ve-governance.adoc#Clock-voteWindowBuffer--
+:xref-Clock-currentEpoch--: xref:ve-governance.adoc#Clock-currentEpoch--
+:xref-Clock-resolveEpoch-uint256-: xref:ve-governance.adoc#Clock-resolveEpoch-uint256-
+:xref-Clock-elapsedInEpoch--: xref:ve-governance.adoc#Clock-elapsedInEpoch--
+:xref-Clock-resolveElapsedInEpoch-uint256-: xref:ve-governance.adoc#Clock-resolveElapsedInEpoch-uint256-
+:xref-Clock-epochStartsIn--: xref:ve-governance.adoc#Clock-epochStartsIn--
+:xref-Clock-resolveEpochStartsIn-uint256-: xref:ve-governance.adoc#Clock-resolveEpochStartsIn-uint256-
+:xref-Clock-epochStartTs--: xref:ve-governance.adoc#Clock-epochStartTs--
+:xref-Clock-resolveEpochStartTs-uint256-: xref:ve-governance.adoc#Clock-resolveEpochStartTs-uint256-
+:xref-Clock-votingActive--: xref:ve-governance.adoc#Clock-votingActive--
+:xref-Clock-resolveVotingActive-uint256-: xref:ve-governance.adoc#Clock-resolveVotingActive-uint256-
+:xref-Clock-epochVoteStartsIn--: xref:ve-governance.adoc#Clock-epochVoteStartsIn--
+:xref-Clock-resolveEpochVoteStartsIn-uint256-: xref:ve-governance.adoc#Clock-resolveEpochVoteStartsIn-uint256-
+:xref-Clock-epochVoteStartTs--: xref:ve-governance.adoc#Clock-epochVoteStartTs--
+:xref-Clock-resolveEpochVoteStartTs-uint256-: xref:ve-governance.adoc#Clock-resolveEpochVoteStartTs-uint256-
+:xref-Clock-epochVoteEndsIn--: xref:ve-governance.adoc#Clock-epochVoteEndsIn--
+:xref-Clock-resolveEpochVoteEndsIn-uint256-: xref:ve-governance.adoc#Clock-resolveEpochVoteEndsIn-uint256-
+:xref-Clock-epochVoteEndTs--: xref:ve-governance.adoc#Clock-epochVoteEndTs--
+:xref-Clock-resolveEpochVoteEndTs-uint256-: xref:ve-governance.adoc#Clock-resolveEpochVoteEndTs-uint256-
+:xref-Clock-epochNextCheckpointIn--: xref:ve-governance.adoc#Clock-epochNextCheckpointIn--
+:xref-Clock-resolveEpochNextCheckpointIn-uint256-: xref:ve-governance.adoc#Clock-resolveEpochNextCheckpointIn-uint256-
+:xref-Clock-epochNextCheckpointTs--: xref:ve-governance.adoc#Clock-epochNextCheckpointTs--
+:xref-Clock-resolveEpochNextCheckpointTs-uint256-: xref:ve-governance.adoc#Clock-resolveEpochNextCheckpointTs-uint256-
+:xref-Clock-_authorizeUpgrade-address-: xref:ve-governance.adoc#Clock-_authorizeUpgrade-address-
+:xref-Clock-implementation--: xref:ve-governance.adoc#Clock-implementation--
+:xref-Clock-CLOCK_ADMIN_ROLE-bytes32: xref:ve-governance.adoc#Clock-CLOCK_ADMIN_ROLE-bytes32
+:xref-Clock-EPOCH_DURATION-uint256: xref:ve-governance.adoc#Clock-EPOCH_DURATION-uint256
+:xref-Clock-CHECKPOINT_INTERVAL-uint256: xref:ve-governance.adoc#Clock-CHECKPOINT_INTERVAL-uint256
+:xref-Clock-VOTE_DURATION-uint256: xref:ve-governance.adoc#Clock-VOTE_DURATION-uint256
+:xref-Clock-VOTE_WINDOW_BUFFER-uint256: xref:ve-governance.adoc#Clock-VOTE_WINDOW_BUFFER-uint256
+= VEGOVERNANCE API
+
+== Core
+
+:ESCROW_ADMIN_ROLE: pass:normal[xref:#VotingEscrow-ESCROW_ADMIN_ROLE-bytes32[`++ESCROW_ADMIN_ROLE++`]]
+:PAUSER_ROLE: pass:normal[xref:#VotingEscrow-PAUSER_ROLE-bytes32[`++PAUSER_ROLE++`]]
+:SWEEPER_ROLE: pass:normal[xref:#VotingEscrow-SWEEPER_ROLE-bytes32[`++SWEEPER_ROLE++`]]
+:decimals: pass:normal[xref:#VotingEscrow-decimals-uint8[`++decimals++`]]
+:minDeposit: pass:normal[xref:#VotingEscrow-minDeposit-uint256[`++minDeposit++`]]
+:lastLockId: pass:normal[xref:#VotingEscrow-lastLockId-uint256[`++lastLockId++`]]
+:totalLocked: pass:normal[xref:#VotingEscrow-totalLocked-uint256[`++totalLocked++`]]
+:token: pass:normal[xref:#VotingEscrow-token-address[`++token++`]]
+:voter: pass:normal[xref:#VotingEscrow-voter-address[`++voter++`]]
+:curve: pass:normal[xref:#VotingEscrow-curve-address[`++curve++`]]
+:queue: pass:normal[xref:#VotingEscrow-queue-address[`++queue++`]]
+:clock: pass:normal[xref:#VotingEscrow-clock-address[`++clock++`]]
+:lockNFT: pass:normal[xref:#VotingEscrow-lockNFT-address[`++lockNFT++`]]
+:constructor: pass:normal[xref:#VotingEscrow-constructor--[`++constructor++`]]
+:initialize: pass:normal[xref:#VotingEscrow-initialize-address-address-address-uint256-[`++initialize++`]]
+:setCurve: pass:normal[xref:#VotingEscrow-setCurve-address-[`++setCurve++`]]
+:setVoter: pass:normal[xref:#VotingEscrow-setVoter-address-[`++setVoter++`]]
+:setQueue: pass:normal[xref:#VotingEscrow-setQueue-address-[`++setQueue++`]]
+:setClock: pass:normal[xref:#VotingEscrow-setClock-address-[`++setClock++`]]
+:setLockNFT: pass:normal[xref:#VotingEscrow-setLockNFT-address-[`++setLockNFT++`]]
+:pause: pass:normal[xref:#VotingEscrow-pause--[`++pause++`]]
+:unpause: pass:normal[xref:#VotingEscrow-unpause--[`++unpause++`]]
+:setMinDeposit: pass:normal[xref:#VotingEscrow-setMinDeposit-uint256-[`++setMinDeposit++`]]
+:isApprovedOrOwner: pass:normal[xref:#VotingEscrow-isApprovedOrOwner-address-uint256-[`++isApprovedOrOwner++`]]
+:ownedTokens: pass:normal[xref:#VotingEscrow-ownedTokens-address-[`++ownedTokens++`]]
+:votingPower: pass:normal[xref:#VotingEscrow-votingPower-uint256-[`++votingPower++`]]
+:votingPowerAt: pass:normal[xref:#VotingEscrow-votingPowerAt-uint256-uint256-[`++votingPowerAt++`]]
+:totalVotingPower: pass:normal[xref:#VotingEscrow-totalVotingPower--[`++totalVotingPower++`]]
+:totalVotingPowerAt: pass:normal[xref:#VotingEscrow-totalVotingPowerAt-uint256-[`++totalVotingPowerAt++`]]
+:locked: pass:normal[xref:#VotingEscrow-locked-uint256-[`++locked++`]]
+:votingPowerForAccount: pass:normal[xref:#VotingEscrow-votingPowerForAccount-address-[`++votingPowerForAccount++`]]
+:isVoting: pass:normal[xref:#VotingEscrow-isVoting-uint256-[`++isVoting++`]]
+:createLock: pass:normal[xref:#VotingEscrow-createLock-uint256-[`++createLock++`]]
+:createLockFor: pass:normal[xref:#VotingEscrow-createLockFor-uint256-address-[`++createLockFor++`]]
+:_createLockFor: pass:normal[xref:#VotingEscrow-_createLockFor-uint256-address-[`++_createLockFor++`]]
+:resetVotesAndBeginWithdrawal: pass:normal[xref:#VotingEscrow-resetVotesAndBeginWithdrawal-uint256-[`++resetVotesAndBeginWithdrawal++`]]
+:beginWithdrawal: pass:normal[xref:#VotingEscrow-beginWithdrawal-uint256-[`++beginWithdrawal++`]]
+:withdraw: pass:normal[xref:#VotingEscrow-withdraw-uint256-[`++withdraw++`]]
+:sweep: pass:normal[xref:#VotingEscrow-sweep--[`++sweep++`]]
+:sweepNFT: pass:normal[xref:#VotingEscrow-sweepNFT-uint256-address-[`++sweepNFT++`]]
+:implementation: pass:normal[xref:#VotingEscrow-implementation--[`++implementation++`]]
+:_authorizeUpgrade: pass:normal[xref:#VotingEscrow-_authorizeUpgrade-address-[`++_authorizeUpgrade++`]]
+
+[.contract]
+[[VotingEscrow]]
+=== `++VotingEscrow++` link:https://github.com/aragon/ve-governance/blob/vundefined//home/jordan/Documents/dev/crypto/aragon/ve-governance/src/escrow/increasing/VotingEscrowIncreasing.sol[{github-icon},role=heading-link]
+
+[.contract-index]
+.Functions
+--
+* {xref-VotingEscrow-constructor--}[`++constructor()++`]
+* {xref-VotingEscrow-initialize-address-address-address-uint256-}[`++initialize(_token, _dao, _clock, _initialMinDeposit)++`]
+* {xref-VotingEscrow-setCurve-address-}[`++setCurve(_curve)++`]
+* {xref-VotingEscrow-setVoter-address-}[`++setVoter(_voter)++`]
+* {xref-VotingEscrow-setQueue-address-}[`++setQueue(_queue)++`]
+* {xref-VotingEscrow-setClock-address-}[`++setClock(_clock)++`]
+* {xref-VotingEscrow-setLockNFT-address-}[`++setLockNFT(_nft)++`]
+* {xref-VotingEscrow-pause--}[`++pause()++`]
+* {xref-VotingEscrow-unpause--}[`++unpause()++`]
+* {xref-VotingEscrow-setMinDeposit-uint256-}[`++setMinDeposit(_minDeposit)++`]
+* {xref-VotingEscrow-isApprovedOrOwner-address-uint256-}[`++isApprovedOrOwner(_spender, _tokenId)++`]
+* {xref-VotingEscrow-ownedTokens-address-}[`++ownedTokens(_owner)++`]
+* {xref-VotingEscrow-votingPower-uint256-}[`++votingPower(_tokenId)++`]
+* {xref-VotingEscrow-votingPowerAt-uint256-uint256-}[`++votingPowerAt(_tokenId, _t)++`]
+* {xref-VotingEscrow-totalVotingPower--}[`++totalVotingPower()++`]
+* {xref-VotingEscrow-totalVotingPowerAt-uint256-}[`++totalVotingPowerAt(_timestamp)++`]
+* {xref-VotingEscrow-locked-uint256-}[`++locked(_tokenId)++`]
+* {xref-VotingEscrow-votingPowerForAccount-address-}[`++votingPowerForAccount(_account)++`]
+* {xref-VotingEscrow-isVoting-uint256-}[`++isVoting(_tokenId)++`]
+* {xref-VotingEscrow-createLock-uint256-}[`++createLock(_value)++`]
+* {xref-VotingEscrow-createLockFor-uint256-address-}[`++createLockFor(_value, _to)++`]
+* {xref-VotingEscrow-_createLockFor-uint256-address-}[`++_createLockFor(_value, _to)++`]
+* {xref-VotingEscrow-resetVotesAndBeginWithdrawal-uint256-}[`++resetVotesAndBeginWithdrawal(_tokenId)++`]
+* {xref-VotingEscrow-beginWithdrawal-uint256-}[`++beginWithdrawal(_tokenId)++`]
+* {xref-VotingEscrow-withdraw-uint256-}[`++withdraw(_tokenId)++`]
+* {xref-VotingEscrow-sweep--}[`++sweep()++`]
+* {xref-VotingEscrow-sweepNFT-uint256-address-}[`++sweepNFT(_tokenId, _to)++`]
+* {xref-VotingEscrow-implementation--}[`++implementation()++`]
+* {xref-VotingEscrow-_authorizeUpgrade-address-}[`++_authorizeUpgrade()++`]
+* {xref-VotingEscrow-ESCROW_ADMIN_ROLE-bytes32}[`++ESCROW_ADMIN_ROLE()++`]
+* {xref-VotingEscrow-PAUSER_ROLE-bytes32}[`++PAUSER_ROLE()++`]
+* {xref-VotingEscrow-SWEEPER_ROLE-bytes32}[`++SWEEPER_ROLE()++`]
+* {xref-VotingEscrow-decimals-uint8}[`++decimals()++`]
+* {xref-VotingEscrow-minDeposit-uint256}[`++minDeposit()++`]
+* {xref-VotingEscrow-lastLockId-uint256}[`++lastLockId()++`]
+* {xref-VotingEscrow-totalLocked-uint256}[`++totalLocked()++`]
+* {xref-VotingEscrow-token-address}[`++token()++`]
+* {xref-VotingEscrow-voter-address}[`++voter()++`]
+* {xref-VotingEscrow-curve-address}[`++curve()++`]
+* {xref-VotingEscrow-queue-address}[`++queue()++`]
+* {xref-VotingEscrow-clock-address}[`++clock()++`]
+* {xref-VotingEscrow-lockNFT-address}[`++lockNFT()++`]
+
+[.contract-subindex-inherited]
+.UUPSUpgradeable
+
+[.contract-subindex-inherited]
+.ERC1967UpgradeUpgradeable
+
+[.contract-subindex-inherited]
+.IERC1967Upgradeable
+
+[.contract-subindex-inherited]
+.IERC1822ProxiableUpgradeable
+
+[.contract-subindex-inherited]
+.DaoAuthorizableUpgradeable
+* link:https://github.com/aragon[__DaoAuthorizableUpgradeable_init]
+* link:https://github.com/aragon[dao]
+
+[.contract-subindex-inherited]
+.PausableUpgradeable
+
+[.contract-subindex-inherited]
+.ContextUpgradeable
+
+[.contract-subindex-inherited]
+.ReentrancyGuardUpgradeable
+
+[.contract-subindex-inherited]
+.Initializable
+
+[.contract-subindex-inherited]
+.IVotingEscrowIncreasing
+
+[.contract-subindex-inherited]
+.ISweeper
+
+[.contract-subindex-inherited]
+.ISweeperErrors
+
+[.contract-subindex-inherited]
+.ISweeperEvents
+
+[.contract-subindex-inherited]
+.IWithdrawalQueue
+
+[.contract-subindex-inherited]
+.IWithdrawalQueueEvents
+
+[.contract-subindex-inherited]
+.IWithdrawalQueueErrors
+
+[.contract-subindex-inherited]
+.IDynamicVoter
+
+[.contract-subindex-inherited]
+.IDynamicVoterErrors
+
+[.contract-subindex-inherited]
+.IVotingEscrowCore
+
+[.contract-subindex-inherited]
+.IVotingEscrowCoreEvents
+
+[.contract-subindex-inherited]
+.IVotingEscrowCoreErrors
+
+[.contract-subindex-inherited]
+.ILockedBalanceIncreasing
+
+--
+
+[.contract-index]
+.Events
+--
+
+[.contract-subindex-inherited]
+.UUPSUpgradeable
+
+[.contract-subindex-inherited]
+.ERC1967UpgradeUpgradeable
+
+[.contract-subindex-inherited]
+.IERC1967Upgradeable
+
+[.contract-subindex-inherited]
+.IERC1822ProxiableUpgradeable
+
+[.contract-subindex-inherited]
+.DaoAuthorizableUpgradeable
+
+[.contract-subindex-inherited]
+.PausableUpgradeable
+
+[.contract-subindex-inherited]
+.ContextUpgradeable
+
+[.contract-subindex-inherited]
+.ReentrancyGuardUpgradeable
+
+[.contract-subindex-inherited]
+.Initializable
+
+[.contract-subindex-inherited]
+.IVotingEscrowIncreasing
+
+[.contract-subindex-inherited]
+.ISweeper
+
+[.contract-subindex-inherited]
+.ISweeperErrors
+
+[.contract-subindex-inherited]
+.ISweeperEvents
+* {xref-ISweeperEvents-Sweep-address-uint256-}[`++Sweep(to, amount)++`]
+* {xref-ISweeperEvents-SweepNFT-address-uint256-}[`++SweepNFT(to, tokenId)++`]
+
+[.contract-subindex-inherited]
+.IWithdrawalQueue
+
+[.contract-subindex-inherited]
+.IWithdrawalQueueEvents
+
+[.contract-subindex-inherited]
+.IWithdrawalQueueErrors
+
+[.contract-subindex-inherited]
+.IDynamicVoter
+
+[.contract-subindex-inherited]
+.IDynamicVoterErrors
+
+[.contract-subindex-inherited]
+.IVotingEscrowCore
+
+[.contract-subindex-inherited]
+.IVotingEscrowCoreEvents
+* {xref-IVotingEscrowCoreEvents-MinDepositSet-uint256-}[`++MinDepositSet(minDeposit)++`]
+* {xref-IVotingEscrowCoreEvents-Deposit-address-uint256-uint256-uint256-uint256-}[`++Deposit(depositor, tokenId, startTs, value, newTotalLocked)++`]
+* {xref-IVotingEscrowCoreEvents-Withdraw-address-uint256-uint256-uint256-uint256-}[`++Withdraw(depositor, tokenId, value, ts, newTotalLocked)++`]
+
+[.contract-subindex-inherited]
+.IVotingEscrowCoreErrors
+
+[.contract-subindex-inherited]
+.ILockedBalanceIncreasing
+
+--
+
+[.contract-index]
+.Errors
+--
+
+[.contract-subindex-inherited]
+.UUPSUpgradeable
+
+[.contract-subindex-inherited]
+.ERC1967UpgradeUpgradeable
+
+[.contract-subindex-inherited]
+.IERC1967Upgradeable
+
+[.contract-subindex-inherited]
+.IERC1822ProxiableUpgradeable
+
+[.contract-subindex-inherited]
+.DaoAuthorizableUpgradeable
+
+[.contract-subindex-inherited]
+.PausableUpgradeable
+
+[.contract-subindex-inherited]
+.ContextUpgradeable
+
+[.contract-subindex-inherited]
+.ReentrancyGuardUpgradeable
+
+[.contract-subindex-inherited]
+.Initializable
+
+[.contract-subindex-inherited]
+.IVotingEscrowIncreasing
+
+[.contract-subindex-inherited]
+.ISweeper
+
+[.contract-subindex-inherited]
+.ISweeperErrors
+* {xref-ISweeperErrors-NothingToSweep--}[`++NothingToSweep()++`]
+
+[.contract-subindex-inherited]
+.ISweeperEvents
+
+[.contract-subindex-inherited]
+.IWithdrawalQueue
+
+[.contract-subindex-inherited]
+.IWithdrawalQueueEvents
+
+[.contract-subindex-inherited]
+.IWithdrawalQueueErrors
+* {xref-IWithdrawalQueueErrors-NotTicketHolder--}[`++NotTicketHolder()++`]
+* {xref-IWithdrawalQueueErrors-CannotExit--}[`++CannotExit()++`]
+
+[.contract-subindex-inherited]
+.IDynamicVoter
+
+[.contract-subindex-inherited]
+.IDynamicVoterErrors
+* {xref-IDynamicVoterErrors-NotVoter--}[`++NotVoter()++`]
+* {xref-IDynamicVoterErrors-OwnershipChange--}[`++OwnershipChange()++`]
+* {xref-IDynamicVoterErrors-AlreadyVoted--}[`++AlreadyVoted()++`]
+
+[.contract-subindex-inherited]
+.IVotingEscrowCore
+
+[.contract-subindex-inherited]
+.IVotingEscrowCoreEvents
+
+[.contract-subindex-inherited]
+.IVotingEscrowCoreErrors
+* {xref-IVotingEscrowCoreErrors-NoLockFound--}[`++NoLockFound()++`]
+* {xref-IVotingEscrowCoreErrors-NotOwner--}[`++NotOwner()++`]
+* {xref-IVotingEscrowCoreErrors-NonExistentToken--}[`++NonExistentToken()++`]
+* {xref-IVotingEscrowCoreErrors-NotApprovedOrOwner--}[`++NotApprovedOrOwner()++`]
+* {xref-IVotingEscrowCoreErrors-ZeroAddress--}[`++ZeroAddress()++`]
+* {xref-IVotingEscrowCoreErrors-ZeroAmount--}[`++ZeroAmount()++`]
+* {xref-IVotingEscrowCoreErrors-ZeroBalance--}[`++ZeroBalance()++`]
+* {xref-IVotingEscrowCoreErrors-SameAddress--}[`++SameAddress()++`]
+* {xref-IVotingEscrowCoreErrors-LockNFTAlreadySet--}[`++LockNFTAlreadySet()++`]
+* {xref-IVotingEscrowCoreErrors-MustBe18Decimals--}[`++MustBe18Decimals()++`]
+* {xref-IVotingEscrowCoreErrors-TransferBalanceIncorrect--}[`++TransferBalanceIncorrect()++`]
+* {xref-IVotingEscrowCoreErrors-AmountTooSmall--}[`++AmountTooSmall()++`]
+
+[.contract-subindex-inherited]
+.ILockedBalanceIncreasing
+
+--
+
+[.contract-item]
+[[VotingEscrow-constructor--]]
+==== `[.contract-item-name]#++constructor++#++()++` [.item-kind]#public#
+
+[.contract-item]
+[[VotingEscrow-initialize-address-address-address-uint256-]]
+==== `[.contract-item-name]#++initialize++#++(address _token, address _dao, address _clock, uint256 _initialMinDeposit)++` [.item-kind]#external#
+
+[.contract-item]
+[[VotingEscrow-setCurve-address-]]
+==== `[.contract-item-name]#++setCurve++#++(address _curve)++` [.item-kind]#external#
+
+Sets the curve contract that calculates the voting power
+
+[.contract-item]
+[[VotingEscrow-setVoter-address-]]
+==== `[.contract-item-name]#++setVoter++#++(address _voter)++` [.item-kind]#external#
+
+Sets the voter contract that tracks votes
+
+[.contract-item]
+[[VotingEscrow-setQueue-address-]]
+==== `[.contract-item-name]#++setQueue++#++(address _queue)++` [.item-kind]#external#
+
+Sets the exit queue contract that manages withdrawal eligibility
+
+[.contract-item]
+[[VotingEscrow-setClock-address-]]
+==== `[.contract-item-name]#++setClock++#++(address _clock)++` [.item-kind]#external#
+
+Sets the clock contract that manages epoch and voting periods
+
+[.contract-item]
+[[VotingEscrow-setLockNFT-address-]]
+==== `[.contract-item-name]#++setLockNFT++#++(address _nft)++` [.item-kind]#external#
+
+Sets the NFT contract that is the lock
+
+By default this can only be set once due to the high risk of changing the lock
+and having the ability to steal user funds.
+
+[.contract-item]
+[[VotingEscrow-pause--]]
+==== `[.contract-item-name]#++pause++#++()++` [.item-kind]#external#
+
+[.contract-item]
+[[VotingEscrow-unpause--]]
+==== `[.contract-item-name]#++unpause++#++()++` [.item-kind]#external#
+
+[.contract-item]
+[[VotingEscrow-setMinDeposit-uint256-]]
+==== `[.contract-item-name]#++setMinDeposit++#++(uint256 _minDeposit)++` [.item-kind]#external#
+
+[.contract-item]
+[[VotingEscrow-isApprovedOrOwner-address-uint256-]]
+==== `[.contract-item-name]#++isApprovedOrOwner++#++(address _spender, uint256 _tokenId) → bool++` [.item-kind]#external#
+
+[.contract-item]
+[[VotingEscrow-ownedTokens-address-]]
+==== `[.contract-item-name]#++ownedTokens++#++(address _owner) → uint256[] tokenIds++` [.item-kind]#public#
+
+Fetch all NFTs owned by an address by leveraging the ERC721Enumerable interface
+
+[.contract-item]
+[[VotingEscrow-votingPower-uint256-]]
+==== `[.contract-item-name]#++votingPower++#++(uint256 _tokenId) → uint256++` [.item-kind]#public#
+
+[.contract-item]
+[[VotingEscrow-votingPowerAt-uint256-uint256-]]
+==== `[.contract-item-name]#++votingPowerAt++#++(uint256 _tokenId, uint256 _t) → uint256++` [.item-kind]#public#
+
+[.contract-item]
+[[VotingEscrow-totalVotingPower--]]
+==== `[.contract-item-name]#++totalVotingPower++#++() → uint256++` [.item-kind]#external#
+
+Currently unsupported
+
+[.contract-item]
+[[VotingEscrow-totalVotingPowerAt-uint256-]]
+==== `[.contract-item-name]#++totalVotingPowerAt++#++(uint256 _timestamp) → uint256++` [.item-kind]#public#
+
+Currently unsupported
+
+[.contract-item]
+[[VotingEscrow-locked-uint256-]]
+==== `[.contract-item-name]#++locked++#++(uint256 _tokenId) → struct ILockedBalanceIncreasing.LockedBalance++` [.item-kind]#external#
+
+[.contract-item]
+[[VotingEscrow-votingPowerForAccount-address-]]
+==== `[.contract-item-name]#++votingPowerForAccount++#++(address _account) → uint256 accountVotingPower++` [.item-kind]#external#
+
+We cannot do historic voting power at this time because we don't current track
+histories of token transfers.
+
+[.contract-item]
+[[VotingEscrow-isVoting-uint256-]]
+==== `[.contract-item-name]#++isVoting++#++(uint256 _tokenId) → bool++` [.item-kind]#public#
+
+Checks if the NFT is currently voting. We require the user to reset their votes if so.
+
+[.contract-item]
+[[VotingEscrow-createLock-uint256-]]
+==== `[.contract-item-name]#++createLock++#++(uint256 _value) → uint256++` [.item-kind]#external#
+
+Deposit `_value` tokens for `msg.sender`
+
+[.contract-item]
+[[VotingEscrow-createLockFor-uint256-address-]]
+==== `[.contract-item-name]#++createLockFor++#++(uint256 _value, address _to) → uint256++` [.item-kind]#external#
+
+Creates a lock on behalf of someone else. Restricted by default.
+
+[.contract-item]
+[[VotingEscrow-_createLockFor-uint256-address-]]
+==== `[.contract-item-name]#++_createLockFor++#++(uint256 _value, address _to) → uint256++` [.item-kind]#internal#
+
+Deposit `_value` tokens for `_to` starting at next deposit interval
+
+[.contract-item]
+[[VotingEscrow-resetVotesAndBeginWithdrawal-uint256-]]
+==== `[.contract-item-name]#++resetVotesAndBeginWithdrawal++#++(uint256 _tokenId)++` [.item-kind]#external#
+
+Resets the votes and begins the withdrawal process for a given tokenId
+
+Convenience function, the user must have authorized this contract to act on their behalf.
+
+[.contract-item]
+[[VotingEscrow-beginWithdrawal-uint256-]]
+==== `[.contract-item-name]#++beginWithdrawal++#++(uint256 _tokenId)++` [.item-kind]#public#
+
+Enters a tokenId into the withdrawal queue by transferring to this contract and creating a ticket.
+
+The user must not have active votes in the voter contract.
+
+[.contract-item]
+[[VotingEscrow-withdraw-uint256-]]
+==== `[.contract-item-name]#++withdraw++#++(uint256 _tokenId)++` [.item-kind]#external#
+
+Withdraws tokens from the contract
+
+[.contract-item]
+[[VotingEscrow-sweep--]]
+==== `[.contract-item-name]#++sweep++#++()++` [.item-kind]#external#
+
+withdraw excess tokens from the contract - possibly by accident
+
+[.contract-item]
+[[VotingEscrow-sweepNFT-uint256-address-]]
+==== `[.contract-item-name]#++sweepNFT++#++(uint256 _tokenId, address _to)++` [.item-kind]#external#
+
+the sweeper can send NFTs mistakenly sent to the contract to a designated address
+
+Cannot sweep NFTs that are in the exit queue for obvious reasons
+
+[.contract-item]
+[[VotingEscrow-implementation--]]
+==== `[.contract-item-name]#++implementation++#++() → address++` [.item-kind]#public#
+
+Returns the address of the implementation contract in the [proxy storage slot](https://eips.ethereum.org/EIPS/eip-1967) slot the [UUPS proxy](https://eips.ethereum.org/EIPS/eip-1822) is pointing to.
+
+[.contract-item]
+[[VotingEscrow-_authorizeUpgrade-address-]]
+==== `[.contract-item-name]#++_authorizeUpgrade++#++(address)++` [.item-kind]#internal#
+
+Internal method authorizing the upgrade of the contract via the [upgradeability mechanism for UUPS proxies](https://docs.openzeppelin.com/contracts/4.x/api/proxy#UUPSUpgradeable) (see [ERC-1822](https://eips.ethereum.org/EIPS/eip-1822)).
+
+[.contract-item]
+[[VotingEscrow-ESCROW_ADMIN_ROLE-bytes32]]
+==== `[.contract-item-name]#++ESCROW_ADMIN_ROLE++#++() → bytes32++` [.item-kind]#public#
+
+Role required to manage the Escrow curve, this typically will be the DAO
+
+[.contract-item]
+[[VotingEscrow-PAUSER_ROLE-bytes32]]
+==== `[.contract-item-name]#++PAUSER_ROLE++#++() → bytes32++` [.item-kind]#public#
+
+Role required to pause the contract - can be given to emergency contracts
+
+[.contract-item]
+[[VotingEscrow-SWEEPER_ROLE-bytes32]]
+==== `[.contract-item-name]#++SWEEPER_ROLE++#++() → bytes32++` [.item-kind]#public#
+
+Role required to withdraw underlying tokens from the contract
+
+[.contract-item]
+[[VotingEscrow-decimals-uint8]]
+==== `[.contract-item-name]#++decimals++#++() → uint8++` [.item-kind]#public#
+
+Decimals of the voting power
+
+[.contract-item]
+[[VotingEscrow-minDeposit-uint256]]
+==== `[.contract-item-name]#++minDeposit++#++() → uint256++` [.item-kind]#public#
+
+Minimum deposit amount
+
+[.contract-item]
+[[VotingEscrow-lastLockId-uint256]]
+==== `[.contract-item-name]#++lastLockId++#++() → uint256++` [.item-kind]#public#
+
+Auto-incrementing ID for the most recently created lock, does not decrease on withdrawal
+
+[.contract-item]
+[[VotingEscrow-totalLocked-uint256]]
+==== `[.contract-item-name]#++totalLocked++#++() → uint256++` [.item-kind]#public#
+
+Total supply of underlying tokens deposited in the contract
+
+[.contract-item]
+[[VotingEscrow-token-address]]
+==== `[.contract-item-name]#++token++#++() → address++` [.item-kind]#public#
+
+Address of the underying ERC20 token.
+
+Only tokens with 18 decimals and no transfer fees are supported
+
+[.contract-item]
+[[VotingEscrow-voter-address]]
+==== `[.contract-item-name]#++voter++#++() → address++` [.item-kind]#public#
+
+Address of the gauge voting contract.
+
+We need to ensure votes are not left in this contract before allowing positing changes
+
+[.contract-item]
+[[VotingEscrow-curve-address]]
+==== `[.contract-item-name]#++curve++#++() → address++` [.item-kind]#public#
+
+Address of the voting Escrow Curve contract that will calculate the voting power
+
+[.contract-item]
+[[VotingEscrow-queue-address]]
+==== `[.contract-item-name]#++queue++#++() → address++` [.item-kind]#public#
+
+Address of the contract that manages exit queue logic for withdrawals
+
+[.contract-item]
+[[VotingEscrow-clock-address]]
+==== `[.contract-item-name]#++clock++#++() → address++` [.item-kind]#public#
+
+Address of the clock contract that manages epoch and voting periods
+
+[.contract-item]
+[[VotingEscrow-lockNFT-address]]
+==== `[.contract-item-name]#++lockNFT++#++() → address++` [.item-kind]#public#
+
+Address of the NFT contract that is the lock
+
+:QUEUE_ADMIN_ROLE: pass:normal[xref:#ExitQueue-QUEUE_ADMIN_ROLE-bytes32[`++QUEUE_ADMIN_ROLE++`]]
+:WITHDRAW_ROLE: pass:normal[xref:#ExitQueue-WITHDRAW_ROLE-bytes32[`++WITHDRAW_ROLE++`]]
+:feePercent: pass:normal[xref:#ExitQueue-feePercent-uint256[`++feePercent++`]]
+:escrow: pass:normal[xref:#ExitQueue-escrow-address[`++escrow++`]]
+:clock: pass:normal[xref:#ExitQueue-clock-address[`++clock++`]]
+:cooldown: pass:normal[xref:#ExitQueue-cooldown-uint48[`++cooldown++`]]
+:minLock: pass:normal[xref:#ExitQueue-minLock-uint48[`++minLock++`]]
+:_queue: pass:normal[xref:#ExitQueue-_queue-mapping-uint256----struct-ITicket-Ticket-[`++_queue++`]]
+:constructor: pass:normal[xref:#ExitQueue-constructor--[`++constructor++`]]
+:initialize: pass:normal[xref:#ExitQueue-initialize-address-uint48-address-uint256-address-uint48-[`++initialize++`]]
+:onlyEscrow: pass:normal[xref:#ExitQueue-onlyEscrow--[`++onlyEscrow++`]]
+:setCooldown: pass:normal[xref:#ExitQueue-setCooldown-uint48-[`++setCooldown++`]]
+:_setCooldown: pass:normal[xref:#ExitQueue-_setCooldown-uint48-[`++_setCooldown++`]]
+:setFeePercent: pass:normal[xref:#ExitQueue-setFeePercent-uint256-[`++setFeePercent++`]]
+:_setFeePercent: pass:normal[xref:#ExitQueue-_setFeePercent-uint256-[`++_setFeePercent++`]]
+:setMinLock: pass:normal[xref:#ExitQueue-setMinLock-uint48-[`++setMinLock++`]]
+:_setMinLock: pass:normal[xref:#ExitQueue-_setMinLock-uint48-[`++_setMinLock++`]]
+:withdraw: pass:normal[xref:#ExitQueue-withdraw-uint256-[`++withdraw++`]]
+:queueExit: pass:normal[xref:#ExitQueue-queueExit-uint256-address-[`++queueExit++`]]
+:nextExitDate: pass:normal[xref:#ExitQueue-nextExitDate--[`++nextExitDate++`]]
+:exit: pass:normal[xref:#ExitQueue-exit-uint256-[`++exit++`]]
+:calculateFee: pass:normal[xref:#ExitQueue-calculateFee-uint256-[`++calculateFee++`]]
+:canExit: pass:normal[xref:#ExitQueue-canExit-uint256-[`++canExit++`]]
+:ticketHolder: pass:normal[xref:#ExitQueue-ticketHolder-uint256-[`++ticketHolder++`]]
+:queue: pass:normal[xref:#ExitQueue-queue-uint256-[`++queue++`]]
+:timeToMinLock: pass:normal[xref:#ExitQueue-timeToMinLock-uint256-[`++timeToMinLock++`]]
+:implementation: pass:normal[xref:#ExitQueue-implementation--[`++implementation++`]]
+:_authorizeUpgrade: pass:normal[xref:#ExitQueue-_authorizeUpgrade-address-[`++_authorizeUpgrade++`]]
+
+[.contract]
+[[ExitQueue]]
+=== `++ExitQueue++` link:https://github.com/aragon/ve-governance/blob/vundefined//home/jordan/Documents/dev/crypto/aragon/ve-governance/src/escrow/increasing/ExitQueue.sol[{github-icon},role=heading-link]
+
+[.contract-index]
+.Modifiers
+--
+* {xref-ExitQueue-onlyEscrow--}[`++onlyEscrow()++`]
+
+--
+
+[.contract-index]
+.Functions
+--
+* {xref-ExitQueue-constructor--}[`++constructor()++`]
+* {xref-ExitQueue-initialize-address-uint48-address-uint256-address-uint48-}[`++initialize(_escrow, _cooldown, _dao, _feePercent, _clock, _minLock)++`]
+* {xref-ExitQueue-setCooldown-uint48-}[`++setCooldown(_cooldown)++`]
+* {xref-ExitQueue-_setCooldown-uint48-}[`++_setCooldown(_cooldown)++`]
+* {xref-ExitQueue-setFeePercent-uint256-}[`++setFeePercent(_feePercent)++`]
+* {xref-ExitQueue-_setFeePercent-uint256-}[`++_setFeePercent(_feePercent)++`]
+* {xref-ExitQueue-setMinLock-uint48-}[`++setMinLock(_minLock)++`]
+* {xref-ExitQueue-_setMinLock-uint48-}[`++_setMinLock(_minLock)++`]
+* {xref-ExitQueue-withdraw-uint256-}[`++withdraw(_amount)++`]
+* {xref-ExitQueue-queueExit-uint256-address-}[`++queueExit(_tokenId, _ticketHolder)++`]
+* {xref-ExitQueue-nextExitDate--}[`++nextExitDate()++`]
+* {xref-ExitQueue-exit-uint256-}[`++exit(_tokenId)++`]
+* {xref-ExitQueue-calculateFee-uint256-}[`++calculateFee(_tokenId)++`]
+* {xref-ExitQueue-canExit-uint256-}[`++canExit(_tokenId)++`]
+* {xref-ExitQueue-ticketHolder-uint256-}[`++ticketHolder(_tokenId)++`]
+* {xref-ExitQueue-queue-uint256-}[`++queue(_tokenId)++`]
+* {xref-ExitQueue-timeToMinLock-uint256-}[`++timeToMinLock(_tokenId)++`]
+* {xref-ExitQueue-implementation--}[`++implementation()++`]
+* {xref-ExitQueue-_authorizeUpgrade-address-}[`++_authorizeUpgrade()++`]
+* {xref-ExitQueue-QUEUE_ADMIN_ROLE-bytes32}[`++QUEUE_ADMIN_ROLE()++`]
+* {xref-ExitQueue-WITHDRAW_ROLE-bytes32}[`++WITHDRAW_ROLE()++`]
+* {xref-ExitQueue-feePercent-uint256}[`++feePercent()++`]
+* {xref-ExitQueue-escrow-address}[`++escrow()++`]
+* {xref-ExitQueue-clock-address}[`++clock()++`]
+* {xref-ExitQueue-cooldown-uint48}[`++cooldown()++`]
+* {xref-ExitQueue-minLock-uint48}[`++minLock()++`]
+
+[.contract-subindex-inherited]
+.UUPSUpgradeable
+
+[.contract-subindex-inherited]
+.ERC1967UpgradeUpgradeable
+
+[.contract-subindex-inherited]
+.IERC1967Upgradeable
+
+[.contract-subindex-inherited]
+.IERC1822ProxiableUpgradeable
+
+[.contract-subindex-inherited]
+.DaoAuthorizableUpgradeable
+* link:https://github.com/aragon[__DaoAuthorizableUpgradeable_init]
+* link:https://github.com/aragon[dao]
+
+[.contract-subindex-inherited]
+.ContextUpgradeable
+
+[.contract-subindex-inherited]
+.Initializable
+
+[.contract-subindex-inherited]
+.IClockUser
+
+[.contract-subindex-inherited]
+.IExitQueue
+
+[.contract-subindex-inherited]
+.IExitQueueMinLock
+
+[.contract-subindex-inherited]
+.IExitQueueCooldown
+
+[.contract-subindex-inherited]
+.IExitQueueFee
+
+[.contract-subindex-inherited]
+.ITicket
+
+[.contract-subindex-inherited]
+.IExitQueueErrorsAndEvents
+
+[.contract-subindex-inherited]
+.IExitMinLockCooldownErrorsAndEvents
+
+[.contract-subindex-inherited]
+.IExitQueueCooldownErrorsAndEvents
+
+[.contract-subindex-inherited]
+.IExitQueueFeeErrorsAndEvents
+
+[.contract-subindex-inherited]
+.IExitQueueCoreErrorsAndEvents
+
+--
+
+[.contract-index]
+.Events
+--
+
+[.contract-subindex-inherited]
+.UUPSUpgradeable
+
+[.contract-subindex-inherited]
+.ERC1967UpgradeUpgradeable
+
+[.contract-subindex-inherited]
+.IERC1967Upgradeable
+
+[.contract-subindex-inherited]
+.IERC1822ProxiableUpgradeable
+
+[.contract-subindex-inherited]
+.DaoAuthorizableUpgradeable
+
+[.contract-subindex-inherited]
+.ContextUpgradeable
+
+[.contract-subindex-inherited]
+.Initializable
+
+[.contract-subindex-inherited]
+.IClockUser
+
+[.contract-subindex-inherited]
+.IExitQueue
+
+[.contract-subindex-inherited]
+.IExitQueueMinLock
+
+[.contract-subindex-inherited]
+.IExitQueueCooldown
+
+[.contract-subindex-inherited]
+.IExitQueueFee
+
+[.contract-subindex-inherited]
+.ITicket
+
+[.contract-subindex-inherited]
+.IExitQueueErrorsAndEvents
+
+[.contract-subindex-inherited]
+.IExitMinLockCooldownErrorsAndEvents
+* {xref-IExitMinLockCooldownErrorsAndEvents-MinLockSet-uint48-}[`++MinLockSet(minLock)++`]
+
+[.contract-subindex-inherited]
+.IExitQueueCooldownErrorsAndEvents
+* {xref-IExitQueueCooldownErrorsAndEvents-CooldownSet-uint48-}[`++CooldownSet(cooldown)++`]
+
+[.contract-subindex-inherited]
+.IExitQueueFeeErrorsAndEvents
+* {xref-IExitQueueFeeErrorsAndEvents-Withdraw-address-uint256-}[`++Withdraw(to, amount)++`]
+* {xref-IExitQueueFeeErrorsAndEvents-FeePercentSet-uint256-}[`++FeePercentSet(feePercent)++`]
+
+[.contract-subindex-inherited]
+.IExitQueueCoreErrorsAndEvents
+* {xref-IExitQueueCoreErrorsAndEvents-ExitQueued-uint256-address-uint256-}[`++ExitQueued(tokenId, holder, exitDate)++`]
+* {xref-IExitQueueCoreErrorsAndEvents-Exit-uint256-uint256-}[`++Exit(tokenId, fee)++`]
+
+--
+
+[.contract-index]
+.Errors
+--
+
+[.contract-subindex-inherited]
+.UUPSUpgradeable
+
+[.contract-subindex-inherited]
+.ERC1967UpgradeUpgradeable
+
+[.contract-subindex-inherited]
+.IERC1967Upgradeable
+
+[.contract-subindex-inherited]
+.IERC1822ProxiableUpgradeable
+
+[.contract-subindex-inherited]
+.DaoAuthorizableUpgradeable
+
+[.contract-subindex-inherited]
+.ContextUpgradeable
+
+[.contract-subindex-inherited]
+.Initializable
+
+[.contract-subindex-inherited]
+.IClockUser
+
+[.contract-subindex-inherited]
+.IExitQueue
+
+[.contract-subindex-inherited]
+.IExitQueueMinLock
+
+[.contract-subindex-inherited]
+.IExitQueueCooldown
+
+[.contract-subindex-inherited]
+.IExitQueueFee
+
+[.contract-subindex-inherited]
+.ITicket
+
+[.contract-subindex-inherited]
+.IExitQueueErrorsAndEvents
+
+[.contract-subindex-inherited]
+.IExitMinLockCooldownErrorsAndEvents
+* {xref-IExitMinLockCooldownErrorsAndEvents-MinLockOutOfBounds--}[`++MinLockOutOfBounds()++`]
+* {xref-IExitMinLockCooldownErrorsAndEvents-MinLockNotReached-uint256-uint48-uint48-}[`++MinLockNotReached(tokenId, minLock, earliestExitDate)++`]
+
+[.contract-subindex-inherited]
+.IExitQueueCooldownErrorsAndEvents
+* {xref-IExitQueueCooldownErrorsAndEvents-CooldownTooHigh--}[`++CooldownTooHigh()++`]
+
+[.contract-subindex-inherited]
+.IExitQueueFeeErrorsAndEvents
+* {xref-IExitQueueFeeErrorsAndEvents-FeeTooHigh-uint256-}[`++FeeTooHigh(maxFee)++`]
+
+[.contract-subindex-inherited]
+.IExitQueueCoreErrorsAndEvents
+* {xref-IExitQueueCoreErrorsAndEvents-OnlyEscrow--}[`++OnlyEscrow()++`]
+* {xref-IExitQueueCoreErrorsAndEvents-AlreadyQueued--}[`++AlreadyQueued()++`]
+* {xref-IExitQueueCoreErrorsAndEvents-ZeroAddress--}[`++ZeroAddress()++`]
+* {xref-IExitQueueCoreErrorsAndEvents-CannotExit--}[`++CannotExit()++`]
+* {xref-IExitQueueCoreErrorsAndEvents-NoLockBalance--}[`++NoLockBalance()++`]
+
+--
+
+[.contract-index]
+.Internal Variables
+--
+* {xref-ExitQueue-_queue-mapping-uint256----struct-ITicket-Ticket-}[`++mapping(uint256 => struct ITicket.Ticket)  _queue++`]
+
+[.contract-subindex-inherited]
+.UUPSUpgradeable
+
+[.contract-subindex-inherited]
+.ERC1967UpgradeUpgradeable
+
+[.contract-subindex-inherited]
+.IERC1967Upgradeable
+
+[.contract-subindex-inherited]
+.IERC1822ProxiableUpgradeable
+
+[.contract-subindex-inherited]
+.DaoAuthorizableUpgradeable
+
+[.contract-subindex-inherited]
+.ContextUpgradeable
+
+[.contract-subindex-inherited]
+.Initializable
+
+[.contract-subindex-inherited]
+.IClockUser
+
+[.contract-subindex-inherited]
+.IExitQueue
+
+[.contract-subindex-inherited]
+.IExitQueueMinLock
+
+[.contract-subindex-inherited]
+.IExitQueueCooldown
+
+[.contract-subindex-inherited]
+.IExitQueueFee
+
+[.contract-subindex-inherited]
+.ITicket
+
+[.contract-subindex-inherited]
+.IExitQueueErrorsAndEvents
+
+[.contract-subindex-inherited]
+.IExitMinLockCooldownErrorsAndEvents
+
+[.contract-subindex-inherited]
+.IExitQueueCooldownErrorsAndEvents
+
+[.contract-subindex-inherited]
+.IExitQueueFeeErrorsAndEvents
+
+[.contract-subindex-inherited]
+.IExitQueueCoreErrorsAndEvents
+
+--
+
+[.contract-item]
+[[ExitQueue-onlyEscrow--]]
+==== `[.contract-item-name]#++onlyEscrow++#++()++` [.item-kind]#modifier#
+
+[.contract-item]
+[[ExitQueue-constructor--]]
+==== `[.contract-item-name]#++constructor++#++()++` [.item-kind]#public#
+
+[.contract-item]
+[[ExitQueue-initialize-address-uint48-address-uint256-address-uint48-]]
+==== `[.contract-item-name]#++initialize++#++(address _escrow, uint48 _cooldown, address _dao, uint256 _feePercent, address _clock, uint48 _minLock)++` [.item-kind]#external#
+
+[.contract-item]
+[[ExitQueue-setCooldown-uint48-]]
+==== `[.contract-item-name]#++setCooldown++#++(uint48 _cooldown)++` [.item-kind]#external#
+
+The exit queue manager can set the cooldown period
+
+[.contract-item]
+[[ExitQueue-_setCooldown-uint48-]]
+==== `[.contract-item-name]#++_setCooldown++#++(uint48 _cooldown)++` [.item-kind]#internal#
+
+[.contract-item]
+[[ExitQueue-setFeePercent-uint256-]]
+==== `[.contract-item-name]#++setFeePercent++#++(uint256 _feePercent)++` [.item-kind]#external#
+
+The exit queue manager can set the fee percent
+
+[.contract-item]
+[[ExitQueue-_setFeePercent-uint256-]]
+==== `[.contract-item-name]#++_setFeePercent++#++(uint256 _feePercent)++` [.item-kind]#internal#
+
+[.contract-item]
+[[ExitQueue-setMinLock-uint48-]]
+==== `[.contract-item-name]#++setMinLock++#++(uint48 _minLock)++` [.item-kind]#external#
+
+The exit queue manager can set the minimum lock time
+
+Min 1 second to prevent single block deposit-withdrawal attacks
+
+[.contract-item]
+[[ExitQueue-_setMinLock-uint48-]]
+==== `[.contract-item-name]#++_setMinLock++#++(uint48 _minLock)++` [.item-kind]#internal#
+
+[.contract-item]
+[[ExitQueue-withdraw-uint256-]]
+==== `[.contract-item-name]#++withdraw++#++(uint256 _amount)++` [.item-kind]#external#
+
+withdraw staked tokens sent as part of fee collection to the caller
+
+The caller must be authorized to withdraw by the DAO
+
+[.contract-item]
+[[ExitQueue-queueExit-uint256-address-]]
+==== `[.contract-item-name]#++queueExit++#++(uint256 _tokenId, address _ticketHolder)++` [.item-kind]#external#
+
+queue an exit for a given tokenId, granting the ticket to the passed holder
+
+we don't check that the ticket holder is the caller
+this is because the escrow contract is the only one that can queue an exit
+and we leave that logic to the escrow contract
+
+[.contract-item]
+[[ExitQueue-nextExitDate--]]
+==== `[.contract-item-name]#++nextExitDate++#++() → uint256++` [.item-kind]#public#
+
+Returns the next exit date for a ticket
+
+The next exit date is the later of the cooldown expiry and the next checkpoint
+
+[.contract-item]
+[[ExitQueue-exit-uint256-]]
+==== `[.contract-item-name]#++exit++#++(uint256 _tokenId) → uint256 fee++` [.item-kind]#external#
+
+Exits the queue for that tokenID.
+
+The holder is not checked. This is left up to the escrow contract to manage.
+
+[.contract-item]
+[[ExitQueue-calculateFee-uint256-]]
+==== `[.contract-item-name]#++calculateFee++#++(uint256 _tokenId) → uint256++` [.item-kind]#public#
+
+Calculate the exit fee for a given tokenId
+
+[.contract-item]
+[[ExitQueue-canExit-uint256-]]
+==== `[.contract-item-name]#++canExit++#++(uint256 _tokenId) → bool++` [.item-kind]#public#
+
+If the admin chages the cooldown, this will affect all ticket holders. We may not want this.
+
+[.contract-item]
+[[ExitQueue-ticketHolder-uint256-]]
+==== `[.contract-item-name]#++ticketHolder++#++(uint256 _tokenId) → address++` [.item-kind]#external#
+
+[.contract-item]
+[[ExitQueue-queue-uint256-]]
+==== `[.contract-item-name]#++queue++#++(uint256 _tokenId) → struct ITicket.Ticket++` [.item-kind]#external#
+
+tokenId => Ticket
+
+[.contract-item]
+[[ExitQueue-timeToMinLock-uint256-]]
+==== `[.contract-item-name]#++timeToMinLock++#++(uint256 _tokenId) → uint48++` [.item-kind]#public#
+
+[.contract-item]
+[[ExitQueue-implementation--]]
+==== `[.contract-item-name]#++implementation++#++() → address++` [.item-kind]#public#
+
+Returns the address of the implementation contract in the [proxy storage slot](https://eips.ethereum.org/EIPS/eip-1967) slot the [UUPS proxy](https://eips.ethereum.org/EIPS/eip-1822) is pointing to.
+
+[.contract-item]
+[[ExitQueue-_authorizeUpgrade-address-]]
+==== `[.contract-item-name]#++_authorizeUpgrade++#++(address)++` [.item-kind]#internal#
+
+Internal method authorizing the upgrade of the contract via the [upgradeability mechanism for UUPS proxies](https://docs.openzeppelin.com/contracts/4.x/api/proxy#UUPSUpgradeable) (see [ERC-1822](https://eips.ethereum.org/EIPS/eip-1822)).
+
+[.contract-item]
+[[ExitQueue-QUEUE_ADMIN_ROLE-bytes32]]
+==== `[.contract-item-name]#++QUEUE_ADMIN_ROLE++#++() → bytes32++` [.item-kind]#public#
+
+role required to manage the exit queue
+
+[.contract-item]
+[[ExitQueue-WITHDRAW_ROLE-bytes32]]
+==== `[.contract-item-name]#++WITHDRAW_ROLE++#++() → bytes32++` [.item-kind]#public#
+
+role required to withdraw tokens from the escrow contract
+
+[.contract-item]
+[[ExitQueue-feePercent-uint256]]
+==== `[.contract-item-name]#++feePercent++#++() → uint256++` [.item-kind]#public#
+
+the fee percent charged on withdrawals
+
+[.contract-item]
+[[ExitQueue-escrow-address]]
+==== `[.contract-item-name]#++escrow++#++() → address++` [.item-kind]#public#
+
+address of the escrow contract
+
+[.contract-item]
+[[ExitQueue-clock-address]]
+==== `[.contract-item-name]#++clock++#++() → address++` [.item-kind]#public#
+
+clock contract for epoch duration
+
+[.contract-item]
+[[ExitQueue-cooldown-uint48]]
+==== `[.contract-item-name]#++cooldown++#++() → uint48++` [.item-kind]#public#
+
+time in seconds between exit and withdrawal
+
+[.contract-item]
+[[ExitQueue-minLock-uint48]]
+==== `[.contract-item-name]#++minLock++#++() → uint48++` [.item-kind]#public#
+
+minimum time from the original lock date before one can enter the queue
+
+[.contract-item]
+[[ExitQueue-_queue-mapping-uint256----struct-ITicket-Ticket-]]
+==== `mapping(uint256 &#x3D;&gt; struct ITicket.Ticket) [.contract-item-name]#++_queue++#` [.item-kind]#internal#
+
+tokenId => Ticket
+
+:OnlyEscrow: pass:normal[xref:#QuadraticIncreasingEscrow-OnlyEscrow--[`++OnlyEscrow++`]]
+:CURVE_ADMIN_ROLE: pass:normal[xref:#QuadraticIncreasingEscrow-CURVE_ADMIN_ROLE-bytes32[`++CURVE_ADMIN_ROLE++`]]
+:escrow: pass:normal[xref:#QuadraticIncreasingEscrow-escrow-address[`++escrow++`]]
+:clock: pass:normal[xref:#QuadraticIncreasingEscrow-clock-address[`++clock++`]]
+:tokenPointIntervals: pass:normal[xref:#QuadraticIncreasingEscrow-tokenPointIntervals-mapping-uint256----uint256-[`++tokenPointIntervals++`]]
+:warmupPeriod: pass:normal[xref:#QuadraticIncreasingEscrow-warmupPeriod-uint48[`++warmupPeriod++`]]
+:_tokenPointHistory: pass:normal[xref:#QuadraticIncreasingEscrow-_tokenPointHistory-mapping-uint256----struct-IEscrowCurveTokenStorage-TokenPoint-1000000000--[`++_tokenPointHistory++`]]
+:constructor: pass:normal[xref:#QuadraticIncreasingEscrow-constructor--[`++constructor++`]]
+:initialize: pass:normal[xref:#QuadraticIncreasingEscrow-initialize-address-address-uint48-address-[`++initialize++`]]
+:_getQuadraticCoeff: pass:normal[xref:#QuadraticIncreasingEscrow-_getQuadraticCoeff-uint256-[`++_getQuadraticCoeff++`]]
+:_getLinearCoeff: pass:normal[xref:#QuadraticIncreasingEscrow-_getLinearCoeff-uint256-[`++_getLinearCoeff++`]]
+:_getConstantCoeff: pass:normal[xref:#QuadraticIncreasingEscrow-_getConstantCoeff-uint256-[`++_getConstantCoeff++`]]
+:_getCoefficients: pass:normal[xref:#QuadraticIncreasingEscrow-_getCoefficients-uint256-[`++_getCoefficients++`]]
+:getCoefficients: pass:normal[xref:#QuadraticIncreasingEscrow-getCoefficients-uint256-[`++getCoefficients++`]]
+:getBias: pass:normal[xref:#QuadraticIncreasingEscrow-getBias-uint256-uint256-[`++getBias++`]]
+:_getBias: pass:normal[xref:#QuadraticIncreasingEscrow-_getBias-uint256-int256-3--[`++_getBias++`]]
+:_maxTime: pass:normal[xref:#QuadraticIncreasingEscrow-_maxTime--[`++_maxTime++`]]
+:previewMaxBias: pass:normal[xref:#QuadraticIncreasingEscrow-previewMaxBias-uint256-[`++previewMaxBias++`]]
+:setWarmupPeriod: pass:normal[xref:#QuadraticIncreasingEscrow-setWarmupPeriod-uint48-[`++setWarmupPeriod++`]]
+:isWarm: pass:normal[xref:#QuadraticIncreasingEscrow-isWarm-uint256-[`++isWarm++`]]
+:_isWarm: pass:normal[xref:#QuadraticIncreasingEscrow-_isWarm-struct-IEscrowCurveTokenStorage-TokenPoint-[`++_isWarm++`]]
+:tokenPointHistory: pass:normal[xref:#QuadraticIncreasingEscrow-tokenPointHistory-uint256-uint256-[`++tokenPointHistory++`]]
+:_getPastTokenPointInterval: pass:normal[xref:#QuadraticIncreasingEscrow-_getPastTokenPointInterval-uint256-uint256-[`++_getPastTokenPointInterval++`]]
+:votingPowerAt: pass:normal[xref:#QuadraticIncreasingEscrow-votingPowerAt-uint256-uint256-[`++votingPowerAt++`]]
+:supplyAt: pass:normal[xref:#QuadraticIncreasingEscrow-supplyAt-uint256-[`++supplyAt++`]]
+:checkpoint: pass:normal[xref:#QuadraticIncreasingEscrow-checkpoint-uint256-struct-ILockedBalanceIncreasing-LockedBalance-struct-ILockedBalanceIncreasing-LockedBalance-[`++checkpoint++`]]
+:_checkpoint: pass:normal[xref:#QuadraticIncreasingEscrow-_checkpoint-uint256-struct-ILockedBalanceIncreasing-LockedBalance-struct-ILockedBalanceIncreasing-LockedBalance-[`++_checkpoint++`]]
+:implementation: pass:normal[xref:#QuadraticIncreasingEscrow-implementation--[`++implementation++`]]
+:_authorizeUpgrade: pass:normal[xref:#QuadraticIncreasingEscrow-_authorizeUpgrade-address-[`++_authorizeUpgrade++`]]
+
+[.contract]
+[[QuadraticIncreasingEscrow]]
+=== `++QuadraticIncreasingEscrow++` link:https://github.com/aragon/ve-governance/blob/vundefined//home/jordan/Documents/dev/crypto/aragon/ve-governance/src/escrow/increasing/QuadraticIncreasingEscrow.sol[{github-icon},role=heading-link]
+
+[.contract-index]
+.Functions
+--
+* {xref-QuadraticIncreasingEscrow-constructor--}[`++constructor()++`]
+* {xref-QuadraticIncreasingEscrow-initialize-address-address-uint48-address-}[`++initialize(_escrow, _dao, _warmupPeriod, _clock)++`]
+* {xref-QuadraticIncreasingEscrow-_getQuadraticCoeff-uint256-}[`++_getQuadraticCoeff(amount)++`]
+* {xref-QuadraticIncreasingEscrow-_getLinearCoeff-uint256-}[`++_getLinearCoeff(amount)++`]
+* {xref-QuadraticIncreasingEscrow-_getConstantCoeff-uint256-}[`++_getConstantCoeff(amount)++`]
+* {xref-QuadraticIncreasingEscrow-_getCoefficients-uint256-}[`++_getCoefficients(amount)++`]
+* {xref-QuadraticIncreasingEscrow-getCoefficients-uint256-}[`++getCoefficients(amount)++`]
+* {xref-QuadraticIncreasingEscrow-getBias-uint256-uint256-}[`++getBias(timeElapsed, amount)++`]
+* {xref-QuadraticIncreasingEscrow-_getBias-uint256-int256-3--}[`++_getBias(timeElapsed, coefficients)++`]
+* {xref-QuadraticIncreasingEscrow-_maxTime--}[`++_maxTime()++`]
+* {xref-QuadraticIncreasingEscrow-previewMaxBias-uint256-}[`++previewMaxBias(amount)++`]
+* {xref-QuadraticIncreasingEscrow-setWarmupPeriod-uint48-}[`++setWarmupPeriod(_warmupPeriod)++`]
+* {xref-QuadraticIncreasingEscrow-isWarm-uint256-}[`++isWarm(tokenId)++`]
+* {xref-QuadraticIncreasingEscrow-_isWarm-struct-IEscrowCurveTokenStorage-TokenPoint-}[`++_isWarm(_point)++`]
+* {xref-QuadraticIncreasingEscrow-tokenPointHistory-uint256-uint256-}[`++tokenPointHistory(_tokenId, _tokenInterval)++`]
+* {xref-QuadraticIncreasingEscrow-_getPastTokenPointInterval-uint256-uint256-}[`++_getPastTokenPointInterval(_tokenId, _timestamp)++`]
+* {xref-QuadraticIncreasingEscrow-votingPowerAt-uint256-uint256-}[`++votingPowerAt(_tokenId, _t)++`]
+* {xref-QuadraticIncreasingEscrow-supplyAt-uint256-}[`++supplyAt()++`]
+* {xref-QuadraticIncreasingEscrow-checkpoint-uint256-struct-ILockedBalanceIncreasing-LockedBalance-struct-ILockedBalanceIncreasing-LockedBalance-}[`++checkpoint(_tokenId, _oldLocked, _newLocked)++`]
+* {xref-QuadraticIncreasingEscrow-_checkpoint-uint256-struct-ILockedBalanceIncreasing-LockedBalance-struct-ILockedBalanceIncreasing-LockedBalance-}[`++_checkpoint(_tokenId, , _newLocked)++`]
+* {xref-QuadraticIncreasingEscrow-implementation--}[`++implementation()++`]
+* {xref-QuadraticIncreasingEscrow-_authorizeUpgrade-address-}[`++_authorizeUpgrade()++`]
+* {xref-QuadraticIncreasingEscrow-CURVE_ADMIN_ROLE-bytes32}[`++CURVE_ADMIN_ROLE()++`]
+* {xref-QuadraticIncreasingEscrow-escrow-address}[`++escrow()++`]
+* {xref-QuadraticIncreasingEscrow-clock-address}[`++clock()++`]
+* {xref-QuadraticIncreasingEscrow-tokenPointIntervals-mapping-uint256----uint256-}[`++tokenPointIntervals()++`]
+* {xref-QuadraticIncreasingEscrow-warmupPeriod-uint48}[`++warmupPeriod()++`]
+
+[.contract-subindex-inherited]
+.UUPSUpgradeable
+
+[.contract-subindex-inherited]
+.ERC1967UpgradeUpgradeable
+
+[.contract-subindex-inherited]
+.IERC1967Upgradeable
+
+[.contract-subindex-inherited]
+.IERC1822ProxiableUpgradeable
+
+[.contract-subindex-inherited]
+.DaoAuthorizableUpgradeable
+* link:https://github.com/aragon[__DaoAuthorizableUpgradeable_init]
+* link:https://github.com/aragon[dao]
+
+[.contract-subindex-inherited]
+.ContextUpgradeable
+
+[.contract-subindex-inherited]
+.ReentrancyGuardUpgradeable
+
+[.contract-subindex-inherited]
+.Initializable
+
+[.contract-subindex-inherited]
+.IClockUser
+
+[.contract-subindex-inherited]
+.IEscrowCurveIncreasing
+
+[.contract-subindex-inherited]
+.IWarmup
+
+[.contract-subindex-inherited]
+.IWarmupEvents
+
+[.contract-subindex-inherited]
+.IEscrowCurveToken
+
+[.contract-subindex-inherited]
+.IEscrowCurveTokenStorage
+
+[.contract-subindex-inherited]
+.IEscrowCurveMath
+
+[.contract-subindex-inherited]
+.IEscrowCurveCore
+
+[.contract-subindex-inherited]
+.IEscrowCurveErrorsAndEvents
+
+--
+
+[.contract-index]
+.Events
+--
+
+[.contract-subindex-inherited]
+.UUPSUpgradeable
+
+[.contract-subindex-inherited]
+.ERC1967UpgradeUpgradeable
+
+[.contract-subindex-inherited]
+.IERC1967Upgradeable
+
+[.contract-subindex-inherited]
+.IERC1822ProxiableUpgradeable
+
+[.contract-subindex-inherited]
+.DaoAuthorizableUpgradeable
+
+[.contract-subindex-inherited]
+.ContextUpgradeable
+
+[.contract-subindex-inherited]
+.ReentrancyGuardUpgradeable
+
+[.contract-subindex-inherited]
+.Initializable
+
+[.contract-subindex-inherited]
+.IClockUser
+
+[.contract-subindex-inherited]
+.IEscrowCurveIncreasing
+
+[.contract-subindex-inherited]
+.IWarmup
+
+[.contract-subindex-inherited]
+.IWarmupEvents
+* {xref-IWarmupEvents-WarmupSet-uint48-}[`++WarmupSet(warmup)++`]
+
+[.contract-subindex-inherited]
+.IEscrowCurveToken
+
+[.contract-subindex-inherited]
+.IEscrowCurveTokenStorage
+
+[.contract-subindex-inherited]
+.IEscrowCurveMath
+
+[.contract-subindex-inherited]
+.IEscrowCurveCore
+
+[.contract-subindex-inherited]
+.IEscrowCurveErrorsAndEvents
+
+--
+
+[.contract-index]
+.Errors
+--
+* {xref-QuadraticIncreasingEscrow-OnlyEscrow--}[`++OnlyEscrow()++`]
+
+[.contract-subindex-inherited]
+.UUPSUpgradeable
+
+[.contract-subindex-inherited]
+.ERC1967UpgradeUpgradeable
+
+[.contract-subindex-inherited]
+.IERC1967Upgradeable
+
+[.contract-subindex-inherited]
+.IERC1822ProxiableUpgradeable
+
+[.contract-subindex-inherited]
+.DaoAuthorizableUpgradeable
+
+[.contract-subindex-inherited]
+.ContextUpgradeable
+
+[.contract-subindex-inherited]
+.ReentrancyGuardUpgradeable
+
+[.contract-subindex-inherited]
+.Initializable
+
+[.contract-subindex-inherited]
+.IClockUser
+
+[.contract-subindex-inherited]
+.IEscrowCurveIncreasing
+
+[.contract-subindex-inherited]
+.IWarmup
+
+[.contract-subindex-inherited]
+.IWarmupEvents
+
+[.contract-subindex-inherited]
+.IEscrowCurveToken
+
+[.contract-subindex-inherited]
+.IEscrowCurveTokenStorage
+
+[.contract-subindex-inherited]
+.IEscrowCurveMath
+
+[.contract-subindex-inherited]
+.IEscrowCurveCore
+
+[.contract-subindex-inherited]
+.IEscrowCurveErrorsAndEvents
+* {xref-IEscrowCurveErrorsAndEvents-InvalidTokenId--}[`++InvalidTokenId()++`]
+* {xref-IEscrowCurveErrorsAndEvents-InvalidCheckpoint--}[`++InvalidCheckpoint()++`]
+
+--
+
+[.contract-index]
+.Internal Variables
+--
+* {xref-QuadraticIncreasingEscrow-_tokenPointHistory-mapping-uint256----struct-IEscrowCurveTokenStorage-TokenPoint-1000000000--}[`++mapping(uint256 => struct IEscrowCurveTokenStorage.TokenPoint[1000000000])  _tokenPointHistory++`]
+
+[.contract-subindex-inherited]
+.UUPSUpgradeable
+
+[.contract-subindex-inherited]
+.ERC1967UpgradeUpgradeable
+
+[.contract-subindex-inherited]
+.IERC1967Upgradeable
+
+[.contract-subindex-inherited]
+.IERC1822ProxiableUpgradeable
+
+[.contract-subindex-inherited]
+.DaoAuthorizableUpgradeable
+
+[.contract-subindex-inherited]
+.ContextUpgradeable
+
+[.contract-subindex-inherited]
+.ReentrancyGuardUpgradeable
+
+[.contract-subindex-inherited]
+.Initializable
+
+[.contract-subindex-inherited]
+.IClockUser
+
+[.contract-subindex-inherited]
+.IEscrowCurveIncreasing
+
+[.contract-subindex-inherited]
+.IWarmup
+
+[.contract-subindex-inherited]
+.IWarmupEvents
+
+[.contract-subindex-inherited]
+.IEscrowCurveToken
+
+[.contract-subindex-inherited]
+.IEscrowCurveTokenStorage
+
+[.contract-subindex-inherited]
+.IEscrowCurveMath
+
+[.contract-subindex-inherited]
+.IEscrowCurveCore
+
+[.contract-subindex-inherited]
+.IEscrowCurveErrorsAndEvents
+
+--
+
+[.contract-item]
+[[QuadraticIncreasingEscrow-constructor--]]
+==== `[.contract-item-name]#++constructor++#++()++` [.item-kind]#public#
+
+[.contract-item]
+[[QuadraticIncreasingEscrow-initialize-address-address-uint48-address-]]
+==== `[.contract-item-name]#++initialize++#++(address _escrow, address _dao, uint48 _warmupPeriod, address _clock)++` [.item-kind]#external#
+
+[.contract-item]
+[[QuadraticIncreasingEscrow-_getQuadraticCoeff-uint256-]]
+==== `[.contract-item-name]#++_getQuadraticCoeff++#++(uint256 amount) → int256++` [.item-kind]#internal#
+
+[.contract-item]
+[[QuadraticIncreasingEscrow-_getLinearCoeff-uint256-]]
+==== `[.contract-item-name]#++_getLinearCoeff++#++(uint256 amount) → int256++` [.item-kind]#internal#
+
+[.contract-item]
+[[QuadraticIncreasingEscrow-_getConstantCoeff-uint256-]]
+==== `[.contract-item-name]#++_getConstantCoeff++#++(uint256 amount) → int256++` [.item-kind]#public#
+
+In this case, the constant term is 1 so we just case the amount
+
+[.contract-item]
+[[QuadraticIncreasingEscrow-_getCoefficients-uint256-]]
+==== `[.contract-item-name]#++_getCoefficients++#++(uint256 amount) → int256[3]++` [.item-kind]#public#
+
+The coefficients are returned in the order [constant, linear, quadratic]
+
+[.contract-item]
+[[QuadraticIncreasingEscrow-getCoefficients-uint256-]]
+==== `[.contract-item-name]#++getCoefficients++#++(uint256 amount) → int256[3]++` [.item-kind]#public#
+
+The coefficients are returned in the order [constant, linear, quadratic]
+and are converted to regular 256-bit signed integers instead of their fixed-point representation
+
+[.contract-item]
+[[QuadraticIncreasingEscrow-getBias-uint256-uint256-]]
+==== `[.contract-item-name]#++getBias++#++(uint256 timeElapsed, uint256 amount) → uint256++` [.item-kind]#public#
+
+Returns the bias for the given time elapsed and amount, up to the maximum time
+
+[.contract-item]
+[[QuadraticIncreasingEscrow-_getBias-uint256-int256-3--]]
+==== `[.contract-item-name]#++_getBias++#++(uint256 timeElapsed, int256[3] coefficients) → uint256++` [.item-kind]#internal#
+
+[.contract-item]
+[[QuadraticIncreasingEscrow-_maxTime--]]
+==== `[.contract-item-name]#++_maxTime++#++() → uint256++` [.item-kind]#internal#
+
+[.contract-item]
+[[QuadraticIncreasingEscrow-previewMaxBias-uint256-]]
+==== `[.contract-item-name]#++previewMaxBias++#++(uint256 amount) → uint256++` [.item-kind]#external#
+
+[.contract-item]
+[[QuadraticIncreasingEscrow-setWarmupPeriod-uint48-]]
+==== `[.contract-item-name]#++setWarmupPeriod++#++(uint48 _warmupPeriod)++` [.item-kind]#external#
+
+[.contract-item]
+[[QuadraticIncreasingEscrow-isWarm-uint256-]]
+==== `[.contract-item-name]#++isWarm++#++(uint256 tokenId) → bool++` [.item-kind]#public#
+
+Returns whether the NFT is warm
+
+[.contract-item]
+[[QuadraticIncreasingEscrow-_isWarm-struct-IEscrowCurveTokenStorage-TokenPoint-]]
+==== `[.contract-item-name]#++_isWarm++#++(struct IEscrowCurveTokenStorage.TokenPoint _point) → bool++` [.item-kind]#public#
+
+[.contract-item]
+[[QuadraticIncreasingEscrow-tokenPointHistory-uint256-uint256-]]
+==== `[.contract-item-name]#++tokenPointHistory++#++(uint256 _tokenId, uint256 _tokenInterval) → struct IEscrowCurveTokenStorage.TokenPoint++` [.item-kind]#external#
+
+Returns the TokenPoint at the passed interval
+
+[.contract-item]
+[[QuadraticIncreasingEscrow-_getPastTokenPointInterval-uint256-uint256-]]
+==== `[.contract-item-name]#++_getPastTokenPointInterval++#++(uint256 _tokenId, uint256 _timestamp) → uint256++` [.item-kind]#internal#
+
+Binary search to get the token point interval for a token id at or prior to a given timestamp
+Once we have the point, we can apply the bias calculation to get the voting power.
+
+If a token point does not exist prior to the timestamp, this will return 0.
+
+[.contract-item]
+[[QuadraticIncreasingEscrow-votingPowerAt-uint256-uint256-]]
+==== `[.contract-item-name]#++votingPowerAt++#++(uint256 _tokenId, uint256 _t) → uint256++` [.item-kind]#external#
+
+Get the current voting power for `_tokenId`
+
+Adheres to the ERC20 `balanceOf` interface for Aragon compatibility
+     Fetches last token point prior to a certain timestamp, then walks forward to timestamp.
+
+[.contract-item]
+[[QuadraticIncreasingEscrow-supplyAt-uint256-]]
+==== `[.contract-item-name]#++supplyAt++#++(uint256) → uint256++` [.item-kind]#external#
+
+[NOT IMPLEMENTED] Calculate total voting power at some point in the past
+
+This function will be implemented in a future version of the contract
+
+[.contract-item]
+[[QuadraticIncreasingEscrow-checkpoint-uint256-struct-ILockedBalanceIncreasing-LockedBalance-struct-ILockedBalanceIncreasing-LockedBalance-]]
+==== `[.contract-item-name]#++checkpoint++#++(uint256 _tokenId, struct ILockedBalanceIncreasing.LockedBalance _oldLocked, struct ILockedBalanceIncreasing.LockedBalance _newLocked)++` [.item-kind]#external#
+
+A checkpoint can be called by the VotingEscrow contract to snapshot the user's voting power
+
+[.contract-item]
+[[QuadraticIncreasingEscrow-_checkpoint-uint256-struct-ILockedBalanceIncreasing-LockedBalance-struct-ILockedBalanceIncreasing-LockedBalance-]]
+==== `[.contract-item-name]#++_checkpoint++#++(uint256 _tokenId, struct ILockedBalanceIncreasing.LockedBalance, struct ILockedBalanceIncreasing.LockedBalance _newLocked)++` [.item-kind]#internal#
+
+Record gper-user data to checkpoints. Used by VotingEscrow system.
+
+Curve finance style but just for users at this stage
+
+[.contract-item]
+[[QuadraticIncreasingEscrow-implementation--]]
+==== `[.contract-item-name]#++implementation++#++() → address++` [.item-kind]#public#
+
+Returns the address of the implementation contract in the [proxy storage slot](https://eips.ethereum.org/EIPS/eip-1967) slot the [UUPS proxy](https://eips.ethereum.org/EIPS/eip-1822) is pointing to.
+
+[.contract-item]
+[[QuadraticIncreasingEscrow-_authorizeUpgrade-address-]]
+==== `[.contract-item-name]#++_authorizeUpgrade++#++(address)++` [.item-kind]#internal#
+
+Internal method authorizing the upgrade of the contract via the [upgradeability mechanism for UUPS proxies](https://docs.openzeppelin.com/contracts/4.x/api/proxy#UUPSUpgradeable) (see [ERC-1822](https://eips.ethereum.org/EIPS/eip-1822)).
+
+[.contract-item]
+[[QuadraticIncreasingEscrow-CURVE_ADMIN_ROLE-bytes32]]
+==== `[.contract-item-name]#++CURVE_ADMIN_ROLE++#++() → bytes32++` [.item-kind]#public#
+
+Administrator role for the contract
+
+[.contract-item]
+[[QuadraticIncreasingEscrow-escrow-address]]
+==== `[.contract-item-name]#++escrow++#++() → address++` [.item-kind]#public#
+
+The VotingEscrow contract address
+
+[.contract-item]
+[[QuadraticIncreasingEscrow-clock-address]]
+==== `[.contract-item-name]#++clock++#++() → address++` [.item-kind]#public#
+
+The Clock contract address
+
+[.contract-item]
+[[QuadraticIncreasingEscrow-tokenPointIntervals-mapping-uint256----uint256-]]
+==== `[.contract-item-name]#++tokenPointIntervals++#++() → mapping(uint256 &#x3D;&gt; uint256)++` [.item-kind]#public#
+
+tokenId => point epoch: incremented on a per-tokenId basis
+
+[.contract-item]
+[[QuadraticIncreasingEscrow-warmupPeriod-uint48]]
+==== `[.contract-item-name]#++warmupPeriod++#++() → uint48++` [.item-kind]#public#
+
+The warmup period for the curve
+
+[.contract-item]
+[[QuadraticIncreasingEscrow-OnlyEscrow--]]
+==== `[.contract-item-name]#++OnlyEscrow++#++()++` [.item-kind]#error#
+
+[.contract-item]
+[[QuadraticIncreasingEscrow-_tokenPointHistory-mapping-uint256----struct-IEscrowCurveTokenStorage-TokenPoint-1000000000--]]
+==== `mapping(uint256 &#x3D;&gt; struct IEscrowCurveTokenStorage.TokenPoint[1000000000]) [.contract-item-name]#++_tokenPointHistory++#` [.item-kind]#internal#
+
+tokenId => tokenPointIntervals => TokenPoint
+The Array is fixed so we can write to it in the future
+This implementation means that very short intervals may be challenging
+
+:GAUGE_ADMIN_ROLE: pass:normal[xref:#SimpleGaugeVoter-GAUGE_ADMIN_ROLE-bytes32[`++GAUGE_ADMIN_ROLE++`]]
+:escrow: pass:normal[xref:#SimpleGaugeVoter-escrow-address[`++escrow++`]]
+:clock: pass:normal[xref:#SimpleGaugeVoter-clock-address[`++clock++`]]
+:totalVotingPowerCast: pass:normal[xref:#SimpleGaugeVoter-totalVotingPowerCast-uint256[`++totalVotingPowerCast++`]]
+:gaugeList: pass:normal[xref:#SimpleGaugeVoter-gaugeList-address--[`++gaugeList++`]]
+:gauges: pass:normal[xref:#SimpleGaugeVoter-gauges-mapping-address----struct-IGauge-Gauge-[`++gauges++`]]
+:gaugeVotes: pass:normal[xref:#SimpleGaugeVoter-gaugeVotes-mapping-address----uint256-[`++gaugeVotes++`]]
+:tokenVoteData: pass:normal[xref:#SimpleGaugeVoter-tokenVoteData-mapping-uint256----struct-IGaugeVote-TokenVoteData-[`++tokenVoteData++`]]
+:constructor: pass:normal[xref:#SimpleGaugeVoter-constructor--[`++constructor++`]]
+:initialize: pass:normal[xref:#SimpleGaugeVoter-initialize-address-address-bool-address-[`++initialize++`]]
+:pause: pass:normal[xref:#SimpleGaugeVoter-pause--[`++pause++`]]
+:unpause: pass:normal[xref:#SimpleGaugeVoter-unpause--[`++unpause++`]]
+:whenVotingActive: pass:normal[xref:#SimpleGaugeVoter-whenVotingActive--[`++whenVotingActive++`]]
+:voteMultiple: pass:normal[xref:#SimpleGaugeVoter-voteMultiple-uint256---struct-IGaugeVote-GaugeVote---[`++voteMultiple++`]]
+:vote: pass:normal[xref:#SimpleGaugeVoter-vote-uint256-struct-IGaugeVote-GaugeVote---[`++vote++`]]
+:_vote: pass:normal[xref:#SimpleGaugeVoter-_vote-uint256-struct-IGaugeVote-GaugeVote---[`++_vote++`]]
+:reset: pass:normal[xref:#SimpleGaugeVoter-reset-uint256-[`++reset++`]]
+:_reset: pass:normal[xref:#SimpleGaugeVoter-_reset-uint256-[`++_reset++`]]
+:gaugeExists: pass:normal[xref:#SimpleGaugeVoter-gaugeExists-address-[`++gaugeExists++`]]
+:isActive: pass:normal[xref:#SimpleGaugeVoter-isActive-address-[`++isActive++`]]
+:createGauge: pass:normal[xref:#SimpleGaugeVoter-createGauge-address-string-[`++createGauge++`]]
+:deactivateGauge: pass:normal[xref:#SimpleGaugeVoter-deactivateGauge-address-[`++deactivateGauge++`]]
+:activateGauge: pass:normal[xref:#SimpleGaugeVoter-activateGauge-address-[`++activateGauge++`]]
+:updateGaugeMetadata: pass:normal[xref:#SimpleGaugeVoter-updateGaugeMetadata-address-string-[`++updateGaugeMetadata++`]]
+:epochId: pass:normal[xref:#SimpleGaugeVoter-epochId--[`++epochId++`]]
+:votingActive: pass:normal[xref:#SimpleGaugeVoter-votingActive--[`++votingActive++`]]
+:epochStart: pass:normal[xref:#SimpleGaugeVoter-epochStart--[`++epochStart++`]]
+:epochVoteStart: pass:normal[xref:#SimpleGaugeVoter-epochVoteStart--[`++epochVoteStart++`]]
+:epochVoteEnd: pass:normal[xref:#SimpleGaugeVoter-epochVoteEnd--[`++epochVoteEnd++`]]
+:getGauge: pass:normal[xref:#SimpleGaugeVoter-getGauge-address-[`++getGauge++`]]
+:getAllGauges: pass:normal[xref:#SimpleGaugeVoter-getAllGauges--[`++getAllGauges++`]]
+:isVoting: pass:normal[xref:#SimpleGaugeVoter-isVoting-uint256-[`++isVoting++`]]
+:votes: pass:normal[xref:#SimpleGaugeVoter-votes-uint256-address-[`++votes++`]]
+:gaugesVotedFor: pass:normal[xref:#SimpleGaugeVoter-gaugesVotedFor-uint256-[`++gaugesVotedFor++`]]
+:usedVotingPower: pass:normal[xref:#SimpleGaugeVoter-usedVotingPower-uint256-[`++usedVotingPower++`]]
+
+[.contract]
+[[SimpleGaugeVoter]]
+=== `++SimpleGaugeVoter++` link:https://github.com/aragon/ve-governance/blob/vundefined//home/jordan/Documents/dev/crypto/aragon/ve-governance/src/voting/SimpleGaugeVoter.sol[{github-icon},role=heading-link]
+
+[.contract-index]
+.Modifiers
+--
+* {xref-SimpleGaugeVoter-whenVotingActive--}[`++whenVotingActive()++`]
+
+--
+
+[.contract-index]
+.Functions
+--
+* {xref-SimpleGaugeVoter-constructor--}[`++constructor()++`]
+* {xref-SimpleGaugeVoter-initialize-address-address-bool-address-}[`++initialize(_dao, _escrow, _startPaused, _clock)++`]
+* {xref-SimpleGaugeVoter-pause--}[`++pause()++`]
+* {xref-SimpleGaugeVoter-unpause--}[`++unpause()++`]
+* {xref-SimpleGaugeVoter-voteMultiple-uint256---struct-IGaugeVote-GaugeVote---}[`++voteMultiple(_tokenIds, _votes)++`]
+* {xref-SimpleGaugeVoter-vote-uint256-struct-IGaugeVote-GaugeVote---}[`++vote(_tokenId, _votes)++`]
+* {xref-SimpleGaugeVoter-_vote-uint256-struct-IGaugeVote-GaugeVote---}[`++_vote(_tokenId, _votes)++`]
+* {xref-SimpleGaugeVoter-reset-uint256-}[`++reset(_tokenId)++`]
+* {xref-SimpleGaugeVoter-_reset-uint256-}[`++_reset(_tokenId)++`]
+* {xref-SimpleGaugeVoter-gaugeExists-address-}[`++gaugeExists(_gauge)++`]
+* {xref-SimpleGaugeVoter-isActive-address-}[`++isActive(_gauge)++`]
+* {xref-SimpleGaugeVoter-createGauge-address-string-}[`++createGauge(_gauge, _metadataURI)++`]
+* {xref-SimpleGaugeVoter-deactivateGauge-address-}[`++deactivateGauge(_gauge)++`]
+* {xref-SimpleGaugeVoter-activateGauge-address-}[`++activateGauge(_gauge)++`]
+* {xref-SimpleGaugeVoter-updateGaugeMetadata-address-string-}[`++updateGaugeMetadata(_gauge, _metadataURI)++`]
+* {xref-SimpleGaugeVoter-epochId--}[`++epochId()++`]
+* {xref-SimpleGaugeVoter-votingActive--}[`++votingActive()++`]
+* {xref-SimpleGaugeVoter-epochStart--}[`++epochStart()++`]
+* {xref-SimpleGaugeVoter-epochVoteStart--}[`++epochVoteStart()++`]
+* {xref-SimpleGaugeVoter-epochVoteEnd--}[`++epochVoteEnd()++`]
+* {xref-SimpleGaugeVoter-getGauge-address-}[`++getGauge(_gauge)++`]
+* {xref-SimpleGaugeVoter-getAllGauges--}[`++getAllGauges()++`]
+* {xref-SimpleGaugeVoter-isVoting-uint256-}[`++isVoting(_tokenId)++`]
+* {xref-SimpleGaugeVoter-votes-uint256-address-}[`++votes(_tokenId, _gauge)++`]
+* {xref-SimpleGaugeVoter-gaugesVotedFor-uint256-}[`++gaugesVotedFor(_tokenId)++`]
+* {xref-SimpleGaugeVoter-usedVotingPower-uint256-}[`++usedVotingPower(_tokenId)++`]
+* {xref-SimpleGaugeVoter-GAUGE_ADMIN_ROLE-bytes32}[`++GAUGE_ADMIN_ROLE()++`]
+* {xref-SimpleGaugeVoter-escrow-address}[`++escrow()++`]
+* {xref-SimpleGaugeVoter-clock-address}[`++clock()++`]
+* {xref-SimpleGaugeVoter-totalVotingPowerCast-uint256}[`++totalVotingPowerCast()++`]
+* {xref-SimpleGaugeVoter-gaugeList-address--}[`++gaugeList()++`]
+* {xref-SimpleGaugeVoter-gauges-mapping-address----struct-IGauge-Gauge-}[`++gauges()++`]
+* {xref-SimpleGaugeVoter-gaugeVotes-mapping-address----uint256-}[`++gaugeVotes()++`]
+
+[.contract-subindex-inherited]
+.PluginUUPSUpgradeable
+* link:https://github.com/aragon[pluginType]
+* link:https://github.com/aragon[__PluginUUPSUpgradeable_init]
+* link:https://github.com/aragon[supportsInterface]
+* link:https://github.com/aragon[implementation]
+* link:https://github.com/aragon[_authorizeUpgrade]
+* link:https://github.com/aragon[UPGRADE_PLUGIN_PERMISSION_ID]
+
+[.contract-subindex-inherited]
+.DaoAuthorizableUpgradeable
+* link:https://github.com/aragon[__DaoAuthorizableUpgradeable_init]
+* link:https://github.com/aragon[dao]
+
+[.contract-subindex-inherited]
+.PausableUpgradeable
+
+[.contract-subindex-inherited]
+.ContextUpgradeable
+
+[.contract-subindex-inherited]
+.UUPSUpgradeable
+
+[.contract-subindex-inherited]
+.ERC1967UpgradeUpgradeable
+
+[.contract-subindex-inherited]
+.IERC1967Upgradeable
+
+[.contract-subindex-inherited]
+.IERC1822ProxiableUpgradeable
+
+[.contract-subindex-inherited]
+.ERC165Upgradeable
+
+[.contract-subindex-inherited]
+.IERC165Upgradeable
+
+[.contract-subindex-inherited]
+.ReentrancyGuardUpgradeable
+
+[.contract-subindex-inherited]
+.Initializable
+
+[.contract-subindex-inherited]
+.IPlugin
+
+[.contract-subindex-inherited]
+.IClockUser
+
+[.contract-subindex-inherited]
+.ISimpleGaugeVoter
+
+[.contract-subindex-inherited]
+.IGauge
+
+[.contract-subindex-inherited]
+.IGaugeManager
+
+[.contract-subindex-inherited]
+.IGaugeManagerErrors
+
+[.contract-subindex-inherited]
+.IGaugeManagerEvents
+
+[.contract-subindex-inherited]
+.IGaugeVoter
+
+[.contract-subindex-inherited]
+.IGaugeVote
+
+[.contract-subindex-inherited]
+.IGaugeVoterErrors
+
+[.contract-subindex-inherited]
+.IGaugeVoterEvents
+
+--
+
+[.contract-index]
+.Events
+--
+
+[.contract-subindex-inherited]
+.PluginUUPSUpgradeable
+
+[.contract-subindex-inherited]
+.DaoAuthorizableUpgradeable
+
+[.contract-subindex-inherited]
+.PausableUpgradeable
+
+[.contract-subindex-inherited]
+.ContextUpgradeable
+
+[.contract-subindex-inherited]
+.UUPSUpgradeable
+
+[.contract-subindex-inherited]
+.ERC1967UpgradeUpgradeable
+
+[.contract-subindex-inherited]
+.IERC1967Upgradeable
+
+[.contract-subindex-inherited]
+.IERC1822ProxiableUpgradeable
+
+[.contract-subindex-inherited]
+.ERC165Upgradeable
+
+[.contract-subindex-inherited]
+.IERC165Upgradeable
+
+[.contract-subindex-inherited]
+.ReentrancyGuardUpgradeable
+
+[.contract-subindex-inherited]
+.Initializable
+
+[.contract-subindex-inherited]
+.IPlugin
+
+[.contract-subindex-inherited]
+.IClockUser
+
+[.contract-subindex-inherited]
+.ISimpleGaugeVoter
+
+[.contract-subindex-inherited]
+.IGauge
+
+[.contract-subindex-inherited]
+.IGaugeManager
+
+[.contract-subindex-inherited]
+.IGaugeManagerErrors
+
+[.contract-subindex-inherited]
+.IGaugeManagerEvents
+* {xref-IGaugeManagerEvents-GaugeCreated-address-address-string-}[`++GaugeCreated(gauge, creator, metadataURI)++`]
+* {xref-IGaugeManagerEvents-GaugeDeactivated-address-}[`++GaugeDeactivated(gauge)++`]
+* {xref-IGaugeManagerEvents-GaugeActivated-address-}[`++GaugeActivated(gauge)++`]
+* {xref-IGaugeManagerEvents-GaugeMetadataUpdated-address-string-}[`++GaugeMetadataUpdated(gauge, metadataURI)++`]
+
+[.contract-subindex-inherited]
+.IGaugeVoter
+
+[.contract-subindex-inherited]
+.IGaugeVote
+
+[.contract-subindex-inherited]
+.IGaugeVoterErrors
+
+[.contract-subindex-inherited]
+.IGaugeVoterEvents
+* {xref-IGaugeVoterEvents-Voted-address-address-uint256-uint256-uint256-uint256-uint256-uint256-}[`++Voted(voter, gauge, epoch, tokenId, votingPowerCastForGauge, totalVotingPowerInGauge, totalVotingPowerInContract, timestamp)++`]
+* {xref-IGaugeVoterEvents-Reset-address-address-uint256-uint256-uint256-uint256-uint256-uint256-}[`++Reset(voter, gauge, epoch, tokenId, votingPowerRemovedFromGauge, totalVotingPowerInGauge, totalVotingPowerInContract, timestamp)++`]
+
+--
+
+[.contract-index]
+.Errors
+--
+
+[.contract-subindex-inherited]
+.PluginUUPSUpgradeable
+
+[.contract-subindex-inherited]
+.DaoAuthorizableUpgradeable
+
+[.contract-subindex-inherited]
+.PausableUpgradeable
+
+[.contract-subindex-inherited]
+.ContextUpgradeable
+
+[.contract-subindex-inherited]
+.UUPSUpgradeable
+
+[.contract-subindex-inherited]
+.ERC1967UpgradeUpgradeable
+
+[.contract-subindex-inherited]
+.IERC1967Upgradeable
+
+[.contract-subindex-inherited]
+.IERC1822ProxiableUpgradeable
+
+[.contract-subindex-inherited]
+.ERC165Upgradeable
+
+[.contract-subindex-inherited]
+.IERC165Upgradeable
+
+[.contract-subindex-inherited]
+.ReentrancyGuardUpgradeable
+
+[.contract-subindex-inherited]
+.Initializable
+
+[.contract-subindex-inherited]
+.IPlugin
+
+[.contract-subindex-inherited]
+.IClockUser
+
+[.contract-subindex-inherited]
+.ISimpleGaugeVoter
+
+[.contract-subindex-inherited]
+.IGauge
+
+[.contract-subindex-inherited]
+.IGaugeManager
+
+[.contract-subindex-inherited]
+.IGaugeManagerErrors
+* {xref-IGaugeManagerErrors-ZeroGauge--}[`++ZeroGauge()++`]
+* {xref-IGaugeManagerErrors-GaugeActivationUnchanged--}[`++GaugeActivationUnchanged()++`]
+* {xref-IGaugeManagerErrors-GaugeExists--}[`++GaugeExists()++`]
+
+[.contract-subindex-inherited]
+.IGaugeManagerEvents
+
+[.contract-subindex-inherited]
+.IGaugeVoter
+
+[.contract-subindex-inherited]
+.IGaugeVote
+
+[.contract-subindex-inherited]
+.IGaugeVoterErrors
+* {xref-IGaugeVoterErrors-AlreadyVoted-uint256-}[`++AlreadyVoted(tokenId)++`]
+* {xref-IGaugeVoterErrors-VotingInactive--}[`++VotingInactive()++`]
+* {xref-IGaugeVoterErrors-NotApprovedOrOwner--}[`++NotApprovedOrOwner()++`]
+* {xref-IGaugeVoterErrors-GaugeDoesNotExist-address-}[`++GaugeDoesNotExist(_pool)++`]
+* {xref-IGaugeVoterErrors-GaugeInactive-address-}[`++GaugeInactive(_gauge)++`]
+* {xref-IGaugeVoterErrors-DoubleVote--}[`++DoubleVote()++`]
+* {xref-IGaugeVoterErrors-NoVotes--}[`++NoVotes()++`]
+* {xref-IGaugeVoterErrors-NoVotingPower--}[`++NoVotingPower()++`]
+* {xref-IGaugeVoterErrors-NotCurrentlyVoting--}[`++NotCurrentlyVoting()++`]
+
+[.contract-subindex-inherited]
+.IGaugeVoterEvents
+
+--
+
+[.contract-index]
+.Internal Variables
+--
+* {xref-SimpleGaugeVoter-tokenVoteData-mapping-uint256----struct-IGaugeVote-TokenVoteData-}[`++mapping(uint256 => struct IGaugeVote.TokenVoteData)  tokenVoteData++`]
+
+[.contract-subindex-inherited]
+.PluginUUPSUpgradeable
+
+[.contract-subindex-inherited]
+.DaoAuthorizableUpgradeable
+
+[.contract-subindex-inherited]
+.PausableUpgradeable
+
+[.contract-subindex-inherited]
+.ContextUpgradeable
+
+[.contract-subindex-inherited]
+.UUPSUpgradeable
+
+[.contract-subindex-inherited]
+.ERC1967UpgradeUpgradeable
+
+[.contract-subindex-inherited]
+.IERC1967Upgradeable
+
+[.contract-subindex-inherited]
+.IERC1822ProxiableUpgradeable
+
+[.contract-subindex-inherited]
+.ERC165Upgradeable
+
+[.contract-subindex-inherited]
+.IERC165Upgradeable
+
+[.contract-subindex-inherited]
+.ReentrancyGuardUpgradeable
+
+[.contract-subindex-inherited]
+.Initializable
+
+[.contract-subindex-inherited]
+.IPlugin
+
+[.contract-subindex-inherited]
+.IClockUser
+
+[.contract-subindex-inherited]
+.ISimpleGaugeVoter
+
+[.contract-subindex-inherited]
+.IGauge
+
+[.contract-subindex-inherited]
+.IGaugeManager
+
+[.contract-subindex-inherited]
+.IGaugeManagerErrors
+
+[.contract-subindex-inherited]
+.IGaugeManagerEvents
+
+[.contract-subindex-inherited]
+.IGaugeVoter
+
+[.contract-subindex-inherited]
+.IGaugeVote
+
+[.contract-subindex-inherited]
+.IGaugeVoterErrors
+
+[.contract-subindex-inherited]
+.IGaugeVoterEvents
+
+--
+
+[.contract-item]
+[[SimpleGaugeVoter-whenVotingActive--]]
+==== `[.contract-item-name]#++whenVotingActive++#++()++` [.item-kind]#modifier#
+
+[.contract-item]
+[[SimpleGaugeVoter-constructor--]]
+==== `[.contract-item-name]#++constructor++#++()++` [.item-kind]#public#
+
+[.contract-item]
+[[SimpleGaugeVoter-initialize-address-address-bool-address-]]
+==== `[.contract-item-name]#++initialize++#++(address _dao, address _escrow, bool _startPaused, address _clock)++` [.item-kind]#external#
+
+[.contract-item]
+[[SimpleGaugeVoter-pause--]]
+==== `[.contract-item-name]#++pause++#++()++` [.item-kind]#external#
+
+[.contract-item]
+[[SimpleGaugeVoter-unpause--]]
+==== `[.contract-item-name]#++unpause++#++()++` [.item-kind]#external#
+
+[.contract-item]
+[[SimpleGaugeVoter-voteMultiple-uint256---struct-IGaugeVote-GaugeVote---]]
+==== `[.contract-item-name]#++voteMultiple++#++(uint256[] _tokenIds, struct IGaugeVote.GaugeVote[] _votes)++` [.item-kind]#external#
+
+extrememly simple for loop. We don't need reentrancy checks in this implementation
+because the plugin doesn't do anything other than signal.
+
+[.contract-item]
+[[SimpleGaugeVoter-vote-uint256-struct-IGaugeVote-GaugeVote---]]
+==== `[.contract-item-name]#++vote++#++(uint256 _tokenId, struct IGaugeVote.GaugeVote[] _votes)++` [.item-kind]#public#
+
+Called by users to vote for pools. Votes distributed proportionally based on weights.
+
+[.contract-item]
+[[SimpleGaugeVoter-_vote-uint256-struct-IGaugeVote-GaugeVote---]]
+==== `[.contract-item-name]#++_vote++#++(uint256 _tokenId, struct IGaugeVote.GaugeVote[] _votes)++` [.item-kind]#internal#
+
+[.contract-item]
+[[SimpleGaugeVoter-reset-uint256-]]
+==== `[.contract-item-name]#++reset++#++(uint256 _tokenId)++` [.item-kind]#external#
+
+Called by users to reset voting state. Required when withdrawing or transferring veNFT.
+
+[.contract-item]
+[[SimpleGaugeVoter-_reset-uint256-]]
+==== `[.contract-item-name]#++_reset++#++(uint256 _tokenId)++` [.item-kind]#internal#
+
+[.contract-item]
+[[SimpleGaugeVoter-gaugeExists-address-]]
+==== `[.contract-item-name]#++gaugeExists++#++(address _gauge) → bool++` [.item-kind]#public#
+
+[.contract-item]
+[[SimpleGaugeVoter-isActive-address-]]
+==== `[.contract-item-name]#++isActive++#++(address _gauge) → bool++` [.item-kind]#public#
+
+[.contract-item]
+[[SimpleGaugeVoter-createGauge-address-string-]]
+==== `[.contract-item-name]#++createGauge++#++(address _gauge, string _metadataURI) → address gauge++` [.item-kind]#external#
+
+[.contract-item]
+[[SimpleGaugeVoter-deactivateGauge-address-]]
+==== `[.contract-item-name]#++deactivateGauge++#++(address _gauge)++` [.item-kind]#external#
+
+[.contract-item]
+[[SimpleGaugeVoter-activateGauge-address-]]
+==== `[.contract-item-name]#++activateGauge++#++(address _gauge)++` [.item-kind]#external#
+
+[.contract-item]
+[[SimpleGaugeVoter-updateGaugeMetadata-address-string-]]
+==== `[.contract-item-name]#++updateGaugeMetadata++#++(address _gauge, string _metadataURI)++` [.item-kind]#external#
+
+[.contract-item]
+[[SimpleGaugeVoter-epochId--]]
+==== `[.contract-item-name]#++epochId++#++() → uint256++` [.item-kind]#public#
+
+autogenerated epoch id based on elapsed time
+
+[.contract-item]
+[[SimpleGaugeVoter-votingActive--]]
+==== `[.contract-item-name]#++votingActive++#++() → bool++` [.item-kind]#public#
+
+whether voting is active in the current epoch
+
+[.contract-item]
+[[SimpleGaugeVoter-epochStart--]]
+==== `[.contract-item-name]#++epochStart++#++() → uint256++` [.item-kind]#external#
+
+timestamp of the start of the next epoch
+
+[.contract-item]
+[[SimpleGaugeVoter-epochVoteStart--]]
+==== `[.contract-item-name]#++epochVoteStart++#++() → uint256++` [.item-kind]#external#
+
+timestamp of the start of the next voting period
+
+[.contract-item]
+[[SimpleGaugeVoter-epochVoteEnd--]]
+==== `[.contract-item-name]#++epochVoteEnd++#++() → uint256++` [.item-kind]#external#
+
+timestamp of the end of the current voting period
+
+[.contract-item]
+[[SimpleGaugeVoter-getGauge-address-]]
+==== `[.contract-item-name]#++getGauge++#++(address _gauge) → struct IGauge.Gauge++` [.item-kind]#external#
+
+[.contract-item]
+[[SimpleGaugeVoter-getAllGauges--]]
+==== `[.contract-item-name]#++getAllGauges++#++() → address[]++` [.item-kind]#external#
+
+[.contract-item]
+[[SimpleGaugeVoter-isVoting-uint256-]]
+==== `[.contract-item-name]#++isVoting++#++(uint256 _tokenId) → bool++` [.item-kind]#public#
+
+Can be called to check if a token is currently voting
+
+[.contract-item]
+[[SimpleGaugeVoter-votes-uint256-address-]]
+==== `[.contract-item-name]#++votes++#++(uint256 _tokenId, address _gauge) → uint256++` [.item-kind]#external#
+
+[.contract-item]
+[[SimpleGaugeVoter-gaugesVotedFor-uint256-]]
+==== `[.contract-item-name]#++gaugesVotedFor++#++(uint256 _tokenId) → address[]++` [.item-kind]#external#
+
+[.contract-item]
+[[SimpleGaugeVoter-usedVotingPower-uint256-]]
+==== `[.contract-item-name]#++usedVotingPower++#++(uint256 _tokenId) → uint256++` [.item-kind]#external#
+
+[.contract-item]
+[[SimpleGaugeVoter-GAUGE_ADMIN_ROLE-bytes32]]
+==== `[.contract-item-name]#++GAUGE_ADMIN_ROLE++#++() → bytes32++` [.item-kind]#public#
+
+The Gauge admin can can create and manage voting gauges for token holders
+
+[.contract-item]
+[[SimpleGaugeVoter-escrow-address]]
+==== `[.contract-item-name]#++escrow++#++() → address++` [.item-kind]#public#
+
+Address of the voting escrow contract that will track voting power
+
+[.contract-item]
+[[SimpleGaugeVoter-clock-address]]
+==== `[.contract-item-name]#++clock++#++() → address++` [.item-kind]#public#
+
+Clock contract for epoch duration
+
+[.contract-item]
+[[SimpleGaugeVoter-totalVotingPowerCast-uint256]]
+==== `[.contract-item-name]#++totalVotingPowerCast++#++() → uint256++` [.item-kind]#public#
+
+The total votes that have accumulated in this contract
+
+[.contract-item]
+[[SimpleGaugeVoter-gaugeList-address--]]
+==== `[.contract-item-name]#++gaugeList++#++() → address[]++` [.item-kind]#public#
+
+enumerable list of all gauges that can be voted on
+
+[.contract-item]
+[[SimpleGaugeVoter-gauges-mapping-address----struct-IGauge-Gauge-]]
+==== `[.contract-item-name]#++gauges++#++() → mapping(address &#x3D;&gt; struct IGauge.Gauge)++` [.item-kind]#public#
+
+address => gauge data
+
+[.contract-item]
+[[SimpleGaugeVoter-gaugeVotes-mapping-address----uint256-]]
+==== `[.contract-item-name]#++gaugeVotes++#++() → mapping(address &#x3D;&gt; uint256)++` [.item-kind]#public#
+
+gauge => total votes (global)
+
+[.contract-item]
+[[SimpleGaugeVoter-tokenVoteData-mapping-uint256----struct-IGaugeVote-TokenVoteData-]]
+==== `mapping(uint256 &#x3D;&gt; struct IGaugeVote.TokenVoteData) [.contract-item-name]#++tokenVoteData++#` [.item-kind]#internal#
+
+tokenId => tokenVoteData
+
+:EXECUTE_PERMISSION_ID: pass:normal[xref:#SimpleGaugeVoterSetup-EXECUTE_PERMISSION_ID-bytes32[`++EXECUTE_PERMISSION_ID++`]]
+:WrongHelpersArrayLength: pass:normal[xref:#SimpleGaugeVoterSetup-WrongHelpersArrayLength-uint256-[`++WrongHelpersArrayLength++`]]
+:voterBase: pass:normal[xref:#SimpleGaugeVoterSetup-voterBase-address[`++voterBase++`]]
+:curveBase: pass:normal[xref:#SimpleGaugeVoterSetup-curveBase-address[`++curveBase++`]]
+:queueBase: pass:normal[xref:#SimpleGaugeVoterSetup-queueBase-address[`++queueBase++`]]
+:escrowBase: pass:normal[xref:#SimpleGaugeVoterSetup-escrowBase-address[`++escrowBase++`]]
+:clockBase: pass:normal[xref:#SimpleGaugeVoterSetup-clockBase-address[`++clockBase++`]]
+:nftBase: pass:normal[xref:#SimpleGaugeVoterSetup-nftBase-address[`++nftBase++`]]
+:constructor: pass:normal[xref:#SimpleGaugeVoterSetup-constructor-address-address-address-address-address-address-[`++constructor++`]]
+:implementation: pass:normal[xref:#SimpleGaugeVoterSetup-implementation--[`++implementation++`]]
+:prepareInstallation: pass:normal[xref:#SimpleGaugeVoterSetup-prepareInstallation-address-bytes-[`++prepareInstallation++`]]
+:prepareUninstallation: pass:normal[xref:#SimpleGaugeVoterSetup-prepareUninstallation-address-struct-IPluginSetup-SetupPayload-[`++prepareUninstallation++`]]
+:getPermissions: pass:normal[xref:#SimpleGaugeVoterSetup-getPermissions-address-address-address-address-address-address-address-enum-PermissionLib-Operation-[`++getPermissions++`]]
+:encodeSetupData: pass:normal[xref:#SimpleGaugeVoterSetup-encodeSetupData-struct-ISimpleGaugeVoterSetupParams-[`++encodeSetupData++`]]
+:encodeSetupData: pass:normal[xref:#SimpleGaugeVoterSetup-encodeSetupData-bool-string-string-address-uint48-uint48-uint256-uint48-uint256-[`++encodeSetupData++`]]
+
+[.contract]
+[[SimpleGaugeVoterSetup]]
+=== `++SimpleGaugeVoterSetup++` link:https://github.com/aragon/ve-governance/blob/vundefined//home/jordan/Documents/dev/crypto/aragon/ve-governance/src/voting/SimpleGaugeVoterSetup.sol[{github-icon},role=heading-link]
+
+[.contract-index]
+.Functions
+--
+* {xref-SimpleGaugeVoterSetup-constructor-address-address-address-address-address-address-}[`++constructor(_voterBase, _curveBase, _queueBase, _escrowBase, _clockBase, _nftBase)++`]
+* {xref-SimpleGaugeVoterSetup-implementation--}[`++implementation()++`]
+* {xref-SimpleGaugeVoterSetup-prepareInstallation-address-bytes-}[`++prepareInstallation(_dao, _data)++`]
+* {xref-SimpleGaugeVoterSetup-prepareUninstallation-address-struct-IPluginSetup-SetupPayload-}[`++prepareUninstallation(_dao, _payload)++`]
+* {xref-SimpleGaugeVoterSetup-getPermissions-address-address-address-address-address-address-address-enum-PermissionLib-Operation-}[`++getPermissions(_dao, _plugin, _curve, _queue, _escrow, _clock, _nft, _grantOrRevoke)++`]
+* {xref-SimpleGaugeVoterSetup-encodeSetupData-struct-ISimpleGaugeVoterSetupParams-}[`++encodeSetupData(_params)++`]
+* {xref-SimpleGaugeVoterSetup-encodeSetupData-bool-string-string-address-uint48-uint48-uint256-uint48-uint256-}[`++encodeSetupData(isPaused, veTokenName, veTokenSymbol, token, cooldown, warmup, feePercent, minLock, minDeposit)++`]
+* {xref-SimpleGaugeVoterSetup-EXECUTE_PERMISSION_ID-bytes32}[`++EXECUTE_PERMISSION_ID()++`]
+
+[.contract-subindex-inherited]
+.PluginSetup
+* link:https://github.com/aragon[prepareUpdate]
+* link:https://github.com/aragon[createERC1967Proxy]
+* link:https://github.com/aragon[supportsInterface]
+
+[.contract-subindex-inherited]
+.IPluginSetup
+
+[.contract-subindex-inherited]
+.ERC165
+
+[.contract-subindex-inherited]
+.IERC165
+
+--
+
+[.contract-index]
+.Errors
+--
+* {xref-SimpleGaugeVoterSetup-WrongHelpersArrayLength-uint256-}[`++WrongHelpersArrayLength(length)++`]
+
+[.contract-subindex-inherited]
+.PluginSetup
+
+[.contract-subindex-inherited]
+.IPluginSetup
+
+[.contract-subindex-inherited]
+.ERC165
+
+[.contract-subindex-inherited]
+.IERC165
+
+--
+
+[.contract-index]
+.Internal Variables
+--
+* {xref-SimpleGaugeVoterSetup-voterBase-address}[`++address  voterBase++`]
+* {xref-SimpleGaugeVoterSetup-curveBase-address}[`++address  curveBase++`]
+* {xref-SimpleGaugeVoterSetup-queueBase-address}[`++address  queueBase++`]
+* {xref-SimpleGaugeVoterSetup-escrowBase-address}[`++address  escrowBase++`]
+* {xref-SimpleGaugeVoterSetup-clockBase-address}[`++address  clockBase++`]
+* {xref-SimpleGaugeVoterSetup-nftBase-address}[`++address  nftBase++`]
+
+[.contract-subindex-inherited]
+.PluginSetup
+
+[.contract-subindex-inherited]
+.IPluginSetup
+
+[.contract-subindex-inherited]
+.ERC165
+
+[.contract-subindex-inherited]
+.IERC165
+
+--
+
+[.contract-item]
+[[SimpleGaugeVoterSetup-constructor-address-address-address-address-address-address-]]
+==== `[.contract-item-name]#++constructor++#++(address _voterBase, address _curveBase, address _queueBase, address _escrowBase, address _clockBase, address _nftBase)++` [.item-kind]#public#
+
+Deploys the setup by binding the implementation contracts required during installation.
+
+[.contract-item]
+[[SimpleGaugeVoterSetup-implementation--]]
+==== `[.contract-item-name]#++implementation++#++() → address++` [.item-kind]#external#
+
+Returns the plugin implementation address.
+
+The implementation can be instantiated via the `new` keyword, cloned via the minimal clones pattern (see [ERC-1167](https://eips.ethereum.org/EIPS/eip-1167)), or proxied via the UUPS pattern (see [ERC-1822](https://eips.ethereum.org/EIPS/eip-1822)).
+
+[.contract-item]
+[[SimpleGaugeVoterSetup-prepareInstallation-address-bytes-]]
+==== `[.contract-item-name]#++prepareInstallation++#++(address _dao, bytes _data) → address plugin, struct IPluginSetup.PreparedSetupData preparedSetupData++` [.item-kind]#external#
+
+Prepares the installation of a plugin.
+
+You need to set the helpers on the plugin as a post install action.
+
+[.contract-item]
+[[SimpleGaugeVoterSetup-prepareUninstallation-address-struct-IPluginSetup-SetupPayload-]]
+==== `[.contract-item-name]#++prepareUninstallation++#++(address _dao, struct IPluginSetup.SetupPayload _payload) → struct PermissionLib.MultiTargetPermission[] permissions++` [.item-kind]#external#
+
+Prepares the uninstallation of a plugin.
+
+[.contract-item]
+[[SimpleGaugeVoterSetup-getPermissions-address-address-address-address-address-address-address-enum-PermissionLib-Operation-]]
+==== `[.contract-item-name]#++getPermissions++#++(address _dao, address _plugin, address _curve, address _queue, address _escrow, address _clock, address _nft, enum PermissionLib.Operation _grantOrRevoke) → struct PermissionLib.MultiTargetPermission[]++` [.item-kind]#public#
+
+Returns the permissions required for the plugin install and uninstall.
+
+[.contract-item]
+[[SimpleGaugeVoterSetup-encodeSetupData-struct-ISimpleGaugeVoterSetupParams-]]
+==== `[.contract-item-name]#++encodeSetupData++#++(struct ISimpleGaugeVoterSetupParams _params) → bytes++` [.item-kind]#external#
+
+[.contract-item]
+[[SimpleGaugeVoterSetup-encodeSetupData-bool-string-string-address-uint48-uint48-uint256-uint48-uint256-]]
+==== `[.contract-item-name]#++encodeSetupData++#++(bool isPaused, string veTokenName, string veTokenSymbol, address token, uint48 cooldown, uint48 warmup, uint256 feePercent, uint48 minLock, uint256 minDeposit) → bytes++` [.item-kind]#external#
+
+Simple utility for external applications create the encoded setup data.
+
+[.contract-item]
+[[SimpleGaugeVoterSetup-EXECUTE_PERMISSION_ID-bytes32]]
+==== `[.contract-item-name]#++EXECUTE_PERMISSION_ID++#++() → bytes32++` [.item-kind]#public#
+
+The identifier of the `EXECUTE_PERMISSION` permission.
+
+[.contract-item]
+[[SimpleGaugeVoterSetup-WrongHelpersArrayLength-uint256-]]
+==== `[.contract-item-name]#++WrongHelpersArrayLength++#++(uint256 length)++` [.item-kind]#error#
+
+Thrown if passed helpers array is of wrong length.
+
+[.contract-item]
+[[SimpleGaugeVoterSetup-voterBase-address]]
+==== `address [.contract-item-name]#++voterBase++#` [.item-kind]#internal#
+
+implementation of the gaugevoting plugin
+
+[.contract-item]
+[[SimpleGaugeVoterSetup-curveBase-address]]
+==== `address [.contract-item-name]#++curveBase++#` [.item-kind]#internal#
+
+implementation of the escrow voting curve
+
+[.contract-item]
+[[SimpleGaugeVoterSetup-queueBase-address]]
+==== `address [.contract-item-name]#++queueBase++#` [.item-kind]#internal#
+
+implementation of the exit queue
+
+[.contract-item]
+[[SimpleGaugeVoterSetup-escrowBase-address]]
+==== `address [.contract-item-name]#++escrowBase++#` [.item-kind]#internal#
+
+implementation of the escrow locker
+
+[.contract-item]
+[[SimpleGaugeVoterSetup-clockBase-address]]
+==== `address [.contract-item-name]#++clockBase++#` [.item-kind]#internal#
+
+implementation of the clock
+
+[.contract-item]
+[[SimpleGaugeVoterSetup-nftBase-address]]
+==== `address [.contract-item-name]#++nftBase++#` [.item-kind]#internal#
+
+implementation of the escrow NFT
+
+:WHITELIST_ANY_ADDRESS: pass:normal[xref:#Lock-WHITELIST_ANY_ADDRESS-address[`++WHITELIST_ANY_ADDRESS++`]]
+:LOCK_ADMIN_ROLE: pass:normal[xref:#Lock-LOCK_ADMIN_ROLE-bytes32[`++LOCK_ADMIN_ROLE++`]]
+:escrow: pass:normal[xref:#Lock-escrow-address[`++escrow++`]]
+:whitelisted: pass:normal[xref:#Lock-whitelisted-mapping-address----bool-[`++whitelisted++`]]
+:onlyEscrow: pass:normal[xref:#Lock-onlyEscrow--[`++onlyEscrow++`]]
+:supportsInterface: pass:normal[xref:#Lock-supportsInterface-bytes4-[`++supportsInterface++`]]
+:constructor: pass:normal[xref:#Lock-constructor--[`++constructor++`]]
+:initialize: pass:normal[xref:#Lock-initialize-address-string-string-address-[`++initialize++`]]
+:setWhitelisted: pass:normal[xref:#Lock-setWhitelisted-address-bool-[`++setWhitelisted++`]]
+:enableTransfers: pass:normal[xref:#Lock-enableTransfers--[`++enableTransfers++`]]
+:_transfer: pass:normal[xref:#Lock-_transfer-address-address-uint256-[`++_transfer++`]]
+:isApprovedOrOwner: pass:normal[xref:#Lock-isApprovedOrOwner-address-uint256-[`++isApprovedOrOwner++`]]
+:mint: pass:normal[xref:#Lock-mint-address-uint256-[`++mint++`]]
+:burn: pass:normal[xref:#Lock-burn-uint256-[`++burn++`]]
+:implementation: pass:normal[xref:#Lock-implementation--[`++implementation++`]]
+:_authorizeUpgrade: pass:normal[xref:#Lock-_authorizeUpgrade-address-[`++_authorizeUpgrade++`]]
+
+[.contract]
+[[Lock]]
+=== `++Lock++` link:https://github.com/aragon/ve-governance/blob/vundefined//home/jordan/Documents/dev/crypto/aragon/ve-governance/src/escrow/increasing/Lock.sol[{github-icon},role=heading-link]
+
+[.contract-index]
+.Modifiers
+--
+* {xref-Lock-onlyEscrow--}[`++onlyEscrow()++`]
+
+--
+
+[.contract-index]
+.Functions
+--
+* {xref-Lock-supportsInterface-bytes4-}[`++supportsInterface(_interfaceId)++`]
+* {xref-Lock-constructor--}[`++constructor()++`]
+* {xref-Lock-initialize-address-string-string-address-}[`++initialize(_escrow, _name, _symbol, _dao)++`]
+* {xref-Lock-setWhitelisted-address-bool-}[`++setWhitelisted(_account, _isWhitelisted)++`]
+* {xref-Lock-enableTransfers--}[`++enableTransfers()++`]
+* {xref-Lock-_transfer-address-address-uint256-}[`++_transfer(_from, _to, _tokenId)++`]
+* {xref-Lock-isApprovedOrOwner-address-uint256-}[`++isApprovedOrOwner(_spender, _tokenId)++`]
+* {xref-Lock-mint-address-uint256-}[`++mint(_to, _tokenId)++`]
+* {xref-Lock-burn-uint256-}[`++burn(_tokenId)++`]
+* {xref-Lock-implementation--}[`++implementation()++`]
+* {xref-Lock-_authorizeUpgrade-address-}[`++_authorizeUpgrade()++`]
+* {xref-Lock-WHITELIST_ANY_ADDRESS-address}[`++WHITELIST_ANY_ADDRESS()++`]
+* {xref-Lock-LOCK_ADMIN_ROLE-bytes32}[`++LOCK_ADMIN_ROLE()++`]
+* {xref-Lock-escrow-address}[`++escrow()++`]
+* {xref-Lock-whitelisted-mapping-address----bool-}[`++whitelisted()++`]
+
+[.contract-subindex-inherited]
+.ReentrancyGuardUpgradeable
+
+[.contract-subindex-inherited]
+.DaoAuthorizableUpgradeable
+* link:https://github.com/aragon[__DaoAuthorizableUpgradeable_init]
+* link:https://github.com/aragon[dao]
+
+[.contract-subindex-inherited]
+.UUPSUpgradeable
+
+[.contract-subindex-inherited]
+.ERC1967UpgradeUpgradeable
+
+[.contract-subindex-inherited]
+.IERC1967Upgradeable
+
+[.contract-subindex-inherited]
+.IERC1822ProxiableUpgradeable
+
+[.contract-subindex-inherited]
+.ERC721EnumerableUpgradeable
+
+[.contract-subindex-inherited]
+.IERC721EnumerableUpgradeable
+
+[.contract-subindex-inherited]
+.ERC721Upgradeable
+
+[.contract-subindex-inherited]
+.IERC721MetadataUpgradeable
+
+[.contract-subindex-inherited]
+.IERC721Upgradeable
+
+[.contract-subindex-inherited]
+.ERC165Upgradeable
+
+[.contract-subindex-inherited]
+.IERC165Upgradeable
+
+[.contract-subindex-inherited]
+.ContextUpgradeable
+
+[.contract-subindex-inherited]
+.Initializable
+
+[.contract-subindex-inherited]
+.ILock
+
+[.contract-subindex-inherited]
+.IWhitelist
+
+[.contract-subindex-inherited]
+.IWhitelistErrors
+
+[.contract-subindex-inherited]
+.IWhitelistEvents
+
+--
+
+[.contract-index]
+.Events
+--
+
+[.contract-subindex-inherited]
+.ReentrancyGuardUpgradeable
+
+[.contract-subindex-inherited]
+.DaoAuthorizableUpgradeable
+
+[.contract-subindex-inherited]
+.UUPSUpgradeable
+
+[.contract-subindex-inherited]
+.ERC1967UpgradeUpgradeable
+
+[.contract-subindex-inherited]
+.IERC1967Upgradeable
+
+[.contract-subindex-inherited]
+.IERC1822ProxiableUpgradeable
+
+[.contract-subindex-inherited]
+.ERC721EnumerableUpgradeable
+
+[.contract-subindex-inherited]
+.IERC721EnumerableUpgradeable
+
+[.contract-subindex-inherited]
+.ERC721Upgradeable
+
+[.contract-subindex-inherited]
+.IERC721MetadataUpgradeable
+
+[.contract-subindex-inherited]
+.IERC721Upgradeable
+
+[.contract-subindex-inherited]
+.ERC165Upgradeable
+
+[.contract-subindex-inherited]
+.IERC165Upgradeable
+
+[.contract-subindex-inherited]
+.ContextUpgradeable
+
+[.contract-subindex-inherited]
+.Initializable
+
+[.contract-subindex-inherited]
+.ILock
+
+[.contract-subindex-inherited]
+.IWhitelist
+
+[.contract-subindex-inherited]
+.IWhitelistErrors
+
+[.contract-subindex-inherited]
+.IWhitelistEvents
+* {xref-IWhitelistEvents-WhitelistSet-address-bool-}[`++WhitelistSet(account, status)++`]
+
+--
+
+[.contract-index]
+.Errors
+--
+
+[.contract-subindex-inherited]
+.ReentrancyGuardUpgradeable
+
+[.contract-subindex-inherited]
+.DaoAuthorizableUpgradeable
+
+[.contract-subindex-inherited]
+.UUPSUpgradeable
+
+[.contract-subindex-inherited]
+.ERC1967UpgradeUpgradeable
+
+[.contract-subindex-inherited]
+.IERC1967Upgradeable
+
+[.contract-subindex-inherited]
+.IERC1822ProxiableUpgradeable
+
+[.contract-subindex-inherited]
+.ERC721EnumerableUpgradeable
+
+[.contract-subindex-inherited]
+.IERC721EnumerableUpgradeable
+
+[.contract-subindex-inherited]
+.ERC721Upgradeable
+
+[.contract-subindex-inherited]
+.IERC721MetadataUpgradeable
+
+[.contract-subindex-inherited]
+.IERC721Upgradeable
+
+[.contract-subindex-inherited]
+.ERC165Upgradeable
+
+[.contract-subindex-inherited]
+.IERC165Upgradeable
+
+[.contract-subindex-inherited]
+.ContextUpgradeable
+
+[.contract-subindex-inherited]
+.Initializable
+
+[.contract-subindex-inherited]
+.ILock
+* {xref-ILock-OnlyEscrow--}[`++OnlyEscrow()++`]
+
+[.contract-subindex-inherited]
+.IWhitelist
+
+[.contract-subindex-inherited]
+.IWhitelistErrors
+* {xref-IWhitelistErrors-NotWhitelisted--}[`++NotWhitelisted()++`]
+* {xref-IWhitelistErrors-ForbiddenWhitelistAddress--}[`++ForbiddenWhitelistAddress()++`]
+
+[.contract-subindex-inherited]
+.IWhitelistEvents
+
+--
+
+[.contract-item]
+[[Lock-onlyEscrow--]]
+==== `[.contract-item-name]#++onlyEscrow++#++()++` [.item-kind]#modifier#
+
+[.contract-item]
+[[Lock-supportsInterface-bytes4-]]
+==== `[.contract-item-name]#++supportsInterface++#++(bytes4 _interfaceId) → bool++` [.item-kind]#public#
+
+[.contract-item]
+[[Lock-constructor--]]
+==== `[.contract-item-name]#++constructor++#++()++` [.item-kind]#public#
+
+[.contract-item]
+[[Lock-initialize-address-string-string-address-]]
+==== `[.contract-item-name]#++initialize++#++(address _escrow, string _name, string _symbol, address _dao)++` [.item-kind]#external#
+
+[.contract-item]
+[[Lock-setWhitelisted-address-bool-]]
+==== `[.contract-item-name]#++setWhitelisted++#++(address _account, bool _isWhitelisted)++` [.item-kind]#external#
+
+Transfers disabled by default, only whitelisted addresses can receive transfers
+
+[.contract-item]
+[[Lock-enableTransfers--]]
+==== `[.contract-item-name]#++enableTransfers++#++()++` [.item-kind]#external#
+
+Enable transfers to any address without whitelisting
+
+[.contract-item]
+[[Lock-_transfer-address-address-uint256-]]
+==== `[.contract-item-name]#++_transfer++#++(address _from, address _to, uint256 _tokenId)++` [.item-kind]#internal#
+
+Override the transfer to check if the recipient is whitelisted
+This avoids needing to check for mint/burn but is less idomatic than beforeTokenTransfer
+
+[.contract-item]
+[[Lock-isApprovedOrOwner-address-uint256-]]
+==== `[.contract-item-name]#++isApprovedOrOwner++#++(address _spender, uint256 _tokenId) → bool++` [.item-kind]#external#
+
+[.contract-item]
+[[Lock-mint-address-uint256-]]
+==== `[.contract-item-name]#++mint++#++(address _to, uint256 _tokenId)++` [.item-kind]#external#
+
+Minting and burning functions that can only be called by the escrow contract
+
+Safe mint ensures contract addresses are ERC721 Receiver contracts
+
+[.contract-item]
+[[Lock-burn-uint256-]]
+==== `[.contract-item-name]#++burn++#++(uint256 _tokenId)++` [.item-kind]#external#
+
+Minting and burning functions that can only be called by the escrow contract
+
+[.contract-item]
+[[Lock-implementation--]]
+==== `[.contract-item-name]#++implementation++#++() → address++` [.item-kind]#public#
+
+Returns the address of the implementation contract in the [proxy storage slot](https://eips.ethereum.org/EIPS/eip-1967) slot the [UUPS proxy](https://eips.ethereum.org/EIPS/eip-1822) is pointing to.
+
+[.contract-item]
+[[Lock-_authorizeUpgrade-address-]]
+==== `[.contract-item-name]#++_authorizeUpgrade++#++(address)++` [.item-kind]#internal#
+
+Internal method authorizing the upgrade of the contract via the [upgradeability mechanism for UUPS proxies](https://docs.openzeppelin.com/contracts/4.x/api/proxy#UUPSUpgradeable) (see [ERC-1822](https://eips.ethereum.org/EIPS/eip-1822)).
+
+[.contract-item]
+[[Lock-WHITELIST_ANY_ADDRESS-address]]
+==== `[.contract-item-name]#++WHITELIST_ANY_ADDRESS++#++() → address++` [.item-kind]#public#
+
+enables transfers without whitelisting
+
+[.contract-item]
+[[Lock-LOCK_ADMIN_ROLE-bytes32]]
+==== `[.contract-item-name]#++LOCK_ADMIN_ROLE++#++() → bytes32++` [.item-kind]#public#
+
+role to upgrade this contract
+
+[.contract-item]
+[[Lock-escrow-address]]
+==== `[.contract-item-name]#++escrow++#++() → address++` [.item-kind]#public#
+
+Address of the escrow contract that holds underyling assets
+
+[.contract-item]
+[[Lock-whitelisted-mapping-address----bool-]]
+==== `[.contract-item-name]#++whitelisted++#++() → mapping(address &#x3D;&gt; bool)++` [.item-kind]#public#
+
+Whitelisted contracts that are allowed to transfer
+
+:CLOCK_ADMIN_ROLE: pass:normal[xref:#Clock-CLOCK_ADMIN_ROLE-bytes32[`++CLOCK_ADMIN_ROLE++`]]
+:EPOCH_DURATION: pass:normal[xref:#Clock-EPOCH_DURATION-uint256[`++EPOCH_DURATION++`]]
+:CHECKPOINT_INTERVAL: pass:normal[xref:#Clock-CHECKPOINT_INTERVAL-uint256[`++CHECKPOINT_INTERVAL++`]]
+:VOTE_DURATION: pass:normal[xref:#Clock-VOTE_DURATION-uint256[`++VOTE_DURATION++`]]
+:VOTE_WINDOW_BUFFER: pass:normal[xref:#Clock-VOTE_WINDOW_BUFFER-uint256[`++VOTE_WINDOW_BUFFER++`]]
+:constructor: pass:normal[xref:#Clock-constructor--[`++constructor++`]]
+:initialize: pass:normal[xref:#Clock-initialize-address-[`++initialize++`]]
+:epochDuration: pass:normal[xref:#Clock-epochDuration--[`++epochDuration++`]]
+:checkpointInterval: pass:normal[xref:#Clock-checkpointInterval--[`++checkpointInterval++`]]
+:voteDuration: pass:normal[xref:#Clock-voteDuration--[`++voteDuration++`]]
+:voteWindowBuffer: pass:normal[xref:#Clock-voteWindowBuffer--[`++voteWindowBuffer++`]]
+:currentEpoch: pass:normal[xref:#Clock-currentEpoch--[`++currentEpoch++`]]
+:resolveEpoch: pass:normal[xref:#Clock-resolveEpoch-uint256-[`++resolveEpoch++`]]
+:elapsedInEpoch: pass:normal[xref:#Clock-elapsedInEpoch--[`++elapsedInEpoch++`]]
+:resolveElapsedInEpoch: pass:normal[xref:#Clock-resolveElapsedInEpoch-uint256-[`++resolveElapsedInEpoch++`]]
+:epochStartsIn: pass:normal[xref:#Clock-epochStartsIn--[`++epochStartsIn++`]]
+:resolveEpochStartsIn: pass:normal[xref:#Clock-resolveEpochStartsIn-uint256-[`++resolveEpochStartsIn++`]]
+:epochStartTs: pass:normal[xref:#Clock-epochStartTs--[`++epochStartTs++`]]
+:resolveEpochStartTs: pass:normal[xref:#Clock-resolveEpochStartTs-uint256-[`++resolveEpochStartTs++`]]
+:votingActive: pass:normal[xref:#Clock-votingActive--[`++votingActive++`]]
+:resolveVotingActive: pass:normal[xref:#Clock-resolveVotingActive-uint256-[`++resolveVotingActive++`]]
+:epochVoteStartsIn: pass:normal[xref:#Clock-epochVoteStartsIn--[`++epochVoteStartsIn++`]]
+:resolveEpochVoteStartsIn: pass:normal[xref:#Clock-resolveEpochVoteStartsIn-uint256-[`++resolveEpochVoteStartsIn++`]]
+:epochVoteStartTs: pass:normal[xref:#Clock-epochVoteStartTs--[`++epochVoteStartTs++`]]
+:resolveEpochVoteStartTs: pass:normal[xref:#Clock-resolveEpochVoteStartTs-uint256-[`++resolveEpochVoteStartTs++`]]
+:epochVoteEndsIn: pass:normal[xref:#Clock-epochVoteEndsIn--[`++epochVoteEndsIn++`]]
+:resolveEpochVoteEndsIn: pass:normal[xref:#Clock-resolveEpochVoteEndsIn-uint256-[`++resolveEpochVoteEndsIn++`]]
+:epochVoteEndTs: pass:normal[xref:#Clock-epochVoteEndTs--[`++epochVoteEndTs++`]]
+:resolveEpochVoteEndTs: pass:normal[xref:#Clock-resolveEpochVoteEndTs-uint256-[`++resolveEpochVoteEndTs++`]]
+:epochNextCheckpointIn: pass:normal[xref:#Clock-epochNextCheckpointIn--[`++epochNextCheckpointIn++`]]
+:resolveEpochNextCheckpointIn: pass:normal[xref:#Clock-resolveEpochNextCheckpointIn-uint256-[`++resolveEpochNextCheckpointIn++`]]
+:epochNextCheckpointTs: pass:normal[xref:#Clock-epochNextCheckpointTs--[`++epochNextCheckpointTs++`]]
+:resolveEpochNextCheckpointTs: pass:normal[xref:#Clock-resolveEpochNextCheckpointTs-uint256-[`++resolveEpochNextCheckpointTs++`]]
+:_authorizeUpgrade: pass:normal[xref:#Clock-_authorizeUpgrade-address-[`++_authorizeUpgrade++`]]
+:implementation: pass:normal[xref:#Clock-implementation--[`++implementation++`]]
+
+[.contract]
+[[Clock]]
+=== `++Clock++` link:https://github.com/aragon/ve-governance/blob/vundefined//home/jordan/Documents/dev/crypto/aragon/ve-governance/src/clock/Clock.sol[{github-icon},role=heading-link]
+
+[.contract-index]
+.Functions
+--
+* {xref-Clock-constructor--}[`++constructor()++`]
+* {xref-Clock-initialize-address-}[`++initialize(_dao)++`]
+* {xref-Clock-epochDuration--}[`++epochDuration()++`]
+* {xref-Clock-checkpointInterval--}[`++checkpointInterval()++`]
+* {xref-Clock-voteDuration--}[`++voteDuration()++`]
+* {xref-Clock-voteWindowBuffer--}[`++voteWindowBuffer()++`]
+* {xref-Clock-currentEpoch--}[`++currentEpoch()++`]
+* {xref-Clock-resolveEpoch-uint256-}[`++resolveEpoch(timestamp)++`]
+* {xref-Clock-elapsedInEpoch--}[`++elapsedInEpoch()++`]
+* {xref-Clock-resolveElapsedInEpoch-uint256-}[`++resolveElapsedInEpoch(timestamp)++`]
+* {xref-Clock-epochStartsIn--}[`++epochStartsIn()++`]
+* {xref-Clock-resolveEpochStartsIn-uint256-}[`++resolveEpochStartsIn(timestamp)++`]
+* {xref-Clock-epochStartTs--}[`++epochStartTs()++`]
+* {xref-Clock-resolveEpochStartTs-uint256-}[`++resolveEpochStartTs(timestamp)++`]
+* {xref-Clock-votingActive--}[`++votingActive()++`]
+* {xref-Clock-resolveVotingActive-uint256-}[`++resolveVotingActive(timestamp)++`]
+* {xref-Clock-epochVoteStartsIn--}[`++epochVoteStartsIn()++`]
+* {xref-Clock-resolveEpochVoteStartsIn-uint256-}[`++resolveEpochVoteStartsIn(timestamp)++`]
+* {xref-Clock-epochVoteStartTs--}[`++epochVoteStartTs()++`]
+* {xref-Clock-resolveEpochVoteStartTs-uint256-}[`++resolveEpochVoteStartTs(timestamp)++`]
+* {xref-Clock-epochVoteEndsIn--}[`++epochVoteEndsIn()++`]
+* {xref-Clock-resolveEpochVoteEndsIn-uint256-}[`++resolveEpochVoteEndsIn(timestamp)++`]
+* {xref-Clock-epochVoteEndTs--}[`++epochVoteEndTs()++`]
+* {xref-Clock-resolveEpochVoteEndTs-uint256-}[`++resolveEpochVoteEndTs(timestamp)++`]
+* {xref-Clock-epochNextCheckpointIn--}[`++epochNextCheckpointIn()++`]
+* {xref-Clock-resolveEpochNextCheckpointIn-uint256-}[`++resolveEpochNextCheckpointIn(timestamp)++`]
+* {xref-Clock-epochNextCheckpointTs--}[`++epochNextCheckpointTs()++`]
+* {xref-Clock-resolveEpochNextCheckpointTs-uint256-}[`++resolveEpochNextCheckpointTs(timestamp)++`]
+* {xref-Clock-_authorizeUpgrade-address-}[`++_authorizeUpgrade()++`]
+* {xref-Clock-implementation--}[`++implementation()++`]
+* {xref-Clock-CLOCK_ADMIN_ROLE-bytes32}[`++CLOCK_ADMIN_ROLE()++`]
+
+[.contract-subindex-inherited]
+.UUPSUpgradeable
+
+[.contract-subindex-inherited]
+.ERC1967UpgradeUpgradeable
+
+[.contract-subindex-inherited]
+.IERC1967Upgradeable
+
+[.contract-subindex-inherited]
+.IERC1822ProxiableUpgradeable
+
+[.contract-subindex-inherited]
+.DaoAuthorizableUpgradeable
+* link:https://github.com/aragon[__DaoAuthorizableUpgradeable_init]
+* link:https://github.com/aragon[dao]
+
+[.contract-subindex-inherited]
+.ContextUpgradeable
+
+[.contract-subindex-inherited]
+.Initializable
+
+[.contract-subindex-inherited]
+.IClock
+
+--
+
+[.contract-index]
+.Events
+--
+
+[.contract-subindex-inherited]
+.UUPSUpgradeable
+
+[.contract-subindex-inherited]
+.ERC1967UpgradeUpgradeable
+
+[.contract-subindex-inherited]
+.IERC1967Upgradeable
+
+[.contract-subindex-inherited]
+.IERC1822ProxiableUpgradeable
+
+[.contract-subindex-inherited]
+.DaoAuthorizableUpgradeable
+
+[.contract-subindex-inherited]
+.ContextUpgradeable
+
+[.contract-subindex-inherited]
+.Initializable
+
+[.contract-subindex-inherited]
+.IClock
+
+--
+
+[.contract-index]
+.Internal Variables
+--
+* {xref-Clock-EPOCH_DURATION-uint256}[`++uint256 constant EPOCH_DURATION++`]
+* {xref-Clock-CHECKPOINT_INTERVAL-uint256}[`++uint256 constant CHECKPOINT_INTERVAL++`]
+* {xref-Clock-VOTE_DURATION-uint256}[`++uint256 constant VOTE_DURATION++`]
+* {xref-Clock-VOTE_WINDOW_BUFFER-uint256}[`++uint256 constant VOTE_WINDOW_BUFFER++`]
+
+[.contract-subindex-inherited]
+.UUPSUpgradeable
+
+[.contract-subindex-inherited]
+.ERC1967UpgradeUpgradeable
+
+[.contract-subindex-inherited]
+.IERC1967Upgradeable
+
+[.contract-subindex-inherited]
+.IERC1822ProxiableUpgradeable
+
+[.contract-subindex-inherited]
+.DaoAuthorizableUpgradeable
+
+[.contract-subindex-inherited]
+.ContextUpgradeable
+
+[.contract-subindex-inherited]
+.Initializable
+
+[.contract-subindex-inherited]
+.IClock
+
+--
+
+[.contract-item]
+[[Clock-constructor--]]
+==== `[.contract-item-name]#++constructor++#++()++` [.item-kind]#public#
+
+[.contract-item]
+[[Clock-initialize-address-]]
+==== `[.contract-item-name]#++initialize++#++(address _dao)++` [.item-kind]#external#
+
+[.contract-item]
+[[Clock-epochDuration--]]
+==== `[.contract-item-name]#++epochDuration++#++() → uint256++` [.item-kind]#external#
+
+[.contract-item]
+[[Clock-checkpointInterval--]]
+==== `[.contract-item-name]#++checkpointInterval++#++() → uint256++` [.item-kind]#external#
+
+[.contract-item]
+[[Clock-voteDuration--]]
+==== `[.contract-item-name]#++voteDuration++#++() → uint256++` [.item-kind]#external#
+
+[.contract-item]
+[[Clock-voteWindowBuffer--]]
+==== `[.contract-item-name]#++voteWindowBuffer++#++() → uint256++` [.item-kind]#external#
+
+[.contract-item]
+[[Clock-currentEpoch--]]
+==== `[.contract-item-name]#++currentEpoch++#++() → uint256++` [.item-kind]#external#
+
+[.contract-item]
+[[Clock-resolveEpoch-uint256-]]
+==== `[.contract-item-name]#++resolveEpoch++#++(uint256 timestamp) → uint256++` [.item-kind]#public#
+
+[.contract-item]
+[[Clock-elapsedInEpoch--]]
+==== `[.contract-item-name]#++elapsedInEpoch++#++() → uint256++` [.item-kind]#external#
+
+[.contract-item]
+[[Clock-resolveElapsedInEpoch-uint256-]]
+==== `[.contract-item-name]#++resolveElapsedInEpoch++#++(uint256 timestamp) → uint256++` [.item-kind]#public#
+
+[.contract-item]
+[[Clock-epochStartsIn--]]
+==== `[.contract-item-name]#++epochStartsIn++#++() → uint256++` [.item-kind]#external#
+
+[.contract-item]
+[[Clock-resolveEpochStartsIn-uint256-]]
+==== `[.contract-item-name]#++resolveEpochStartsIn++#++(uint256 timestamp) → uint256++` [.item-kind]#public#
+
+Number of seconds until the start of the next epoch (relative)
+
+If exactly at the start of the epoch, returns 0
+
+[.contract-item]
+[[Clock-epochStartTs--]]
+==== `[.contract-item-name]#++epochStartTs++#++() → uint256++` [.item-kind]#external#
+
+[.contract-item]
+[[Clock-resolveEpochStartTs-uint256-]]
+==== `[.contract-item-name]#++resolveEpochStartTs++#++(uint256 timestamp) → uint256++` [.item-kind]#public#
+
+Timestamp of the start of the next epoch (absolute)
+
+[.contract-item]
+[[Clock-votingActive--]]
+==== `[.contract-item-name]#++votingActive++#++() → bool++` [.item-kind]#external#
+
+[.contract-item]
+[[Clock-resolveVotingActive-uint256-]]
+==== `[.contract-item-name]#++resolveVotingActive++#++(uint256 timestamp) → bool++` [.item-kind]#public#
+
+[.contract-item]
+[[Clock-epochVoteStartsIn--]]
+==== `[.contract-item-name]#++epochVoteStartsIn++#++() → uint256++` [.item-kind]#external#
+
+[.contract-item]
+[[Clock-resolveEpochVoteStartsIn-uint256-]]
+==== `[.contract-item-name]#++resolveEpochVoteStartsIn++#++(uint256 timestamp) → uint256++` [.item-kind]#public#
+
+Number of seconds until voting starts.
+
+If voting is active, returns 0.
+
+[.contract-item]
+[[Clock-epochVoteStartTs--]]
+==== `[.contract-item-name]#++epochVoteStartTs++#++() → uint256++` [.item-kind]#external#
+
+[.contract-item]
+[[Clock-resolveEpochVoteStartTs-uint256-]]
+==== `[.contract-item-name]#++resolveEpochVoteStartTs++#++(uint256 timestamp) → uint256++` [.item-kind]#public#
+
+Timestamp of the start of the next voting period (absolute)
+
+[.contract-item]
+[[Clock-epochVoteEndsIn--]]
+==== `[.contract-item-name]#++epochVoteEndsIn++#++() → uint256++` [.item-kind]#external#
+
+[.contract-item]
+[[Clock-resolveEpochVoteEndsIn-uint256-]]
+==== `[.contract-item-name]#++resolveEpochVoteEndsIn++#++(uint256 timestamp) → uint256++` [.item-kind]#public#
+
+Number of seconds until the end of the current voting period (relative)
+
+If we are outside the voting period, returns 0
+
+[.contract-item]
+[[Clock-epochVoteEndTs--]]
+==== `[.contract-item-name]#++epochVoteEndTs++#++() → uint256++` [.item-kind]#external#
+
+[.contract-item]
+[[Clock-resolveEpochVoteEndTs-uint256-]]
+==== `[.contract-item-name]#++resolveEpochVoteEndTs++#++(uint256 timestamp) → uint256++` [.item-kind]#public#
+
+Timestamp of the end of the current voting period (absolute)
+
+[.contract-item]
+[[Clock-epochNextCheckpointIn--]]
+==== `[.contract-item-name]#++epochNextCheckpointIn++#++() → uint256++` [.item-kind]#external#
+
+[.contract-item]
+[[Clock-resolveEpochNextCheckpointIn-uint256-]]
+==== `[.contract-item-name]#++resolveEpochNextCheckpointIn++#++(uint256 timestamp) → uint256++` [.item-kind]#public#
+
+Number of seconds until the next checkpoint interval (relative)
+
+If exactly at the start of the checkpoint interval, returns 0
+
+[.contract-item]
+[[Clock-epochNextCheckpointTs--]]
+==== `[.contract-item-name]#++epochNextCheckpointTs++#++() → uint256++` [.item-kind]#external#
+
+[.contract-item]
+[[Clock-resolveEpochNextCheckpointTs-uint256-]]
+==== `[.contract-item-name]#++resolveEpochNextCheckpointTs++#++(uint256 timestamp) → uint256++` [.item-kind]#public#
+
+Timestamp of the next deposit interval (absolute)
+
+[.contract-item]
+[[Clock-_authorizeUpgrade-address-]]
+==== `[.contract-item-name]#++_authorizeUpgrade++#++(address)++` [.item-kind]#internal#
+
+[.contract-item]
+[[Clock-implementation--]]
+==== `[.contract-item-name]#++implementation++#++() → address++` [.item-kind]#external#
+
+[.contract-item]
+[[Clock-CLOCK_ADMIN_ROLE-bytes32]]
+==== `[.contract-item-name]#++CLOCK_ADMIN_ROLE++#++() → bytes32++` [.item-kind]#public#
+
+[.contract-item]
+[[Clock-EPOCH_DURATION-uint256]]
+==== `uint256 [.contract-item-name]#++EPOCH_DURATION++#` [.item-kind]#internal constant#
+
+Epoch encompasses a voting and non-voting period
+
+[.contract-item]
+[[Clock-CHECKPOINT_INTERVAL-uint256]]
+==== `uint256 [.contract-item-name]#++CHECKPOINT_INTERVAL++#` [.item-kind]#internal constant#
+
+Checkpoint interval is the time between each voting checkpoint
+
+[.contract-item]
+[[Clock-VOTE_DURATION-uint256]]
+==== `uint256 [.contract-item-name]#++VOTE_DURATION++#` [.item-kind]#internal constant#
+
+Voting duration is the time during which votes can be cast
+
+[.contract-item]
+[[Clock-VOTE_WINDOW_BUFFER-uint256]]
+==== `uint256 [.contract-item-name]#++VOTE_WINDOW_BUFFER++#` [.item-kind]#internal constant#
+
+Opens and closes the voting window slightly early to avoid timing attacks
+
