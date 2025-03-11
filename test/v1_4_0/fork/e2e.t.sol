@@ -541,12 +541,12 @@ contract TestE2EV1_4_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
             );
 
             assertEq(
-                tp1_1.ts,
+                tp1_1.writtenTs,
                 epochStartTime + 1 days,
                 "Alice point should have the correct written timestamp"
             );
             assertEq(
-                tp2_1.ts,
+                tp2_1.writtenTs,
                 epochStartTime + 6 days,
                 "Bob point should have the correct written timestamp"
             );
@@ -624,7 +624,7 @@ contract TestE2EV1_4_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
                 "Alice point should have the correct checkpoint"
             );
             assertEq(
-                tp1_2.ts,
+                tp1_2.writtenTs,
                 epochStartTime + 4 weeks,
                 "Alice point should have the correct written timestamp"
             );
@@ -1018,7 +1018,7 @@ contract TestE2EV1_4_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
                 "Alice point should have the correct checkpoint"
             );
             assertEq(
-                tp1_2.ts,
+                tp1_2.writtenTs,
                 epochStartTime + 8 weeks + 1 hours,
                 "Alice point should have the correct written timestamp"
             );
@@ -1338,7 +1338,7 @@ contract TestE2EV1_4_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
             );
 
             assertEq(
-                tp1_1.ts,
+                tp1_1.writtenTs,
                 epochStartTime + 1 days,
                 "Alice point should have the correct written timestamp"
             );
@@ -1369,7 +1369,7 @@ contract TestE2EV1_4_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
             );
 
             assertEq(
-                tp2_1.ts,
+                tp2_1.writtenTs,
                 epochStartTime + clock.checkpointInterval() - 1,
                 "Carol point should have the correct written timestamp"
             );

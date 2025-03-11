@@ -43,6 +43,7 @@ interface IEscrowCurveToken is IEscrowCurveTokenStorage {
 interface IEscrowCurveErrorsAndEvents {
     error InvalidTokenId();
     error InvalidCheckpoint();
+    error OnlyEscrow();
 }
 
 interface IEscrowCurveCore is IEscrowCurveErrorsAndEvents {

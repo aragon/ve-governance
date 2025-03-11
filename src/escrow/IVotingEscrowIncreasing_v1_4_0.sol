@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import "./IVotingEscrowIncreasing.sol";
 
 interface IVotingEscrowExiting {
-    /// @notice How much amount has been exitting.
+    /// @notice How much amount has been exiting.
     /// @return total The total amount for which beginWithdrawal has been called
     ///         but withdraw has not yet been executed.
     function currentExitingAmount() external view returns (uint256);

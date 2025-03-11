@@ -45,6 +45,10 @@ contract ExitQueue is IExitQueue, IClockUser, DaoAuthorizable, UUPSUpgradeable {
     /// @notice tokenId => Ticket
     mapping(uint256 => Ticket) internal _queue;
 
+    /// @notice The total amount that is currently being exited.
+    /// @dev Added in 0.2.0
+    uint256 public totalExiting;
+
     /*//////////////////////////////////////////////////////////////
                               Constructor
     //////////////////////////////////////////////////////////////*/
@@ -69,6 +73,13 @@ contract ExitQueue is IExitQueue, IClockUser, DaoAuthorizable, UUPSUpgradeable {
         _setMinLock(_minLock);
         _setFeePercent(_feePercent);
         _setCooldown(_cooldown);
+    }
+
+    /// @notice Called upon the upgrade.
+    /// @dev Note that in the previous version, totalExiting didn't exist as a variable, 
+    ///      but it also was not 0. Only Escrow can call to ensure correct value is passed.
+    function initializeFrom(uint256 _totalExiting) public onlyEscrow {
+        totalExiting = _totalExiting;
     }
 
     /*//////////////////////////////////////////////////////////////

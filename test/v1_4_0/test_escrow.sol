@@ -13,12 +13,7 @@ import {ProxyLib} from "@libs/ProxyLib.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
-contract TestEscrow is
-    Test,
-    IEscrowCurveGlobalStorage,
-    IEscrowCurveTokenStorage,
-    ILockedBalanceIncreasing
-{
+contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage {
     using ProxyLib for address;
     using SafeCast for uint256;
 
@@ -47,7 +42,7 @@ contract TestEscrow is
     function lockedBalance(
         uint208 amount,
         uint48 start
-    ) public pure returns (LockedBalance memory) {
+    ) public pure returns (ILockedBalanceIncreasing.LockedBalance memory) {
         return ILockedBalanceIncreasing.LockedBalance(amount, start);
     }
 
@@ -71,6 +66,14 @@ contract TestEscrow is
 
     function bias(uint256 _amount, uint256 _duration) private view returns (int256 bias_) {
         return biasFP(_amount, _duration) / 1e18;
+    }
+
+    function slopeChanges(uint16 _seasonIndex, uint256 _end) private view returns(int256 slope) {
+        return curve.slopeChanges(_seasonIndex, _end);
+    }
+
+    function slopeChanges(uint256 _end) private view returns(int256 slope) {
+        return slopeChanges(0, _end);
     }
 
     function assertTotalSupply(uint256 _t, int256 _amountFP) private view {
@@ -171,7 +174,7 @@ contract TestEscrow is
 
         // 3
         GlobalPoint memory p = curve.globalPointHistory(1);
-        assertEq(p.ts, currentTs);
+        assertEq(p.writtenTs, currentTs);
         assertEq(p.bias, biasFP(Lock_1_Amount, currentTs - weekStartTs));
         assertEq(p.slope, slopeFP(Lock_1_Amount));
 
@@ -182,7 +185,7 @@ contract TestEscrow is
         assertTotalSupply(endTs + 10, biasFP(Lock_1_Amount, endTs - weekStartTs));
 
         // 7
-        assertEq(curve.slopeChanges(endTs), slopeFP(Lock_1_Amount));
+        assertEq(slopeChanges(endTs), slopeFP(Lock_1_Amount));
 
         // 8
         // TODO:
@@ -210,14 +213,13 @@ contract TestEscrow is
 
         // 2, 3
         GlobalPoint memory p = curve.globalPointHistory(2);
-        assertEq(p.ts, currentTs);
+        assertEq(p.writtenTs, currentTs);
         assertEq(
             p.bias,
             biasFP(Lock_1_Amount, currentTs - weekStartTs) +
                 biasFP(Lock_2_Amount, currentTs - weekStartTs)
         );
 
-        // assertEq(p.start, weekStartTs); TODO: check it on `locked()`
         assertEq(p.slope, slopeFP(Lock_1_Amount) + slopeFP(Lock_2_Amount));
 
         // 4, 5, 6
@@ -227,7 +229,7 @@ contract TestEscrow is
         assertTotalSupply(endTs + 10, biasFP(totalLockAmount, endTs - weekStartTs));
 
         // 7
-        assertEq(curve.slopeChanges(endTs), slopeFP(Lock_1_Amount) + slopeFP(Lock_2_Amount));
+        assertEq(slopeChanges(endTs), slopeFP(Lock_1_Amount) + slopeFP(Lock_2_Amount));
     }
 
     function test_whenCreatingNewLock_existingLock_at_previous_week() public givenExistingLock {
@@ -258,9 +260,8 @@ contract TestEscrow is
 
         // 2, 3
         GlobalPoint memory p = curve.globalPointHistory(3);
-        assertEq(p.ts, currentTs);
+        assertEq(p.writtenTs, currentTs);
         assertEq(p.bias, currentTotalBiasFP);
-        // assertEq(p.start, weekStartTs); TODO: check it on `locked()`
         assertEq(p.slope, slopeFP(Lock_1_Amount) + slopeFP(Lock_2_Amount));
 
         // 4, 5
@@ -285,8 +286,8 @@ contract TestEscrow is
         assertTotalSupply(Lock_2_end + 10, Lock_1_MAX + LOCK_2_MAX);
 
         // 8
-        assertEq(curve.slopeChanges(Lock_1_end), slopeFP(Lock_1_Amount));
-        assertEq(curve.slopeChanges(Lock_2_end), slopeFP(Lock_2_Amount));
+        assertEq(slopeChanges(Lock_1_end), slopeFP(Lock_1_Amount));
+        assertEq(slopeChanges(Lock_2_end), slopeFP(Lock_2_Amount));
     }
 
     function test_whenCreatingNewLock_existingLock_ended() public givenExistingLock {
@@ -323,9 +324,8 @@ contract TestEscrow is
 
         // 2, 3
         GlobalPoint memory p = curve.globalPointHistory(lastEpoch);
-        assertEq(p.ts, currentTs);
-        assertEq(p.bias, currentTotalBiasFP);
-        // assertEq(p.start, weekStartTs); TODO: check it on `locked()`
+        assertEq(p.writtenTs, currentTs);
+        assertEq(p.bias, currentTotalBiasFP); 
         assertEq(p.slope, slopeFP(Lock_2_Amount));
 
         int256 Lock_1_MAX = biasFP(Lock_1_Amount, Lock_1_end - Lock_1_start);
@@ -344,8 +344,8 @@ contract TestEscrow is
         assertTotalSupply(Lock_2_end + 10, Lock_1_MAX + Lock_2_MAX);
 
         // 8
-        assertEq(curve.slopeChanges(Lock_1_end), slopeFP(Lock_1_Amount));
-        assertEq(curve.slopeChanges(Lock_2_end), slopeFP(Lock_2_Amount));
+        assertEq(slopeChanges(Lock_1_end), slopeFP(Lock_1_Amount));
+        assertEq(slopeChanges(Lock_2_end), slopeFP(Lock_2_Amount));
     }
 
     // ================== MERGE ============================
@@ -357,7 +357,9 @@ contract TestEscrow is
         uint256 to = escrow.createLock(Lock_2_Amount);
 
         //reverts as start dates are different and tokens are not mature.
-        vm.expectRevert(abi.encodeWithSelector(IMerge.CannotMerge.selector, from, to));
+        vm.expectRevert(
+            abi.encodeWithSelector(IMerge.CannotMerge.selector, from, to)
+        );
         escrow.merge(from, to);
     }
 
@@ -403,8 +405,8 @@ contract TestEscrow is
 
         assertEq(fromP.coefficients[0], 0);
         assertEq(fromP.coefficients[1], 0);
-        // assertEq(fromP.start, weekStartTs); TODO: check it on `locked()`
-        assertEq(fromP.ts, currentTs);
+        assertEq(fromP.checkpointTs, weekStartTs); 
+        assertEq(fromP.writtenTs, currentTs);
 
         // 2
         // since merge occured in the same block as `createLock`,
@@ -419,8 +421,8 @@ contract TestEscrow is
 
         assertEq(toP.coefficients[0], currentTotalBiasFP);
         assertEq(toP.coefficients[1], slopeFP(Lock_1_Amount) + slopeFP(Lock_2_Amount));
-        // assertEq(toP.start, weekStartTs); TODO: check it on `locked()`
-        assertEq(toP.ts, currentTs);
+        assertEq(toP.checkpointTs, weekStartTs);
+        assertEq(toP.writtenTs, currentTs);
 
         uint256 end = weekStartTs + maxTime;
         int256 LOCK_1_MAX = biasFP(Lock_1_Amount, end - weekStartTs);
@@ -440,7 +442,7 @@ contract TestEscrow is
         assertTotalSupply(end + 10, LOCK_1_MAX + LOCK_2_MAX);
 
         // 6
-        assertEq(curve.slopeChanges(end), slopeFP(Lock_1_Amount) + slopeFP(Lock_2_Amount));
+        assertEq(slopeChanges(end), slopeFP(Lock_1_Amount) + slopeFP(Lock_2_Amount));
     }
 
     function test_Merge_WhenMature_SameStartDate() public {
@@ -473,8 +475,8 @@ contract TestEscrow is
 
         assertEq(fromP.coefficients[0], 0);
         assertEq(fromP.coefficients[1], 0);
-        // assertEq(fromP.start, weekStartTs); TODO: check it on `locked()`
-        assertEq(fromP.ts, currentTs);
+        assertEq(fromP.checkpointTs, weekStartTs);
+        assertEq(fromP.writtenTs, currentTs);
 
         // 2
         // since merge occured in the different block than `createLock`,
@@ -487,9 +489,9 @@ contract TestEscrow is
         int256 currentTotalBiasFP = LOCK_1_MAX + LOCK_2_MAX;
 
         assertEq(toP.coefficients[0], currentTotalBiasFP);
-        assertEq(toP.coefficients[1], 0);
-        // assertEq(toP.start, weekStartTs); TODO: check it on `locked()`
-        assertEq(toP.ts, currentTs);
+        assertEq(toP.coefficients[1], slopeFP(Lock_1_Amount + Lock_2_Amount));
+        assertEq(toP.checkpointTs, weekStartTs);
+        assertEq(toP.writtenTs, currentTs);
 
         // 3, 4
         assertTotalSupply(currentTs - 1, currentTotalBiasFP);
@@ -501,12 +503,12 @@ contract TestEscrow is
 
         assertEq(lastPoint.slope, 0);
         assertEq(lastPoint.bias, currentTotalBiasFP);
-        assertEq(lastPoint.ts, currentTs);
+        assertEq(lastPoint.writtenTs, currentTs);
         // assertEq(lastPoint.start, (currentTs / checkpointInterval) * checkpointInterval); // TODO:GIORGI on the global points, we also store something like lastPoint.start = _newLocked.start
         // in this specific scenario, lastPoint.start becomes the `to` token's start which is in the past. does this make sense at all ?
 
         // 6
-        assertEq(curve.slopeChanges(end), slopeFP(Lock_1_Amount) + slopeFP(Lock_2_Amount));
+        assertEq(slopeChanges(end), slopeFP(Lock_1_Amount) + slopeFP(Lock_2_Amount));
     }
 
     function test_Merge_WhenMature_DifferentStartDates() public {
@@ -539,8 +541,8 @@ contract TestEscrow is
 
             assertEq(fromP.coefficients[0], 0);
             assertEq(fromP.coefficients[1], 0);
-            // assertEq(fromP.start, weekStartTs); TODO: check it on `locked()`
-            assertEq(fromP.ts, currentTs);
+            assertEq(fromP.checkpointTs, fromLockWeekStart);
+            assertEq(fromP.writtenTs, currentTs);
         }
 
         int256 currentTotalBiasFP = biasFP(Lock_1_Amount, fromLockEnd - fromLockWeekStart) +
@@ -554,9 +556,9 @@ contract TestEscrow is
             TokenPoint memory toP = curve.tokenPointHistory(to, toLatestEpoch);
 
             assertEq(toP.coefficients[0], currentTotalBiasFP);
-            assertEq(toP.coefficients[1], 0);
-            // assertEq(toP.start, weekStartTs); TODO: check it on `locked()`
-            assertEq(toP.ts, currentTs);
+            assertEq(toP.coefficients[1], slopeFP(Lock_1_Amount) + slopeFP(Lock_2_Amount));
+            assertEq(toP.checkpointTs, toLockWeekStart);
+            assertEq(toP.writtenTs, currentTs);
         }
 
         // 3, 4
@@ -569,13 +571,13 @@ contract TestEscrow is
 
         assertEq(lastPoint.slope, 0);
         assertEq(lastPoint.bias, currentTotalBiasFP);
-        assertEq(lastPoint.ts, currentTs);
+        assertEq(lastPoint.writtenTs, currentTs);
         // assertEq(lastPoint.start, (currentTs / checkpointInterval) * checkpointInterval); // TODO:GIORGI on the global points, we also store something like lastPoint.start = _newLocked.start
-        // in this specific scenario, lastPoint.start becomes the `to` token's start which is in the past. does this make sense at all ?
+        // // in this specific scenario, lastPoint.start becomes the `to` token's start which is in the past. does this make sense at all ?
 
         // 6
-        assertEq(curve.slopeChanges(fromLockEnd), slopeFP(Lock_1_Amount));
-        assertEq(curve.slopeChanges(toLockEnd), slopeFP(Lock_2_Amount));
+        assertEq(slopeChanges(fromLockEnd), slopeFP(Lock_1_Amount));
+        assertEq(slopeChanges(toLockEnd), slopeFP(Lock_2_Amount));
     }
 
     // ====================SPLIT TESTS==========================
@@ -619,7 +621,7 @@ contract TestEscrow is
         // vm.expectEmit();
         // emit ISplit.Split(tokenId, 2, 3, sender, Lock_1_Amount - value, value);
 
-        escrow.split(tokenId, value);
+        escrow.split(tokenId, value);   
         uint256 currentTs = block.timestamp;
 
         int256 slope1 = slopeFP(Lock_1_Amount - value);
@@ -633,8 +635,8 @@ contract TestEscrow is
 
         assertEq(mainP.coefficients[0], 0);
         assertEq(mainP.coefficients[1], 0);
-        // assertEq(mainP.start, weekStartTs); TODO: check it on `locked()`
-        assertEq(mainP.ts, block.timestamp);
+        assertEq(mainP.checkpointTs, weekStartTs);
+        assertEq(mainP.writtenTs, block.timestamp);
 
         // 2
         {
@@ -650,8 +652,8 @@ contract TestEscrow is
                 biasFP(Lock_1_Amount - value, block.timestamp - weekStartTs)
             );
             assertEq(token1P.coefficients[1], slope1);
-            // assertEq(token1P.start, weekStartTs); TODO: check it on `locked()`
-            assertEq(token1P.ts, block.timestamp);
+            assertEq(token1P.checkpointTs, weekStartTs);
+            assertEq(token1P.writtenTs, block.timestamp);
 
             uint256 token2Epoch = curve.tokenPointLatestIndex(3);
             assertEq(token2Epoch, 1);
@@ -662,8 +664,8 @@ contract TestEscrow is
 
             assertEq(token2P.coefficients[0], biasFP(value, block.timestamp - weekStartTs));
             assertEq(token2P.coefficients[1], slope2);
-            // assertEq(token2P.start, weekStartTs); TODO: check it on `locked()`
-            assertEq(token2P.ts, block.timestamp);
+            assertEq(token2P.checkpointTs, weekStartTs);
+            assertEq(token2P.writtenTs, block.timestamp);
         }
 
         // 3.
@@ -688,7 +690,7 @@ contract TestEscrow is
         );
 
         // 5
-        assertEq(curve.slopeChanges(endTs), slope1 + slope2);
+        assertEq(slopeChanges(endTs), slope1 + slope2);
     }
 
     function test_Split_TokenAlreadyMature() public {
@@ -719,8 +721,8 @@ contract TestEscrow is
 
         assertEq(mainP.coefficients[0], 0);
         assertEq(mainP.coefficients[1], 0);
-        // assertEq(mainP.start, weekStartTs); TODO: check it on `locked()`
-        assertEq(mainP.ts, block.timestamp);
+        assertEq(mainP.checkpointTs, weekStartTs);
+        assertEq(mainP.writtenTs, block.timestamp);
 
         // 2
         {
@@ -732,9 +734,9 @@ contract TestEscrow is
             );
 
             assertEq(token1P.coefficients[0], biasFP(Lock_1_Amount - value, endTs - weekStartTs));
-            assertEq(token1P.coefficients[1], 0);
-            // assertEq(token1P.start, weekStartTs); TODO: check it on `locked()`
-            assertEq(token1P.ts, block.timestamp);
+            assertEq(token1P.coefficients[1], slopeFP(Lock_1_Amount - value));
+            assertEq(token1P.checkpointTs, weekStartTs);
+            assertEq(token1P.writtenTs, block.timestamp);
 
             uint256 token2Epoch = curve.tokenPointLatestIndex(3);
             assertEq(token2Epoch, 1);
@@ -744,9 +746,9 @@ contract TestEscrow is
             );
 
             assertEq(token2P.coefficients[0], biasFP(value, endTs - weekStartTs));
-            assertEq(token2P.coefficients[1], 0);
-            // assertEq(token2P.start, weekStartTs); TODO: check it on `locked()`
-            assertEq(token2P.ts, block.timestamp);
+            assertEq(token2P.coefficients[1], slopeFP(value));
+            assertEq(token2P.checkpointTs, weekStartTs);
+            assertEq(token2P.writtenTs, block.timestamp);
         }
 
         // 3.
@@ -770,7 +772,7 @@ contract TestEscrow is
         );
 
         // 5
-        assertEq(curve.slopeChanges(endTs), slopeFP(Lock_1_Amount));
+        assertEq(slopeChanges(endTs), slopeFP(Lock_1_Amount));
     }
 
     function test_multipleMergeAndSplit(uint208[10] memory _amounts) public {
@@ -815,23 +817,23 @@ contract TestEscrow is
             vm.assume(amounts[i] != 0);
         }
 
-        uint256 amount = 2049e18;
-        uint256 splitValue = 892e18;
+        // uint256 amount = 2049e18;
+        // uint256 splitValue = 892e18;
 
-        uint256 tokenId = escrow.createLock(amount);
+        // uint256 tokenId = escrow.createLock(amount);
 
-        uint256 depositWeekTs = (block.timestamp / checkpointInterval) * checkpointInterval;
+        // uint256 depositWeekTs = (block.timestamp / checkpointInterval) * checkpointInterval;
 
-        uint256 timestampAt = depositWeekTs + maxTime - 1;
+        // uint256 timestampAt = depositWeekTs + maxTime - 1;
 
-        uint256 beforeSupply = curve.supplyAt(timestampAt);
+        // uint256 beforeSupply = curve.supplyAt(timestampAt);
 
-        int256 beforeSupplyFP = biasFP(amount, timestampAt - depositWeekTs);
+        // int256 beforeSupplyFP = biasFP(amount, timestampAt - depositWeekTs);
 
-        escrow.split(tokenId, splitValue);
+        // escrow.split(tokenId, splitValue);
 
-        int256 afterSupplyFP = biasFP(amount - splitValue, timestampAt - depositWeekTs) +
-            biasFP(splitValue, timestampAt - depositWeekTs);
+        // int256 afterSupplyFP = biasFP(amount - splitValue, timestampAt - depositWeekTs) +
+        //     biasFP(splitValue, timestampAt - depositWeekTs);
 
         // console.log(beforeSupplyFP - afterSupplyFP, timestampAt - depositWeekTs);
     }

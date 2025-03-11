@@ -112,4 +112,7 @@ interface IExitQueue is
 
     /// @return the ticket holder for a given tokenId
     function ticketHolder(uint256 _tokenId) external view returns (address);
+
+    /// @notice The total amount of tokens that have been exiting.
+    function totalExiting() external view returns(uint256);
 }

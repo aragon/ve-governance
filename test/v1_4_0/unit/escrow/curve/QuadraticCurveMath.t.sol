@@ -90,7 +90,7 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
         IEscrowCurve.TokenPoint memory tokenPoint = curve.tokenPointHistory(tokenIdFirst, 1);
         assertEq(tokenPoint.bias, depositFirst, "Bias is incorrect");
         assertEq(tokenPoint.checkpointTs, block.timestamp, "CP Timestamp is incorrect");
-        assertEq(tokenPoint.ts, block.timestamp, "Written Timestamp is incorrect");
+        assertEq(tokenPoint.writtenTs, block.timestamp, "Written Timestamp is incorrect");
 
         // balance now is zero but Warm up
         assertEq(curve.votingPowerAt(tokenIdFirst, 0), 0, "Balance after deposit before warmup");
@@ -193,7 +193,7 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
         IEscrowCurve.TokenPoint memory tokenPoint = curve.tokenPointHistory(tokenIdFirst, 1);
         assertEq(tokenPoint.bias, depositFirst, "Bias is incorrect");
         assertEq(tokenPoint.checkpointTs, block.timestamp, "CP Timestamp is incorrect");
-        assertEq(tokenPoint.ts, block.timestamp, "Written Timestamp is incorrect");
+        assertEq(tokenPoint.writtenTs, block.timestamp, "Written Timestamp is incorrect");
 
         // balance now is zero but Warm up
         assertEq(curve.votingPowerAt(tokenIdFirst, 0), 0, "Balance after deposit before warmup");

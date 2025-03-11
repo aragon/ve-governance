@@ -9,10 +9,12 @@ import {IERC721EnumerableMintableBurnable as IERC721EMB} from "@lock/IERC721EMB.
 // veGovernance
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {ISimpleGaugeVoter} from "@voting/ISimpleGaugeVoter.sol";
-import {IClockV1_4_0 as IClock} from "@clock/IClock_v1_4_0.sol";
 import {IEscrowCurveIncreasingV1_4_0 as IEscrowCurve} from "@curve/IEscrowCurveIncreasing_v1_4_0.sol";
 import {IExitQueue} from "@queue/IExitQueue.sol";
-import {IVotingEscrowIncreasingV1_4_0 as IVotingEscrow} from "./IVotingEscrowIncreasing_v1_4_0.sol";
+import {IVotingEscrowIncreasingV1_4_0 as IVotingEscrow, IVotingEscrowExiting, IMerge, ISplit} from "./IVotingEscrowIncreasing_v1_4_0.sol";
+import {IClockUser, IClockV1_4_0 as IClock} from "@clock/IClock_v1_4_0.sol";
+import {IClockSeason} from "@clock/IClockSeason.sol";
+import {ExitQueue} from "@queue/ExitQueue.sol";
 
 // libraries
 import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
@@ -68,7 +70,7 @@ contract VotingEscrowV1_4_0 is
                               Helper Contracts
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Address of the underlying ERC20 token.
+    /// @notice Address of the underying ERC20 token.
     /// @dev Only tokens with 18 decimals and no transfer fees are supported
     address public token;
 
@@ -89,6 +91,8 @@ contract VotingEscrowV1_4_0 is
     address public lockNFT;
 
     bool private _lockNFTSet;
+
+    error UpgradeNotPossible();
 
     /*//////////////////////////////////////////////////////////////
                               Initialization
@@ -113,6 +117,28 @@ contract VotingEscrowV1_4_0 is
         clock = _clock;
         minDeposit = _initialMinDeposit;
         emit MinDepositSet(_initialMinDeposit);
+    }
+
+     function initializeFrom(bool exitAmountIncluded, uint256 exitAmount) public {        
+        if (exitAmountIncluded) {
+            // If `exitAmount` is passed, make sure the escrow is paused
+            // so that incorrect upgrade doesn't go unnoticed. Otherwise,
+            // upgrade transaction might be front-run by `beginWithdrawal`
+            // causing the `exitAmount` to be wrong.
+            if(!paused()) {
+                revert UpgradeNotPossible();
+            }
+        } else {
+            exitAmount = currentExitingAmount();
+        }
+
+        if (totalLocked < exitAmount) {
+            revert UpgradeNotPossible();
+        }
+
+        _addSeason(totalLocked - exitAmount);
+
+        ExitQueue(queue).initializeFrom(exitAmount);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -254,6 +280,7 @@ contract VotingEscrowV1_4_0 is
         if (_value == 0) revert ZeroAmount();
         if (_value < minDeposit) revert AmountTooSmall();
 
+        // query the duration lib to get the next time we can deposit
         uint256 startTime = IClock(clock).epochPrevCheckpointTs();
 
         // increment the total locked supply and get the new tokenId
@@ -265,7 +292,7 @@ contract VotingEscrowV1_4_0 is
         _locked[newTokenId] = lock;
 
         // we don't allow edits in this implementation, so only the new lock is used
-        _checkpoint(newTokenId, LockedBalance(0, 0), lock);
+        _checkpointCreateLock(newTokenId, LockedBalance(0, 0), lock);
 
         uint256 balanceBefore = IERC20(token).balanceOf(address(this));
 
@@ -283,21 +310,7 @@ contract VotingEscrowV1_4_0 is
         return newTokenId;
     }
 
-    function makeIt0(uint256 _tokenId) public {
-        if (!isApprovedOrOwner(_msgSender(), _tokenId)) {
-            revert("token not owned or approved for msg sender");
-        }
-
-        LockedBalance memory newLocked = LockedBalance(0, _locked[_tokenId].start);
-
-        _checkpoint(_tokenId, _locked[_tokenId], newLocked);
-
-        _locked[_tokenId] = newLocked;
-    }
-
-    /// @notice Merge two tokens - i.e  `from` into `_to`.
-    /// @param _from The token id from which merge is occuring
-    /// @param _to The token id to which `_from` is merging
+    /// @inheritdoc IMerge
     function merge(uint256 _from, uint256 _to) public {
         address sender = _msgSender();
 
@@ -330,6 +343,7 @@ contract VotingEscrowV1_4_0 is
         emit Merged(sender, _from, _to, oldLockedFrom.amount, oldLockedTo.amount, newLockedAmount);
     }
 
+    /// @inheritdoc IMerge
     function canMerge(
         LockedBalance memory _fromLocked,
         LockedBalance memory _toLocked
@@ -350,6 +364,7 @@ contract VotingEscrowV1_4_0 is
         return true;
     }
 
+    /// @inheritdoc ISplit
     function split(
         uint256 _from,
         uint256 _value
@@ -402,13 +417,47 @@ contract VotingEscrowV1_4_0 is
         LockedBalance memory _fromLocked,
         LockedBalance memory _newLocked
     ) private {
+        (uint48 seasonStart, uint48 seasonEnd) = IClockSeason(clock).seasonTsAt(uint48(block.timestamp));
+        if(seasonStart != 0) {
+            _fromLocked.start = seasonStart;
+            _newLocked.start = seasonStart;
+        }
         IEscrowCurve(curve).checkpoint(_tokenId, _fromLocked, _newLocked);
+    }
+
+    /// @notice Record per-user data to checkpoints. Used by VotingEscrow system.
+    /// @param _tokenId NFT token ID.
+    /// @dev Old locked balance is unused in the increasing case, at least in this implementation.
+    /// @param _fromLocked New locked amount / start lock time for the user
+    /// @param _newLocked New locked amount / start lock time for the user
+    function _checkpointCreateLock(
+        uint256 _tokenId,
+        LockedBalance memory _fromLocked,
+        LockedBalance memory _newLocked
+    ) private {
+        IEscrowCurve(curve).checkpoint(_tokenId, _fromLocked, _newLocked);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        Season
+    //////////////////////////////////////////////////////////////*/
+    function addSeason() public auth(ESCROW_ADMIN_ROLE)  {
+        uint256 total = totalLocked - IExitQueue(queue).totalExiting();
+
+        _addSeason(total);
+    }
+
+    function _addSeason(uint256 _totalAmount) internal {
+        (uint48 start, uint16 seasonIndx) = IClockSeason(clock).newSeason();
+
+        IEscrowCurve(curve).resetCheckPoint(_totalAmount, start, seasonIndx);
     }
 
     /*//////////////////////////////////////////////////////////////
                         Exit and Withdraw Logic
     //////////////////////////////////////////////////////////////*/
 
+    /// @inheritdoc IVotingEscrowExiting
     function currentExitingAmount() public view returns (uint256 total) {
         IERC721EMB enumerable = IERC721EMB(lockNFT);
         uint256 balance = enumerable.balanceOf(address(this));
@@ -470,6 +519,7 @@ contract VotingEscrowV1_4_0 is
         // clear out the token data
         _locked[_tokenId] = LockedBalance(0, 0);
         totalLocked -= value;
+        
 
         // Burn the NFT and transfer the tokens to the user
         IERC721EMB(lockNFT).burn(_tokenId);

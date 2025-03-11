@@ -33,8 +33,6 @@ contract QuadraticIncreasingEscrowV1_2_0 is
     using SafeCast for uint256;
     using SignedFixedPointMath for int256;
 
-    error OnlyEscrow();
-
     /// @notice Administrator role for the contract
     bytes32 public constant CURVE_ADMIN_ROLE = keccak256("CURVE_ADMIN_ROLE");
 
