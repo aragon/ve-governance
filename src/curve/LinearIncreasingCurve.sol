@@ -4,11 +4,12 @@ pragma solidity ^0.8.17;
 // interfaces
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
-import {IVotingEscrowIncreasing as IVotingEscrow} from "@escrow/IVotingEscrowIncreasing_v1_4_0.sol";
-import {IEscrowCurveIncreasing as IEscrowCurve, IEscrowCurveGlobal, IEscrowCurveCore, IEscrowCurveToken} from "@curve/IEscrowCurveIncreasing_v1_4_0.sol";
+import {IVotingEscrowIncreasingV1_4_0 as IVotingEscrow} from "@escrow/IVotingEscrowIncreasing_v1_4_0.sol";
+import {IEscrowCurveIncreasingV1_4_0 as IEscrowCurve} from "@curve/IEscrowCurveIncreasing_v1_4_0.sol";
 import {IERC721EnumerableMintableBurnable as IERC721EMB} from "@lock/IERC721EMB.sol";
 
-import {IClockUser, IClock, IClockSeason} from "@clock/IClock_v1_4_0.sol";
+import {IClockUser} from "@clock/IClock.sol";
+import {IClockV1_4_0 as IClock, IClockSeason} from "@clock/IClock_v1_4_0.sol";
 
 // libraries
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -124,7 +125,7 @@ contract LinearIncreasingEscrow is
                 revert UpgradeNotPossible();
             }
         } else {
-            exitAmount = IVotingEscrow(escrow).currentExittingAmount();
+            exitAmount = IVotingEscrow(escrow).currentExitingAmount();
         }
 
         uint256 totalLocked = IVotingEscrow(escrow).totalLocked();
@@ -257,7 +258,6 @@ contract LinearIncreasingEscrow is
                               BALANCE
     //////////////////////////////////////////////////////////////*/
 
-    /// @inheritdoc IEscrowCurveToken
     function tokenPointHistory(
         uint256 _tokenId,
         uint256 _index
@@ -265,12 +265,10 @@ contract LinearIncreasingEscrow is
         return _tokenPointHistory[_tokenId][_index];
     }
 
-    /// @inheritdoc IEscrowCurveGlobal
     function globalPointHistory(uint256 _index) external view returns (GlobalPoint memory) {
         return _globalPointHistory[_index];
     }
 
-    /// @inheritdoc IEscrowCurveToken
     function tokenPointIntervals(uint256 _tokenId) external view returns (uint256) {
         return tokenPointLatestIndex[_tokenId];
     }
@@ -309,7 +307,6 @@ contract LinearIncreasingEscrow is
         return lower;
     }
 
-    /// @inheritdoc IEscrowCurveCore
     function votingPowerAt(uint256 _tokenId, uint256 _t) external view returns (uint256) {
         uint256 interval = _getPastTokenPointInterval(_tokenId, _t);
 
@@ -337,7 +334,6 @@ contract LinearIncreasingEscrow is
         return _getBias(timeElapsed, lastPoint.coefficients[0], lastPoint.coefficients[1]);
     }
 
-    /// @inheritdoc IEscrowCurveCore
     function supplyAt(uint256 _ts) external view returns (uint256) {
         return
             BalanceLogicLibrary.supplyAt(

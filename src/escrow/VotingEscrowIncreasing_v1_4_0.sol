@@ -9,10 +9,10 @@ import {IERC721EnumerableMintableBurnable as IERC721EMB} from "@lock/IERC721EMB.
 // veGovernance
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {ISimpleGaugeVoter} from "@voting/ISimpleGaugeVoter.sol";
-import {IClock} from "@clock/IClock_v1_4_0.sol";
-import {IEscrowCurveIncreasing as IEscrowCurve} from "@curve/IEscrowCurveIncreasing_v1_4_0.sol";
+import {IClockV1_4_0 as IClock} from "@clock/IClock_v1_4_0.sol";
+import {IEscrowCurveIncreasingV1_4_0 as IEscrowCurve} from "@curve/IEscrowCurveIncreasing_v1_4_0.sol";
 import {IExitQueue} from "@queue/IExitQueue.sol";
-import {IVotingEscrowIncreasing as IVotingEscrow, IVotingEscrowCore, IMerge, ISplit} from "./IVotingEscrowIncreasing_v1_4_0.sol";
+import {IVotingEscrowIncreasingV1_4_0 as IVotingEscrow} from "./IVotingEscrowIncreasing_v1_4_0.sol";
 
 // libraries
 import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
@@ -298,7 +298,6 @@ contract VotingEscrowV1_4_0 is
     /// @notice Merge two tokens - i.e  `from` into `_to`.
     /// @param _from The token id from which merge is occuring
     /// @param _to The token id to which `_from` is merging
-    /// @inheritdoc IMerge
     function merge(uint256 _from, uint256 _to) public {
         address sender = _msgSender();
 
@@ -331,7 +330,6 @@ contract VotingEscrowV1_4_0 is
         emit Merged(sender, _from, _to, oldLockedFrom.amount, oldLockedTo.amount, newLockedAmount);
     }
 
-    /// @inheritdoc IMerge
     function canMerge(
         LockedBalance memory _fromLocked,
         LockedBalance memory _toLocked
@@ -352,7 +350,6 @@ contract VotingEscrowV1_4_0 is
         return true;
     }
 
-    /// @inheritdoc ISplit
     function split(
         uint256 _from,
         uint256 _value
@@ -412,8 +409,7 @@ contract VotingEscrowV1_4_0 is
                         Exit and Withdraw Logic
     //////////////////////////////////////////////////////////////*/
 
-    /// @inheritdoc IVotingEscrowCore
-    function currentExittingAmount() public view returns (uint256 total) {
+    function currentExitingAmount() public view returns (uint256 total) {
         IERC721EMB enumerable = IERC721EMB(lockNFT);
         uint256 balance = enumerable.balanceOf(address(this));
 

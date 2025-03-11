@@ -8,7 +8,8 @@ import {QuadraticIncreasingEscrow, Clock, Lock, ExitQueue, VotingEscrow, SimpleG
 import {GaugesDaoFactoryV1_2_0 as GaugesDaoFactory, Deployment, DeploymentParameters, TokenParameters, GaugePluginSet} from "@factory/GaugesDaoFactory_v1_2_0.sol";
 
 // interfaces
-import {IClock, ISeasonErrors} from "@clock/IClock_v1_2_0.sol";
+import {IClock} from "@clock/IClock.sol";
+import {ISeasonErrors} from "@clock/IClockSeason.sol";
 import {ISimpleGaugeVoterSetupParams} from "@setup/SimpleGaugeVoterSetup_v1_2_0.sol";
 import {IEscrowCurveIncreasing, IEscrowCurveTokenStorage} from "@curve/IEscrowCurveIncreasing.sol";
 import {IExitQueue, ITicket, IExitQueueErrorsAndEvents} from "@queue/IExitQueue.sol";

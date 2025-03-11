@@ -6,7 +6,8 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {IVotingEscrowIncreasing as IVotingEscrow} from "@escrow/IVotingEscrowIncreasing.sol";
 import {IEscrowCurveIncreasing as IEscrowCurve} from "@curve/IEscrowCurveIncreasing.sol";
-import {IClockUser, IClock, IClockSeason} from "@clock/IClock.sol";
+import {IClockUser, IClock} from "@clock/IClock.sol";
+import {IClockSeason} from "@clock/IClockSeason.sol";
 
 // libraries
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";

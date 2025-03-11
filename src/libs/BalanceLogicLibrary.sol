@@ -3,7 +3,7 @@ pragma solidity ^0.8.17;
 
 import {QuadraticIncreasingEscrow} from "@curve/QuadraticIncreasingCurve.sol";
 import {ILockedBalanceIncreasing} from "@escrow/IVotingEscrowIncreasing.sol";
-import {IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage} from "@curve/IEscrowCurveIncreasing_v1_4_0.sol";
+import {IEscrowCurveTokenStorageV1_4_0, IEscrowCurveGlobalStorage} from "@curve/IEscrowCurveIncreasing_v1_4_0.sol";
 import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 

@@ -373,7 +373,7 @@ contract TestEscrow is
     function test_shouldRevert_BothNFTsAreSame() public {
         uint256 from = escrow.createLock(Lock_1_Amount);
 
-        vm.expectRevert(IVotingEscrowCoreErrors.SameNFT.selector);
+        vm.expectRevert(IMerge.SameNFT.selector);
         escrow.merge(from, from);
     }
 

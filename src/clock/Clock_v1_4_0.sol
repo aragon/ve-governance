@@ -3,14 +3,16 @@ pragma solidity ^0.8.17;
 
 // interfaces
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
-import {IClock, IClockSeason} from "./IClock_v1_4_0.sol";
+import {IClock} from "./IClock.sol";
+import {IClockSeason} from "./IClockSeason.sol";
+import {IClockV1_4_0} from "./IClock_v1_4_0.sol";
 
 // contracts
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
 
 /// @title Clock
-contract ClockV1_4_0 is IClock, DaoAuthorizable, UUPSUpgradeable, IClockSeason {
+contract ClockV1_4_0 is IClockV1_4_0, DaoAuthorizable, UUPSUpgradeable {
     bytes32 public constant CLOCK_ADMIN_ROLE = keccak256("CLOCK_ADMIN_ROLE");
 
     /// @dev Epoch encompasses a voting and non-voting period

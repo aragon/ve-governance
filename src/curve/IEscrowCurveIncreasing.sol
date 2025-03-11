@@ -4,30 +4,6 @@ pragma solidity ^0.8.0;
 import {ILockedBalanceIncreasing} from "@escrow/IVotingEscrowIncreasing.sol";
 
 /*///////////////////////////////////////////////////////////////
-                        Global Curve
-//////////////////////////////////////////////////////////////*/
-
-interface IEscrowCurveGlobalStorage {
-    /// @notice Captures the shape of the aggregate voting curve at a specific point in time
-    /// @param bias The y intercept of the aggregate voting curve at the given time
-    /// @param ts The timestamp at which the we last updated the aggregate voting curve
-    /// @param coefficients The coefficients of the aggregated curve, supports up to quadratic curves.
-    /// @dev Coefficients are stored in the following order: [constant, linear, quadratic]
-    /// and not all coefficients are used for all curves.
-    struct GlobalPoint {
-        uint128 bias;
-        uint256 ts;
-        int256[3] coefficients;
-    }
-}
-
-interface IEscrowCurveGlobal is IEscrowCurveGlobalStorage {
-    /// @notice Returns the GlobalPoint at the passed epoch
-    /// @param _loc The epoch to return the GlobalPoint at
-    function pointHistory(uint256 _loc) external view returns (GlobalPoint memory);
-}
-
-/*///////////////////////////////////////////////////////////////
                         Token Curve
 //////////////////////////////////////////////////////////////*/
 

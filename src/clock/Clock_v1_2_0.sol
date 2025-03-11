@@ -3,7 +3,8 @@ pragma solidity ^0.8.17;
 
 // interfaces
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
-import {IClock, IClockSeason} from "./IClock.sol";
+import {IClock, IClockUser} from "./IClock.sol";
+import {IClockSeason} from "./IClockSeason.sol";
 
 // contracts
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
