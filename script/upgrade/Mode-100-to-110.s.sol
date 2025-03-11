@@ -6,7 +6,7 @@ import {Multisig} from "@aragon/multisig/Multisig.sol";
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 
 import {GaugesDaoFactory, GaugePluginSet, DeploymentParameters, Deployment, TokenParameters, DAO, IGaugeVote} from "@factory/GaugesDaoFactory.sol";
-import {VotingEscrow, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams} from "@voting/SimpleGaugeVoterSetup.sol";
+import {VotingEscrow, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams} from "@setup/SimpleGaugeVoterSetup.sol";
 import {SimpleGaugeVoterV1_1_0} from "@voting/SimpleGaugeVoter_v1_1_0.sol";
 
 import {Upgrades} from "@foundry-upgrades/LegacyUpgrades.sol";

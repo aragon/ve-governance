@@ -8,13 +8,16 @@ utils/=test/utils/
 
 @interfaces/=src/interfaces/
 @libs/=src/libs/
-@escrow/=src/escrow/increasing/
+@escrow/=src/escrow/
+@clock/=src/clock/
+@lock/=src/lock/
+@queue/=src/queue/
+@curve/=src/curve/
 @escrow-interfaces/=src/escrow/increasing/interfaces/
 @voting/=src/voting/
-@execution-chain/=src/execution-chain/
+@setup/=src/setup/
 @utils/=src/utils/
 @helpers/=test/helpers/
-@clock/=src/clock/
 @factory/=src/factory/
 @mocks/=test/mocks/
   

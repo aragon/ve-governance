@@ -4,16 +4,15 @@ pragma solidity ^0.8.17;
 // token interfaces
 import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import {IERC20MetadataUpgradeable as IERC20Metadata} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
-import {IERC721EnumerableMintableBurnable as IERC721EMB} from "./interfaces/IERC721EMB.sol";
-import {console2 as console} from "forge-std/console2.sol";
+import {IERC721EnumerableMintableBurnable as IERC721EMB} from "@lock/IERC721EMB.sol";
 
 // veGovernance
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {ISimpleGaugeVoter} from "@voting/ISimpleGaugeVoter.sol";
 import {IClock} from "@clock/IClock_v1_4_0.sol";
-import {IEscrowCurveIncreasing as IEscrowCurve} from "./interfaces/IEscrowCurveIncreasing_v1_4_0.sol";
-import {IExitQueue} from "./interfaces/IExitQueue.sol";
-import {IVotingEscrowIncreasing as IVotingEscrow, IVotingEscrowCore, IMerge, ISplit} from "./interfaces/IVotingEscrowIncreasing_v1_4_0.sol";
+import {IEscrowCurveIncreasing as IEscrowCurve} from "@curve/IEscrowCurveIncreasing_v1_4_0.sol";
+import {IExitQueue} from "@queue/IExitQueue.sol";
+import {IVotingEscrowIncreasing as IVotingEscrow, IVotingEscrowCore, IMerge, ISplit} from "./IVotingEscrowIncreasing_v1_4_0.sol";
 
 // libraries
 import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";

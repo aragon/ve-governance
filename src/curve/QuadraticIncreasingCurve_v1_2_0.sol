@@ -4,9 +4,9 @@ pragma solidity ^0.8.17;
 // interfaces
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
-import {IVotingEscrowIncreasing as IVotingEscrow} from "@escrow-interfaces/IVotingEscrowIncreasing.sol";
-import {IEscrowCurveIncreasing as IEscrowCurve} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
-import {IClockUser, IClock} from "@clock/IClock.sol";
+import {IVotingEscrowIncreasing as IVotingEscrow} from "@escrow/IVotingEscrowIncreasing.sol";
+import {IEscrowCurveIncreasing as IEscrowCurve} from "@curve/IEscrowCurveIncreasing.sol";
+import {IClockUser, IClock, IClockSeason} from "@clock/IClock.sol";
 
 // libraries
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -20,7 +20,7 @@ import {ReentrancyGuardUpgradeable as ReentrancyGuard} from "@openzeppelin/contr
 import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
 
 /// @title Quadratic Increasing Escrow
-contract QuadraticIncreasingEscrow is
+contract QuadraticIncreasingEscrowV1_2_0 is
     IEscrowCurve,
     IClockUser,
     ReentrancyGuard,
@@ -73,6 +73,7 @@ contract QuadraticIncreasingEscrow is
                               INITIALIZATION
     //////////////////////////////////////////////////////////////*/
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }
@@ -88,8 +89,8 @@ contract QuadraticIncreasingEscrow is
         warmupPeriod = _warmupPeriod;
         clock = _clock;
 
-        __DaoAuthorizableUpgradeable_init(IDAO(_dao));
         __ReentrancyGuard_init();
+        __DaoAuthorizableUpgradeable_init(IDAO(_dao));
 
         // other initializers are empty
     }
@@ -244,6 +245,8 @@ contract QuadraticIncreasingEscrow is
         return lower;
     }
 
+    /// @notice Get the voting power at a specific timestamp
+    /// @dev The voting power is computed since the last point or last season whatever happen after
     function votingPowerAt(uint256 _tokenId, uint256 _t) external view returns (uint256) {
         uint256 interval = _getPastTokenPointInterval(_tokenId, _t);
 
@@ -252,8 +255,17 @@ contract QuadraticIncreasingEscrow is
         TokenPoint memory lastPoint = _tokenPointHistory[_tokenId][interval];
 
         if (!_isWarm(lastPoint)) return 0;
-        uint256 timeElapsed = _t - lastPoint.checkpointTs;
 
+        // get season at time
+        (uint48 start, ) = IClockSeason(clock).seasonTsAt(uint48(_t));
+
+        // if the last point is before the season start, use last season start
+        uint256 timeElapsed;
+        if (lastPoint.checkpointTs < start) {
+            timeElapsed = _t - start;
+        } else {
+            timeElapsed = _t - lastPoint.checkpointTs;
+        }
         return _getBias(timeElapsed, lastPoint.coefficients);
     }
 

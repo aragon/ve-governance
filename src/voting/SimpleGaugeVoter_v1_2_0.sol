@@ -2,7 +2,7 @@
 pragma solidity ^0.8.17;
 
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
-import {IVotingEscrowIncreasing as IVotingEscrow} from "@escrow-interfaces/IVotingEscrowIncreasing.sol";
+import {IVotingEscrowIncreasing as IVotingEscrow} from "@escrow/IVotingEscrowIncreasing.sol";
 import {IClockUser, IClock, IClockSeason} from "@clock/IClock.sol";
 import {ISimpleGaugeVoter} from "./ISimpleGaugeVoter.sol";
 
@@ -103,7 +103,14 @@ contract SimpleGaugeVoterV1_2_0 is
     }
 
     /// @notice Cast the vote of an tokenId to a specific gauge
-    function _castVote(GaugeVote memory currentVote, uint16 season, uint256 _tokenId, uint256 votingPower, uint256 sumOfWeights, TokenVoteData storage voteData) internal returns (uint256) {
+    function _castVote(
+        GaugeVote memory currentVote,
+        uint16 season,
+        uint256 _tokenId,
+        uint256 votingPower,
+        uint256 sumOfWeights,
+        TokenVoteData storage voteData
+    ) internal returns (uint256) {
         // the gauge must exist and be active,
         // it also can't have any votes or we haven't reset properly
         if (!gaugeExists(currentVote.gauge)) revert GaugeDoesNotExist(currentVote.gauge);

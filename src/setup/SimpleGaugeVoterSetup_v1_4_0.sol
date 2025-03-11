@@ -14,11 +14,11 @@ import {PermissionLib} from "@aragon/osx/core/permission/PermissionLib.sol";
 import {PluginSetup} from "@aragon/osx/framework/plugin/setup/PluginSetup.sol";
 
 import {SimpleGaugeVoterV1_2_0 as SimpleGaugeVoter} from "@voting/SimpleGaugeVoter_v1_2_0.sol";
-import {VotingEscrow} from "@escrow/VotingEscrowIncreasing.sol";
-import {ExitQueue} from "@escrow/ExitQueue.sol";
-import {QuadraticIncreasingEscrowV1_2_0 as QuadraticIncreasingEscrow} from "@escrow/QuadraticIncreasingEscrow_v1_2_0.sol";
-import {ClockV1_2_0 as Clock} from "@clock/Clock_v1_2_0.sol";
-import {Lock} from "@escrow/Lock.sol";
+import {VotingEscrowV1_4_0 as VotingEscrow} from "@escrow/VotingEscrowIncreasing_v1_4_0.sol";
+import {ExitQueue} from "@queue/ExitQueue.sol";
+import {LinearIncreasingEscrow as QuadraticIncreasingEscrow} from "@curve/LinearIncreasingCurve.sol";
+import {ClockV1_4_0 as Clock} from "@clock/Clock_v1_4_0.sol";
+import {Lock} from "@lock/Lock.sol";
 
 /// @param isPaused Whether the voter contract is deployed in a paused state
 /// @param veTokenName The name of the voting escrow token
@@ -43,7 +43,7 @@ struct ISimpleGaugeVoterSetupParams {
     uint48 warmup;
 }
 
-contract SimpleGaugeVoterSetupV1_2_0 is PluginSetup {
+contract SimpleGaugeVoterSetupV1_4_0 is PluginSetup {
     using Address for address;
     using Clones for address;
     using ERC165Checker for address;

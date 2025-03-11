@@ -4,9 +4,9 @@ pragma solidity ^0.8.17;
 // interfaces
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
-import {IVotingEscrowIncreasing as IVotingEscrow} from "@escrow-interfaces/IVotingEscrowIncreasing_v1_4_0.sol";
-import {IEscrowCurveIncreasing as IEscrowCurve, IEscrowCurveGlobal, IEscrowCurveCore, IEscrowCurveToken} from "@escrow-interfaces/IEscrowCurveIncreasing_v1_4_0.sol";
-import {IERC721EnumerableMintableBurnable as IERC721EMB} from "./interfaces/IERC721EMB.sol";
+import {IVotingEscrowIncreasing as IVotingEscrow} from "@escrow/IVotingEscrowIncreasing_v1_4_0.sol";
+import {IEscrowCurveIncreasing as IEscrowCurve, IEscrowCurveGlobal, IEscrowCurveCore, IEscrowCurveToken} from "@curve/IEscrowCurveIncreasing_v1_4_0.sol";
+import {IERC721EnumerableMintableBurnable as IERC721EMB} from "@lock/IERC721EMB.sol";
 
 import {IClockUser, IClock, IClockSeason} from "@clock/IClock_v1_4_0.sol";
 
@@ -20,7 +20,7 @@ import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {ReentrancyGuardUpgradeable as ReentrancyGuard} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
-import {BalanceLogicLibrary} from "../../libs/BalanceLogicLibrary.sol";
+import {BalanceLogicLibrary} from "@libs/BalanceLogicLibrary.sol";
 import {PausableUpgradeable as Pausable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 
 import {console2 as console} from "forge-std/console2.sol";

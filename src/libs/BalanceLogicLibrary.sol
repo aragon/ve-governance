@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.17;
 
-import {QuadraticIncreasingEscrow} from "../escrow/increasing/QuadraticIncreasingEscrow.sol";
-import {ILockedBalanceIncreasing} from "src/escrow/increasing/interfaces/IVotingEscrowIncreasing.sol";
-import {IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage} from "src/escrow/increasing/interfaces/IEscrowCurveIncreasing_v1_4_0.sol";
-
-import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import {console2 as console} from "forge-std/console2.sol";
+import {QuadraticIncreasingEscrow} from "@curve/QuadraticIncreasingCurve.sol";
+import {ILockedBalanceIncreasing} from "@escrow/IVotingEscrowIncreasing.sol";
+import {IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage} from "@curve/IEscrowCurveIncreasing_v1_4_0.sol";
 import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 library BalanceLogicLibrary {
     using SafeCast for int256;
