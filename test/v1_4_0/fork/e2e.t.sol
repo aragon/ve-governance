@@ -43,7 +43,7 @@ contract MultisigReceiver is GhettoMultisig {
  * 4. A more robust suite for admininstration of the contracts
  * 5. Ability to connect to an existing deployment and test on the real network
  */
-contract TestE2EV1_2_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveTokenStorage {
+contract TestE2EV1_4_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveTokenStorage {
     error VotingInactive();
     error OnlyEscrow();
     error GaugeDoesNotExist(address _pool);
@@ -541,12 +541,12 @@ contract TestE2EV1_2_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
             );
 
             assertEq(
-                tp1_1.writtenTs,
+                tp1_1.ts,
                 epochStartTime + 1 days,
                 "Alice point should have the correct written timestamp"
             );
             assertEq(
-                tp2_1.writtenTs,
+                tp2_1.ts,
                 epochStartTime + 6 days,
                 "Bob point should have the correct written timestamp"
             );
@@ -624,7 +624,7 @@ contract TestE2EV1_2_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
                 "Alice point should have the correct checkpoint"
             );
             assertEq(
-                tp1_2.writtenTs,
+                tp1_2.ts,
                 epochStartTime + 4 weeks,
                 "Alice point should have the correct written timestamp"
             );
@@ -1018,7 +1018,7 @@ contract TestE2EV1_2_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
                 "Alice point should have the correct checkpoint"
             );
             assertEq(
-                tp1_2.writtenTs,
+                tp1_2.ts,
                 epochStartTime + 8 weeks + 1 hours,
                 "Alice point should have the correct written timestamp"
             );
@@ -1338,7 +1338,7 @@ contract TestE2EV1_2_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
             );
 
             assertEq(
-                tp1_1.writtenTs,
+                tp1_1.ts,
                 epochStartTime + 1 days,
                 "Alice point should have the correct written timestamp"
             );
@@ -1349,7 +1349,6 @@ contract TestE2EV1_2_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
 
             // 1 day before the end of the interval
             goToEpochStartPlus(clock.checkpointInterval() - 1);
-
 
             vm.startPrank(carol);
             {
@@ -1370,7 +1369,7 @@ contract TestE2EV1_2_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
             );
 
             assertEq(
-                tp2_1.writtenTs,
+                tp2_1.ts,
                 epochStartTime + clock.checkpointInterval() - 1,
                 "Carol point should have the correct written timestamp"
             );
@@ -1403,10 +1402,18 @@ contract TestE2EV1_2_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
             // fast forward to the checkpoint interval carol is warm
             goToEpochStartPlus(clock.checkpointInterval() + 3 days);
 
-            assertEq(escrow.votingPower(1), 266946049122870400000, "Alice vp should have more voting power");
+            assertEq(
+                escrow.votingPower(1),
+                266946049122870400000,
+                "Alice vp should have more voting power"
+            );
 
             assertTrue(curve.isWarm(2), "Carol should be warm");
-            assertEq(escrow.votingPower(2), 266946049122870400000, "Carol vp should have more voting power");
+            assertEq(
+                escrow.votingPower(2),
+                266946049122870400000,
+                "Carol vp should have more voting power"
+            );
 
             // start a withdrawal that finish before the new season
             vm.startPrank(alice);
@@ -1423,7 +1430,7 @@ contract TestE2EV1_2_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
             _startNewSeason();
 
             goToEpochStartPlus(clock.checkpointInterval() * 2 + 6 days);
-            
+
             // start a withdrawal that finish after the new season
             vm.startPrank(carol);
             {
@@ -1432,7 +1439,11 @@ contract TestE2EV1_2_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
             }
             vm.stopPrank();
 
-            assertEq(escrow.votingPower(2), 347120709266838400000, "Carol vp should still be not zero");
+            assertEq(
+                escrow.votingPower(2),
+                347120709266838400000,
+                "Carol vp should still be not zero"
+            );
 
             goToEpochStartPlus(clock.checkpointInterval() * 3);
 
@@ -1456,7 +1467,6 @@ contract TestE2EV1_2_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
                 escrow.withdraw(2);
             }
             vm.stopPrank();
-
         }
     }
 

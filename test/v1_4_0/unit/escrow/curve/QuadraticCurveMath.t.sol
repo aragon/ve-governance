@@ -3,9 +3,8 @@ pragma solidity ^0.8.17;
 import {console2 as console} from "forge-std/console2.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
-import {IClock} from "@clock/IClock.sol";
 import {QuadraticCurveBase} from "./QuadraticCurveBase.t.sol";
-import {Clock, QuadraticIncreasingEscrow, ILockedBalanceIncreasing, IVotingEscrowIncreasing as IVotingEscrow, IEscrowCurveIncreasing as IEscrowCurve} from "../../../versions.sol";
+import {IClock, Clock, QuadraticIncreasingEscrow, ILockedBalanceIncreasing, IVotingEscrowIncreasing as IVotingEscrow, IEscrowCurveIncreasing as IEscrowCurve} from "../../../versions.sol";
 
 contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
     using SafeCast for uint256;
@@ -91,7 +90,7 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
         IEscrowCurve.TokenPoint memory tokenPoint = curve.tokenPointHistory(tokenIdFirst, 1);
         assertEq(tokenPoint.bias, depositFirst, "Bias is incorrect");
         assertEq(tokenPoint.checkpointTs, block.timestamp, "CP Timestamp is incorrect");
-        assertEq(tokenPoint.writtenTs, block.timestamp, "Written Timestamp is incorrect");
+        assertEq(tokenPoint.ts, block.timestamp, "Written Timestamp is incorrect");
 
         // balance now is zero but Warm up
         assertEq(curve.votingPowerAt(tokenIdFirst, 0), 0, "Balance after deposit before warmup");
@@ -169,16 +168,16 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
         uint208 depositFirst = 420.69e18;
         uint208 depositSecond = 1_000_000_000e18;
         uint start = 52 weeks;
-    
+
         // initial conditions, no balance
         assertEq(curve.votingPowerAt(tokenIdFirst, 0), 0, "Balance before deposit");
-    
+
         vm.warp(start);
         vm.roll(420);
-    
+
         // still no balance
         assertEq(curve.votingPowerAt(tokenIdFirst, 0), 0, "Balance before deposit");
-    
+
         escrow.checkpoint(
             tokenIdFirst,
             LockedBalance(0, 0),
@@ -194,21 +193,21 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
         IEscrowCurve.TokenPoint memory tokenPoint = curve.tokenPointHistory(tokenIdFirst, 1);
         assertEq(tokenPoint.bias, depositFirst, "Bias is incorrect");
         assertEq(tokenPoint.checkpointTs, block.timestamp, "CP Timestamp is incorrect");
-        assertEq(tokenPoint.writtenTs, block.timestamp, "Written Timestamp is incorrect");
-    
+        assertEq(tokenPoint.ts, block.timestamp, "Written Timestamp is incorrect");
+
         // balance now is zero but Warm up
         assertEq(curve.votingPowerAt(tokenIdFirst, 0), 0, "Balance after deposit before warmup");
         assertEq(curve.isWarm(tokenIdFirst), false, "Not warming up");
-    
+
         // wait for warmup
         vm.warp(block.timestamp + curve.warmupPeriod());
         assertEq(curve.votingPowerAt(tokenIdFirst, 0), 0, "Balance after deposit before warmup");
         assertEq(curve.isWarm(tokenIdFirst), false, "Not warming up");
         assertEq(curve.isWarm(tokenIdSecond), false, "Not warming up II");
-    
+
         // warmup complete
         vm.warp(block.timestamp + 1);
-    
+
         // python:              449.206279554928541696
         // solmate (optimized): 449.206254284606635135
         assertEq(
@@ -217,7 +216,7 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
             "Balance incorrect after warmup"
         );
         assertEq(curve.isWarm(tokenIdFirst), true, "Still warming up");
-    
+
         // python:    1067784543380942056100724736
         // solmate:   1067784483312193385000000000
         assertEq(
@@ -225,7 +224,7 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
             1067784483312193385000000000,
             "Balance incorrect after warmup II"
         );
-    
+
         // warp to the start of period 2
         vm.warp(start + clock.epochDuration());
         // excel:     600.985714300000000000
@@ -238,10 +237,10 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
             600985163959347101952,
             "Balance incorrect after p1"
         );
-    
+
         uint256 expectedMaxI = 2524126241845405205760;
         uint256 expectedMaxII = 5999967296216704000000000000;
-    
+
         // warp to the final period
         // TECHNICALLY, this should finish at exactly 5 periodd and 6 * voting power
         // but FP arithmetic has a small rounding error
@@ -299,7 +298,7 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
             1428570120419660800000000000,
             "Balance incorrect after p1"
         );
-        
+
         vm.warp(block.timestamp + clock.epochDuration());
 
         // Simulate a beginWithdrawal checkpoint
@@ -312,7 +311,7 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
 
         assertEq(
             curve.votingPowerAt(tokenIdFirst, block.timestamp),
-            901476370123561173504, 
+            901476370123561173504,
             "Voting power should be the same after beginWithdrawal"
         );
 
@@ -326,14 +325,21 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
 
         assertEq(
             curve.votingPowerAt(tokenIdSecond, block.timestamp),
-            2142851910251161600000000000, 
+            2142851910251161600000000000,
             "Voting power should be the same after beginWithdrawal II"
         );
-        
-        vm.warp(block.timestamp + clock.epochDuration());
-        
-        assertEq(curve.votingPowerAt(tokenIdFirst, block.timestamp), 0, "Voting power should be after withdrawal");
-        assertEq(curve.votingPowerAt(tokenIdSecond, block.timestamp), 0, "Voting power should be after withdrawal II");
 
+        vm.warp(block.timestamp + clock.epochDuration());
+
+        assertEq(
+            curve.votingPowerAt(tokenIdFirst, block.timestamp),
+            0,
+            "Voting power should be after withdrawal"
+        );
+        assertEq(
+            curve.votingPowerAt(tokenIdSecond, block.timestamp),
+            0,
+            "Voting power should be after withdrawal II"
+        );
     }
 }

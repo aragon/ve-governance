@@ -56,9 +56,11 @@ interface IClock {
 
     function epochNextCheckpointTs() external view returns (uint256);
 
-    function epochCurrentWeekTs() external view returns (uint256);
-
     function resolveEpochNextCheckpointTs(uint256 timestamp) external pure returns (uint256);
+
+    function epochPrevCheckpointTs() external view returns (uint256);
+
+    function resolveEpochPrevCheckpointTs(uint256 timestamp) external pure returns (uint256);
 }
 
 interface ISeasonEvents {

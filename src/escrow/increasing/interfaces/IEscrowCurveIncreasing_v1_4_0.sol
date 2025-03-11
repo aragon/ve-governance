@@ -1,7 +1,7 @@
 /// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {ILockedBalanceIncreasing} from "./IVotingEscrowIncreasing.sol";
+import {ILockedBalanceIncreasing} from "./IVotingEscrowIncreasing_v1_4_0.sol";
 
 /*///////////////////////////////////////////////////////////////
                         Global Curve
@@ -20,7 +20,6 @@ interface IEscrowCurveGlobalStorage {
         int256 slope;
         uint48 ts;
     }
-
 }
 
 interface IEscrowCurveGlobal is IEscrowCurveGlobalStorage {
@@ -47,13 +46,6 @@ interface IEscrowCurveTokenStorage {
         uint128 ts; // renamed from writtenTs to ts
         int256[3] coefficients;
     }
-
-    struct TokenPointV2 {
-        uint256 bias;
-        uint256 slope;
-        uint48 ts;
-    }
-
 
     // struct TokenPoint {
     //     // we need to think carefully if we need this, i'd argue no we dont
@@ -83,20 +75,20 @@ interface IEscrowCurveTokenStorage {
 interface IEscrowCurveToken is IEscrowCurveTokenStorage {
     // /// @notice returns the token point at time `timestamp`
     // function tokenPointIntervals(uint256 timestamp) external view returns (uint256);
-    
-    /// @notice Returns the latest index of the tokenId which can be used 
+
+    /// @notice Returns the latest index of the tokenId which can be used
     ///         to retrive token point from `tokenPointHistory` function.
     /// @dev This has been renamed to `tokenPointLatestIndex` in the latest upgrade, but
     ///      for backwards-compatibility, the function still stays in the contract.
     ///      Note that we treat it as deprecated, So use `tokenPointLatestIndex` instead.
     /// @return The latest index of the token id.
     function tokenPointIntervals(uint256 _tokenId) external view returns (uint256);
-    
-    /// @notice Returns the latest index of the tokenId which can be used 
+
+    /// @notice Returns the latest index of the tokenId which can be used
     ///         to retrive token point from `tokenPointHistory` function.
     /// @param _tokenId The NFT to return the latest token point index
     /// @return The latest index of the token id.
-    function tokenPointLatestIndex(uint256 _tokenId) external view returns(uint256);
+    function tokenPointLatestIndex(uint256 _tokenId) external view returns (uint256);
 
     /// @notice Returns the TokenPoint at the passed `_index`.
     /// @param _tokenId The NFT to return the TokenPoint for

@@ -10,8 +10,8 @@ import {console2 as console} from "forge-std/console2.sol";
 // veGovernance
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {ISimpleGaugeVoter} from "@voting/ISimpleGaugeVoter.sol";
-import {IClock} from "@clock/IClock.sol";
-import {IEscrowCurveIncreasing as IEscrowCurve} from "./interfaces/IEscrowCurveIncreasing.sol";
+import {IClock} from "@clock/IClock_v1_4_0.sol";
+import {IEscrowCurveIncreasing as IEscrowCurve} from "./interfaces/IEscrowCurveIncreasing_v1_4_0.sol";
 import {IExitQueue} from "./interfaces/IExitQueue.sol";
 import {IVotingEscrowIncreasing as IVotingEscrow, IVotingEscrowCore, IMerge, ISplit} from "./interfaces/IVotingEscrowIncreasing_v1_4_0.sol";
 
@@ -255,8 +255,7 @@ contract VotingEscrowV1_4_0 is
         if (_value == 0) revert ZeroAmount();
         if (_value < minDeposit) revert AmountTooSmall();
 
-        // query the duration lib to get the next time we can deposit
-        uint256 startTime = IClock(clock).epochCurrentWeekTs();
+        uint256 startTime = IClock(clock).epochPrevCheckpointTs();
 
         // increment the total locked supply and get the new tokenId
         totalLocked += _value;

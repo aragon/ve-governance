@@ -2,25 +2,23 @@ pragma solidity ^0.8.17;
 
 import {console2 as console} from "forge-std/console2.sol";
 
-import {QuadraticIncreasingEscrow, IVotingEscrow, IEscrowCurve} from "src/escrow/increasing/QuadraticIncreasingEscrow.sol";
-import {IVotingEscrowIncreasing, IVotingEscrowCoreErrors, IMerge, ISplit, ILockedBalanceIncreasing} from "src/escrow/increasing/interfaces/IVotingEscrowIncreasing.sol";
-import {IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage} from "src/escrow/increasing/interfaces/IEscrowCurveIncreasing.sol";
-
-import {VotingEscrow} from "src/escrow/increasing/VotingEscrowIncreasing.sol";
-import {Lock} from "src/escrow/increasing/Lock.sol";
+import {Clock, IClock, Lock, VotingEscrow, QuadraticIncreasingEscrow, IVotingEscrowIncreasing, IEscrowCurveIncreasing, IVotingEscrowIncreasing, IVotingEscrowCoreErrors, IMerge, ISplit, ILockedBalanceIncreasing, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage} from "./versions.sol";
 
 import {Test} from "forge-std/Test.sol";
 import {SafeCastUpgradeable as SafeCast} from "@openzeppelin/contracts-upgradeable/utils/math/SafeCastUpgradeable.sol";
 
 import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
-import {Clock} from "../src/clock/Clock.sol";
-import {IClock} from "../src/clock/IClock.sol";
-import {MockERC20} from "./mocks/MockERC20.sol";
+import {MockERC20} from "@mocks/MockERC20.sol";
 import {ProxyLib} from "@libs/ProxyLib.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
-contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage {
+contract TestEscrow is
+    Test,
+    IEscrowCurveGlobalStorage,
+    IEscrowCurveTokenStorage,
+    ILockedBalanceIncreasing
+{
     using ProxyLib for address;
     using SafeCast for uint256;
 
@@ -49,7 +47,7 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
     function lockedBalance(
         uint208 amount,
         uint48 start
-    ) public pure returns (ILockedBalanceIncreasing.LockedBalance memory) {
+    ) public pure returns (LockedBalance memory) {
         return ILockedBalanceIncreasing.LockedBalance(amount, start);
     }
 
@@ -359,9 +357,7 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
         uint256 to = escrow.createLock(Lock_2_Amount);
 
         //reverts as start dates are different and tokens are not mature.
-        vm.expectRevert(
-            abi.encodeWithSelector(IMerge.CannotMerge.selector, from, to)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IMerge.CannotMerge.selector, from, to));
         escrow.merge(from, to);
     }
 
@@ -623,7 +619,7 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
         // vm.expectEmit();
         // emit ISplit.Split(tokenId, 2, 3, sender, Lock_1_Amount - value, value);
 
-        escrow.split(tokenId, value);   
+        escrow.split(tokenId, value);
         uint256 currentTs = block.timestamp;
 
         int256 slope1 = slopeFP(Lock_1_Amount - value);

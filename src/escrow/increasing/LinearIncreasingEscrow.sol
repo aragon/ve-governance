@@ -61,7 +61,7 @@ contract LinearIncreasingEscrow is
     mapping(uint256 => TokenPoint[1_000_000_000]) internal _tokenPointHistory;
 
     /*//////////////////////////////////////////////////////////////
-                                ADDED: 0.2.0
+                                ADDED: 1.4.0
     //////////////////////////////////////////////////////////////*/
 
     /// @dev The latest global point index.

@@ -216,6 +216,17 @@ contract ClockV1_4_0 is IClock, DaoAuthorizable, UUPSUpgradeable, IClockSeason {
         }
     }
 
+    function epochPrevCheckpointTs() external view returns (uint256) {
+        return resolveEpochPrevCheckpointTs(block.timestamp);
+    }
+
+    /// @notice Timestamp of the prev deposit interval (absolute)
+    function resolveEpochPrevCheckpointTs(uint256 timestamp) public pure returns (uint256) {
+        unchecked {
+            return timestamp + resolveEpochNextCheckpointIn(timestamp) - CHECKPOINT_INTERVAL;
+        }
+    }
+
     /*///////////////////////////////////////////////////////////////
                             Seasons
     //////////////////////////////////////////////////////////////*/
@@ -270,7 +281,11 @@ contract ClockV1_4_0 is IClock, DaoAuthorizable, UUPSUpgradeable, IClockSeason {
 
     /// @notice Creates a new season
     /// @dev The season duration must be greater than EPOCH_DURATION
-    function newSeason() public auth(CLOCK_ADMIN_ROLE) {
+    function newSeason()
+        public
+        auth(CLOCK_ADMIN_ROLE)
+        returns (uint48 startTimestamp, uint16 seasonIndex)
+    {
         uint256 startTime = IClock(this).epochNextCheckpointTs();
 
         if (seasonTimestamps.length > 0) {
@@ -282,6 +297,7 @@ contract ClockV1_4_0 is IClock, DaoAuthorizable, UUPSUpgradeable, IClockSeason {
         seasonTimestamps.push(uint48(startTime));
 
         emit SeasonStarted(uint16(seasonTimestamps.length), uint48(startTime));
+        return (uint48(startTime), uint16(seasonTimestamps.length));
     }
 
     /*///////////////////////////////////////////////////////////////

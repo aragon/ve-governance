@@ -1350,7 +1350,6 @@ contract TestE2EV1_2_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
             // 1 day before the end of the interval
             goToEpochStartPlus(clock.checkpointInterval() - 1);
 
-
             vm.startPrank(carol);
             {
                 token.approve(address(escrow), balanceCarol);
@@ -1403,10 +1402,18 @@ contract TestE2EV1_2_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
             // fast forward to the checkpoint interval carol is warm
             goToEpochStartPlus(clock.checkpointInterval() + 3 days);
 
-            assertEq(escrow.votingPower(1), 266946049122870400000, "Alice vp should have more voting power");
+            assertEq(
+                escrow.votingPower(1),
+                266946049122870400000,
+                "Alice vp should have more voting power"
+            );
 
             assertTrue(curve.isWarm(2), "Carol should be warm");
-            assertEq(escrow.votingPower(2), 266946049122870400000, "Carol vp should have more voting power");
+            assertEq(
+                escrow.votingPower(2),
+                266946049122870400000,
+                "Carol vp should have more voting power"
+            );
 
             // start a withdrawal that finish before the new season
             vm.startPrank(alice);
@@ -1423,7 +1430,7 @@ contract TestE2EV1_2_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
             _startNewSeason();
 
             goToEpochStartPlus(clock.checkpointInterval() * 2 + 6 days);
-            
+
             // start a withdrawal that finish after the new season
             vm.startPrank(carol);
             {
@@ -1432,7 +1439,11 @@ contract TestE2EV1_2_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
             }
             vm.stopPrank();
 
-            assertEq(escrow.votingPower(2), 347120709266838400000, "Carol vp should still be not zero");
+            assertEq(
+                escrow.votingPower(2),
+                347120709266838400000,
+                "Carol vp should still be not zero"
+            );
 
             goToEpochStartPlus(clock.checkpointInterval() * 3);
 
@@ -1456,7 +1467,6 @@ contract TestE2EV1_2_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
                 escrow.withdraw(2);
             }
             vm.stopPrank();
-
         }
     }
 

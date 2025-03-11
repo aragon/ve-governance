@@ -10,7 +10,6 @@ interface ILockedBalanceIncreasing {
         uint208 amount;
         uint48 start; // mirrors oz ERC20 timestamp clocks
     }
-
 }
 
 interface IVotingEscrowCoreErrors {
@@ -85,7 +84,7 @@ interface IVotingEscrowCore is
     function isApprovedOrOwner(address spender, uint256 tokenId) external view returns (bool);
 
     /// @notice How much amount has been exitting.
-    /// @return total The total amount for which beginWithdrawal has been called 
+    /// @return total The total amount for which beginWithdrawal has been called
     ///         but withdraw has not yet been executed.
     function currentExittingAmount() external view returns (uint256);
 }
@@ -192,7 +191,10 @@ interface IMerge is ILockedBalanceIncreasing {
     /// @notice Whether 2 tokens can be merged.
     /// @param _from The token id from which merge should occur.
     /// @param _to The token id to which `_from` should merge.
-    function canMerge(LockedBalance memory _from, LockedBalance memory _to) external view returns (bool);
+    function canMerge(
+        LockedBalance memory _from,
+        LockedBalance memory _to
+    ) external view returns (bool);
 
     event Merged(
         address indexed _sender,
@@ -216,7 +218,7 @@ interface ISplit {
         uint256 _from,
         uint256 _value
     ) external returns (uint256 _tokenId1, uint256 _tokenId2);
-    
+
     event Split(
         uint256 indexed _from,
         uint256 indexed _tokenId1,
@@ -229,12 +231,18 @@ interface ISplit {
     error SplitAmountTooBig();
 }
 
-
 /*///////////////////////////////////////////////////////////////
                         INCREASED ESCROW
 //////////////////////////////////////////////////////////////*/
 
-interface IVotingEscrowIncreasing is IVotingEscrowCore, IDynamicVoter, IWithdrawalQueue, ISweeper, IMerge, ISplit {}
+interface IVotingEscrowIncreasing is
+    IVotingEscrowCore,
+    IDynamicVoter,
+    IWithdrawalQueue,
+    ISweeper,
+    IMerge,
+    ISplit
+{}
 
 /// @dev useful for testing
 interface IVotingEscrowEventsStorageErrorsEvents is

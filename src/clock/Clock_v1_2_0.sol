@@ -236,7 +236,9 @@ contract ClockV1_2_0 is IClock, DaoAuthorizable, UUPSUpgradeable, IClockSeason {
     /// @notice Returns a season's start and end timestamps by index
     /// @dev The startTimestamp of the first season is always 0
     ///      The endTimestamp of the current season is always 0
-    function seasonTs(uint16 seasonIndex) public view returns (uint48 startTimestamp, uint48 endTimestamp) {
+    function seasonTs(
+        uint16 seasonIndex
+    ) public view returns (uint48 startTimestamp, uint48 endTimestamp) {
         if (seasonIndex > seasonTimestamps.length) {
             revert SeasonNotFound();
         }
@@ -247,7 +249,9 @@ contract ClockV1_2_0 is IClock, DaoAuthorizable, UUPSUpgradeable, IClockSeason {
     /// @notice Returns the season at a given timestamp
     /// @dev The startTimestamp of the first season is always 0
     ///      The endTimestamp of the current season is always 0
-    function seasonTsAt(uint48 _timestamp) public view returns (uint48 startTimestamp, uint48 endTimestamp) {
+    function seasonTsAt(
+        uint48 _timestamp
+    ) public view returns (uint48 startTimestamp, uint48 endTimestamp) {
         uint16 seasonIndex = seasonIndexAt(_timestamp);
         return seasonTs(seasonIndex);
     }
@@ -266,7 +270,11 @@ contract ClockV1_2_0 is IClock, DaoAuthorizable, UUPSUpgradeable, IClockSeason {
 
     /// @notice Creates a new season
     /// @dev The season duration must be greater than EPOCH_DURATION
-    function newSeason() public auth(CLOCK_ADMIN_ROLE) {
+    function newSeason()
+        public
+        auth(CLOCK_ADMIN_ROLE)
+        returns (uint48 startTimestamp, uint16 seasonIndex)
+    {
         uint256 startTime = IClock(this).epochNextCheckpointTs();
 
         if (seasonTimestamps.length > 0) {
@@ -278,6 +286,7 @@ contract ClockV1_2_0 is IClock, DaoAuthorizable, UUPSUpgradeable, IClockSeason {
         seasonTimestamps.push(uint48(startTime));
 
         emit SeasonStarted(uint16(seasonTimestamps.length), uint48(startTime));
+        return (uint48(startTime), uint16(seasonTimestamps.length));
     }
 
     /*///////////////////////////////////////////////////////////////

@@ -3,7 +3,7 @@ pragma solidity ^0.8.17;
 
 import {QuadraticIncreasingEscrow} from "../escrow/increasing/QuadraticIncreasingEscrow.sol";
 import {ILockedBalanceIncreasing} from "src/escrow/increasing/interfaces/IVotingEscrowIncreasing.sol";
-import {IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage} from "src/escrow/increasing/interfaces/IEscrowCurveIncreasing.sol";
+import {IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage} from "src/escrow/increasing/interfaces/IEscrowCurveIncreasing_v1_4_0.sol";
 
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {console2 as console} from "forge-std/console2.sol";
@@ -15,45 +15,6 @@ library BalanceLogicLibrary {
     using SafeCast for int128;
 
     uint256 internal constant WEEK = 1 weeks;
-
-    /// @notice Binary search to get the user point index for a token id at or prior to a given timestamp
-    /// @dev If a user point does not exist prior to the timestamp, this will return 0.
-    /// @param _tokenPointIndex State of all token's latest indexes
-    /// @param _tokenPointHistory State of all user point history
-    /// @param _tokenId .
-    /// @param _timestamp .
-    /// @return User point index
-    function getPastUserPointIndex(
-        mapping(uint256 => uint256) storage _tokenPointIndex,
-        mapping(uint256 => IEscrowCurveTokenStorage.TokenPointV2[1000000000])
-            storage _tokenPointHistory,
-        uint256 _tokenId,
-        uint256 _timestamp
-    ) internal view returns (uint256) {
-        uint256 _userEpoch = _tokenPointIndex[_tokenId];
-        if (_userEpoch == 0) return 0;
-        // First check most recent balance
-        if (_tokenPointHistory[_tokenId][_userEpoch].ts <= _timestamp) return (_userEpoch);
-        // Next check implicit zero balance
-        if (_tokenPointHistory[_tokenId][1].ts > _timestamp) return 0;
-
-        uint256 lower = 0;
-        uint256 upper = _userEpoch;
-        while (upper > lower) {
-            uint256 center = upper - (upper - lower) / 2; // ceil, avoiding overflow
-            IEscrowCurveTokenStorage.TokenPointV2 storage userPoint = _tokenPointHistory[_tokenId][
-                center
-            ];
-            if (userPoint.ts == _timestamp) {
-                return center;
-            } else if (userPoint.ts < _timestamp) {
-                lower = center;
-            } else {
-                upper = center - 1;
-            }
-        }
-        return lower;
-    }
 
     /// @notice Binary search to get the global point index at or prior to a given timestamp
     /// @dev If a checkpoint does not exist prior to the timestamp, this will return 0.
@@ -87,41 +48,6 @@ library BalanceLogicLibrary {
             }
         }
         return lower;
-    }
-
-    /// @notice Get the current voting power for `_tokenId`
-    /// @dev Adheres to the ERC20 `balanceOf` interface for Aragon compatibility
-    ///      Fetches last user point prior to a certain timestamp, then walks forward to timestamp.
-    /// @param _tokenPointIndex State of all token's latest indexes
-    /// @param _tokenPointHistory State of all user point history
-    /// @param _tokenId NFT for lock
-    /// @param _t Epoch time to return voting power at
-    /// @param _end The time at which lock ends.
-    /// @return User voting power
-    function balanceOfNFTAt(
-        mapping(uint256 => uint256) storage _tokenPointIndex,
-        mapping(uint256 => IEscrowCurveTokenStorage.TokenPointV2[1000000000])
-            storage _tokenPointHistory,
-        uint256 _tokenId,
-        uint256 _t,
-        uint48 _end
-    ) external view returns (uint256) {
-        uint256 _epoch = getPastUserPointIndex(_tokenPointIndex, _tokenPointHistory, _tokenId, _t);
-        // epoch 0 is an empty point
-        if (_epoch == 0) return 0;
-        IEscrowCurveTokenStorage.TokenPointV2 memory lastPoint = _tokenPointHistory[_tokenId][_epoch];
-        
-        uint48 duration;
-        
-        if(lastPoint.ts <= _end && uint48(_t) >= _end) {
-            duration = _end - lastPoint.ts;
-        } else {
-            duration = uint48(_t) - lastPoint.ts;
-        }
-
-        lastPoint.bias += lastPoint.slope * duration;
-
-        return lastPoint.bias;
     }
 
     /// @notice Calculate total voting power at some point in the past
@@ -167,4 +93,3 @@ library BalanceLogicLibrary {
         return uint256(bias / 1e18); // TODO: USE safe cast
     }
 }
-
