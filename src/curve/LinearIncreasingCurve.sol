@@ -277,7 +277,7 @@ contract LinearIncreasingEscrow is
             timeElapsed = _t - lastPoint.checkpointTs;
         }
 
-        return _getBias(timeElapsed, bias, slope);
+        return _getBias(timeElapsed, bias, slope) / 1e18;
     }
 
     /// @inheritdoc IEscrowCurveCore

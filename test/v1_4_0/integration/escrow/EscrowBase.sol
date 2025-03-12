@@ -12,7 +12,7 @@ import {
     IClock, 
     Lock, 
     VotingEscrow, 
-    QuadraticIncreasingEscrow, 
+    LinearIncreasingEscrow, 
     IVotingEscrowIncreasing, 
     IEscrowCurveIncreasing, 
     IVotingEscrowIncreasing, 
@@ -36,7 +36,7 @@ contract EscrowBase is AragonTest, IEscrowCurveGlobalStorage, IEscrowCurveTokenS
 
     uint256 internal DAY = 86400;
 
-    QuadraticIncreasingEscrow internal curve;
+    LinearIncreasingEscrow internal curve;
     VotingEscrow internal escrow;
     Clock internal clock;
 
@@ -49,10 +49,9 @@ contract EscrowBase is AragonTest, IEscrowCurveGlobalStorage, IEscrowCurveTokenS
     uint256 internal Lock_2_ts;
     uint256 internal Lock_2_start;
 
-    address public sender = address(123);
-
     uint256 public checkpointInterval;
     uint256 public maxTime;
+    uint48 public warmupPeriod;
 
     function lockedBalance(
         uint208 amount,
@@ -95,6 +94,10 @@ contract EscrowBase is AragonTest, IEscrowCurveGlobalStorage, IEscrowCurveTokenS
         assertEq(curve.supplyAt(_t), uint256(_amountFP / 1e18));
     }
 
+    function assertVotingPower(uint256 _tokenId, uint256 _t, int256 _amountFP) internal view {
+        assertEq(curve.votingPowerAt(_tokenId, _t), uint256(_amountFP / 1e18));
+    }
+
     modifier givenExistingLock() {
         vm.warp(block.timestamp + 1 hours);
         uint256 tokenId = escrow.createLock(Lock_1_Amount);
@@ -129,12 +132,14 @@ contract EscrowBase is AragonTest, IEscrowCurveGlobalStorage, IEscrowCurveTokenS
             )
         );
 
+        warmupPeriod = 10;
+
         // deploy curve proxy
-        curve = QuadraticIncreasingEscrow(
-            address(new QuadraticIncreasingEscrow()).deployUUPSProxy(
+        curve = LinearIncreasingEscrow(
+            address(new LinearIncreasingEscrow()).deployUUPSProxy(
                 abi.encodeCall(
-                    QuadraticIncreasingEscrow.initialize,
-                    (address(escrow), address(_dao), 0, address(clock))
+                    LinearIncreasingEscrow.initialize,
+                    (address(escrow), address(_dao), warmupPeriod, address(clock))
                 )
             )
         );
@@ -145,7 +150,7 @@ contract EscrowBase is AragonTest, IEscrowCurveGlobalStorage, IEscrowCurveTokenS
             _permissionId: escrow.ESCROW_ADMIN_ROLE()
         });
 
-        token.mint(sender, 10000000e18);
+        token.mint(alice, 10000000e18);
 
         escrow.setCurve(address(curve));
         escrow.setLockNFT(
@@ -160,7 +165,7 @@ contract EscrowBase is AragonTest, IEscrowCurveGlobalStorage, IEscrowCurveTokenS
             )
         );
 
-        vm.startPrank(sender);
+        vm.startPrank(alice);
         token.approve(address(escrow), 10000000e18);
     }
 

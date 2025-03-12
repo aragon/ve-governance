@@ -7,7 +7,7 @@ import {
     IClock, 
     Lock, 
     VotingEscrow, 
-    QuadraticIncreasingEscrow, 
+    LinearIncreasingEscrow, 
     IVotingEscrowIncreasing, 
     IEscrowCurveIncreasing, 
     IVotingEscrowIncreasing, 
@@ -28,7 +28,7 @@ contract TestCreateLock is EscrowBase {
         super.setUp();
     }
 
-    function test_whenCreatingNewLock_no_existing_lock_111() public {
+    function test_whenCreatingNewLock_no_existing_lock() public {
         // Given: no prior locks existing
         // 1. should start lock at start of the current week(deposit interval)
         // 2. should be a single entry point in token point and global point history
@@ -67,7 +67,14 @@ contract TestCreateLock is EscrowBase {
         assertEq(slopeChanges(endTs), slopeFP(Lock_1_Amount));
 
         // 8
-        // TODO:
+        // assertVotingPower(tokenId, currentTs, 0);
+        // assertEq(curve.isWarm(tokenId), false);
+        // vm.warp(currentTs + warmupPeriod);
+        // // assertVotingPower(tokenId, currentTs, 0);
+        // // assertEq(curve.isWarm(tokenId), false);
+        // vm.warp(currentTs + warmupPeriod + 3);
+        // assertEq(curve.isWarm(tokenId), true);
+        // assertVotingPower(tokenId, block.timestamp, biasFP(Lock_1_Amount, block.timestamp - weekStartTs));
     }
 
     function test_whenCreatingNewLock_existingLock_at_same_timestamp() public givenExistingLock {

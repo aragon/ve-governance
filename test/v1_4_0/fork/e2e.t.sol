@@ -9,7 +9,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
 import {UUPSUpgradeable as UUPS} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {VotingEscrow, Clock, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveTokenStorage, GaugesDaoFactory, GaugePluginSet, Deployment, DeploymentParameters, DeployGauges} from "../versions.sol";
+import {VotingEscrow, Clock, Lock, LinearIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveTokenStorage, GaugesDaoFactory, GaugePluginSet, Deployment, DeploymentParameters, DeployGauges} from "../versions.sol";
 
 interface IERC20Mint is IERC20 {
     function mint(address _to, uint256 _amount) external;
@@ -65,7 +65,7 @@ contract TestE2EV1_4_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
     // these only reference the FIRST set of contracts, if deploying multiple
     // fetch from the factory
     SimpleGaugeVoter voter;
-    QuadraticIncreasingEscrow curve;
+    LinearIncreasingEscrow curve;
     ExitQueue queue;
     VotingEscrow escrow;
     Clock clock;
@@ -142,7 +142,7 @@ contract TestE2EV1_4_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
         GaugePluginSet memory pluginSet = deployment.gaugeVoterPluginSets[0];
 
         voter = SimpleGaugeVoter(pluginSet.plugin);
-        curve = QuadraticIncreasingEscrow(pluginSet.curve);
+        curve = LinearIncreasingEscrow(pluginSet.curve);
         queue = ExitQueue(pluginSet.exitQueue);
         escrow = VotingEscrow(pluginSet.votingEscrow);
         clock = Clock(pluginSet.clock);

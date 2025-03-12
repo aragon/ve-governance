@@ -2,7 +2,7 @@ pragma solidity ^0.8.17;
 
 import {console2 as console} from "forge-std/console2.sol";
 
-import {Clock, IClock, Lock, VotingEscrow, QuadraticIncreasingEscrow, IVotingEscrowIncreasing, IEscrowCurveIncreasing, IVotingEscrowIncreasing, IVotingEscrowCoreErrors, IMerge, ISplit, ILockedBalanceIncreasing, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage} from "./versions.sol";
+import {Clock, IClock, Lock, VotingEscrow, LinearIncreasingEscrow, IVotingEscrowIncreasing, IEscrowCurveIncreasing, IVotingEscrowIncreasing, IVotingEscrowCoreErrors, IMerge, ISplit, ILockedBalanceIncreasing, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage} from "./versions.sol";
 
 import {Test} from "forge-std/Test.sol";
 import {SafeCastUpgradeable as SafeCast} from "@openzeppelin/contracts-upgradeable/utils/math/SafeCastUpgradeable.sol";
@@ -21,7 +21,7 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
 
     uint256 internal DAY = 86400;
 
-    QuadraticIncreasingEscrow internal curve;
+    LinearIncreasingEscrow internal curve;
     VotingEscrow internal escrow;
     Clock internal clock;
 
@@ -106,10 +106,10 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
         );
 
         // deploy curve proxy
-        curve = QuadraticIncreasingEscrow(
-            address(new QuadraticIncreasingEscrow()).deployUUPSProxy(
+        curve = LinearIncreasingEscrow(
+            address(new LinearIncreasingEscrow()).deployUUPSProxy(
                 abi.encodeCall(
-                    QuadraticIncreasingEscrow.initialize,
+                    LinearIncreasingEscrow.initialize,
                     (address(escrow), address(_dao), 0, address(clock))
                 )
             )

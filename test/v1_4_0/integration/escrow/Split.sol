@@ -7,7 +7,7 @@ import {
     IClock, 
     Lock, 
     VotingEscrow, 
-    QuadraticIncreasingEscrow, 
+    LinearIncreasingEscrow, 
     IVotingEscrowIncreasing, 
     IEscrowCurveIncreasing, 
     IVotingEscrowIncreasing, 
