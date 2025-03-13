@@ -57,8 +57,11 @@ interface IEscrowCurveTokenV1_4_0 is IEscrowCurveTokenStorage {
 }
 
 interface IEscrowCurveCoreV1_4_0 is IEscrowCurveCore {
-    /// TODO: GIORGI
-    function resetCheckPoint(uint256 _amount, uint48 _at, uint16 _seasonIndex) external;
+    /// @notice Creates a new global point in the future at the start timestamp of the new season.
+    /// @param _amount The bias that the global point will store at `ts`.
+    /// @param _ts The timestamp at which this new global point will be recorded at.
+    /// @param _seasonIndex The seasonIndex makes sure to record the new slope changes at the correct storage.
+    function resetCheckPoint(uint256 _amount, uint48 _ts, uint16 _seasonIndex) external;
 }
 
 interface IEscrowCurveMaxTime is IEscrowCurveErrorsAndEvents {

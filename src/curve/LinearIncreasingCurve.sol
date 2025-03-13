@@ -10,13 +10,6 @@ import {IEscrowCurveIncreasingV1_4_0 as IEscrowCurve, IEscrowCurveGlobal, IEscro
 import {IClockUser, IClockV1_4_0 as IClock} from "@clock/IClock_v1_4_0.sol";
 import {IClockSeason} from "@clock/IClockSeason.sol";
 
-// import {IVotingEscrowIncreasingV1_4_0 as IVotingEscrow} from "@escrow/IVotingEscrowIncreasing_v1_4_0.sol";
-// import {IEscrowCurveIncreasingV1_4_0 as IEscrowCurve} from "@curve/IEscrowCurveIncreasing_v1_4_0.sol";
-// import {IERC721EnumerableMintableBurnable as IERC721EMB} from "@lock/IERC721EMB.sol";
-
-// import {IClockUser} from "@clock/IClock.sol";
-// import {IClockV1_4_0 as IClock, IClockSeason} from "@clock/IClock_v1_4_0.sol";
-
 // libraries
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
@@ -200,15 +193,23 @@ contract LinearIncreasingEscrow is
     }
 
     /// @notice Returns whether the NFT is warm
-    function isWarm(uint256 tokenId) public view returns (bool) {
-        uint256 interval = _getPastTokenPointInterval(tokenId, block.timestamp);
-        TokenPoint memory point = _tokenPointHistory[tokenId][interval];
-        if (point.bias == 0) return false;
-        else return _isWarm(point);
+    function isWarm(uint256 _tokenId) public view returns (bool) {
+        _isWarm(_tokenId, block.timestamp);
     }
 
-    function _isWarm(TokenPoint memory _point) public view returns (bool) {
-        return block.timestamp > _point.writtenTs + warmupPeriod;
+    function isWarm(uint256 _tokenId, uint48 _ts) public view returns (bool) {
+        _isWarm(_tokenId, _ts);
+    }
+
+    function _isWarm(uint256 _tokenId, uint256 _ts) public view returns (bool) {
+        IVotingEscrow.LockedBalance memory locked = IVotingEscrow(escrow).locked(_tokenId);
+
+        // This could occur if user withdraw in which case lock is removed.
+        // In such case, `_tokenId` is treated as if it never existed
+        // in which case we anyways return false.
+        if (locked.amount == 0) return false;
+
+        return _ts > locked.start + warmupPeriod;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -233,7 +234,7 @@ contract LinearIncreasingEscrow is
         return tokenPointLatestIndex[_tokenId];
     }
 
-    /// @inheritdoc IEscrowCurveCore
+    //// TODO: inheritdoc IEscrowCurveCore doesn't work.
     function votingPowerAt(uint256 _tokenId, uint256 _t) external view returns (uint256) {
         uint256 interval = _getPastTokenPointInterval(_tokenId, _t);
 
@@ -242,7 +243,7 @@ contract LinearIncreasingEscrow is
 
         TokenPoint memory lastPoint = _tokenPointHistory[_tokenId][interval];
 
-        if (!_isWarm(lastPoint)) return 0;
+        if (!_isWarm(_tokenId, _t)) return 0;
 
         // get latest season prior to `_t`.
         (uint48 start, ) = IClockSeason(clock).seasonTsAt(uint48(_t));
@@ -280,7 +281,7 @@ contract LinearIncreasingEscrow is
         return _getBias(timeElapsed, bias, slope) / 1e18;
     }
 
-    /// @inheritdoc IEscrowCurveCore
+    //// TODO: inheritdoc IEscrowCurveCore doesn't work.
     function supplyAt(uint256 _timestamp) external view returns (uint256) {
         uint16 seasonIndex = IClockSeason(clock).seasonIndexAt(uint48(_timestamp));
         return _supplyAt(_timestamp, seasonIndex);
@@ -300,30 +301,30 @@ contract LinearIncreasingEscrow is
         _checkpoint(_tokenId, _oldLocked, _newLocked);
     }
 
-    /// TODO: GIORGI add desc
-    function resetCheckPoint(uint256 _amount, uint48 _at, uint16 _seasonIndex) public {
+    /// TODO: doesn't work inheritdoc IEscrowCurveCore
+    function resetCheckPoint(uint256 _amount, uint48 _ts, uint16 _seasonIndex) public {
         if (msg.sender != escrow) revert OnlyEscrow();
 
-        _resetCheckPoint(_amount, _at, _seasonIndex);
+        _resetCheckPoint(_amount, _ts, _seasonIndex);
     }
 
-    /// TODO: GIORGI add desc
-    function _resetCheckPoint(uint256 _amount, uint48 _at, uint16 _seasonIndex) internal {
+    /// TODO: doesn't work inheritdoc IEscrowCurveCore
+    function _resetCheckPoint(uint256 _amount, uint48 _ts, uint16 _seasonIndex) internal {
         int256 slope = _getLinearCoeff(_amount);
-    
-        // The below check also ensures that new global point will be stored 
-        // after the latest already stored global point, as latest stored global point 
+
+        // The below check also ensures that new global point will be stored
+        // after the latest already stored global point, as latest stored global point
         // either will have `block.timestamp` or less on its `.writtenTs`
-        if (_at <= block.timestamp) {
+        if (_ts <= block.timestamp) {
             revert("TODO: GIORGI better message");
         }
 
-        slopeChanges[_seasonIndex][_at + maxTime()] = slope;
+        slopeChanges[_seasonIndex][_ts + maxTime()] = slope;
 
         _globalPointHistory[++globalPointLatestIndex] = GlobalPoint({
             bias: _getConstantCoeff(_amount),
             slope: slope,
-            writtenTs: _at
+            writtenTs: _ts
         });
     }
 
@@ -411,11 +412,11 @@ contract LinearIncreasingEscrow is
         lastPoint.bias += newLockBias;
 
         uint256 tokenLatestIndex = tokenPointLatestIndex[_tokenId];
-        
+
         // The `tokenId` already exists..
         if (tokenLatestIndex > 0) {
             uint256 _fromLockedEnd = _fromLocked.start + maxTime();
-            
+
             // Get the slope and bias for `_fromLocked`...
             (int256 oldLockBias, int256 oldLockSlope) = _getBiasAndSlope(
                 block.timestamp - _fromLocked.start,
@@ -492,7 +493,8 @@ contract LinearIncreasingEscrow is
         if (tokenInterval == 0) return 0;
 
         // if the most recent point is before the timestamp, return it
-        if (_tokenPointHistory[_tokenId][tokenInterval].writtenTs <= _timestamp) return (tokenInterval);
+        if (_tokenPointHistory[_tokenId][tokenInterval].writtenTs <= _timestamp)
+            return (tokenInterval);
 
         // Check if the first balance is after the timestamp
         // this means that the first epoch has yet to start
