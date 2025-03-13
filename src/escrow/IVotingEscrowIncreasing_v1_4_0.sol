@@ -10,6 +10,12 @@ interface IVotingEscrowExiting {
     function currentExitingAmount() external view returns (uint256);
 }
 
+interface IDelegationMapper {
+    /// @notice Called upon the transfer to update delegation checkpoints.
+    /// TODO: GIORGI add natspec for params.
+    function moveDelegateVotes(address _from, address _to, uint256 _tokenId) external;
+}
+
 interface IMerge is ILockedBalanceIncreasing {
     /// @notice Merge two tokens - i.e  `from` into `_to`.
     /// @param _from The token id from which merge is occuring
@@ -65,5 +71,6 @@ interface IVotingEscrowIncreasingV1_4_0 is
     IVotingEscrowIncreasing,
     IVotingEscrowExiting,
     IMerge,
-    ISplit
+    ISplit,
+    IDelegationMapper
 {}

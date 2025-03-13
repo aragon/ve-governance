@@ -25,6 +25,7 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {ReentrancyGuardUpgradeable as ReentrancyGuard} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {PausableUpgradeable as Pausable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
+import {IDelegationMapper} from "../delegation/IDelegationMapper.sol";
 
 import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 
@@ -92,6 +93,9 @@ contract VotingEscrowV1_4_0 is
 
     bool private _lockNFTSet;
 
+    // added in 0.2
+    address public delegationMapper;
+
     error UpgradeNotPossible();
 
     /*//////////////////////////////////////////////////////////////
@@ -102,6 +106,9 @@ contract VotingEscrowV1_4_0 is
         _disableInitializers();
     }
 
+    // TODO: GIORGI add `address _delegationMapper` as a param. 
+    // Currently, I didn't as compilation fails due to
+    // 1.4.0 tests not expecting this argument.
     function initialize(
         address _token,
         address _dao,
@@ -119,26 +126,32 @@ contract VotingEscrowV1_4_0 is
         emit MinDepositSet(_initialMinDeposit);
     }
 
-     function initializeFrom(bool exitAmountIncluded, uint256 exitAmount) public {        
-        if (exitAmountIncluded) {
+    function initializeFrom(
+        address _delegationMapper,
+        bool _exitAmountIncluded,
+        uint256 _exitAmount
+    ) public {
+        if (_exitAmountIncluded) {
             // If `exitAmount` is passed, make sure the escrow is paused
             // so that incorrect upgrade doesn't go unnoticed. Otherwise,
             // upgrade transaction might be front-run by `beginWithdrawal`
             // causing the `exitAmount` to be wrong.
-            if(!paused()) {
+            if (!paused()) {
                 revert UpgradeNotPossible();
             }
         } else {
-            exitAmount = currentExitingAmount();
+            _exitAmount = currentExitingAmount();
         }
 
-        if (totalLocked < exitAmount) {
+        if (totalLocked < _exitAmount) {
             revert UpgradeNotPossible();
         }
 
-        _addSeason(totalLocked - exitAmount);
+        _addSeason(totalLocked - _exitAmount);
 
-        ExitQueue(queue).initializeFrom(exitAmount);
+        ExitQueue(queue).initializeFrom(_exitAmount);
+
+        delegationMapper = _delegationMapper;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -417,8 +430,10 @@ contract VotingEscrowV1_4_0 is
         LockedBalance memory _fromLocked,
         LockedBalance memory _newLocked
     ) private {
-        (uint48 seasonStart, uint48 seasonEnd) = IClockSeason(clock).seasonTsAt(uint48(block.timestamp));
-        if(seasonStart != 0) {
+        (uint48 seasonStart, uint48 seasonEnd) = IClockSeason(clock).seasonTsAt(
+            uint48(block.timestamp)
+        );
+        if (seasonStart != 0) {
             _fromLocked.start = seasonStart;
             _newLocked.start = seasonStart;
         }
@@ -441,7 +456,7 @@ contract VotingEscrowV1_4_0 is
     /*//////////////////////////////////////////////////////////////
                         Season
     //////////////////////////////////////////////////////////////*/
-    function addSeason() public auth(ESCROW_ADMIN_ROLE)  {
+    function addSeason() public auth(ESCROW_ADMIN_ROLE) {
         uint256 total = totalLocked - IExitQueue(queue).totalExiting();
 
         _addSeason(total);
@@ -519,7 +534,6 @@ contract VotingEscrowV1_4_0 is
         // clear out the token data
         _locked[_tokenId] = LockedBalance(0, 0);
         totalLocked -= value;
-        
 
         // Burn the NFT and transfer the tokens to the user
         IERC721EMB(lockNFT).burn(_tokenId);
@@ -556,6 +570,11 @@ contract VotingEscrowV1_4_0 is
 
         IERC721EMB(lockNFT).transferFrom(address(this), _to, _tokenId);
         emit SweepNFT(_to, _tokenId);
+    }
+
+    
+    function moveDelegateVotes(address _from, address _to, uint256 _tokenId) public {
+        IDelegationMapper(delegationMapper).moveDelegateVotes(_from, _to, _tokenId);
     }
 
     /*///////////////////////////////////////////////////////////////

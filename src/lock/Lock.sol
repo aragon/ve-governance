@@ -7,6 +7,7 @@ import {ReentrancyGuardUpgradeable as ReentrancyGuard} from "@openzeppelin/contr
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
+import {IVotingEscrowIncreasingV1_4_0 as IVotingEscrow} from "@escrow/IVotingEscrowIncreasing_v1_4_0.sol";
 
 /// @title NFT representation of an escrow locking mechanism
 contract Lock is ILock, ERC721Enumerable, UUPSUpgradeable, DaoAuthorizable, ReentrancyGuard {
@@ -86,9 +87,13 @@ contract Lock is ILock, ERC721Enumerable, UUPSUpgradeable, DaoAuthorizable, Reen
     /// @dev Override the transfer to check if the recipient is whitelisted
     /// This avoids needing to check for mint/burn but is less idomatic than beforeTokenTransfer
     function _transfer(address _from, address _to, uint256 _tokenId) internal override {
-        if (whitelisted[WHITELIST_ANY_ADDRESS] || whitelisted[_to]) {
-            super._transfer(_from, _to, _tokenId);
-        } else revert NotWhitelisted();
+        if(!whitelisted[WHITELIST_ANY_ADDRESS] && !whitelisted[_to]) {
+            revert NotWhitelisted();
+        }
+
+        super._transfer(_from, _to, _tokenId);
+
+        IVotingEscrow(escrow).moveDelegateVotes(_from, _to, _tokenId);
     }
 
     /*//////////////////////////////////////////////////////////////
