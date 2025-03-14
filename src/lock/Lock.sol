@@ -87,12 +87,16 @@ contract Lock is ILock, ERC721Enumerable, UUPSUpgradeable, DaoAuthorizable, Reen
     /// @dev Override the transfer to check if the recipient is whitelisted
     /// This avoids needing to check for mint/burn but is less idomatic than beforeTokenTransfer
     function _transfer(address _from, address _to, uint256 _tokenId) internal override {
-        if(!whitelisted[WHITELIST_ANY_ADDRESS] && !whitelisted[_to]) {
+        // side note but was thinking of adding !whitelisted[from]
+        // as this means things like vaults are easier to work with
+        if (!whitelisted[WHITELIST_ANY_ADDRESS] && !whitelisted[_to]) {
             revert NotWhitelisted();
         }
 
         super._transfer(_from, _to, _tokenId);
 
+        // in the aragon system we always self delegate if there is no record.
+        // would we consider this?
         IVotingEscrow(escrow).moveDelegateVotes(_from, _to, _tokenId);
     }
 
