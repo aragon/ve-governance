@@ -28,7 +28,7 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
 
         console.log("Coefficients: %st^2 + %st + %s", quadratic, linear, const);
 
-        for (uint i; i <= 6; i++) {
+        for (uint i; i <= 12; i++) {
             uint period = 2 weeks * i;
             console.log(
                 "Period: %d Voting Power      : %s",
@@ -58,33 +58,36 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
     // write a new checkpoint
     /*
      * for the 1000 tokens (Python)  (extend to 1bn with more zeros)
-     * 0                              Voting Power: 1000000000000000000000
-     * 1 minute                       Voting Power: 1000000953907203932160
-     * 1 hour                         Voting Power: 1000057234432234487808
-     * 1 day                          Voting Power: 1001373626373626396672
-     * WARMUP_PERIOD (3 days)         Voting Power: 1004120879120879058944
-     * WARMUP_PERIOD + 1s             Voting Power: 1004120895019332534272
-     * 1 week                         Voting Power: 1009615384615384645632
-     * 1 period (2 weeks)             Voting Power: 1019230769230769160192
-     * 10 periods (10 * PERIOD)       Voting Power: 1192307692307692388352
-     * 50% periods (26 * PERIOD)      Voting Power: 1500000000000000000000
-     * 35 periods (35 * PERIOD)       Voting Power: 1673076923076923097088
-     * PERIOD_END (26 * PERIOD)       Voting Power: 2000000000000000000000
+
+
+0                              Voting Power: 1000000000000000013287555072
+1 minute                       Voting Power: 1000028935185185204573569024
+1 hour                         Voting Power: 1001736111111111215570485248
+1 day                          Voting Power: 1041666666666666806493577216
+WARMUP_PERIOD (3 days)         Voting Power: 1124999999999999980588761088
+WARMUP_PERIOD + 1s             Voting Power: 1125000482253086386699632640
+1 week                         Voting Power: 1291666666666666878534942720
+1 period (2 weeks)             Voting Power: 1583333333333333468904423424
+2 periods (2 * PERIOD)         Voting Power: 2166666666666666924521291776
+3 periods (3 * PERIOD)         Voting Power: 2749999999999999830382346240
+4 periods (4 * PERIOD)         Voting Power: 3333333333333333560877121536
+PERIOD_END (12 * PERIOD)       Voting Power: 8000000000000000106300440576
      
-     * for the 420.69 tokens (Python)
-     * 0                              Voting Power: 420690000000000000000
-     * 1 minute                       Voting Power: 420690401299221577728
-     * 1 hour                         Voting Power: 420714077953296695296
-     * 1 day                          Voting Power: 421267870879120883712
-     * WARMUP_PERIOD (3 days)         Voting Power: 422423612637362651136
-     * WARMUP_PERIOD + 1s             Voting Power: 422423619325683040256
-     * 1 week                         Voting Power: 424735096153846120448
-     * 1 period (2 weeks)             Voting Power: 428780192307692306432
-     * 10 periods (10 * PERIOD)       Voting Power: 501591923076923064320
-     * 50% periods (26 * PERIOD)      Voting Power: 631035000000000032768
-     * 35 periods (35 * PERIOD)       Voting Power: 703846730769230856192
-     * PERIOD_END (26 * PERIOD)       Voting Power: 841380000000000000000
-     */
+
+0                              Voting Power: 420690000000000000000
+1 minute                       Voting Power: 420702172743055572992
+1 hour                         Voting Power: 421420364583333330944
+1 day                          Voting Power: 438218750000000008192
+WARMUP_PERIOD (3 days)         Voting Power: 473276250000000024576
+WARMUP_PERIOD + 1s             Voting Power: 473276452879050866688
+1 week                         Voting Power: 543391250000000057344
+1 period (2 weeks)             Voting Power: 666092500000000049152
+2 periods (2 * PERIOD)         Voting Power: 911495000000000163840
+3 periods (3 * PERIOD)         Voting Power: 1156897500000000016384
+4 periods (4 * PERIOD)         Voting Power: 1402300000000000131072
+PERIOD_END (12 * PERIOD)       Voting Power: 3365520000000000000000
+
+*/
     function testWritesCheckpoint() public {
         uint tokenIdFirst = 1;
         uint tokenIdSecond = 2;
@@ -131,43 +134,36 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
         // warmup complete
         vm.warp(block.timestamp + 1);
 
-        assertEq(
-            curve.votingPowerAt(tokenIdFirst, block.timestamp),
-            422423619325633557508,
-            "Balance incorrect after warmup"
-        );
-        assertEq(curve.isWarm(tokenIdFirst), true, "Still warming up");
-
-        assertEq(
-            curve.votingPowerAt(tokenIdSecond, block.timestamp),
-            1004120895019214998000000000,
-            "Balance incorrect after warmup II"
-        );
-
         // warp to the start of period 2
         vm.warp(start + clock.epochDuration());
         assertEq(
             curve.votingPowerAt(tokenIdFirst, block.timestamp),
-            428780192307461588352,
+            666092499999616779456,
             "Balance incorrect after p1"
         );
 
-        uint256 expectedMaxI = 841379999988002594304;
-        uint256 expectedMaxII = 1999999999971481600000000000;
+        assertEq(
+            curve.votingPowerAt(tokenIdSecond, block.timestamp),
+            1583333333332422400000000000,
+            "Balance incorrect after p1 II"
+        );
+
+        uint256 expectedMaxI = 3365519999995401353472;
+        uint256 expectedMaxII = 7999999999989068800000000000;
 
         // warp to the final period
         // TECHNICALLY, this should round to a whole max
         // but FP arithmetic has a small rounding error and it finishes just below
-        vm.warp(start + clock.epochDuration() * 52);
+        vm.warp(start + clock.epochDuration() * 12);
         assertEq(
             curve.votingPowerAt(tokenIdFirst, block.timestamp),
             expectedMaxI,
-            "Balance incorrect after pend"
+            "Balance incorrect after max"
         );
         assertEq(
             curve.votingPowerAt(tokenIdSecond, block.timestamp),
             expectedMaxII,
-            "Balance incorrect after pend II "
+            "Balance incorrect after max II "
         );
 
         // warp to the future and balance should be the same

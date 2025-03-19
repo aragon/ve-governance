@@ -40,6 +40,18 @@ ft-mode-fork-100 :;  forge test --match-contract TestE2E \
 ft-mode-fork-110 :; forge test --match-contract TestE2EV1_1_0 \
 	--rpc-url https://mainnet.mode.network/ \
 	-vvvvv
+	
+# Fork testing - bsc mainnet
+ft-bsc-fork-100 :;  forge test --match-contract TestE2E --match-path "test/v1_0_0/**/*.sol" \
+	--rpc-url https://bnb-mainnet.g.alchemy.com/v2/$(ALCHEMY_API_KEY) \
+	--fork-block-number 47600679 \
+	-vvvvv
+
+ft-bsc-fork-101 :;  forge test --match-contract TestE2E --match-path "test/v1_1_0/**/*.sol" \
+	--rpc-url https://bnb-mainnet.g.alchemy.com/v2/$(ALCHEMY_API_KEY) \
+	--fork-block-number 47600679 \
+	-vvvvv
+
 
 
 #### Deployments ####
@@ -58,3 +70,75 @@ deploy-mode-sepolia-110 :; forge script DeployGaugesV1_1_0 \
 	--verifier-url https://sepolia.explorer.mode.network/api\? \
 	-vvvvv
 
+
+deploy-preview-ethereum-sepolia :; forge script DeployGauges \
+  --rpc-url $(RPC_URL) \
+    --private-key $(DEPLOYMENT_PRIVATE_KEY) \
+    -vvvvv    
+
+deploy-ethereum-sepolia :; forge script DeployGauges \
+    --rpc-url $(RPC_URL) \
+    --private-key $(DEPLOYMENT_PRIVATE_KEY) \
+    --slow \
+    --broadcast \
+    --verify \
+    --verifier etherscan \
+    -vvvvv
+	
+
+deploy-preview-bnb-testnet :; forge script DeployGauges \
+  	--rpc-url https://bsc-testnet-rpc.publicnode.com \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+ 	-vvv    
+
+deploy-bnb-testnet :; forge script DeployGauges \
+    --rpc-url https://bsc-testnet-rpc.publicnode.com \
+    --private-key $(DEPLOYMENT_PRIVATE_KEY) \
+    --broadcast \
+    --resume \
+    --verify \
+    --verifier etherscan \
+    -vvv 
+
+deploy-preview-msig-bnb-testnet :; forge script DeployMultisig \
+  	--rpc-url https://bsc-testnet-rpc.publicnode.com \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+ 	-vvv    
+
+
+deploy-msig-bnb-testnet :; forge script DeployMultisig \
+    --rpc-url https://bsc-testnet-rpc.publicnode.com \
+    --private-key $(DEPLOYMENT_PRIVATE_KEY) \
+    --broadcast \
+    --verify \
+    --verifier etherscan \
+    -vvv 
+
+
+deploy-preview-bnb :; forge script DeployGauges \
+    --rpc-url https://bnb-mainnet.g.alchemy.com/v2/$(ALCHEMY_API_KEY) \
+    --private-key $(DEPLOYMENT_PRIVATE_KEY) \
+    -vvvv   
+
+deploy-bnb :; forge script DeployGauges \
+    --rpc-url https://bnb-mainnet.g.alchemy.com/v2/$(ALCHEMY_API_KEY) \
+    --private-key $(DEPLOYMENT_PRIVATE_KEY) \
+    --broadcast \
+    --resume \
+    --verify \
+    --verifier etherscan \
+    -vvvv
+
+deploy-preview-msig-bnb :; forge script DeployMultisig \
+	--rpc-url https://bnb-mainnet.g.alchemy.com/v2/$(ALCHEMY_API_KEY) \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+ 	-vvvv    
+
+
+deploy-msig-bnb :; forge script DeployMultisig \
+    --rpc-url https://bnb-mainnet.g.alchemy.com/v2/$(ALCHEMY_API_KEY) \
+    --private-key $(DEPLOYMENT_PRIVATE_KEY) \
+    --broadcast \
+    --verify \
+    --verifier etherscan \
+    -vvvv

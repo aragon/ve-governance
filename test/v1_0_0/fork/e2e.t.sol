@@ -569,7 +569,7 @@ contract TestE2E is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurve
                 "Bob should have the correct amount locked"
             );
 
-            // start date in the future - alice will not be warm as his lock is not active yet
+            // start date in the future - alice will not be warm as her lock is not active yet
             assertFalse(curve.isWarm(1), "Alice should not be warm");
             assertFalse(curve.isWarm(2), "Bob should not be warm");
 
@@ -587,14 +587,14 @@ contract TestE2E is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurve
                 "Both locks should start at the next checkpoint"
             );
 
-            // fast forward to the checkpoint interval alice is warm and has voting power, bob is not
+            // fast forward to the checkpoint interval alice and bob both warm
             goToEpochStartPlus(clock.checkpointInterval());
 
             assertEq(escrow.votingPower(1), depositAlice0, "Alice should have voting power");
-            assertTrue(curve.isWarm(1), "Alice should not be warm");
+            assertTrue(curve.isWarm(1), "Alice should be warm");
 
-            assertEq(escrow.votingPower(2), 0, "Bob should not have the correct voting power");
-            assertFalse(curve.isWarm(2), "Bob should not be warm");
+            assertEq(escrow.votingPower(2), depositAliceBob, "Bob should have voting power");
+            assertTrue(curve.isWarm(2), "Bob should be warm");
         }
 
         // we fast forward 4 weeks and check the expected balances
@@ -605,7 +605,7 @@ contract TestE2E is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurve
             // we could check a < x < b, but checking x exactly is tedious
         }
 
-        // we have alice make a second deposit and validate that his total voting power is initially unchanged
+        // we have alice make a second deposit and validate that her total voting power is initially unchanged
         {
             vm.startPrank(alice);
             {
@@ -628,7 +628,7 @@ contract TestE2E is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurve
                 "Alice point should have the correct written timestamp"
             );
 
-            // check the voting power is unchanged (my boi aint warm)
+            // check the voting power is unchanged (my gal aint warm)
             assertEq(
                 escrow.votingPower(3),
                 0,
@@ -640,7 +640,7 @@ contract TestE2E is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurve
             assertEq(
                 escrow.totalLocked(),
                 depositAlice0 + depositAlice1 + depositAliceBob,
-                "Total locked should be the sum of the two deposits"
+                "Total locked should be the sum of the three deposits"
             );
 
             // calculate elapsed time since we made the first lock
@@ -999,15 +999,15 @@ contract TestE2E is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurve
             }
             vm.stopPrank();
 
-            // alice doesnt have the nft - its in the queue but he has a ticket
+            // alice doesnt have the nft - its in the queue but she has a ticket
             assertEq(lock.ownerOf(1), address(escrow), "Alice should not own the nft");
             assertEq(queue.queue(1).holder, alice, "Alice should be in the queue");
 
-            // exit date should be the next checkpoint
+            // exit date should be in 2 weeks
             assertEq(
                 queue.queue(1).exitDate,
-                epochStartTime + 8 weeks + clock.checkpointInterval(),
-                "Alice should be able to exit at the next checkpoint"
+                epochStartTime + 8 weeks + 1 hours + queue.cooldown(),
+                "Alice should be able to exit at the cooldown"
             );
 
             // second user point wrttien
@@ -1025,28 +1025,28 @@ contract TestE2E is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurve
                 "Alice point should have the correct written timestamp"
             );
 
-            // he can't exit early
+            // she can't exit early
             vm.startPrank(alice);
             {
                 vm.expectRevert(CannotExit.selector);
                 escrow.withdraw(1);
 
                 // he waits till the end of the week to exit
-                goToEpochStartPlus(9 weeks);
+                goToEpochStartPlus(10 weeks + 1 hours);
 
                 // can't exit yet
                 vm.expectRevert(CannotExit.selector);
                 escrow.withdraw(1);
 
-                // + 1s he can
+                // + 1s she can
 
-                goToEpochStartPlus(9 weeks + 1);
+                goToEpochStartPlus(10 weeks + 1 hours + 1);
 
                 escrow.withdraw(1);
             }
             vm.stopPrank();
 
-            // he should have his original amount back, minus any fees
+            // she should have his original amount back, minus any fees
             assertEq(
                 token.balanceOf(alice),
                 depositAlice0 - (queue.feePercent() * depositAlice0) / 10_000,
@@ -1082,7 +1082,7 @@ contract TestE2E is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurve
             assertEq(queue.cooldown(), 1 weeks, "Queue should have the correct cooldown period");
         }
 
-        // alice creates a new lock 12 h the window opens, he should be warm tomorrow
+        // alice creates a new lock 12 h the window opens, she should be warm tomorrow
         {
             goToEpochStartPlus(10 weeks - 12 hours);
 
