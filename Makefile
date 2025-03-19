@@ -44,12 +44,10 @@ ft-mode-fork-110 :; forge test --match-contract TestE2EV1_1_0 \
 # Fork testing - bsc mainnet
 ft-bsc-fork-100 :;  forge test --match-contract TestE2E --match-path "test/v1_0_0/**/*.sol" \
 	--rpc-url https://bnb-mainnet.g.alchemy.com/v2/$(ALCHEMY_API_KEY) \
-	--fork-block-number 47600679 \
 	-vvvvv
 
 ft-bsc-fork-101 :;  forge test --match-contract TestE2E --match-path "test/v1_1_0/**/*.sol" \
 	--rpc-url https://bnb-mainnet.g.alchemy.com/v2/$(ALCHEMY_API_KEY) \
-	--fork-block-number 47600679 \
 	-vvvvv
 
 
@@ -95,7 +93,6 @@ deploy-bnb-testnet :; forge script DeployGauges \
     --rpc-url https://bsc-testnet-rpc.publicnode.com \
     --private-key $(DEPLOYMENT_PRIVATE_KEY) \
     --broadcast \
-    --resume \
     --verify \
     --verifier etherscan \
     -vvv 
