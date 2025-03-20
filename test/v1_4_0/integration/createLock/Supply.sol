@@ -78,7 +78,6 @@ contract TestCreateLock_Supply is IEscrowCurveTokenStorage, IEscrowCurveGlobalSt
         escrow.createLock(Lock_2_Amount);
 
         uint256 weekStartTs = weekStartTs(block.timestamp);
-        uint256 endTs = weekStartTs + maxTime;
         uint256 currentTs = block.timestamp;
         
         int256 currentTotalBiasFP = biasFP(Lock_1_Amount, currentTs - Lock_1_start) +
@@ -118,11 +117,7 @@ contract TestCreateLock_Supply is IEscrowCurveTokenStorage, IEscrowCurveGlobalSt
         escrow.createLock(Lock_2_Amount);
 
         uint256 weekStartTs = weekStartTs(block.timestamp);
-        uint256 endTs = weekStartTs + maxTime;
         uint256 currentTs = block.timestamp;
-
-        // Calculate how many weeks between our locks + 2 as last lock's record and new lock's record.
-        uint256 lastEpoch = (currentTime - Lock_1_start) / checkpointInterval + 2;
 
         uint256 Lock_1_end = Lock_1_start + maxTime;
         uint256 Lock_2_end = weekStartTs + maxTime;

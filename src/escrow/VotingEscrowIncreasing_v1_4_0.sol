@@ -419,7 +419,7 @@ contract VotingEscrowV1_4_0 is
         LockedBalance memory _fromLocked,
         LockedBalance memory _newLocked
     ) private {
-        (uint48 seasonStart, uint48 seasonEnd) = IClockSeason(clock).seasonTsAt(uint48(block.timestamp));
+        (uint48 seasonStart, ) = IClockSeason(clock).seasonTsAt(uint48(block.timestamp));
         if(seasonStart != 0) {
             _fromLocked.start = seasonStart;
             _newLocked.start = seasonStart;

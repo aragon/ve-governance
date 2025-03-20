@@ -29,7 +29,7 @@ contract TestCreateLock_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalSt
 
         // 1
         assertEq(curve.globalPointLatestIndex(), 1);
-        assertEq(curve.tokenPointLatestIndex(1), 1);
+        assertEq(curve.tokenPointLatestIndex(tokenId), 1);
 
         // 2
         GlobalPoint memory p = curve.globalPointHistory(1);
@@ -48,8 +48,6 @@ contract TestCreateLock_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalSt
         // 3. bias and slope on the last global point must include both lock's bias till this point summed up.
         // 4. should schedule both slopes summed up at weekStart + MAX_TIME
         escrow.createLock(Lock_2_Amount);
-
-        uint256 totalLockAmount = Lock_1_Amount + Lock_2_Amount;
 
         uint256 currentTs = block.timestamp;
         uint256 weekStartTs = weekStartTs(currentTs);

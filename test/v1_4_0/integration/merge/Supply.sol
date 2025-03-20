@@ -25,7 +25,6 @@ contract TestMerge_Supply is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage
         uint256 to = escrow.createLock(Lock_2_Amount);
 
         uint256 weekStartTs = weekStartTs(block.timestamp);
-        uint256 endTs = weekStartTs + maxTime;
         uint256 currentTs = block.timestamp;
 
         escrow.merge(from, to);
@@ -61,7 +60,6 @@ contract TestMerge_Supply is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage
         uint256 to = escrow.createLock(Lock_2_Amount);
 
         uint256 weekStartTs = weekStartTs(block.timestamp);
-        uint256 endTs = weekStartTs + maxTime;
 
         uint256 end = weekStartTs + maxTime;
         int256 LOCK_1_MAX = biasFP(Lock_1_Amount, end - weekStartTs);
@@ -90,14 +88,12 @@ contract TestMerge_Supply is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage
 
         uint256 fromLockWeekStart = weekStartTs(block.timestamp);
         uint256 fromLockEnd = fromLockWeekStart + maxTime;
-        uint256 fromLockCurrentTime = block.timestamp;
 
         vm.warp(block.timestamp + checkpointInterval);
         uint256 to = escrow.createLock(Lock_2_Amount);
 
         uint256 toLockWeekStart = weekStartTs(block.timestamp);
         uint256 toLockEnd = toLockWeekStart + maxTime;
-        uint256 toLockCurrentTime = block.timestamp;
 
         // we merge after both are mature.
         vm.warp(toLockEnd + 1 hours);

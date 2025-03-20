@@ -31,7 +31,6 @@ contract TestSplit_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage
         vm.warp(block.timestamp + checkpointInterval);
 
         escrow.split(tokenId, value);
-        uint256 currentTs = block.timestamp;
 
         int256 slope1 = slopeFP(Lock_1_Amount - value);
         int256 slope2 = slopeFP(value);
@@ -83,8 +82,6 @@ contract TestSplit_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage
         vm.warp(endTs + 1 hours);
 
         escrow.split(tokenId, value);
-
-        uint256 currentTs = block.timestamp;
 
         // 2
         uint256 mainTokenIdEpoch = curve.tokenPointLatestIndex(tokenId);

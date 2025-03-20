@@ -520,11 +520,11 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
         // 5. last global point must have slope 0 and bias as sum of both token's maxed out values.
         // 6. Since `to`'s end is greater than `from`'s end, and we make `from` to become 0, `to`'s slope change must also include `to`'s slope.
         uint256 from = escrow.createLock(Lock_1_Amount);
-        (uint256 fromLockWeekStart, uint256 fromLockEnd, uint256 fromLockCurrentTime) = getTimes();
+        (uint256 fromLockWeekStart, uint256 fromLockEnd, ) = getTimes();
 
         vm.warp(block.timestamp + checkpointInterval);
         uint256 to = escrow.createLock(Lock_2_Amount);
-        (uint256 toLockWeekStart, uint256 toLockEnd, uint256 toLockCurrentTime) = getTimes();
+        (uint256 toLockWeekStart, uint256 toLockEnd, ) = getTimes();
 
         // we merge after both are mature.
         vm.warp(toLockEnd + 1 hours);

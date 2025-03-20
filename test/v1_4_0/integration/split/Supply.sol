@@ -32,9 +32,6 @@ contract TestSplit_Supply is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage
         escrow.split(tokenId, value);
         uint256 currentTs = block.timestamp;
 
-        int256 slope1 = slopeFP(Lock_1_Amount - value);
-        int256 slope2 = slopeFP(value);
-
         // 1.
         assertTotalSupply(
             currentTs,

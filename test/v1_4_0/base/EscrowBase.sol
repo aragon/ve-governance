@@ -159,13 +159,10 @@ contract EscrowBase is
         int256 _slopeFP,
         uint256 _checkpointTs,
         uint256 _writtenTs
-    ) internal {
+    ) internal view {
         uint256 tokenLatestIndex = curve.tokenPointLatestIndex(_tokenId);
         assertEq(tokenLatestIndex, _expectedLatestIndex);
-        TokenPoint memory tokenP = curve.tokenPointHistory(
-            _tokenId, 
-            tokenLatestIndex
-        );
+        TokenPoint memory tokenP = curve.tokenPointHistory(_tokenId, tokenLatestIndex);
         assertEq(tokenP.coefficients[0], _biasFP);
         assertEq(tokenP.coefficients[1], _slopeFP);
         assertEq(tokenP.checkpointTs, _checkpointTs);
@@ -179,10 +176,10 @@ contract EscrowBase is
     // The default sender to contract calls ends up a test contract itself.
     // We add this receiver so tokens can be minted to test contract.
     function onERC721Received(
-        address operator,
-        address from,
-        uint256 tokenId,
-        bytes calldata data
+        address,
+        address,
+        uint256,
+        bytes calldata
     ) external pure returns (bytes4) {
         return IERC721Receiver.onERC721Received.selector;
     }
