@@ -172,6 +172,10 @@ contract EscrowBase is
         assertEq(tokenP.writtenTs, _writtenTs);
     }
 
+    function assertTotalSupply(uint256 _t, int256 _amountFP) internal view {
+        assertEq(curve.supplyAt(_t), uint256(_amountFP / 1e18));
+    }
+
     // The default sender to contract calls ends up a test contract itself.
     // We add this receiver so tokens can be minted to test contract.
     function onERC721Received(
