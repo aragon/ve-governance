@@ -317,6 +317,7 @@ contract VotingEscrowV1_4_0 is
 
         if (!isApprovedOrOwner(sender, _from)) revert NotApprovedOrOwner();
         if (!isApprovedOrOwner(sender, _to)) revert NotApprovedOrOwner();
+        
         if (_from == _to) revert SameNFT();
 
         LockedBalance memory oldLockedFrom = _locked[_from];

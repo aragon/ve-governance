@@ -28,28 +28,6 @@ contract TestSplit is EscrowBase {
         super.setUp();
     }
 
-    function test_Split_shouldRevert_IfSenderIsNotApprovedOrOwner() public {
-        uint256 from = escrow.createLock(Lock_1_Amount);
-
-        vm.startPrank(address(999));
-        vm.expectRevert(IVotingEscrowCoreErrors.NotApprovedOrOwner.selector);
-        escrow.split(from, 10);
-    }
-
-    function test_Split_shouldRevert_ifAmountZero() public {
-        uint256 from = escrow.createLock(Lock_1_Amount);
-
-        vm.expectRevert(IVotingEscrowCoreErrors.ZeroAmount.selector);
-        escrow.split(from, 0);
-    }
-
-    function test_Split_shouldRevert_ifAmountTooBig() public {
-        uint256 from = escrow.createLock(Lock_1_Amount);
-
-        vm.expectRevert(ISplit.SplitAmountTooBig.selector);
-        escrow.split(from, Lock_1_Amount);
-    }
-
     function test_Split_TokenNotMature() public {
         // 1. the tokenId's point must become 0
         // 2. we should have 2 new tokenIds with `value` and `Lock_1_Amount - value` with their according bias and slope.

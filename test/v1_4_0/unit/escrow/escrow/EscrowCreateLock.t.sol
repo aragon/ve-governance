@@ -72,7 +72,7 @@ contract TestCreateLock is EscrowBase, IEscrowCurveTokenStorage {
         token.mint(_depositor, _value);
 
         // start of current week
-        uint256 startTime = expTime(_time);
+        uint256 startTime = weekStartTs(_time);
 
         vm.startPrank(_depositor);
         {
@@ -157,7 +157,7 @@ contract TestCreateLock is EscrowBase, IEscrowCurveTokenStorage {
         token.mint(matt.addr, matt.value);
         token.mint(shane.addr, shane.value);
 
-        uint startTime = expTime(block.timestamp);
+        uint startTime = weekStartTs(block.timestamp);
 
         // create the locks
         {
@@ -291,7 +291,7 @@ contract TestCreateLock is EscrowBase, IEscrowCurveTokenStorage {
         uint256 depositTime = 1;
         vm.warp(depositTime);
 
-        uint256 startTime = expTime(depositTime);
+        uint256 startTime = weekStartTs(depositTime);
 
         // try with regular user
         address _who = address(0x1);

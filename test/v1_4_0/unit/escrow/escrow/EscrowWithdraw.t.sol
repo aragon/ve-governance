@@ -158,7 +158,7 @@ contract TestWithdraw is EscrowBase, IEscrowCurveTokenStorage, IGaugeVote, ITick
         TokenPoint memory up = curve.tokenPointHistory(tokenId, 2);
         assertEq(up.bias, 0);
         assertEq(up.writtenTs, block.timestamp);
-        assertEq(up.checkpointTs, expTime(startTime));
+        assertEq(up.checkpointTs, weekStartTs(startTime));
         assertEq(up.coefficients[0], 0);
         assertEq(up.coefficients[1], 0);
 

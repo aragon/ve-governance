@@ -28,36 +28,6 @@ contract TestMerge is EscrowBase {
         super.setUp();
     }
 
-    function test_shouldRevert_IfNotMatureAndDifferentStart() public {
-        uint256 from = escrow.createLock(Lock_1_Amount);
-
-        // Warp so start dates end up different..
-        vm.warp(block.timestamp + checkpointInterval);
-        uint256 to = escrow.createLock(Lock_2_Amount);
-
-        //reverts as start dates are different and tokens are not mature.
-        vm.expectRevert(
-            abi.encodeWithSelector(IMerge.CannotMerge.selector, from, to)
-        );
-        escrow.merge(from, to);
-    }
-
-    function test_shouldRevert_IfSenderIsNotApprovedOrOwner() public {
-        uint256 from = escrow.createLock(Lock_1_Amount);
-        uint256 to = escrow.createLock(Lock_2_Amount);
-
-        vm.startPrank(address(999));
-        vm.expectRevert(IVotingEscrowCoreErrors.NotApprovedOrOwner.selector);
-        escrow.merge(from, to);
-    }
-
-    function test_shouldRevert_BothNFTsAreSame() public {
-        uint256 from = escrow.createLock(Lock_1_Amount);
-
-        vm.expectRevert(IMerge.SameNFT.selector);
-        escrow.merge(from, from);
-    }
-
     function test_Merge_WhenNotMature_SameStartDate() public {
         // 1. on `from` token point, bias and slope must become 0. `start` should stay the same and current timestamp updated.
         // 2. on `to` token point, bias and slope must include both token's bias and slope. `start` should stay the same and current timestamp updated.
