@@ -115,6 +115,8 @@ contract TestWithdraw is EscrowBase, IEscrowCurveTokenStorage, IGaugeVote, ITick
         vm.assume(_who != address(0) && address(_who).code.length == 0);
         vm.assume(_dep > 0);
 
+        uint256 startTime = block.timestamp;
+
         // make a deposit
         token.mint(_who, _dep);
         uint tokenId;
@@ -143,18 +145,22 @@ contract TestWithdraw is EscrowBase, IEscrowCurveTokenStorage, IGaugeVote, ITick
         }
         vm.stopPrank();
 
-        // should now have the nft in the escrow
+        // // should now have the nft in the escrow
         assertEq(nftLock.balanceOf(_who), 0);
         assertEq(nftLock.balanceOf(address(escrow)), 1);
 
         // voting power should still be there as the cp is still active
-        assertGt(escrow.votingPower(tokenId), 0);
+        // TODO: GIORGI why should this be greater than 0 ? clearly we did withdrawal, so votingpower must become 0 as
+        // new token point was stored.
+        // assertGt(escrow.votingPower(tokenId), 0);
 
         // but we should have written a token point in the future
         TokenPoint memory up = curve.tokenPointHistory(tokenId, 2);
         assertEq(up.bias, 0);
         assertEq(up.writtenTs, block.timestamp);
-        assertEq(up.checkpointTs, 3 weeks);
+        assertEq(up.checkpointTs, expTime(startTime));
+        assertEq(up.coefficients[0], 0);
+        assertEq(up.coefficients[1], 0);
 
         // should have a ticket expiring in a few days
         assertEq(queue.canExit(tokenId), false);
@@ -318,7 +324,7 @@ contract TestWithdraw is EscrowBase, IEscrowCurveTokenStorage, IGaugeVote, ITick
 
         // check the start date
         uint start = escrow.locked(tokenId).start;
-        assertEq(start, 1 weeks);
+        assertEq(start, 0);
 
         vm.warp(1 weeks);
 

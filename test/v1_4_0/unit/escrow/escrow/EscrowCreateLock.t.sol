@@ -19,10 +19,6 @@ contract TestCreateLock is EscrowBase, IEscrowCurveTokenStorage {
         // token.mint(address(this), 1_000_000_000 ether);
     }
 
-    function _expTime(uint256 _time) internal pure returns (uint256) {
-        return uint(_time) + 1 weeks - (_time % 1 weeks);
-    }
-
     function testCannotCreateLockWithZeroValue() public {
         vm.expectRevert(ZeroAmount.selector);
         escrow.createLock(0);
@@ -64,6 +60,7 @@ contract TestCreateLock is EscrowBase, IEscrowCurveTokenStorage {
     function testFuzz_createLock(uint128 _value, address _depositor, uint32 _time) public {
         vm.assume(_value > 0);
         vm.assume(_depositor != address(0) && address(_depositor).code.length == 0);
+        vm.assume(_time > 0);
 
         // set the min deposit to _value
         escrow.setMinDeposit(_value);
@@ -74,14 +71,14 @@ contract TestCreateLock is EscrowBase, IEscrowCurveTokenStorage {
         vm.warp(_time);
         token.mint(_depositor, _value);
 
-        // start of next week
-        uint256 expectedTime = _expTime(_time);
+        // start of current week
+        uint256 startTime = expTime(_time);
 
         vm.startPrank(_depositor);
         {
             token.approve(address(escrow), _value);
             vm.expectEmit(true, true, true, true);
-            emit Deposit(_depositor, 1, expectedTime, _value, _value);
+            emit Deposit(_depositor, 1, startTime, _value, _value);
             escrow.createLock(_value);
         }
         vm.stopPrank();
@@ -99,15 +96,12 @@ contract TestCreateLock is EscrowBase, IEscrowCurveTokenStorage {
 
         // check the various getters
         {
-            // warp to the start date
-            vm.warp(expectedTime);
+            uint256 vp = bias(_value, block.timestamp - startTime);
 
-            // voting power will be the same as the deposit
-            // as we have no cooldown
-            assertEq(escrow.votingPower(tokenId), _value, "value incorrect for the tokenid");
+            assertEq(escrow.votingPower(tokenId), vp, "value incorrect for the tokenid");
             assertEq(
                 escrow.votingPowerForAccount(_depositor),
-                _value,
+                vp,
                 "value incorrect for account"
             );
         }
@@ -130,14 +124,16 @@ contract TestCreateLock is EscrowBase, IEscrowCurveTokenStorage {
         {
             LockedBalance memory lock = escrow.locked(tokenId);
             assertEq(lock.amount, _value);
-            assertEq(lock.start, expectedTime);
+            assertEq(lock.start, startTime);
         }
         // Check the checkpoint was created
         {
             uint256 epoch = curve.tokenPointIntervals(tokenId);
             TokenPoint memory checkpoint = curve.tokenPointHistory(tokenId, epoch);
-            assertEq(checkpoint.bias, _value);
-            assertEq(checkpoint.checkpointTs, expectedTime);
+
+            assertEq(checkpoint.coefficients[0], biasFP(_value, block.timestamp - startTime));
+            assertEq(checkpoint.coefficients[1], slopeFP(_value));
+            assertEq(checkpoint.checkpointTs, startTime);
         }
     }
 
@@ -161,7 +157,7 @@ contract TestCreateLock is EscrowBase, IEscrowCurveTokenStorage {
         token.mint(matt.addr, matt.value);
         token.mint(shane.addr, shane.value);
 
-        uint expTime = _expTime(block.timestamp);
+        uint startTime = expTime(block.timestamp);
 
         // create the locks
         {
@@ -169,7 +165,7 @@ contract TestCreateLock is EscrowBase, IEscrowCurveTokenStorage {
             {
                 token.approve(address(escrow), matt.value);
                 vm.expectEmit(true, true, true, true);
-                emit Deposit(matt.addr, 1, expTime, matt.value, matt.value);
+                emit Deposit(matt.addr, 1, startTime, matt.value, matt.value);
                 escrow.createLock(matt.value);
             }
             vm.stopPrank();
@@ -178,7 +174,7 @@ contract TestCreateLock is EscrowBase, IEscrowCurveTokenStorage {
             {
                 token.approve(address(escrow), shane.value);
                 vm.expectEmit(true, true, true, true);
-                emit Deposit(shane.addr, 2, expTime, shane.value, total);
+                emit Deposit(shane.addr, 2, startTime, shane.value, total);
                 escrow.createLock(shane.value);
             }
             vm.stopPrank();
@@ -203,7 +199,7 @@ contract TestCreateLock is EscrowBase, IEscrowCurveTokenStorage {
             {
                 LockedBalance memory lock = escrow.locked(tokenId);
                 assertEq(lock.amount, user.value);
-                assertEq(lock.start, expTime);
+                assertEq(lock.start, startTime);
             }
         }
 
@@ -266,22 +262,24 @@ contract TestCreateLock is EscrowBase, IEscrowCurveTokenStorage {
         vm.stopPrank();
 
         // our expected behaviour:
-        // shane's lock should snap to the nearest deposit date (+1 second)
+        // shane's lock should snap to the current week's start
         assertEq(
             escrow.locked(1).start,
-            expectedNextDeposit,
+            0,
             "shane's lock should snap to the upcoming deposit date"
         );
-        // matt  is an edge case, they should also snap to the next deposit date (+1 week)
+        // Matt made a deposit exactly at the week's start date
         assertEq(
             escrow.locked(2).start,
-            expectedNextDeposit + clock.checkpointInterval(),
+            expectedNextDeposit,
             "matt's lock should snap to the next deposit date"
         );
-        // phil should snap to the next deposit date (+1 week)
+        
+        // even though phil made a deposit after the week already started,
+        // it still should snap to the week's start.
         assertEq(
             escrow.locked(3).start,
-            expectedNextDeposit + clock.checkpointInterval(),
+            expectedNextDeposit,
             "phil's lock should snap to the next deposit date"
         );
     }
@@ -289,7 +287,11 @@ contract TestCreateLock is EscrowBase, IEscrowCurveTokenStorage {
     function testFuzz_createLockFor(uint128 _value) public {
         vm.assume(_value > 0);
         escrow.setMinDeposit(_value);
-        vm.warp(1);
+
+        uint256 depositTime = 1;
+        vm.warp(depositTime);
+
+        uint256 startTime = expTime(depositTime);
 
         // try with regular user
         address _who = address(0x1);
@@ -298,7 +300,7 @@ contract TestCreateLock is EscrowBase, IEscrowCurveTokenStorage {
         token.approve(address(escrow), _value);
 
         vm.expectEmit(true, true, true, true);
-        emit Deposit(_who, 1, 1 weeks, _value, _value);
+        emit Deposit(_who, 1, startTime, _value, _value);
         escrow.createLockFor(_value, _who);
 
         // try with a contract
@@ -308,7 +310,7 @@ contract TestCreateLock is EscrowBase, IEscrowCurveTokenStorage {
         token.approve(address(escrow), _value);
 
         vm.expectEmit(true, true, true, true);
-        emit Deposit(_contract, 2, 1 weeks, _value, 2 * uint(_value));
+        emit Deposit(_contract, 2, startTime, _value, 2 * uint(_value));
         escrow.createLockFor(_value, _contract);
     }
 

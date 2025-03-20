@@ -27,6 +27,7 @@ import {PausableUpgradeable as Pausable} from "@openzeppelin/contracts-upgradeab
 import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
 
 import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
+import {console2 as console} from "forge-std/console2.sol";
 
 contract VotingEscrowV1_4_0 is
     IVotingEscrow,

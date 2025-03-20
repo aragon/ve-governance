@@ -18,9 +18,12 @@ import "@helpers/OSxHelpers.sol";
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
 import {Lock, Clock, VotingEscrow, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, IVotingEscrowEventsStorageErrorsEvents, IWhitelistErrors, IWhitelistEvents} from "../../../versions.sol";
+import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
+import {FixedPointBase} from "../../../base/FixedPointBase.sol";
 
 contract EscrowBase is
     Test,
+    FixedPointBase,
     IVotingEscrowEventsStorageErrorsEvents,
     IWhitelistErrors,
     IWhitelistEvents
@@ -58,6 +61,8 @@ contract EscrowBase is
         escrow = _deployEscrow(address(token), address(dao), address(clock), 1);
         curve = _deployCurve(address(escrow), address(dao), 3 days, address(clock));
         nftLock = _deployLock(address(escrow), name, symbol, address(dao));
+
+        super.initialize(curve.maxTime(), clock.checkpointInterval());
 
         // to be added as proxies
         voter = _deployVoter(address(dao), address(escrow), false, address(clock));
