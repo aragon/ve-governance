@@ -12,7 +12,7 @@ import {ProxyLib} from "@libs/ProxyLib.sol";
 
 import {Clock, IClock, Lock, VotingEscrow, LinearIncreasingEscrow, IVotingEscrowIncreasing, IEscrowCurveIncreasing, IVotingEscrowIncreasing, IVotingEscrowCoreErrors, IMerge, ISplit, ILockedBalanceIncreasing, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage} from "../../../versions.sol";
 
-contract TestEscrowSplit is EscrowBase, IEscrowCurveTokenStorage {
+contract TestEscrowSplit is EscrowBase {
     function setUp() public override {
         super.setUp();
     }

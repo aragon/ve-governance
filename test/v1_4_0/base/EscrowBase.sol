@@ -19,7 +19,7 @@ import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Recei
 import "@helpers/OSxHelpers.sol";
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
-import {Lock, Clock, VotingEscrow, LinearIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, IVotingEscrowEventsStorageErrorsEvents, IWhitelistErrors, IWhitelistEvents} from "../versions.sol";
+import {Lock, Clock, VotingEscrow, LinearIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, IVotingEscrowEventsStorageErrorsEvents, IWhitelistErrors, IWhitelistEvents, IEscrowCurveTokenStorage} from "../versions.sol";
 import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 import {FixedPointBase} from "./FixedPointBase.sol";
 
@@ -27,6 +27,7 @@ contract EscrowBase is
     Test,
     FixedPointBase,
     IVotingEscrowEventsStorageErrorsEvents,
+    IEscrowCurveTokenStorage,
     IWhitelistErrors,
     IWhitelistEvents
 {
@@ -141,6 +142,34 @@ contract EscrowBase is
         Lock_1_ts = block.timestamp;
         Lock_1_start = (block.timestamp / checkpointInterval) / checkpointInterval;
         _;
+    }
+
+    function slopeChanges(uint16 _seasonIndex, uint256 _end) internal view returns (int256 slope) {
+        return curve.slopeChanges(_seasonIndex, _end);
+    }
+
+    function slopeChanges(uint256 _end) internal view returns (int256 slope) {
+        return slopeChanges(0, _end);
+    }
+
+    function assertTokenPoint(
+        uint256 _tokenId,
+        uint256 _expectedLatestIndex,
+        int256 _biasFP,
+        int256 _slopeFP,
+        uint256 _checkpointTs,
+        uint256 _writtenTs
+    ) internal {
+        uint256 tokenLatestIndex = curve.tokenPointLatestIndex(_tokenId);
+        assertEq(tokenLatestIndex, _expectedLatestIndex);
+        TokenPoint memory tokenP = curve.tokenPointHistory(
+            _tokenId, 
+            tokenLatestIndex
+        );
+        assertEq(tokenP.coefficients[0], _biasFP);
+        assertEq(tokenP.coefficients[1], _slopeFP);
+        assertEq(tokenP.checkpointTs, _checkpointTs);
+        assertEq(tokenP.writtenTs, _writtenTs);
     }
 
     // The default sender to contract calls ends up a test contract itself.
