@@ -2,7 +2,7 @@
 
 == Description
 
-Aragon's ve-governance system is a Aragon’s ve-governance system is a *tokenomics-first governance framework* designed for improved resource allocation by onchain organizations.. It enables DAOs to *align user incentives with the protocol*, *reward long-term participants*, and *build an active ecosystem* using staking, dynamic voting power, emissions, and bribes.
+Aragon’s ve-governance system is a *tokenomics-first governance framework* designed for improved resource allocation by onchain organizations.. It enables DAOs to *align user incentives with the protocol*, *reward long-term participants*, and *build an active ecosystem* using staking, dynamic voting power, emissions, and bribes.
 
 Previously, DAOs looking to implement VE mechanics needed to fork complex DeFi protocols, which can be *difficult to customize* and *risky to modify* without a rock-solid grasp of the complex, onchain mechanics. With Aragon VE, we provide:
 
