@@ -2,14 +2,15 @@
 
 == Description
 
-Aragon's ve-governance system is a *tokenomics-first governance framework* designed for onchain organizations. It enables DAOs to *align user incentives with the protocol*, *reward long-term participants*, and *build an active ecosystem* using staking, dynamic voting power, emissions, and bribes.
+Aragon's ve-governance system is a Aragon’s ve-governance system is a *tokenomics-first governance framework* designed for improved resource allocation by onchain organizations.. It enables DAOs to *align user incentives with the protocol*, *reward long-term participants*, and *build an active ecosystem* using staking, dynamic voting power, emissions, and bribes.
 
 Previously, DAOs looking to implement VE mechanics needed to fork complex DeFi protocols, which can be *difficult to customize* and *risky to modify* without a rock-solid grasp of the complex, onchain mechanics. With Aragon VE, we provide:
 
 - *Customizable Contracts* – Tailor escrow, voting, and reward mechanisms to your DAO.
 - *Deployment Support* – Our team has hands-on experience from projects like link:https://gov.mode.network[Mode] and link:https://vote.puffer.fi[Puffer].
-- *UI Kit* – A ready-to-use governance UI that can be easily tweaked for a new organization.
+- *UI Kit* – A ready-to-use governance UI that can be easily tweaked for a new organization. For an example see the link:https://github.com/aragon/aragonette-mode[Mode Governance UI].
 - *Process Integrations* – We have ready-to-go integrations with service providers to ease the operational burden of setting up and managing incentives.
+  - In particular, we have ready-made integrations to support both *bribes* and *offchain incentive distribution*.  
 
 If you're interested in building a VE governance system for your organization, you can:
 
@@ -27,7 +28,7 @@ Vote-Escrow (VE) governance is a *proven model* for aligning user incentives in 
 1. *Users lock tokens* in an escrow contract.
 2. *They receive veTokens*, which represent their voting power.
 3. *Voting power scales with lock duration* – longer locks mean *higher governance weight*.
-4. *Votes influence protocol incentives*, typically directing emissions toward specific pools or initiatives.
+4. *Votes influence resource allocation* across the protocol, typically directing incentive emissions towards specific pools or initiatives.
 
 To dive deeper into VE mechanics, check out these resources:
 
@@ -47,7 +48,7 @@ Vote-escrow systems share a set of common mechanics, which can be *customized* b
 - *🔒 Locking & Escrow* – Users deposit an ERC20 token in an escrow contract to mint veTokens (can be veNFT or veERC20).
 - *📊 Voting Power & Time* – Voting power is a function of the lock duration (longer locks often mean more influence).
 - *⏳ Epochs & Voting* – Governance decisions are made in fixed *voting cycles (epochs)*.
-- *📈 Gauges & Incentives* – veToken holders vote on "gauges," which direct *emissions, rewards, or protocol incentives*.
+- *📈 Gauges & Incentives* – veToken holders vote on "gauges," which *direct emissions, incentives or protocol revenue*.
 - *🚪 Exit Queue (Optional)* – DAOs can define cooldown periods, minimum lock times, and exit fees for unstaking.
 
 ---
