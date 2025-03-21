@@ -10,9 +10,9 @@ import {MockERC20} from "@mocks/MockERC20.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
-import {Clock, IClock, Lock, VotingEscrow, LinearIncreasingEscrow, IVotingEscrowIncreasing, IEscrowCurveIncreasing, IVotingEscrowIncreasing, IVotingEscrowCoreErrors, IMerge, ISplit, ILockedBalanceIncreasing, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage} from "../../../versions.sol";
+import {Clock, IClock, Lock, VotingEscrow, LinearIncreasingEscrow, IVotingEscrowIncreasing, IEscrowCurveIncreasing, IVotingEscrowIncreasing, IVotingEscrowCoreErrors, IMerge, ISplit, ILockedBalanceIncreasing, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage, ISplitEventsAndErrors} from "../../../versions.sol";
 
-contract TestEscrowSplit is EscrowBase {
+contract TestEscrowSplit is EscrowBase, ISplitEventsAndErrors {
     function setUp() public override {
         super.setUp();
 
@@ -37,7 +37,7 @@ contract TestEscrowSplit is EscrowBase {
     function test_shouldRevert_ifAmountTooBig() public {
         uint256 from = escrow.createLock(Lock_1_Amount);
 
-        vm.expectRevert(ISplit.SplitAmountTooBig.selector);
+        vm.expectRevert(SplitAmountTooBig.selector);
         escrow.split(from, Lock_1_Amount);
     }
 
@@ -70,7 +70,7 @@ contract TestEscrowSplit is EscrowBase {
 
         uint256 from = escrow.createLock(Lock_1_Amount);
 
-        // warp so even though the start should give different week, 
+        // warp so even though the start should give different week,
         // the new tokens stills should use original token's start.
         vm.warp(block.timestamp + checkpointInterval + 1 hours);
         escrow.split(from, splitVal);
@@ -85,15 +85,18 @@ contract TestEscrowSplit is EscrowBase {
         assertEq(token2.start, originalTokenStartTs);
     }
 
-    // TODO: GIORGI the below doesn't work (Merged not found or visible)
-    // function test_SplitEventIsEmitted() public {
-    //     uint256 splitVal = 20;
-
-    //     uint256 from = escrow.createLock(Lock_1_Amount);
-
-    //     escrow.split(from, splitVal);
-
-    //     vm.expectEmit();
-    //     emit ISplit.Split(from, from + 1, from + 2, address(this), Lock_1_Amount - splitVal, splitVal);
-    // }
+    function test_SplitEventIsEmitted() public {
+        uint256 splitVal = 20;
+        uint256 from = escrow.createLock(Lock_1_Amount);
+        vm.expectEmit();
+        emit Split(
+            from,
+            from + 1,
+            from + 2,
+            address(this),
+            uint208(Lock_1_Amount - splitVal),
+            uint208(splitVal)
+        );
+        escrow.split(from, splitVal);
+    }
 }

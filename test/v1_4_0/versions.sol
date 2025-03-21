@@ -15,7 +15,7 @@ import {ISimpleGaugeVoterSetupParams} from "@setup/SimpleGaugeVoterSetup_v1_4_0.
 import {IEscrowCurveGlobalStorage, IEscrowCurveIncreasingV1_4_0 as IEscrowCurveIncreasing, IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage} from "@curve/IEscrowCurveIncreasing_v1_4_0.sol";
 import {IExitQueue, ITicket, IExitQueueErrorsAndEvents} from "@queue/IExitQueue.sol";
 import {ILock, IWhitelistErrors, IWhitelistEvents} from "@lock/ILock.sol";
-import {IMerge, ISplit, IVotingEscrowIncreasing, IWithdrawalQueueErrors, ILockedBalanceIncreasing, IVotingEscrowEventsStorageErrorsEvents, IVotingEscrowCoreErrors} from "@escrow/IVotingEscrowIncreasing_v1_4_0.sol";
+import {IMerge, ISplit, IVotingEscrowIncreasing, IWithdrawalQueueErrors, ILockedBalanceIncreasing, IVotingEscrowEventsStorageErrorsEvents, IVotingEscrowCoreErrors, IMergeEventsAndErrors, ISplitEventsAndErrors} from "@escrow/IVotingEscrowIncreasing_v1_4_0.sol";
 import {IGaugeVote, ISimpleGaugeVoterStorageEventsErrors} from "@voting/ISimpleGaugeVoter.sol";
 
 // other

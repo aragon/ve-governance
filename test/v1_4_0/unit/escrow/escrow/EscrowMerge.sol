@@ -10,9 +10,9 @@ import {MockERC20} from "@mocks/MockERC20.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
-import {Clock, IClock, Lock, VotingEscrow, LinearIncreasingEscrow, IVotingEscrowIncreasing, IEscrowCurveIncreasing, IVotingEscrowIncreasing, IVotingEscrowCoreErrors, IMerge, ISplit, ILockedBalanceIncreasing, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage} from "../../../versions.sol";
+import {Clock, IClock, Lock, VotingEscrow, LinearIncreasingEscrow, IVotingEscrowIncreasing, IEscrowCurveIncreasing, IVotingEscrowIncreasing, IVotingEscrowCoreErrors, IMerge, IMergeEventsAndErrors, ISplit, ILockedBalanceIncreasing, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage} from "../../../versions.sol";
 
-contract TestEscrowMerge is IEscrowCurveTokenStorage, EscrowBase {
+contract TestEscrowMerge is IEscrowCurveTokenStorage, EscrowBase, IMergeEventsAndErrors {
     function setUp() public override {
         super.setUp();
 
@@ -41,7 +41,7 @@ contract TestEscrowMerge is IEscrowCurveTokenStorage, EscrowBase {
         assertEq(canMerge(startForFrom, startForTo), false);
 
         //reverts as start dates are different and tokens are not mature.
-        vm.expectRevert(abi.encodeWithSelector(IMerge.CannotMerge.selector, from, to));
+        vm.expectRevert(abi.encodeWithSelector(CannotMerge.selector, from, to));
 
         escrow.merge(from, to);
     }
@@ -58,7 +58,7 @@ contract TestEscrowMerge is IEscrowCurveTokenStorage, EscrowBase {
     function test_shouldRevert_BothNFTsAreSame() public {
         uint256 from = escrow.createLock(Lock_1_Amount);
 
-        vm.expectRevert(IMerge.SameNFT.selector);
+        vm.expectRevert(SameNFT.selector);
         escrow.merge(from, from);
     }
 
@@ -125,23 +125,20 @@ contract TestEscrowMerge is IEscrowCurveTokenStorage, EscrowBase {
         assertEq(escrow.totalLocked(), total);
     }
 
-    // TODO: GIORGI the below doesn't work (Merged not found or visible)
-    // function test_MergedEventIsEmitted() public {
-    //     uint256 from = escrow.createLock(Lock_1_Amount);
-    //     uint256 to = escrow.createLock(Lock_2_Amount);
+    function test_MergedEventIsEmitted() public {
+        uint256 from = escrow.createLock(Lock_1_Amount);
+        uint256 to = escrow.createLock(Lock_2_Amount);
+        vm.warp(block.timestamp + maxTime);
+        vm.expectEmit();
 
-    //     vm.warp(block.timestamp + maxTime);
-
-    //     escrow.merge(from, to);
-
-    //     vm.expectEmit();
-    //     emit IMerge.Merged(
-    //         address(this),
-    //         from,
-    //         to,
-    //         Lock_1_Amount,
-    //         Lock_2_Amount,
-    //         Lock_1_Amount + Lock_2_Amount
-    //     );
-    // }
+        emit Merged(
+            address(this),
+            from,
+            to,
+            uint208(Lock_1_Amount),
+            uint208(Lock_2_Amount),
+            uint208(Lock_1_Amount + Lock_2_Amount)
+        );
+        escrow.merge(from, to);
+    }
 }
