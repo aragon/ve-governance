@@ -27,12 +27,4 @@ contract FixedPointBase  {
     function weekStartTs(uint256 _time) internal view returns (uint256) {
         return (_time / checkpointInterval) * checkpointInterval;
     }
-
-    // function assertTotalSupply(uint256 _t, int256 _amountFP) internal view {
-    //     assertEq(curve.supplyAt(_t), uint256(_amountFP / 1e18));
-    // }
-
-    // function assertVotingPower(uint256 _tokenId, uint256 _t, int256 _amountFP) internal view {
-    //     assertEq(curve.votingPowerAt(_tokenId, _t), uint256(_amountFP / 1e18));
-    // }
 }
