@@ -1,6 +1,6 @@
 pragma solidity ^0.8.17;
 
-import {EscrowBase} from "./EscrowBase.sol";
+import {EscrowBase} from "../../../base/EscrowBase.sol";
 
 import {console2 as console} from "forge-std/console2.sol";
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
@@ -12,12 +12,13 @@ import {ProxyLib} from "@libs/ProxyLib.sol";
 
 import {Lock, Clock, VotingEscrow, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, IEscrowCurveIncreasing, IEscrowCurveTokenStorage} from "../../../versions.sol";
 
-contract TestCreateLock is EscrowBase, IEscrowCurveTokenStorage {
+contract TestCreateLock is IEscrowCurveTokenStorage, EscrowBase {
     function setUp() public override {
         super.setUp();
 
         // token.mint(address(this), 1_000_000_000 ether);
     }
+
 
     function testCannotCreateLockWithZeroValue() public {
         vm.expectRevert(ZeroAmount.selector);

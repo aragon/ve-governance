@@ -15,12 +15,15 @@ import {Clock, IClock, Lock, VotingEscrow, LinearIncreasingEscrow, IVotingEscrow
 contract TestSplit_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage, EscrowBase {
     function setUp() public override {
         super.setUp();
+
+        super.mintAndApproveEscrow();
     }
 
     function test_Split_TokenNotMature() public {
         // 1. the tokenId's point must become 0
         // 2. we should have 2 new tokenIds with `value` and `Lock_1_Amount - value` with their according bias and slope.
-        // 3. slope changes must still include the original token's slope at the same original end.
+        // 3. bias and slope on the latest global point must include the same slope and bias as it was originally before splitting.
+        // 4. slope changes must still include the original token's slope at the same original end.
         uint256 value = 20e18;
         uint256 tokenId = escrow.createLock(Lock_1_Amount);
         uint256 weekStartTs = weekStartTs(block.timestamp);
@@ -35,44 +38,40 @@ contract TestSplit_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage
         int256 slope1 = slopeFP(Lock_1_Amount - value);
         int256 slope2 = slopeFP(value);
 
+        uint256 elapsed = block.timestamp - weekStartTs;
+
         // 1
-        uint256 mainTokenIdEpoch = curve.tokenPointLatestIndex(tokenId);
-        assertEq(mainTokenIdEpoch, 2);
-
-        TokenPoint memory mainP = curve.tokenPointHistory(tokenId, mainTokenIdEpoch);
-
-        assertEq(mainP.coefficients[0], 0);
-        assertEq(mainP.coefficients[1], 0);
-        assertEq(mainP.checkpointTs, weekStartTs);
-        assertEq(mainP.writtenTs, block.timestamp);
+        assertTokenPoint(tokenId, 2, 0, 0, weekStartTs, block.timestamp);
 
         // 2
         assertTokenPoint(
-            2, // tokenId
-            1, // latestIndex
-            biasFP(Lock_1_Amount - value, block.timestamp - weekStartTs),
+            2,
+            1,
+            biasFP(Lock_1_Amount - value, elapsed),
             slope1,
             weekStartTs,
             block.timestamp
         );
 
-        assertTokenPoint(
-            3, // tokenId
-            1, // latestIndex
-            biasFP(value, block.timestamp - weekStartTs),
-            slope2,
-            weekStartTs,
+        assertTokenPoint(3, 1, biasFP(value, elapsed), slope2, weekStartTs, block.timestamp);
+
+        // 3
+        assertGlobalPoint(
+            5,
+            biasFP(Lock_1_Amount, elapsed),
+            slopeFP(Lock_1_Amount),
             block.timestamp
         );
 
-        // 3
+        // 4
         assertEq(slopeChanges(endTs), slope1 + slope2);
     }
 
     function test_Split_TokenAlreadyMature() public {
         // 1. the tokenId's point must become 0
         // 2. we should have 2 new tokenIds with `value` and `Lock_1_Amount - value` with their according bias and slope.
-        // 3. slope changes must still include the original token's slope at the same original end.
+        // 3. slope on the last global point must be 0 as it was stored after both tokens were mature. bias must be maxed out.
+        // 4. slope changes must still include the original token's slope at the same original end.
         uint256 value = 20e18;
         uint256 tokenId = escrow.createLock(Lock_1_Amount);
         uint256 weekStartTs = weekStartTs(block.timestamp);
@@ -83,37 +82,35 @@ contract TestSplit_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage
 
         escrow.split(tokenId, value);
 
-        // 2
-        uint256 mainTokenIdEpoch = curve.tokenPointLatestIndex(tokenId);
-        assertEq(mainTokenIdEpoch, 2);
+        // 1
+        assertTokenPoint(tokenId, 2, 0, 0, weekStartTs, block.timestamp);
 
-        TokenPoint memory mainP = curve.tokenPointHistory(tokenId, mainTokenIdEpoch);
-
-        assertEq(mainP.coefficients[0], 0);
-        assertEq(mainP.coefficients[1], 0);
-        assertEq(mainP.checkpointTs, weekStartTs);
-        assertEq(mainP.writtenTs, block.timestamp);
+        uint256 elapsed = endTs - weekStartTs;
 
         // 2
         assertTokenPoint(
-            2, // tokenId
-            1, // latestIndex
-            biasFP(Lock_1_Amount - value, endTs - weekStartTs),
+            2,
+            1,
+            biasFP(Lock_1_Amount - value, elapsed),
             slopeFP(Lock_1_Amount - value),
             weekStartTs,
             block.timestamp
         );
 
         assertTokenPoint(
-            3, // tokenId
-            1, // latestIndex
-            biasFP(value, endTs - weekStartTs),
+            3,
+            1,
+            biasFP(value, elapsed),
             slopeFP(value),
             weekStartTs,
             block.timestamp
         );
 
         // 3
+        uint256 lastIndex = (block.timestamp - Lock_1_start) / checkpointInterval + 4;
+        assertGlobalPoint(lastIndex, biasFP(Lock_1_Amount, elapsed), 0, block.timestamp);
+
+        // 4
         assertEq(slopeChanges(endTs), slopeFP(Lock_1_Amount));
     }
 }

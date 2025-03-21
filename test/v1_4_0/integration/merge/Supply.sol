@@ -15,6 +15,8 @@ import {Clock, IClock, Lock, VotingEscrow, LinearIncreasingEscrow, IVotingEscrow
 contract TestMerge_Supply is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage, EscrowBase {
     function setUp() public override {
         super.setUp();
+
+        super.mintAndApproveEscrow();
     }
 
     function test_Merge_WhenNotMature_SameStartDate() public {

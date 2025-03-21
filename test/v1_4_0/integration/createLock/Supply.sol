@@ -15,6 +15,8 @@ import {Clock, IClock, Lock, VotingEscrow, LinearIncreasingEscrow, IVotingEscrow
 contract TestCreateLock_Supply is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage, EscrowBase {
     function setUp() public override {
         super.setUp();
+
+        super.mintAndApproveEscrow();
     }
 
     function test_whenCreatingNewLock_no_existing_lock() public {
@@ -37,14 +39,17 @@ contract TestCreateLock_Supply is IEscrowCurveTokenStorage, IEscrowCurveGlobalSt
         assertTotalSupply(endTs + 10, biasFP(Lock_1_Amount, endTs - weekStartTs));
 
         // 4
-        // assertVotingPower(tokenId, currentTs, 0);
-        // assertEq(curve.isWarm(tokenId), false);
-        // vm.warp(currentTs + warmupPeriod);
-        // // assertVotingPower(tokenId, currentTs, 0);
-        // // assertEq(curve.isWarm(tokenId), false);
-        // vm.warp(currentTs + warmupPeriod + 3);
-        // assertEq(curve.isWarm(tokenId), true);
-        // assertVotingPower(tokenId, block.timestamp, biasFP(Lock_1_Amount, block.timestamp - weekStartTs));
+        assertEq(curve.isWarm(tokenId), false);
+        assertVotingPower(tokenId, 0);
+
+        vm.warp(weekStartTs + warmupPeriod);
+
+        assertEq(curve.isWarm(tokenId), false);
+        assertVotingPower(tokenId, 0);
+
+        vm.warp(weekStartTs + warmupPeriod + 1);
+        assertEq(curve.isWarm(tokenId), true);
+        assertVotingPower(tokenId, biasFP(Lock_1_Amount, block.timestamp - weekStartTs));
     }
 
     function test_whenCreatingNewLock_existingLock_at_same_timestamp() public givenExistingLock {
@@ -79,7 +84,7 @@ contract TestCreateLock_Supply is IEscrowCurveTokenStorage, IEscrowCurveGlobalSt
 
         uint256 weekStartTs = weekStartTs(block.timestamp);
         uint256 currentTs = block.timestamp;
-        
+
         int256 currentTotalBiasFP = biasFP(Lock_1_Amount, currentTs - Lock_1_start) +
             biasFP(Lock_2_Amount, currentTs - weekStartTs);
 

@@ -194,11 +194,11 @@ contract LinearIncreasingEscrow is
 
     /// @notice Returns whether the NFT is warm
     function isWarm(uint256 _tokenId) public view returns (bool) {
-        _isWarm(_tokenId, block.timestamp);
+        return _isWarm(_tokenId, block.timestamp);
     }
 
     function isWarm(uint256 _tokenId, uint48 _ts) public view returns (bool) {
-        _isWarm(_tokenId, _ts);
+        return _isWarm(_tokenId, _ts);
     }
 
     function _isWarm(uint256 _tokenId, uint256 _ts) public view returns (bool) {

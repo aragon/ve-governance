@@ -15,6 +15,8 @@ import {Clock, IClock, Lock, VotingEscrow, LinearIncreasingEscrow, IVotingEscrow
 contract TestEscrowSplit is EscrowBase {
     function setUp() public override {
         super.setUp();
+
+        super.mintAndApproveEscrow();
     }
 
     function test_shouldRevert_IfSenderIsNotApprovedOrOwner() public {

@@ -15,6 +15,8 @@ import {Clock, IClock, Lock, VotingEscrow, LinearIncreasingEscrow, IVotingEscrow
 contract TestEscrowMerge is IEscrowCurveTokenStorage, EscrowBase {
     function setUp() public override {
         super.setUp();
+
+        super.mintAndApproveEscrow();
     }
 
     function canMerge(uint256 _startForFrom, uint256 _startForTo) private view returns (bool) {

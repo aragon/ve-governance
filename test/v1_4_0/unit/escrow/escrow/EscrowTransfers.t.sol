@@ -1,6 +1,6 @@
 pragma solidity ^0.8.17;
 
-import {EscrowBase} from "./EscrowBase.sol";
+import {EscrowBase} from "../../../base/EscrowBase.sol";
 
 import {console2 as console} from "forge-std/console2.sol";
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
@@ -11,7 +11,7 @@ import {ProxyLib} from "@libs/ProxyLib.sol";
 
 import {Lock, Clock, VotingEscrow, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, IEscrowCurveTokenStorage} from "../../../versions.sol";
 
-contract TestEscrowTransfers is EscrowBase, IEscrowCurveTokenStorage {
+contract TestEscrowTransfers is IEscrowCurveTokenStorage, EscrowBase {
     uint deposit = 100e18;
     uint tokenId;
 
@@ -44,14 +44,5 @@ contract TestEscrowTransfers is EscrowBase, IEscrowCurveTokenStorage {
 
         assertEq(nftLock.balanceOf(address(123)), 1);
         assertEq(nftLock.balanceOf(address(this)), 0);
-    }
-
-    function onERC721Received(
-        address,
-        address,
-        uint256,
-        bytes calldata
-    ) external pure returns (bytes4) {
-        return this.onERC721Received.selector;
     }
 }
