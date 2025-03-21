@@ -57,36 +57,34 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
 
     // write a new checkpoint
     /*
-     * for the 1000 tokens (Python)  (extend to 1bn with more zeros)
 
+==== VP for 1000000000 ====
+0                              Voting Power: 1000000000000000013287555072 (1000000000)
+1 minute                       Voting Power: 1000066137566137554101600256 (1000066138)
+1 hour                         Voting Power: 1003968253968253973958754304 (1003968254)
+1 day                          Voting Power: 1095238095238095344274243584 (1095238095)
+WARMUP_PERIOD (3 days)         Voting Power: 1285714285714285731369713664 (1285714286)
+WARMUP_PERIOD + 1s             Voting Power: 1285715388007054777427951616 (1285715388)
+1 week                         Voting Power: 1666666666666666505560653824 (1666666667)
+1 period (2 weeks)             Voting Power: 2333333333333332997833752576 (2333333333)
+2 periods (2 * PERIOD)         Voting Power: 3666666666666666807013670912 (3666666667)
+3 periods (3 * PERIOD)         Voting Power: 4999999999999999791559868416 (5000000000)
+4 periods (4 * PERIOD)         Voting Power: 6333333333333332776106065920 (6333333333)
+PERIOD_END (6 * PERIOD)        Voting Power: 8999999999999999844710088704 (9000000000)
 
-0                              Voting Power: 1000000000000000013287555072
-1 minute                       Voting Power: 1000028935185185204573569024
-1 hour                         Voting Power: 1001736111111111215570485248
-1 day                          Voting Power: 1041666666666666806493577216
-WARMUP_PERIOD (3 days)         Voting Power: 1124999999999999980588761088
-WARMUP_PERIOD + 1s             Voting Power: 1125000482253086386699632640
-1 week                         Voting Power: 1291666666666666878534942720
-1 period (2 weeks)             Voting Power: 1583333333333333468904423424
-2 periods (2 * PERIOD)         Voting Power: 2166666666666666924521291776
-3 periods (3 * PERIOD)         Voting Power: 2749999999999999830382346240
-4 periods (4 * PERIOD)         Voting Power: 3333333333333333560877121536
-PERIOD_END (12 * PERIOD)       Voting Power: 8000000000000000106300440576
-     
-
-0                              Voting Power: 420690000000000000000
-1 minute                       Voting Power: 420702172743055572992
-1 hour                         Voting Power: 421420364583333330944
-1 day                          Voting Power: 438218750000000008192
-WARMUP_PERIOD (3 days)         Voting Power: 473276250000000024576
-WARMUP_PERIOD + 1s             Voting Power: 473276452879050866688
-1 week                         Voting Power: 543391250000000057344
-1 period (2 weeks)             Voting Power: 666092500000000049152
-2 periods (2 * PERIOD)         Voting Power: 911495000000000163840
-3 periods (3 * PERIOD)         Voting Power: 1156897500000000016384
-4 periods (4 * PERIOD)         Voting Power: 1402300000000000131072
-PERIOD_END (12 * PERIOD)       Voting Power: 3365520000000000000000
-
+==== Changing amount to 420.69 ====
+0                              Voting Power: 420690000000000000000 (421)
+1 minute                       Voting Power: 420717823412698349568 (421)
+1 hour                         Voting Power: 422359404761904775168 (422)
+1 day                          Voting Power: 460755714285714341888 (461)
+WARMUP_PERIOD (3 days)         Voting Power: 540887142857142829056 (541)
+WARMUP_PERIOD + 1s             Voting Power: 540887606580687798272 (541)
+1 week                         Voting Power: 701149999999999934464 (701)
+1 period (2 weeks)             Voting Power: 981609999999999934464 (982)
+2 periods (2 * PERIOD)         Voting Power: 1542529999999999934464 (1543)
+3 periods (3 * PERIOD)         Voting Power: 2103449999999999934464 (2103)
+4 periods (4 * PERIOD)         Voting Power: 2664369999999999672320 (2664)
+PERIOD_END (6 * PERIOD)        Voting Power: 3786210000000000196608 (3786)
 */
     function testWritesCheckpoint() public {
         uint tokenIdFirst = 1;
@@ -138,18 +136,18 @@ PERIOD_END (12 * PERIOD)       Voting Power: 3365520000000000000000
         vm.warp(start + clock.epochDuration());
         assertEq(
             curve.votingPowerAt(tokenIdFirst, block.timestamp),
-            666092499999616779456,
+            981609999999778324416,
             "Balance incorrect after p1"
         );
 
         assertEq(
             curve.votingPowerAt(tokenIdSecond, block.timestamp),
-            1583333333332422400000000000,
+            2333333333332806400000000000,
             "Balance incorrect after p1 II"
         );
 
-        uint256 expectedMaxI = 3365519999995401353472;
-        uint256 expectedMaxII = 7999999999989068800000000000;
+        uint256 expectedMaxI = 3786209999998669946496;
+        uint256 expectedMaxII = 8999999999996838400000000000;
 
         // warp to the final period
         // TECHNICALLY, this should round to a whole max
