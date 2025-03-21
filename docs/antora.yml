@@ -1,6 +1,6 @@
 name: ve-governance
 title: "@aragon/ve-governance"
-version: 1.0
+version: "1.0.0"
 prerelease: false
 nav:
   - modules/ROOT/nav.adoc

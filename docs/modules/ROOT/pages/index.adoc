@@ -2,12 +2,12 @@
 
 == Description
 
-Aragon’s ve-governance system is a *tokenomics-first governance framework* designed for improved resource allocation by onchain organizations. It enables DAOs to *align user incentives with the protocol*, *reward long-term participants*, and *build an active ecosystem* using staking, dynamic voting power, emissions, and bribes.
+Aragon’s ve-governance system is a *tokenomics-first governance framework* designed to improve resource allocation in onchain organizations. It enables DAOs to *align user incentives with the protocol*, *reward long-term participants*, and *build an active ecosystem* using staking, dynamic voting power, emissions, and bribes.
 
 Previously, DAOs looking to implement VE mechanics needed to fork complex DeFi protocols, which can be *difficult to customize* and *risky to modify* without a rock-solid grasp of the complex, onchain mechanics. With Aragon VE, we provide:
 
-- *Customizable Contracts* – Tailor escrow, voting, and reward mechanisms to your DAO.
-- *Deployment Support* – Our team has hands-on experience from projects like link:https://gov.mode.network[Mode] and link:https://vote.puffer.fi[Puffer].
+- *Customizable Contracts* – Tailored escrow, voting, and reward mechanisms to your DAO.
+- *Deployment Support* – Our team has hands-on experience from major projects like link:https://gov.mode.network[Mode] and link:https://vote.puffer.fi[Puffer], and are able to support in deployment and rollout of your VE system.
 - *UI Kit* – A ready-to-use governance UI that can be easily tweaked for a new organization. For an example see the link:https://github.com/aragon/aragonette-mode[Mode Governance UI].
 - *Process Integrations* – We have ready-to-go integrations to ease the operational burden of setting up and managing incentives.
   - For example, we support both *bribes* and *offchain incentive distribution* via service partners.  
@@ -48,7 +48,7 @@ Vote-escrow systems share a set of common mechanics, which can be *customized* b
 - *🔒 Locking & Escrow* – Users deposit an ERC20 token in an escrow contract to mint veTokens (can be veNFT or veERC20).
 - *📊 Voting Power & Time* – Voting power is a function of the lock duration (longer locks often mean more influence).
 - *⏳ Epochs & Voting* – Governance decisions are made in fixed *voting cycles (epochs)*.
-- *📈 Gauges & Incentives* – veToken holders vote on "gauges," which *direct emissions, incentives or protocol revenue*.
+- *📈 Gauges & Incentives* – veToken holders vote on "gauges", which *direct emissions, incentives or protocol revenue*.
 - *🚪 Exit Queue (Optional)* – DAOs can define cooldown periods, minimum lock times, and exit fees for unstaking.
 
 ---
@@ -57,14 +57,14 @@ Vote-escrow systems share a set of common mechanics, which can be *customized* b
 
 Unlike traditional ve implementations, Aragon’s system is:
 
-✅ *Modular & Customizable* – Each component (escrow, voting, rewards) is separate and configurable.  
-✅ *Designed for Progressive Decentralization* – DAOs can start with a multisig and evolve governance over time.  
-✅ *Production-Ready* – Used in *Mode* and *Puffer* (link:https://gov.mode.network[Mode Governance], link:https://vote.puffer.fi[Puffer Voting]).  
-✅ *Comes with a UI & Integrations* – Ready-to-use frontends and integrations for bribes & emissions.
+- ✅ *Modular & Customizable* – Each component (escrow, voting, rewards) is separate and configurable.  
+- ✅ *Designed for Progressive Decentralization* – DAOs can start with a simple multisig ownership model and decentralize governance over time.  
+- ✅ *Production-Ready* – Used in major DAOs such as *Mode* and *Puffer* (link:https://gov.mode.network[Mode Governance], link:https://vote.puffer.fi[Puffer Voting]).  
+- ✅ *Out the box support for tooling* – Ready-to-use frontends and integrations for features like bribes & emissions.
 
 === Governance Core
 
-- *Multisig Governance* – The DAO can start with a multisig and transition to full onchain governance.
+- *Multisig Governance* – The DAO can start with a multisig and transition to full onchain governance when ready.
 - *Aragon DAO Contract* – Flexible permission management, *supporting both token-based and multisig models*.
 - *Factory Contract* – Stores contract references for streamlined deployments.
 
