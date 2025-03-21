@@ -33,6 +33,14 @@ contract DelegationMapper is
         uint256 balance;
     }
 
+    struct DelegationHistory {
+        uint256 timestamp;
+        address delegatee;
+    }
+
+    mapping(uint256 => DelegationHistory[]) public delegationHistories;
+
+    // tokenId => history
     mapping(uint256 => DelegationInfo) public delegations;
     mapping(address => Checkpoint[]) public delegateCheckpoints;
 
@@ -94,6 +102,28 @@ contract DelegationMapper is
 
         // Add new power
         _updateDelegateBalance(sender, _add, newVotingPower);
+    }
+
+    function pullAt(uint256 _tokenId, address _dst, uint48 _at) public nonRentrant {
+        // fetch delegation history using binary search
+	(address delegate, uint48 ts) = getPriorDelegateHistory(_tokenId, _at)
+	require(_dst == delegate, "not delegated at the time");
+	require(ts <= _at, "seems unlikely");
+
+
+	if (ts != _at) {
+	
+	// get the votes for the token id
+        uint256 votesPrev =  IVotingEscrow(escrow).votingPowerAt(_tokenId, ts);
+        uint256 votesCurr =  IVotingEscrow(escrow).votingPowerAt(_tokenId, _at);
+
+	uint dif = votesCurr - votesPrev;
+
+	// then add at _at
+	_updateDelegateBalanceAt(delegate, _add, dif, _tokenId, _at);
+	}
+	
+
     }
 
     // Called by the escrow when the transfer of the token occurs..
@@ -174,7 +204,7 @@ contract DelegationMapper is
         if (length == 0 || checkpoints[0].timestamp > _t) {
             return 0;
         }
-
+a
         uint256 low = 0;
         uint256 high = length - 1;
 
@@ -190,6 +220,58 @@ contract DelegationMapper is
         return checkpoints[low].balance;
     }
 
+    function getPriorDelegateHistory(
+        uint256 _tokenId,
+        uint256 _t
+    ) internal view returns (address, timestamp) {
+        DelegationHistory[] storage checkpoints = delegationHistories[_tokenId];
+        uint256 length = checkpoints.length;
+        if (length == 0 || checkpoints[0].timestamp > _t) {
+            return 0;
+        }
+        uint256 low = 0;
+        uint256 high = length - 1;
+
+        while (low < high) {
+            uint256 mid = (low + high + 1) / 2;
+            if (checkpoints[mid].timestamp <= _t) {
+                low = mid;
+            } else {
+                high = mid - 1;
+            }
+        }
+        return checkpoints[low];
+    }
+
+function _updateDelegateBalanceAt(
+  address _delegate,
+  function(uint256, uint256) view returns (uint256) _op,
+  uint256 _delta,
+  uint256 _at
+) internal {
+  uint256 idx = 0;
+  bool isExact = false;
+
+  uint256 length = delegateCheckpoints[_delegate].length;
+  if (length != 0) {
+    // do a binary search to fetch the index
+    // isExact is 
+    (idx, isExact) = getPriorDelegateIndex(_delegate, _at);
+  }
+
+  // is there is not a match, insert a record at idx + 1 
+  if (!isExact) {
+    // if at the .length, must be a push
+  }
+
+  // get the most recent value
+  uint bal = delegateCheckpoints[_delegate][idx].balance;
+
+  // diff the balance
+  _op(bal, _delta);
+}
+
+
     function _add(uint256 a, uint256 b) private pure returns (uint256) {
         return a + b;
     }
@@ -198,3 +280,4 @@ contract DelegationMapper is
         return a - b;
     }
 }
+
