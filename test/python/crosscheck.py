@@ -42,7 +42,10 @@ time_points = [
     (f"2 periods (2 * PERIOD)", 2 * PERIOD_LENGTH),
     (f"3 periods (3 * PERIOD)", 3 * PERIOD_LENGTH),
     (f"4 periods (4 * PERIOD)", 4 * PERIOD_LENGTH),
-    (f"PERIOD_END ({MAX_PERIODS} * PERIOD)", MAX_PERIODS * PERIOD_LENGTH),
+    (
+        f"END @ {MAX_PERIODS * PERIOD_LENGTH // WEEK} weeks ({MAX_PERIODS} * PERIOD)",
+        MAX_PERIODS * PERIOD_LENGTH,
+    ),
 ]
 
 # Evaluate and print results
