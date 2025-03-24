@@ -9,7 +9,9 @@ ALTERNATIVE_AMOUNT = 420.69  # alternative amount to deposit
 PERIOD_LENGTH = 2 * WEEK  # example period length in seconds (1 week)
 WARMUP_PERIOD = 3 * DAY  # warmup period in days
 MAX_PERIODS = 6  # maximum periods
-MAX_MULTIPLIER = 8  # maximum multiplier
+MAX_MULTIPLIER = (
+    7  # maximum multiplier (1 less than the max value given that we start at 1)
+)
 
 QUADRATIC_COEFFICIENT = 0
 LINEAR_COEFFICIENT = MAX_MULTIPLIER / (MAX_PERIODS * PERIOD_LENGTH)

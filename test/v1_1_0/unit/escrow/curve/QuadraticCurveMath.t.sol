@@ -135,18 +135,18 @@ PERIOD_END (6 * PERIOD)        Voting Power: 3786210000000000196608 (3786)
         vm.warp(start + clock.epochDuration());
         assertEq(
             curve.votingPowerAt(tokenIdFirst, block.timestamp),
-            981609999999778324416,
+            911494999999742425536,
             "Balance incorrect after p1"
         );
 
         assertEq(
             curve.votingPowerAt(tokenIdSecond, block.timestamp),
-            2333333333332806400000000000,
+            2166666666666054400000000000,
             "Balance incorrect after p1 II"
         );
 
-        uint256 expectedMaxI = 3786209999998669946496;
-        uint256 expectedMaxII = 8999999999996838400000000000;
+        uint256 expectedMaxI = 3365519999998454553216;
+        uint256 expectedMaxII = 7999999999996326400000000000;
 
         // warp to the final period
         // TECHNICALLY, this should round to a whole max

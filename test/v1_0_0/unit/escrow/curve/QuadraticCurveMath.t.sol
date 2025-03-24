@@ -59,32 +59,33 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
     /*
 
 ==== VP for 1000000000 ====
-0                              Voting Power: 1000000000000000013287555072 (1000000000)
-1 minute                       Voting Power: 1000066137566137554101600256 (1000066138)
-1 hour                         Voting Power: 1003968253968253973958754304 (1003968254)
-1 day                          Voting Power: 1095238095238095344274243584 (1095238095)
-WARMUP_PERIOD (3 days)         Voting Power: 1285714285714285731369713664 (1285714286)
-WARMUP_PERIOD + 1s             Voting Power: 1285715388007054777427951616 (1285715388)
-1 week                         Voting Power: 1666666666666666505560653824 (1666666667)
-1 period (2 weeks)             Voting Power: 2333333333333332997833752576 (2333333333)
-2 periods (2 * PERIOD)         Voting Power: 3666666666666666807013670912 (3666666667)
-3 periods (3 * PERIOD)         Voting Power: 4999999999999999791559868416 (5000000000)
-4 periods (4 * PERIOD)         Voting Power: 6333333333333332776106065920 (6333333333)
-PERIOD_END (6 * PERIOD)        Voting Power: 8999999999999999844710088704 (9000000000)
+0                              Voting Power: 1000000000000000013287555072 | 1000000000 | 1.00x
+1 minute                       Voting Power: 1000057870370370395859582976 | 1000057870 | 1.00x
+1 hour                         Voting Power: 1003472222222222280414461952 | 1003472222 | 1.00x
+1 day                          Voting Power: 1083333333333333324821692416 | 1083333333 | 1.08x
+WARMUP_PERIOD (3 days)         Voting Power: 1249999999999999947889967104 | 1250000000 | 1.25x
+WARMUP_PERIOD + 1s             Voting Power: 1250000964506172760111710208 | 1250000965 | 1.25x
+1 week                         Voting Power: 1583333333333333468904423424 | 1583333333 | 1.58x
+1 period (2 weeks)             Voting Power: 2166666666666666924521291776 | 2166666667 | 2.17x
+2 periods (2 * PERIOD)         Voting Power: 3333333333333333560877121536 | 3333333333 | 3.33x
+3 periods (3 * PERIOD)         Voting Power: 4499999999999999922355044352 | 4500000000 | 4.50x
+4 periods (4 * PERIOD)         Voting Power: 5666666666666667383344594944 | 5666666667 | 5.67x
+PERIOD_END (6 * PERIOD)        Voting Power: 8000000000000000106300440576 | 8000000000 | 8.00x
 
 ==== Changing amount to 420.69 ====
-0                              Voting Power: 420690000000000000000 (421)
-1 minute                       Voting Power: 420717823412698349568 (421)
-1 hour                         Voting Power: 422359404761904775168 (422)
-1 day                          Voting Power: 460755714285714341888 (461)
-WARMUP_PERIOD (3 days)         Voting Power: 540887142857142829056 (541)
-WARMUP_PERIOD + 1s             Voting Power: 540887606580687798272 (541)
-1 week                         Voting Power: 701149999999999934464 (701)
-1 period (2 weeks)             Voting Power: 981609999999999934464 (982)
-2 periods (2 * PERIOD)         Voting Power: 1542529999999999934464 (1543)
-3 periods (3 * PERIOD)         Voting Power: 2103449999999999934464 (2103)
-4 periods (4 * PERIOD)         Voting Power: 2664369999999999672320 (2664)
-PERIOD_END (6 * PERIOD)        Voting Power: 3786210000000000196608 (3786)
+0                              Voting Power: 420690000000000000000 | 421 | 1.00x
+1 minute                       Voting Power: 420714345486111145984 | 421 | 1.00x
+1 hour                         Voting Power: 422150729166666727424 | 422 | 1.00x
+1 day                          Voting Power: 455747499999999950848 | 456 | 1.08x
+WARMUP_PERIOD (3 days)         Voting Power: 525862499999999983616 | 526 | 1.25x
+WARMUP_PERIOD + 1s             Voting Power: 525862905758101798912 | 526 | 1.25x
+1 week                         Voting Power: 666092500000000049152 | 666 | 1.58x
+1 period (2 weeks)             Voting Power: 911495000000000163840 | 911 | 2.17x
+2 periods (2 * PERIOD)         Voting Power: 1402300000000000131072 | 1402 | 3.33x
+3 periods (3 * PERIOD)         Voting Power: 1893105000000000098304 | 1893 | 4.50x
+4 periods (4 * PERIOD)         Voting Power: 2383910000000000065536 | 2384 | 5.67x
+PERIOD_END (6 * PERIOD)        Voting Power: 3365520000000000000000 | 3366 | 8.00x
+
 */
     function testWritesCheckpoint() public {
         uint tokenIdFirst = 1;
@@ -136,18 +137,18 @@ PERIOD_END (6 * PERIOD)        Voting Power: 3786210000000000196608 (3786)
         vm.warp(start + clock.epochDuration());
         assertEq(
             curve.votingPowerAt(tokenIdFirst, block.timestamp),
-            981609999999778324416,
+            911494999999742425536,
             "Balance incorrect after p1"
         );
 
         assertEq(
             curve.votingPowerAt(tokenIdSecond, block.timestamp),
-            2333333333332806400000000000,
+            2166666666666054400000000000,
             "Balance incorrect after p1 II"
         );
 
-        uint256 expectedMaxI = 3786209999998669946496;
-        uint256 expectedMaxII = 8999999999996838400000000000;
+        uint256 expectedMaxI = 3365519999998454553216;
+        uint256 expectedMaxII = 7999999999996326400000000000;
 
         // warp to the final period
         // TECHNICALLY, this should round to a whole max

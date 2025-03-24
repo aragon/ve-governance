@@ -10,10 +10,9 @@ library CurveConstantLib {
     int256 internal constant SHARED_CONSTANT_COEFFICIENT = 1e18;
 
     /// @dev straight line so the curve is increasing only in the linear term
-    /// 8e18 / 12 weeks;
-    /// Rearrangement of 8 = x * 24_weeks + 1
-    int256 internal constant SHARED_LINEAR_COEFFICIENT = 8e18 / (int256(MAX_EPOCHS) * 2 weeks);
-    // int256 internal constant SHARED_LINEAR_COEFFICIENT = 482253086419;
+    /// 7e18 / 12 weeks;
+    /// Rearrangement of 8 = x * 12_weeks + 1
+    int256 internal constant SHARED_LINEAR_COEFFICIENT = 7e18 / (int256(MAX_EPOCHS) * 2 weeks);
 
     /// @dev this curve is linear
     int256 internal constant SHARED_QUADRATIC_COEFFICIENT = 0;
