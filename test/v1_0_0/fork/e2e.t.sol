@@ -9,7 +9,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
 import {UUPSUpgradeable as UUPS} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {VotingEscrow, Clock, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveTokenStorage, GaugesDaoFactory, GaugePluginSet, Deployment, DeployGauges, DeploymentParameters} from "../versions.sol";
+import {VotingEscrow, Clock, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveTokenStorage, GaugesDaoFactory, GaugePluginSet, Deployment, DeployGauges, DeploymentParameters, IExitQueueErrorsAndEvents} from "../versions.sol";
 
 interface IERC20Mint is IERC20 {
     function mint(address _to, uint256 _amount) external;
@@ -43,9 +43,8 @@ contract MultisigReceiver is GhettoMultisig {
  * 4. A more robust suite for admininstration of the contracts
  * 5. Ability to connect to an existing deployment and test on the real network
  */
-contract TestE2E is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveTokenStorage {
+contract TestE2E is AragonTest, IGaugeVote, IEscrowCurveTokenStorage, IExitQueueErrorsAndEvents {
     error VotingInactive();
-    error OnlyEscrow();
     error GaugeDoesNotExist(address _pool);
     error NotApprovedOrOwner();
     error NoVotingPower();
@@ -873,7 +872,7 @@ contract TestE2E is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurve
             }
         }
 
-        // carol create a deposit mid vote and tries to vote - he should have no voting power
+        // carol create a deposit mid vote and tries to vote - she should have no voting power
         {
             vm.startPrank(carol);
             {
@@ -885,12 +884,12 @@ contract TestE2E is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurve
                 vm.expectRevert("ERC721: transfer to non ERC721Receiver implementer");
                 escrow.createLockFor(balanceCarol, address(badMultisig));
 
-                // he fixes it
+                // she fixes it
                 carolsMultisig = new MultisigReceiver();
 
                 escrow.createLockFor(balanceCarol, address(carolsMultisig));
 
-                // allow carol to vote on behalf of his msig
+                // allow carol to vote on behalf of her msig
                 carolsMultisig.approveCallerToSpendTokenWithID(address(lock), 4);
 
                 GaugeVote[] memory votes = new GaugeVote[](2);
@@ -988,7 +987,7 @@ contract TestE2E is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurve
         }
 
         // we wait till voting is over and they begin the exit - alice does anyhow
-        // we check he can't exit early and someone can't exit for him
+        // we check she can't exit early and someone can't exit for her
         {
             goToEpochStartPlus(8 weeks + 1 hours);
 
@@ -1234,6 +1233,15 @@ contract TestE2E is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurve
                 lock.approve(address(escrow), 5);
 
                 escrow.resetVotesAndBeginWithdrawal(3);
+
+                // cant withdraw this yet, must wait for min lock
+                bytes memory minLockErr = abi.encodeWithSelector(
+                    MinLockNotReached.selector,
+                    5,
+                    4 weeks,
+                    epochStartTime + 14 weeks
+                );
+                vm.expectRevert(minLockErr);
                 escrow.beginWithdrawal(5);
             }
             vm.stopPrank();
@@ -1245,7 +1253,15 @@ contract TestE2E is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurve
             }
             vm.stopPrank();
 
-            // fast forward like 5 weeks
+            goToEpochStartPlus(14 weeks);
+            // now alice can withdraw 5
+            vm.startPrank(alice);
+            {
+                escrow.beginWithdrawal(5);
+            }
+            vm.stopPrank();
+
+            // fast forward so we can exit
             goToEpochStartPlus(16 weeks);
 
             // alice exits
