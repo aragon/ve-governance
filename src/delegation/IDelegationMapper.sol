@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 interface IDelegationMapper {
     function delegate(uint256[] calldata _tokenIds, address _delegate) external;
 
-    function pull(uint256[] calldata _tokenIds) external;
+    function pull(uint256[] calldata _tokenIds, uint256 _timestamp) external;
 
     function moveDelegateVotes(address _from, address _to, uint256 _tokenId) external;
 
