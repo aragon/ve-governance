@@ -41,12 +41,14 @@ contract DelegationMapper is
 
     mapping(uint256 => DelegateCheckpoint[]) private delegationCheckpoints;
     mapping(address => BalanceCheckpoint[]) private balanceCheckpoints;
+    mapping(address => mapping(address => bool)) private pullAllowedList;
 
     error NotApprovedOrOwner();
     error CanNotDelegateeToAddressZero();
     error CanNotDelegateToSameAddress();
     error TokenNotDelegated(uint256 tokenId);
     error InvalidPullTimestamp();
+    error PullNotAllowed(address delegatee, address sender);
 
     /*///////////////////////////////////////////////////////////////
                             Initialization
@@ -129,6 +131,8 @@ contract DelegationMapper is
             _timestamp = block.timestamp;
         }
 
+        address sender = _msgSender();
+
         for (uint256 i = 0; i < _tokenIds.length; i++) {
             uint256 tokenId = _tokenIds[i];
 
@@ -136,6 +140,10 @@ contract DelegationMapper is
 
             if (currentDelegatee == address(0)) {
                 revert TokenNotDelegated(tokenId);
+            }
+
+            if (sender != currentDelegatee && !pullAllowedList[currentDelegatee][sender]) {
+                revert PullNotAllowed(currentDelegatee, sender);
             }
 
             _updateBalance(
@@ -166,6 +174,12 @@ contract DelegationMapper is
 
         _updateLatestBalance(currentDelegatee, getVP(_tokenId, ts), 0);
         _updateLatestDelegate(_tokenId, address(0));
+    }
+
+    function setAllowed(address _allowed, bool _val) public {
+        address sender = _msgSender();
+
+        pullAllowedList[sender][_allowed] = _val;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -272,9 +286,9 @@ contract DelegationMapper is
         }
 
         uint256 pos = _upperBinaryLookup(cps, _when);
-        
+
         BalanceCheckpoint storage lastCp = cps[length - 1];
-        
+
         // if `pos` is equal to the length of array or more, that means
         // no element was found with greater timestamp than our `_when`.
         // In this case, it's a normal push operation only without
