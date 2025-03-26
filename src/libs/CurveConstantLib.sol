@@ -4,8 +4,8 @@ pragma solidity ^0.8.0;
 /// @title CurveConstantLib
 /// @notice Precomputed coefficients for escrow curve
 /// Below are the shared coefficients for the linear and quadratic terms
-/// @dev This curve goes from 1x -> 9x voting power over a 12 week (~3m) period
-/// Epochs are still 2 weeks long
+/// @dev This curve goes from 1x -> 8x voting power over a 12 week (~3m) period
+/// Epochs are 2 weeks long
 library CurveConstantLib {
     int256 internal constant SHARED_CONSTANT_COEFFICIENT = 1e18;
 
