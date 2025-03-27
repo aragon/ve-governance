@@ -19,6 +19,7 @@ utils/=test/utils/
 @utils/=src/utils/
 @helpers/=test/helpers/
 @factory/=src/factory/
+@delegation/=src/delegation/
 @mocks/=test/mocks/
   
 @ensdomains/ens-contracts/=lib/ens-contracts/
