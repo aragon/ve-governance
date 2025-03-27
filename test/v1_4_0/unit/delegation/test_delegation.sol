@@ -63,7 +63,16 @@ contract DelegationTest is Test {
 
         // check delegation
 
-        // assertEq(escrow.delegates(address(this)), 1000);
+        uint dvp;
+        uint vp;
+
+        for (uint i = 0; i < 54; i++) {
+            dvp = delegator.votingPower(giorgi);
+            vp = escrow.votingPowerForAccount(jordan);
+
+            assertEq(dvp, vp);
+            vm.warp(block.timestamp + 2 weeks);
+        }
     }
 
     function _factoryDeploy() internal {

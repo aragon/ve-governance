@@ -404,6 +404,17 @@ contract DynamicDelegator is IGlobalPoint, ReentrancyGuard, DaoAuthorizable, UUP
 
         return uint256(bias / 1e18); // TODO: USE safe cast
     }
+
+    function votingPower(address _delegateAddress) public view returns (uint256) {
+        return _delegateBalanceAt(_delegateAddress, block.timestamp);
+    }
+
+    function votingPowerAt(
+        address _delegateAddress,
+        uint256 _timestamp
+    ) public view returns (uint256) {
+        return _delegateBalanceAt(_delegateAddress, _timestamp);
+    }
     /*//////////////////////////////////////////////////////////////
                               INITIALIZATION
     //////////////////////////////////////////////////////////////*/
