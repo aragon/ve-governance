@@ -9,10 +9,11 @@ import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {DelegationMapper} from "@delegation/DelegationMapper.sol";
 
 import {createTestDAO} from "@mocks/MockDAO.sol";
-import {Lock, Clock, VotingEscrow, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, IEscrowCurveTokenStorage, IGaugeVote} from "../../versions.sol";
+import {Lock, Clock, VotingEscrow, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, IEscrowCurveTokenStorage, IGaugeVote, IVotingEscrowIncreasing} from "../../versions.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
 import {console2 as console} from "forge-std/console2.sol";
+import {ILockedBalanceIncreasing} from "@escrow/IVotingEscrowIncreasing.sol";
 
 contract EscrowVotingPowerMock {
     struct Checkpoint {
@@ -22,7 +23,7 @@ contract EscrowVotingPowerMock {
 
     mapping(uint256 => Checkpoint[]) public tcps;
     mapping(uint256 => mapping(uint256 => uint256)) vps;
-
+    mapping(uint256 => ILockedBalanceIncreasing.LockedBalance) lockedBalances;
     bool isApproved = true;
     uint256 vp = 0;
 
@@ -34,8 +35,21 @@ contract EscrowVotingPowerMock {
         write(_tokenId, _vp, block.timestamp);
     }
 
+    function writeLock(uint256 _tokenId, uint256 _amount, uint256 _start) external {
+        lockedBalances[_tokenId] = ILockedBalanceIncreasing.LockedBalance(
+            uint208(_amount),
+            uint48(_start)
+        );
+    }
+
     function setApproved(bool _isApproved) public {
         isApproved = _isApproved;
+    }
+
+    function locked(
+        uint256 _tokenId
+    ) public view returns (ILockedBalanceIncreasing.LockedBalance memory) {
+        return lockedBalances[_tokenId];
     }
 
     function votingPowerAt(uint256 _tokenId, uint256 _ts) external view returns (uint256) {
@@ -85,13 +99,17 @@ contract Base is Test {
         dg = _deployDelegationMapper(address(dao), address(clock), address(escrow));
     }
 
-    function assertDelegate(uint256 _tokenId, uint256 _ts, address _delegatee) internal {
-        (address delegatee, ) = dg.getDelegate(_tokenId, _ts);
-        assertEq(delegatee, _delegatee);
-    }
+    // function assertDelegate(uint256 _tokenId, uint256 _ts, address _delegatee) internal {
+    //     (address delegatee, ) = dg.getDelegate(_tokenId, _ts);
+    //     assertEq(delegatee, _delegatee);
+    // }
 
     function _deployDAO() internal {
         dao = createTestDAO(deployer);
+    }
+
+    function weekStartTs(uint256 _ts) public view returns (uint256) {
+        return (_ts / 1 weeks) * 1 weeks;
     }
 
     function _deployClock(address _dao) internal returns (Clock) {

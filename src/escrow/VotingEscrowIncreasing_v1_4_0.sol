@@ -106,7 +106,7 @@ contract VotingEscrowV1_4_0 is
         _disableInitializers();
     }
 
-    // TODO: GIORGI add `address _delegationMapper` as a param. 
+    // TODO: GIORGI add `address _delegationMapper` as a param.
     // Currently, I didn't as compilation fails due to
     // 1.4.0 tests not expecting this argument.
     function initialize(
@@ -338,6 +338,15 @@ contract VotingEscrowV1_4_0 is
             revert CannotMerge(_from, _to);
         }
 
+        // Note that this function must be called before we
+        // empty `lockedFrom`'s amount to 0. `moveDelegateVotes` 
+        // relies that lock still contains the amount.
+        IDelegationMapper(delegationMapper).moveDelegateVotes(
+            IERC721EMB(lockNFT).ownerOf(_from),
+            IERC721EMB(lockNFT).ownerOf(_to),
+            _from
+        );
+
         // Update for `_from`.
         IERC721EMB(lockNFT).burn(_from);
         _locked[_from] = LockedBalance(0, 0);
@@ -351,7 +360,7 @@ contract VotingEscrowV1_4_0 is
 
         uint208 newLockedAmount = oldLockedFrom.amount + oldLockedTo.amount;
 
-        _locked[_to] = LockedBalance({start: oldLockedTo.start, amount: newLockedAmount});
+        _locked[_to] = LockedBalance(newLockedAmount, oldLockedTo.start);
 
         emit Merged(sender, _from, _to, oldLockedFrom.amount, oldLockedTo.amount, newLockedAmount);
     }
@@ -571,7 +580,6 @@ contract VotingEscrowV1_4_0 is
         IERC721EMB(lockNFT).transferFrom(address(this), _to, _tokenId);
         emit SweepNFT(_to, _tokenId);
     }
-
     
     function moveDelegateVotes(address _from, address _to, uint256 _tokenId) public {
         IDelegationMapper(delegationMapper).moveDelegateVotes(_from, _to, _tokenId);

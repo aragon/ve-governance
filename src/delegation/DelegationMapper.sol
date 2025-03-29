@@ -1,24 +1,26 @@
 /// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
+import {IVotesUpgradeable} from "@openzeppelin/contracts-upgradeable/governance/utils/IVotesUpgradeable.sol";
+import {SafeCastUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/math/SafeCastUpgradeable.sol";
+import {ReentrancyGuardUpgradeable as ReentrancyGuard} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {IVotingEscrowIncreasingV1_4_0 as IVotingEscrow} from "@escrow/IVotingEscrowIncreasing_v1_4_0.sol";
+import {VotingEscrowV1_4_0 as VotingEscrow} from "@escrow/VotingEscrowIncreasing_v1_4_0.sol";
 
-import {IClockUser} from "@clock/IClock.sol";
-import {IClockSeason} from "@clock/IClockSeason.sol";
+import {IClockUser, IClockV1_4_0 as IClock} from "@clock/IClock_v1_4_0.sol";
 
-import {ReentrancyGuardUpgradeable as ReentrancyGuard} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {PluginUUPSUpgradeable} from "@aragon/osx/core/plugin/PluginUUPSUpgradeable.sol";
-import {IVotes, IDelegationMapper} from "./IDelegationMapper.sol";
-import {MathUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
-import {SafeCastUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/math/SafeCastUpgradeable.sol";
+import {IDelegationMapper} from "./IDelegationMapper.sol";
 import {console2 as console} from "forge-std/console2.sol";
+import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 
 contract DelegationMapper is
     IClockUser,
     ReentrancyGuard,
     IDelegationMapper,
-    IVotes,
+    IVotesUpgradeable,
     PluginUUPSUpgradeable
 {
     using SafeCastUpgradeable for uint256;
@@ -29,26 +31,22 @@ contract DelegationMapper is
     /// @notice Clock contract for epoch duration
     address public clock;
 
-    struct DelegateCheckpoint {
-        address delegatee;
-        uint32 timestamp;
-    }
+    mapping(address => mapping(uint256 => int256)) internal slopeChanges;
+    mapping(address => mapping(uint256 => GlobalPoint)) internal pointHistory;
+    mapping(address => address) private delegatees_;
+    mapping(address => uint256) public latestPointIndex;
 
-    struct BalanceCheckpoint {
-        uint224 balance;
-        uint32 timestamp;
-    }
+    mapping(uint256 => bool) public tokenIsDelegated;
+    mapping(address => uint) public numberOfDelegatedTokens;
+    mapping(address => bool) public autoDelegationEnabled;
 
-    mapping(uint256 => DelegateCheckpoint[]) private delegationCheckpoints;
-    mapping(address => BalanceCheckpoint[]) private balanceCheckpoints;
-    mapping(address => mapping(address => bool)) private pullAllowedList;
+    int256 private sharedLinearCoefficient;
+    int256 private sharedConstantCoefficient;
+    uint256 private maxTime;
 
     error NotApprovedOrOwner();
-    error CanNotDelegateeToAddressZero();
-    error CanNotDelegateToSameAddress();
-    error TokenNotDelegated(uint256 tokenId);
-    error InvalidPullTimestamp();
-    error PullNotAllowed(address delegatee, address sender);
+    error InvalidTokenId();
+    error DelegationNotAllowed();
 
     /*///////////////////////////////////////////////////////////////
                             Initialization
@@ -63,306 +61,357 @@ contract DelegationMapper is
         __ReentrancyGuard_init();
         escrow = _escrow;
         clock = _clock;
+
+        maxTime = IClock(clock).epochDuration() * CurveConstantLib.MAX_EPOCHS;
     }
 
-    // Called by the delegator..
-    function delegate(uint256[] calldata _tokenIds, address _to) public {
-        if (_to == address(0)) {
-            revert CanNotDelegateeToAddressZero();
-        }
-
+    function setAutoDelegation(bool _enabled) external {
         address sender = _msgSender();
 
-        uint256 add = 0;
-        uint256 subtract = 0;
+        autoDelegationEnabled[sender] = _enabled;
+        emit AutoDelegationSet(sender, _enabled);
+    }
+
+    function delegate(address _delegatee) public {
+        address sender = _msgSender();
+
+        if (numberOfDelegatedTokens[sender] != 0) {
+            revert DelegationNotAllowed();
+        }
+
+        delegatees_[sender] = _delegatee;
+
+        address oldDelegatee = delegates(_delegatee);
+
+        if (autoDelegationEnabled[sender]) {
+            uint256[] memory tokenIds = VotingEscrow(escrow).ownedTokens(sender);
+            delegate(tokenIds);
+        }
+
+        emit DelegateChanged(sender, oldDelegatee, _delegatee);
+    }
+
+    function delegate(uint256[] memory _tokenIds) public {
+        address sender = _msgSender();
+
+        address delegatee = delegates(sender);
+
+        int256 totalBias;
+        int256 totalSlope;
 
         for (uint256 i = 0; i < _tokenIds.length; i++) {
             uint256 tokenId = _tokenIds[i];
 
-            // ensure the sender owns the `tokenId`.
             if (!IVotingEscrow(escrow).isApprovedOrOwner(sender, tokenId)) {
                 revert NotApprovedOrOwner();
             }
 
-            (address currentDelegatee, uint32 ts) = getDelegate(tokenId, block.timestamp);
+            IVotingEscrow.LockedBalance memory locked = IVotingEscrow(escrow).locked(tokenId);
 
-            // revert in case user tries to delegate to the same address as before.
-            if (currentDelegatee == _to) {
-                revert CanNotDelegateToSameAddress();
+            // you can only delegate once but you can delegate tokens one at a time
+            if (!tokenIsDelegated[tokenId]) {
+                (int256 bias, int256 slope) = _getBiasAndSlope(delegatee, locked, _positive);
+
+                totalBias += bias;
+                totalSlope += slope;
             }
-
-            uint256 newVotingPower = getVP(tokenId, block.timestamp);
-
-            add += newVotingPower;
-
-            // delegate changes, so reduce old delegatee's balance.
-            if (currentDelegatee != address(0)) {
-                _updateLatestBalance(currentDelegatee, getVP(tokenId, ts), 0);
-            }
-
-            _updateLatestDelegate(tokenId, _to);
         }
 
-        _updateLatestBalance(_to, subtract, add);
+        numberOfDelegatedTokens[sender] += _tokenIds.length;
+
+        _checkpoint(totalBias, totalSlope, delegatee);
     }
 
-    function undelegate(uint256[] calldata _tokenIds) public {
+    function undelegate(uint256[] memory _tokenIds) public {
         address sender = _msgSender();
+
+        address delegatee = delegates(sender);
+
+        int256 totalBias;
+        int256 totalSlope;
+
         for (uint256 i = 0; i < _tokenIds.length; i++) {
             uint256 tokenId = _tokenIds[i];
 
-            // ensure the sender owns the `tokenId`.
             if (!IVotingEscrow(escrow).isApprovedOrOwner(sender, tokenId)) {
                 revert NotApprovedOrOwner();
             }
 
-            (address currentDelegatee, uint32 ts) = getDelegate(tokenId, block.timestamp);
+            IVotingEscrow.LockedBalance memory locked = IVotingEscrow(escrow).locked(tokenId);
 
-            _updateLatestBalance(currentDelegatee, getVP(tokenId, ts), 0);
-            _updateLatestDelegate(tokenId, address(0));
+            if (tokenIsDelegated[tokenId]) {
+                (int256 bias, int256 slope) = _getBiasAndSlope(delegatee, locked, _negative);
+
+                totalBias += bias;
+                totalSlope += slope;
+            }
         }
+
+        numberOfDelegatedTokens[sender] -= _tokenIds.length;
+
+        _checkpoint(totalBias, totalSlope, delegatee);
     }
 
-    // Called by delegatee to re-pull the power and update its power.
-    function pull(uint256[] calldata _tokenIds, uint256 _timestamp) public {
-        if (_timestamp > block.timestamp) {
-            revert InvalidPullTimestamp();
-        } else if (_timestamp == 0) {
-            _timestamp = block.timestamp;
-        }
-
-        address sender = _msgSender();
-
-        for (uint256 i = 0; i < _tokenIds.length; i++) {
-            uint256 tokenId = _tokenIds[i];
-
-            (address currentDelegatee, uint32 ts) = getDelegate(tokenId, _timestamp);
-
-            if (currentDelegatee == address(0)) {
-                revert TokenNotDelegated(tokenId);
-            }
-
-            if (sender != currentDelegatee && !pullAllowedList[currentDelegatee][sender]) {
-                revert PullNotAllowed(currentDelegatee, sender);
-            }
-
-            _updateBalance(
-                currentDelegatee,
-                getVP(tokenId, ts), // oldVP
-                getVP(tokenId, _timestamp), // newVP
-                _timestamp
-            );
-        }
-    }
-
-    // Called by the escrow when the transfer of the token occurs..
-    function moveDelegateVotes(address /* _from */, address /* _to */, uint256 _tokenId) public {
+    function moveDelegateVotes(address _from, address _to, uint256 _tokenId) external {
         if (_msgSender() != escrow) {
             revert OnlyEscrow();
         }
 
-        (address currentDelegatee, uint256 ts) = getDelegate(_tokenId, block.timestamp);
+        address from = delegates(_from);
+        address to = delegates(_to);
 
-        // delegatee is not set, so skip.
-        if (currentDelegatee == address(0)) {
+        // `_tokenId` already has the same delegatee, so skip.
+        if (from == to) {
             return;
         }
 
-        // When the token transfer occurs, we must clear out delegatee data
-        // and not automatically re-delegate it as this must only be decided by
-        // the receiver by calling `delegate`.
+        IVotingEscrow.LockedBalance memory locked = IVotingEscrow(escrow).locked(_tokenId);
 
-        _updateLatestBalance(currentDelegatee, getVP(_tokenId, ts), 0);
-        _updateLatestDelegate(_tokenId, address(0));
-    }
+        if (from != address(0)) {
+            (int256 bias, int256 slope) = _getBiasAndSlope(from, locked, _negative);
+            _checkpoint(bias, slope, from);
+        }
 
-    function setAllowed(address _allowed, bool _val) public {
-        address sender = _msgSender();
-
-        pullAllowedList[sender][_allowed] = _val;
+        if (to != address(0)) {
+            (int256 bias, int256 slope) = _getBiasAndSlope(to, locked, _positive);
+            _checkpoint(bias, slope, to);
+        }
     }
 
     /*//////////////////////////////////////////////////////////////
-                        IVotes Function
+                        Checkpoint Functions
     //////////////////////////////////////////////////////////////*/
+
+    function checkpointTransition(address _delegatee, uint256 _transitionWeeks) external {
+        _checkpoint(0, 0, _delegatee, _transitionWeeks);
+    }
+
+    function _checkpoint(int256 _totalBias, int256 _totalSlope, address _delegatee) internal {
+        _checkpoint(_totalBias, _totalSlope, _delegatee, 255);
+    }
+
+    function _checkpoint(
+        int256 _totalBias,
+        int256 _totalSlope,
+        address _delegatee,
+        uint256 _transitionWeeks
+    ) internal {
+        GlobalPoint memory lastPoint = GlobalPoint({
+            bias: 0,
+            slope: 0,
+            writtenTs: uint48(block.timestamp)
+        });
+
+        uint256 latestPointIndex_ = latestPointIndex[_delegatee];
+        if (latestPointIndex_ > 0) {
+            lastPoint = pointHistory[_delegatee][latestPointIndex_];
+        }
+
+        // Get slope changes for the delegatee
+        mapping(uint256 => int256) storage slopeChanges_ = slopeChanges[_delegatee];
+
+        {
+            uint256 checkpointInterval = IClock(clock).checkpointInterval();
+
+            uint256 lastPointCheckpoint = lastPoint.writtenTs;
+            uint256 t_i = (lastPointCheckpoint / checkpointInterval) * checkpointInterval;
+
+            for (uint256 i = 0; i < _transitionWeeks; ++i) {
+                t_i += checkpointInterval;
+                int256 dSlope;
+
+                if (t_i > block.timestamp) {
+                    t_i = block.timestamp;
+                } else {
+                    dSlope = slopeChanges_[t_i];
+                }
+
+                lastPoint.bias += lastPoint.slope * int256(t_i - lastPointCheckpoint);
+                lastPoint.slope -= dSlope;
+
+                if (lastPoint.slope < 0) lastPoint.slope = 0;
+                if (lastPoint.bias < 0) lastPoint.bias = 0;
+
+                lastPointCheckpoint = t_i;
+                lastPoint.writtenTs = uint48(t_i);
+                latestPointIndex_ += 1;
+
+                if (t_i == block.timestamp) {
+                    break;
+                } else {
+                    pointHistory[_delegatee][latestPointIndex_] = lastPoint;
+                }
+            }
+        }
+
+        // totalBias and totalSlope can be negative, in which case
+        // it will subtract instead of adding.
+        lastPoint.bias += _totalBias;
+        lastPoint.slope += _totalSlope;
+
+        if (lastPoint.slope < 0) lastPoint.slope = 0;
+        if (lastPoint.bias < 0) lastPoint.bias = 0;
+
+        latestPointIndex[_delegatee] = latestPointIndex_;
+        pointHistory[_delegatee][latestPointIndex_] = lastPoint;
+    }
+
+     /*//////////////////////////////////////////////////////////////
+                      IVotes Function
+    //////////////////////////////////////////////////////////////*/
+    
     function getVotes(address _account) external view returns (uint256) {
-        return getDelegationBalance(_account, block.timestamp);
+        return _delegateBalanceAt(_account, block.timestamp);
     }
 
-    function getPastVotes(address _account, uint256 _timepoint) external view returns (uint256) {
-        return getDelegationBalance(_account, _timepoint);
+    function getPastVotes(address _account, uint256 _timestamp) external view returns (uint256) {
+        return _delegateBalanceAt(_account, _timestamp);
     }
 
-    function getPastTotalSupply(uint256 _timepoint) external view returns (uint256) {
-        return IVotingEscrow(escrow).totalVotingPowerAt(_timepoint);
+    function getPastTotalSupply(uint256 _timestamp) external view returns (uint256) {
+        return IVotingEscrow(escrow).totalVotingPowerAt(_timestamp);
+    }
+
+    function delegates(address _account) public view virtual returns (address) {
+        return delegatees_[_account];
+    }
+
+    function delegateBySig(
+        address _delegatee,
+        uint256 _nonce,
+        uint256 _expiry,
+        uint8 _v,
+        bytes32 _r,
+        bytes32 _s
+    ) public virtual {
+        revert DelegateBySigNotSupported();
     }
 
     /*//////////////////////////////////////////////////////////////
-                       Delegation Related Functions
+                      Binary Search Functions
     //////////////////////////////////////////////////////////////*/
-    function getDelegationBalance(
+
+    function getPastDelegatePointIndex(
         address _delegatee,
         uint256 _timestamp
-    ) public view returns (uint256) {
-        // Get the latest season's start before `_t`
-        (uint48 seasonStart, ) = IClockSeason(clock).seasonTsAt(uint48(_timestamp));
+    ) internal view returns (uint256) {
+        uint256 latestPointIndex_ = latestPointIndex[_delegatee];
+        if (latestPointIndex_ == 0) return 0;
 
-        BalanceCheckpoint[] storage cps = balanceCheckpoints[_delegatee];
+        mapping(uint256 => GlobalPoint) storage pointHistory_ = pointHistory[_delegatee];
 
-        uint256 pos = _upperBinaryLookup(cps, uint32(_timestamp));
+        // First check most recent balance
+        if (pointHistory_[latestPointIndex_].writtenTs <= _timestamp) return (latestPointIndex_);
 
-        if (pos == 0) return 0;
+        // Next check implicit zero balance
+        if (pointHistory_[1].writtenTs > _timestamp) return 0;
 
-        BalanceCheckpoint storage cp = cps[pos - 1];
-
-        if (seasonStart > cp.timestamp) return 0;
-
-        return cp.balance;
+        uint256 lower = 0;
+        uint256 upper = latestPointIndex_;
+        while (upper > lower) {
+            uint256 center = upper - (upper - lower) / 2; // ceil, avoiding overflow
+            GlobalPoint storage delegatePoint = pointHistory_[center];
+            if (delegatePoint.writtenTs == _timestamp) {
+                return center;
+            } else if (delegatePoint.writtenTs < _timestamp) {
+                lower = center;
+            } else {
+                upper = center - 1;
+            }
+        }
+        return lower;
     }
 
-    function getVP(uint256 _tokenId, uint256 _timestamp) public view returns (uint256) {
-        return IVotingEscrow(escrow).votingPowerAt(_tokenId, _timestamp);
-    }
-
-    function getDelegate(
-        uint256 _tokenId,
+    /// @notice Calculate total voting power at some point in the past
+    /// @param _timestamp Time to calculate the total voting power at
+    /// @return Total voting power at that time
+    function _delegateBalanceAt(
+        address _delegatee,
         uint256 _timestamp
-    ) public view returns (address, uint32) {
-        DelegateCheckpoint[] storage cps = delegationCheckpoints[_tokenId];
+    ) internal view returns (uint256) {
+        uint256 index = getPastDelegatePointIndex(_delegatee, _timestamp);
+        // epoch 0 is an empty point
+        if (index == 0) return 0;
+        GlobalPoint memory point = pointHistory[_delegatee][index];
 
-        if (cps.length == 0) {
-            return (address(0), 0);
+        int256 bias = point.bias;
+        int256 slope = point.slope;
+        uint256 ts = point.writtenTs;
+
+        mapping(uint256 => int256) storage slopeChanges_ = slopeChanges[_delegatee];
+
+        uint256 checkpointInterval = IClock(clock).checkpointInterval();
+
+        uint256 t_i = (ts / checkpointInterval) * checkpointInterval;
+
+        for (uint256 i = 0; i < 255; ++i) {
+            t_i += checkpointInterval;
+            int256 dSlope = 0;
+            if (t_i > _timestamp) {
+                t_i = _timestamp;
+            } else {
+                dSlope = slopeChanges_[t_i];
+            }
+            bias += slope * int256(t_i - ts);
+
+            if (t_i == _timestamp) {
+                break;
+            }
+            slope -= dSlope;
+            ts = t_i;
         }
 
-        DelegateCheckpoint memory cp;
+        if (bias < 0) bias = 0;
 
-        if (_timestamp == block.timestamp) {
-            cp = cps[cps.length - 1];
+        return uint256(bias / 1e18); // TODO: USE safe cast
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        Private Helper Functions
+    //////////////////////////////////////////////////////////////*/
+
+    /// @dev Note that this function also updates slopeChanges.
+    function _getBiasAndSlope(
+        address _delegatee,
+        IVotingEscrow.LockedBalance memory _locked,
+        function(int256) view returns (int256) op
+    ) private returns (int256, int256) {
+        uint256 elapsed = block.timestamp - _locked.start;
+        elapsed = elapsed > maxTime ? maxTime : elapsed;
+
+        int256 amount = uint256(_locked.amount).toInt256();
+
+        // TODO: Probably better if we could get this constants by calling the contract.
+        // The reasoning is delegationMapper might not be useful for some clients in the beginning,
+        // but might become useful later on. But when the time comes that we decide to deploy this for them,
+        // curveconstant coefficients might have changed and this could result in a problem.
+        // Clearly, this delegationMapper only expects `escrow` address in `initialize`, but those functions
+        // that return constant coefficients live inside curve. Passing `curve` address just for this reason
+        // is ideal ? even if we do so, we also have to make the functions public (see curve).
+
+        int256 slope = amount * CurveConstantLib.SHARED_LINEAR_COEFFICIENT;
+        int256 bias = slope *
+            int256(elapsed) +
+            amount *
+            CurveConstantLib.SHARED_CONSTANT_COEFFICIENT;
+
+        if (bias < 0) bias = 0;
+
+        if (elapsed < maxTime) {
+            slope = op(slope);
+            slopeChanges[_delegatee][_locked.start + maxTime] += op(slope);
         } else {
-            uint256 pos = _upperBinaryLookup(cps, _timestamp);
-            if (pos != 0) {
-                cp = cps[pos - 1];
-            }
+            slope = 0;
         }
 
-        return (cp.delegatee, cp.timestamp);
+        return (op(bias), slope);
     }
 
-    /*//////////////////////////////////////////////////////////////
-                        PRIVATE FUNCTIONS
-    //////////////////////////////////////////////////////////////*/
-
-    function _updateLatestDelegate(uint256 _tokenId, address _delegatee) private {
-        _updateDelegate(_tokenId, _delegatee, block.timestamp);
+    function _positive(int256 _value) private pure returns (int256) {
+        return _value;
     }
 
-    function _updateDelegate(uint256 _tokenId, address _delegatee, uint256 _when) private {
-        delegationCheckpoints[_tokenId].push(DelegateCheckpoint(_delegatee, uint32(_when)));
-    }
-
-    function _updateLatestBalance(
-        address _delegatee,
-        uint256 _subtractAmount,
-        uint256 _addAmount
-    ) private {
-        _updateBalance(_delegatee, _subtractAmount, _addAmount, block.timestamp);
-    }
-
-    /// @dev Note that if this function is called in the same tx multiple times,
-    ///      it only uses single slot and extra gas comes only from writing to "dirty slot".
-    function _updateBalance(
-        address _delegatee,
-        uint256 _subtractAmount,
-        uint256 _addAmount,
-        uint256 _when
-    ) private {
-        BalanceCheckpoint[] storage cps = balanceCheckpoints[_delegatee];
-        uint256 length = cps.length;
-
-        if (length == 0) {
-            cps.push(BalanceCheckpoint(_addAmount.toUint224(), uint32(_when)));
-
-            return;
-        }
-
-        uint256 pos = _upperBinaryLookup(cps, _when);
-
-        BalanceCheckpoint storage lastCp = cps[length - 1];
-
-        // if `pos` is equal to the length of array or more, that means
-        // no element was found with greater timestamp than our `_when`.
-        // In this case, it's a normal push operation only without
-        // the need to shift elements.
-        if (pos < length) {
-            // Shift an array to the right
-            for (uint256 i = length - 1; i > pos; i--) {
-                cps[i] = cps[i - 1];
-            }
-
-            // [15, 24, 24]
-
-            // move the last element to the new end.
-            cps.push(lastCp);
-
-            uint256 newBalance;
-
-            // If pos is 0, there's no previous element, so use only `addAmount`.
-            if (pos == 0) {
-                newBalance = _addAmount;
-            } else {
-                newBalance = uint256(cps[pos - 1].balance) - _subtractAmount + _addAmount;
-            }
-
-            // store the new checkpoint at the pos.
-            cps[pos] = BalanceCheckpoint(newBalance.toUint224(), uint32(_when));
-        } else {
-            uint224 balance = (uint256(lastCp.balance) - _subtractAmount + _addAmount).toUint224();
-            if (lastCp.timestamp == block.timestamp) {
-                lastCp.balance = balance;
-            } else {
-                cps.push(BalanceCheckpoint(balance, uint32(_when)));
-            }
-        }
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                        BINARY SEARCH HELPERS
-    //////////////////////////////////////////////////////////////*/
-    function _upperBinaryLookup(
-        BalanceCheckpoint[] storage _checkpoints,
-        uint256 _timestamp
-    ) private view returns (uint256) {
-        uint256 low = 0;
-        uint256 high = _checkpoints.length;
-
-        while (low < high) {
-            uint256 mid = MathUpgradeable.average(low, high);
-            if (_checkpoints[mid].timestamp > _timestamp) {
-                high = mid;
-            } else {
-                low = mid + 1;
-            }
-        }
-
-        return high;
-    }
-
-    function _upperBinaryLookup(
-        DelegateCheckpoint[] storage _checkpoints,
-        uint256 _timestamp
-    ) private view returns (uint256) {
-        uint256 low = 0;
-        uint256 high = _checkpoints.length;
-
-        while (low < high) {
-            uint256 mid = MathUpgradeable.average(low, high);
-            if (_checkpoints[mid].timestamp > _timestamp) {
-                high = mid;
-            } else {
-                low = mid + 1;
-            }
-        }
-
-        return high;
+    function _negative(int256 _value) private pure returns (int256) {
+        return -_value;
     }
 }
