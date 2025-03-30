@@ -15,6 +15,7 @@ import {PluginUUPSUpgradeable} from "@aragon/osx/core/plugin/PluginUUPSUpgradeab
 import {IDelegationMapper} from "./IDelegationMapper.sol";
 import {console2 as console} from "forge-std/console2.sol";
 import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
+import {SignedFixedPointMath} from "@libs/SignedFixedPointMathLib.sol";
 
 contract DelegationMapper is
     IClockUser,
@@ -182,19 +183,24 @@ contract DelegationMapper is
                         Checkpoint Functions
     //////////////////////////////////////////////////////////////*/
 
-    function checkpointTransition(address _delegatee, uint256 _transitionWeeks) external {
-        _checkpoint(0, 0, _delegatee, _transitionWeeks);
+    function checkpointTransition(address _delegatee, uint256 _transitionCount) external {
+        _checkpoint(0, 0, _delegatee, _transitionCount, 1);
+    }
+    
+    function checkpointTransition(uint256 _transitionCount, uint256 _intervalStep) external {
+         _checkpoint(0, 0, _msgSender(), _transitionCount, _intervalStep);
     }
 
     function _checkpoint(int256 _totalBias, int256 _totalSlope, address _delegatee) internal {
-        _checkpoint(_totalBias, _totalSlope, _delegatee, 255);
+        _checkpoint(_totalBias, _totalSlope, _delegatee, 255, 1);
     }
 
     function _checkpoint(
         int256 _totalBias,
         int256 _totalSlope,
         address _delegatee,
-        uint256 _transitionWeeks
+        uint256 _transitionCount,
+        uint256 _intervalStep
     ) internal {
         GlobalPoint memory lastPoint = GlobalPoint({
             bias: 0,
@@ -212,11 +218,11 @@ contract DelegationMapper is
 
         {
             uint256 checkpointInterval = IClock(clock).checkpointInterval();
-
             uint256 lastPointCheckpoint = lastPoint.writtenTs;
             uint256 t_i = (lastPointCheckpoint / checkpointInterval) * checkpointInterval;
+            checkpointInterval = _intervalStep * checkpointInterval;
 
-            for (uint256 i = 0; i < _transitionWeeks; ++i) {
+            for (uint256 i = 0; i < _transitionCount; ++i) {
                 t_i += checkpointInterval;
                 int256 dSlope;
 
@@ -277,12 +283,12 @@ contract DelegationMapper is
     }
 
     function delegateBySig(
-        address _delegatee,
-        uint256 _nonce,
-        uint256 _expiry,
-        uint8 _v,
-        bytes32 _r,
-        bytes32 _s
+        address,
+        uint256,
+        uint256,
+        uint8,
+        bytes32,
+        bytes32
     ) public virtual {
         revert DelegateBySigNotSupported();
     }
@@ -362,8 +368,8 @@ contract DelegationMapper is
         }
 
         if (bias < 0) bias = 0;
-
-        return uint256(bias / 1e18); // TODO: USE safe cast
+        
+        return uint256(SignedFixedPointMath.fromFP(bias));
     }
 
     /*//////////////////////////////////////////////////////////////
