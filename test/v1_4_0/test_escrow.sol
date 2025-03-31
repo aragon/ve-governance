@@ -2,7 +2,7 @@ pragma solidity ^0.8.17;
 
 import {console2 as console} from "forge-std/console2.sol";
 
-import {Clock, IClock, Lock, VotingEscrow, LinearIncreasingEscrow, IVotingEscrowIncreasing, IEscrowCurveIncreasing, IVotingEscrowIncreasing, IVotingEscrowCoreErrors, IMerge, ISplit, ILockedBalanceIncreasing, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage} from "./versions.sol";
+import {Clock, IClock, Lock, VotingEscrow, LinearIncreasingEscrow, IVotingEscrowIncreasing, IEscrowCurveIncreasing, IVotingEscrowIncreasing, IVotingEscrowCoreErrors, IMerge, IMergeEventsAndErrors, ISplit, ILockedBalanceIncreasing, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage, ISplitEventsAndErrors} from "./versions.sol";
 
 import {Test} from "forge-std/Test.sol";
 import {SafeCastUpgradeable as SafeCast} from "@openzeppelin/contracts-upgradeable/utils/math/SafeCastUpgradeable.sol";
@@ -13,7 +13,13 @@ import {ProxyLib} from "@libs/ProxyLib.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
-contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage {
+contract TestEscrow is
+    Test,
+    IEscrowCurveGlobalStorage,
+    IEscrowCurveTokenStorage,
+    IMergeEventsAndErrors,
+    ISplitEventsAndErrors
+{
     using ProxyLib for address;
     using SafeCast for uint256;
 
@@ -68,11 +74,11 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
         return biasFP(_amount, _duration) / 1e18;
     }
 
-    function slopeChanges(uint16 _seasonIndex, uint256 _end) private view returns(int256 slope) {
+    function slopeChanges(uint16 _seasonIndex, uint256 _end) private view returns (int256 slope) {
         return curve.slopeChanges(_seasonIndex, _end);
     }
 
-    function slopeChanges(uint256 _end) private view returns(int256 slope) {
+    function slopeChanges(uint256 _end) private view returns (int256 slope) {
         return slopeChanges(0, _end);
     }
 
@@ -325,7 +331,7 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
         // 2, 3
         GlobalPoint memory p = curve.globalPointHistory(lastEpoch);
         assertEq(p.writtenTs, currentTs);
-        assertEq(p.bias, currentTotalBiasFP); 
+        assertEq(p.bias, currentTotalBiasFP);
         assertEq(p.slope, slopeFP(Lock_2_Amount));
 
         int256 Lock_1_MAX = biasFP(Lock_1_Amount, Lock_1_end - Lock_1_start);
@@ -357,9 +363,7 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
         uint256 to = escrow.createLock(Lock_2_Amount);
 
         //reverts as start dates are different and tokens are not mature.
-        vm.expectRevert(
-            abi.encodeWithSelector(IMerge.CannotMerge.selector, from, to)
-        );
+        vm.expectRevert(abi.encodeWithSelector(CannotMerge.selector, from, to));
         escrow.merge(from, to);
     }
 
@@ -375,7 +379,7 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
     function test_shouldRevert_BothNFTsAreSame() public {
         uint256 from = escrow.createLock(Lock_1_Amount);
 
-        vm.expectRevert(IMerge.SameNFT.selector);
+        vm.expectRevert(SameNFT.selector);
         escrow.merge(from, from);
     }
 
@@ -393,7 +397,7 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
 
         // TODO:GIORGI
         // vm.expectEmit();
-        // emit IMerge.Merged(sender, from, to, Lock_1_Amount, Lock_2_Amount, Lock_1_Amount + Lock_2_Amount);
+        // emit Merged(sender, from, to, Lock_1_Amount, Lock_2_Amount, Lock_1_Amount + Lock_2_Amount);
 
         escrow.merge(from, to);
 
@@ -405,7 +409,7 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
 
         assertEq(fromP.coefficients[0], 0);
         assertEq(fromP.coefficients[1], 0);
-        assertEq(fromP.checkpointTs, weekStartTs); 
+        assertEq(fromP.checkpointTs, weekStartTs);
         assertEq(fromP.writtenTs, currentTs);
 
         // 2
@@ -520,11 +524,11 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
         // 5. last global point must have slope 0 and bias as sum of both token's maxed out values.
         // 6. Since `to`'s end is greater than `from`'s end, and we make `from` to become 0, `to`'s slope change must also include `to`'s slope.
         uint256 from = escrow.createLock(Lock_1_Amount);
-        (uint256 fromLockWeekStart, uint256 fromLockEnd, uint256 fromLockCurrentTime) = getTimes();
+        (uint256 fromLockWeekStart, uint256 fromLockEnd, ) = getTimes();
 
         vm.warp(block.timestamp + checkpointInterval);
         uint256 to = escrow.createLock(Lock_2_Amount);
-        (uint256 toLockWeekStart, uint256 toLockEnd, uint256 toLockCurrentTime) = getTimes();
+        (uint256 toLockWeekStart, uint256 toLockEnd, ) = getTimes();
 
         // we merge after both are mature.
         vm.warp(toLockEnd + 1 hours);
@@ -599,7 +603,7 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
     function test_Split_shouldRevert_ifAmountTooBig() public {
         uint256 from = escrow.createLock(Lock_1_Amount);
 
-        vm.expectRevert(ISplit.SplitAmountTooBig.selector);
+        vm.expectRevert(SplitAmountTooBig.selector);
         escrow.split(from, Lock_1_Amount);
     }
 
@@ -619,9 +623,9 @@ contract TestEscrow is Test, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage
 
         // TODO:GIORGI
         // vm.expectEmit();
-        // emit ISplit.Split(tokenId, 2, 3, sender, Lock_1_Amount - value, value);
+        // emit Split(tokenId, 2, 3, sender, Lock_1_Amount - value, value);
 
-        escrow.split(tokenId, value);   
+        escrow.split(tokenId, value);
         uint256 currentTs = block.timestamp;
 
         int256 slope1 = slopeFP(Lock_1_Amount - value);

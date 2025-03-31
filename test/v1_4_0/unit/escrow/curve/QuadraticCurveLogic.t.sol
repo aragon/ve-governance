@@ -21,8 +21,10 @@ contract TestQuadraticIncreasingCurveLogic is QuadraticCurveBase {
     }
 
     function testCannotWriteNewCheckpointInPast() public {
-        LockedBalance memory first = LockedBalance({amount: 100, start: 100});
-        LockedBalance memory second = LockedBalance({amount: 200, start: 99});
+        vm.warp(2 weeks + 1 hours);
+
+        LockedBalance memory first = LockedBalance({amount: 100, start: 2 weeks});
+        LockedBalance memory second = LockedBalance({amount: 200, start: 1 weeks});
 
         escrow.checkpoint(1, LockedBalance(0, 0), first);
         vm.expectRevert(InvalidCheckpoint.selector);
@@ -30,14 +32,20 @@ contract TestQuadraticIncreasingCurveLogic is QuadraticCurveBase {
     }
 
     function testCanWriteNewCheckpointsAtSameTime() public {
-        LockedBalance memory first = LockedBalance({amount: 100, start: 100});
-        LockedBalance memory second = LockedBalance({amount: 200, start: 100});
+        vm.warp(1 weeks + 1 hours);
+
+        LockedBalance memory first = LockedBalance({amount: 100, start: 1 weeks});
+        LockedBalance memory second = LockedBalance({amount: 200, start: 1 weeks});
 
         escrow.checkpoint(1, LockedBalance(0, 0), first);
         escrow.checkpoint(1, first, second);
 
         // check we have only 1 token interval
         assertEq(curve.tokenPointIntervals(1), 1);
-        assertEq(curve.tokenPointHistory(1, 1).bias, 200);
+        assertEq(
+            curve.tokenPointHistory(1, 1).coefficients[0],
+            biasFP(100, 1 hours) + biasFP(200, 1 hours)
+        );
+        assertEq(curve.tokenPointHistory(1, 1).coefficients[1], slopeFP(200) + slopeFP(100));
     }
 }

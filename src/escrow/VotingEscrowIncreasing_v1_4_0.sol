@@ -12,7 +12,7 @@ import {ISimpleGaugeVoter} from "@voting/ISimpleGaugeVoter.sol";
 import {IEscrowCurveIncreasingV1_4_0 as IEscrowCurve} from "@curve/IEscrowCurveIncreasing_v1_4_0.sol";
 import {IExitQueue} from "@queue/IExitQueue.sol";
 import {IVotingEscrowIncreasingV1_4_0 as IVotingEscrow, IVotingEscrowExiting, IMerge, ISplit} from "./IVotingEscrowIncreasing_v1_4_0.sol";
-import {IClockUser, IClockV1_4_0 as IClock} from "@clock/IClock_v1_4_0.sol";
+import {IClockV1_4_0 as IClock} from "@clock/IClock_v1_4_0.sol";
 import {IClockSeason} from "@clock/IClockSeason.sol";
 import {ExitQueue} from "@queue/ExitQueue.sol";
 
@@ -25,8 +25,6 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {ReentrancyGuardUpgradeable as ReentrancyGuard} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {PausableUpgradeable as Pausable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
-
-import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 
 contract VotingEscrowV1_4_0 is
     IVotingEscrow,
@@ -316,6 +314,7 @@ contract VotingEscrowV1_4_0 is
 
         if (!isApprovedOrOwner(sender, _from)) revert NotApprovedOrOwner();
         if (!isApprovedOrOwner(sender, _to)) revert NotApprovedOrOwner();
+        
         if (_from == _to) revert SameNFT();
 
         LockedBalance memory oldLockedFrom = _locked[_from];
@@ -417,7 +416,7 @@ contract VotingEscrowV1_4_0 is
         LockedBalance memory _fromLocked,
         LockedBalance memory _newLocked
     ) private {
-        (uint48 seasonStart, uint48 seasonEnd) = IClockSeason(clock).seasonTsAt(uint48(block.timestamp));
+        (uint48 seasonStart, ) = IClockSeason(clock).seasonTsAt(uint48(block.timestamp));
         if(seasonStart != 0) {
             _fromLocked.start = seasonStart;
             _newLocked.start = seasonStart;

@@ -194,11 +194,11 @@ contract LinearIncreasingEscrow is
 
     /// @notice Returns whether the NFT is warm
     function isWarm(uint256 _tokenId) public view returns (bool) {
-        _isWarm(_tokenId, block.timestamp);
+        return _isWarm(_tokenId, block.timestamp);
     }
 
     function isWarm(uint256 _tokenId, uint48 _ts) public view returns (bool) {
-        _isWarm(_tokenId, _ts);
+        return _isWarm(_tokenId, _ts);
     }
 
     function _isWarm(uint256 _tokenId, uint256 _ts) public view returns (bool) {
@@ -340,6 +340,10 @@ contract LinearIncreasingEscrow is
     ) internal {
         // this implementation doesn't yet support manual checkpointing
         if (_tokenId == 0) revert InvalidTokenId();
+
+        if(_newLocked.start < _fromLocked.start) {
+            revert InvalidCheckpoint();
+        }
 
         uint256 _globalPointLatestIndex = globalPointLatestIndex;
 
@@ -488,14 +492,15 @@ contract LinearIncreasingEscrow is
     function _getPastTokenPointInterval(
         uint256 _tokenId,
         uint256 _timestamp
-    ) internal view returns (uint256) {
+    ) internal view returns (uint256) {        
         uint256 tokenInterval = tokenPointLatestIndex[_tokenId];
+
         if (tokenInterval == 0) return 0;
 
         // if the most recent point is before the timestamp, return it
         if (_tokenPointHistory[_tokenId][tokenInterval].writtenTs <= _timestamp)
             return (tokenInterval);
-
+        
         // Check if the first balance is after the timestamp
         // this means that the first epoch has yet to start
         if (_tokenPointHistory[_tokenId][1].writtenTs > _timestamp) return 0;
