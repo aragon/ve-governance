@@ -184,23 +184,22 @@ contract DelegationMapper is
     //////////////////////////////////////////////////////////////*/
 
     function checkpointTransition(address _delegatee, uint256 _transitionCount) external {
-        _checkpoint(0, 0, _delegatee, _transitionCount, 1);
+        _checkpoint(0, 0, _delegatee, _transitionCount);
     }
     
-    function checkpointTransition(uint256 _transitionCount, uint256 _intervalStep) external {
-         _checkpoint(0, 0, _msgSender(), _transitionCount, _intervalStep);
+    function checkpointTransition(uint256 _transitionCount) external {
+         _checkpoint(0, 0, _msgSender(), _transitionCount);
     }
 
     function _checkpoint(int256 _totalBias, int256 _totalSlope, address _delegatee) internal {
-        _checkpoint(_totalBias, _totalSlope, _delegatee, 255, 1);
+        _checkpoint(_totalBias, _totalSlope, _delegatee, 255);
     }
 
     function _checkpoint(
         int256 _totalBias,
         int256 _totalSlope,
         address _delegatee,
-        uint256 _transitionCount,
-        uint256 _intervalStep
+        uint256 _transitionCount
     ) internal {
         GlobalPoint memory lastPoint = GlobalPoint({
             bias: 0,
@@ -220,7 +219,6 @@ contract DelegationMapper is
             uint256 checkpointInterval = IClock(clock).checkpointInterval();
             uint256 lastPointCheckpoint = lastPoint.writtenTs;
             uint256 t_i = (lastPointCheckpoint / checkpointInterval) * checkpointInterval;
-            checkpointInterval = _intervalStep * checkpointInterval;
 
             for (uint256 i = 0; i < _transitionCount; ++i) {
                 t_i += checkpointInterval;
@@ -239,13 +237,9 @@ contract DelegationMapper is
                 if (lastPoint.bias < 0) lastPoint.bias = 0;
 
                 lastPointCheckpoint = t_i;
-                lastPoint.writtenTs = uint48(t_i);
-                latestPointIndex_ += 1;
 
-                if (t_i == block.timestamp) {
+                if(t_i == block.timestamp) {
                     break;
-                } else {
-                    pointHistory[_delegatee][latestPointIndex_] = lastPoint;
                 }
             }
         }
@@ -258,7 +252,7 @@ contract DelegationMapper is
         if (lastPoint.slope < 0) lastPoint.slope = 0;
         if (lastPoint.bias < 0) lastPoint.bias = 0;
 
-        latestPointIndex[_delegatee] = latestPointIndex_;
+        latestPointIndex[_delegatee] = ++latestPointIndex_;
         pointHistory[_delegatee][latestPointIndex_] = lastPoint;
     }
 
