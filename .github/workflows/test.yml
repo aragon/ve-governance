@@ -39,6 +39,37 @@ jobs:
           forge test --match-path "test/**/unit/**/*.sol"
         id: test
 
+  test-gas-report-and-coverage:
+    strategy:
+      fail-fast: true
+    name: Gas Report and Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: foundry-toolchain
+        uses: foundry-rs/foundry-toolchain@v1.3.1
+
+      - name: Show Forge version
+        run: forge --version
+
+      - name: Run Forge build
+        run: |
+          forge build
+        id: build
+
+      - name: Run Forge tests
+        run: |
+          forge test --match-path "test/**/unit/**/*.sol" --gas-report
+        id: test
+      
+      - name: Run Forge coverage
+        run: |
+          forge coverage
+        id: coverage
+
   test-upgrade:
     strategy:
       fail-fast: true
