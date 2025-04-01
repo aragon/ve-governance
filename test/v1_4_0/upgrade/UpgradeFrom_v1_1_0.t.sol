@@ -17,16 +17,14 @@ import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {Addresslist} from "@aragon/osx/plugins/utils/Addresslist.sol";
 import {Multisig, MultisigSetup as MultisigPluginSetup} from "@aragon/osx/plugins/governance/multisig/MultisigSetup.sol";
 
-import {SimpleGaugeVoterSetup, IGaugeVote, VotingEscrow, Clock, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, GaugesDaoFactory as GaugesDaoFactoryV1_1_0, Deployment, DeploymentParameters, TokenParameters, GaugePluginSet} from "test/v1_1_0/versions.sol";
-import {SimpleGaugeVoter as SimpleGaugeVoterV1_2_0, Clock as ClockV1_2_0, QuadraticIncreasingEscrow as QuadraticIncreasingEscrowV1_2_0} from "test/v1_2_0/versions.sol";
+import {SimpleGaugeVoterSetup, IGaugeVote, VotingEscrow, Clock, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, GaugesDaoFactory as GaugesDaoFactoryV1_0_0, Deployment, DeploymentParameters, TokenParameters, GaugePluginSet} from "test/v1_0_0/versions.sol";
+import {Clock as ClockV1_4_0, QuadraticIncreasingEscrow as LinearEscrowCurve, VotingEscrow as VotingEscrowV1_4_0} from "test/v1_4_0/versions.sol";
 
 import {Upgrades} from "@foundry-upgrades/LegacyUpgrades.sol";
 import {Options} from "@foundry-upgrades/Options.sol";
 
-contract RegressionV1_1_0__to__V1_2_0 is Test, IGaugeVote {
-    GaugesDaoFactoryV1_1_0 factory;
-
-    SimpleGaugeVoterV1_2_0 voterV1_2_0;
+contract RegressionV1_0_0__to__V1_4_0 is Test, IGaugeVote {
+    GaugesDaoFactoryV1_0_0 factory;
 
     VotingEscrow escrow;
     SimpleGaugeVoter voter;
@@ -37,6 +35,12 @@ contract RegressionV1_1_0__to__V1_2_0 is Test, IGaugeVote {
     DAO dao;
     Multisig multisig;
     MockERC20 token;
+
+    // upgraded implementations
+
+    ClockV1_4_0 clockUpgrade;
+    VotingEscrowV1_4_0 escrowUpgrade;
+    LinearEscrowCurve curveUpgrade;
 
     uint aliceToken;
     uint bobToken;
@@ -115,7 +119,7 @@ contract RegressionV1_1_0__to__V1_2_0 is Test, IGaugeVote {
         vm.stopPrank();
     }
 
-    function testValidateUpgradeGaugeVoter__v1_1_0__v1_2_0() public {
+    function testValidateUpgradeGaugeVoter__v1_1_0__v1_4_0() public {
         Options memory options;
 
         string[] memory exclude = new string[](1);
@@ -123,18 +127,14 @@ contract RegressionV1_1_0__to__V1_2_0 is Test, IGaugeVote {
         exclude[0] = "lib/osx/packages/contracts/src/core/plugin/PluginUUPSUpgradeable.sol";
         options.exclude = exclude;
 
-        // SimpleGaugeVoter can't be upgraded due to slot incompatibilities. Should always be a new deployment
-        //options.referenceContract = "SimpleGaugeVoter_v1_1_0.sol";
-        //Upgrades.validateUpgrade("SimpleGaugeVoter_v1_2_0.sol:SimpleGaugeVoterV1_2_0", options);
-
         options.referenceContract = "Clock.sol";
-        Upgrades.validateUpgrade("Clock_v1_2_0.sol:ClockV1_2_0", options);
+        Upgrades.validateUpgrade("Clock_v1_4_0.sol:ClockV1_4_0", options);
 
-        options.referenceContract = "QuadraticIncreasingEscrow.sol";
-        Upgrades.validateUpgrade(
-            "QuadraticIncreasingEscrow_v1_2_0.sol:QuadraticIncreasingEscrowV1_2_0",
-            options
-        );
+        options.referenceContract = "QuadraticIncreasingCurve.sol:QuadraticIncreasingEscrow";
+        Upgrades.validateUpgrade("LinearIncreasingCurve.sol:LinearIncreasingEscrow", options);
+
+        options.referenceContract = "VotingEscrow.sol";
+        Upgrades.validateUpgrade("VotingEscrowIncreasing_v1_4_0.sol:VotingEscrowV1_4_0", options);
     }
 
     function testInitialState() public view {
@@ -189,7 +189,7 @@ contract RegressionV1_1_0__to__V1_2_0 is Test, IGaugeVote {
         {
             GaugeVote[] memory vote = new GaugeVote[](1);
             vote[0] = GaugeVote(1, gauge);
-            voterV1_2_0.vote(aliceToken, vote);
+            voter.vote(aliceToken, vote);
             aliceVPSnapshot = escrow.votingPower(aliceToken);
         }
         vm.stopPrank();
@@ -216,13 +216,13 @@ contract RegressionV1_1_0__to__V1_2_0 is Test, IGaugeVote {
 
         // alice1 is locked and is currently voting
         assertEq(escrow.locked(aliceToken).amount, 1_000 ether);
-        assertTrue(voterV1_2_0.isVoting(aliceToken));
-        assertEq(voterV1_2_0.votes(aliceToken, gauge), aliceVPSnapshot);
+        assertTrue(voter.isVoting(aliceToken));
+        assertEq(voter.votes(aliceToken, gauge), aliceVPSnapshot);
 
         // bob is locked and is currently exiting
         assertEq(escrow.locked(bobToken).amount, 1_000 ether);
         assertFalse(queue.canExit(bobToken));
-        assertFalse(voterV1_2_0.isVoting(bobToken));
+        assertFalse(voter.isVoting(bobToken));
         assertEq(queue.ticketHolder(bobToken), BOB_ADDRESS);
 
         // carol is not locked and has her tokens back
@@ -245,21 +245,27 @@ contract RegressionV1_1_0__to__V1_2_0 is Test, IGaugeVote {
         exclude[0] = "lib/osx/packages/contracts/src/core/plugin/PluginUUPSUpgradeable.sol";
         options.exclude = exclude;
 
-        voterV1_2_0 = new SimpleGaugeVoterV1_2_0();
-
         options.referenceContract = "Clock.sol";
-        Upgrades.upgradeProxy(address(clock), "Clock_v1_2_0.sol:ClockV1_2_0", "", options);
+        Upgrades.upgradeProxy(address(clock), "Clock_v1_4_0.sol:ClockV1_4_0", "", options);
 
-        options.referenceContract = "QuadraticIncreasingEscrow.sol";
+        options.referenceContract = "QuadraticIncreasingCurve.sol:QuadraticIncreasingEscrow";
         Upgrades.upgradeProxy(
             address(curve),
-            "QuadraticIncreasingEscrow_v1_2_0.sol:QuadraticIncreasingEscrowV1_2_0",
+            "LinearIncreasingCurve.sol:LinearIncreasingEscrow",
+            "",
+            options
+        );
+
+        options.referenceContract = "VotingEscrow.sol";
+        Upgrades.upgradeProxy(
+            address(escrow),
+            "VotingEscrowIncreasing_v1_4_0.sol:VotingEscrowV1_4_0",
             "",
             options
         );
     }
 
-    function _deployViaFactory() internal returns (GaugesDaoFactoryV1_1_0) {
+    function _deployViaFactory() internal returns (GaugesDaoFactoryV1_0_0) {
         address[] memory multisigMembers = new address[](13);
         for (uint256 i = 0; i < 13; i++) {
             multisigMembers[i] = address(uint160(i + 5));
@@ -338,7 +344,7 @@ contract RegressionV1_1_0__to__V1_2_0 is Test, IGaugeVote {
             pluginRepoFactory: pRefoFactory
         });
 
-        GaugesDaoFactoryV1_1_0 _factory = new GaugesDaoFactoryV1_1_0(creationParams);
+        GaugesDaoFactoryV1_0_0 _factory = new GaugesDaoFactoryV1_0_0(creationParams);
 
         _factory.deployOnce();
 

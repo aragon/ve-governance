@@ -20,6 +20,7 @@ test-unit-110 :; forge test --match-path "test/v1_1_0/unit/**/*.sol"
 
 # regression and upgrade tests
 test-upgrade-110 :; forge test --match-path "test/v1_1_0/upgrade/**/*.sol" --force
+test-upgrade-140 :; forge test --match-path "test/v1_4_0/upgrade/**/*.sol" --force
 
 #### Fork testing ####
 
