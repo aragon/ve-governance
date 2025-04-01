@@ -247,10 +247,6 @@ contract LinearIncreasingEscrow is
         int256 bias = lastPoint.coefficients[0];
         int256 slope = lastPoint.coefficients[1];
 
-        uint256 maxTime = maxTime();
-        uint256 timeElapsed = _t - lastPoint.checkpointTs;
-        if (timeElapsed > maxTime) timeElapsed = maxTime;
-
         return _getBias(_t - lastPoint.checkpointTs, bias, slope) / 1e18;
     }
 
