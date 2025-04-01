@@ -8,7 +8,6 @@ import {IVotingEscrowIncreasingV1_4_0 as IVotingEscrow} from "@escrow/IVotingEsc
 import {IEscrowCurveIncreasingV1_4_0 as IEscrowCurve, IEscrowCurveGlobal, IEscrowCurveCore, IEscrowCurveTokenV1_4_0 as IEscrowCurveToken} from "@curve/IEscrowCurveIncreasing_v1_4_0.sol";
 
 import {IClockUser, IClockV1_4_0 as IClock} from "@clock/IClock_v1_4_0.sol";
-import {IClockSeason} from "@clock/IClockSeason.sol";
 
 // libraries
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -65,7 +64,7 @@ contract LinearIncreasingEscrow is
     uint256 public globalPointLatestIndex;
 
     // endTime => summed up slopes at that endTime
-    mapping(uint16 => mapping(uint256 => int256)) public slopeChanges;
+    mapping(uint256 => int256) public slopeChanges;
     mapping(uint256 => GlobalPoint) internal _globalPointHistory;
 
     /// @dev precomputed coefficients of the quadratic curve
@@ -194,11 +193,11 @@ contract LinearIncreasingEscrow is
 
     /// @notice Returns whether the NFT is warm
     function isWarm(uint256 _tokenId) public view returns (bool) {
-        _isWarm(_tokenId, block.timestamp);
+        return _isWarm(_tokenId, block.timestamp);
     }
 
     function isWarm(uint256 _tokenId, uint48 _ts) public view returns (bool) {
-        _isWarm(_tokenId, _ts);
+        return _isWarm(_tokenId, _ts);
     }
 
     function _isWarm(uint256 _tokenId, uint256 _ts) public view returns (bool) {
@@ -245,46 +244,19 @@ contract LinearIncreasingEscrow is
 
         if (!_isWarm(_tokenId, _t)) return 0;
 
-        // get latest season prior to `_t`.
-        (uint48 start, ) = IClockSeason(clock).seasonTsAt(uint48(_t));
-
         int256 bias = lastPoint.coefficients[0];
         int256 slope = lastPoint.coefficients[1];
 
-        if (start == 0) {
-            start = uint48(lastPoint.checkpointTs);
-        }
-
         uint256 maxTime = maxTime();
-
-        // Subtract the accumulated bias to the current bias,
-        // which will give only total amount on that token point.
-        // This step can be avoided in case the season
-        // doesn't exist between `_t` and last token point, but to have
-        // the consistent flow, the below code works the same way in every case.
-        uint256 timeElapsed = lastPoint.writtenTs - lastPoint.checkpointTs;
+        uint256 timeElapsed = _t - lastPoint.checkpointTs;
         if (timeElapsed > maxTime) timeElapsed = maxTime;
-        bias -= slope * int256(timeElapsed);
 
-        // For rounding errors, this can become less than 0.
-        if (bias < 0) bias = 0;
-
-        // Calculate the elapsed time.
-        // If season exists, we use the time from season to the `_t`.
-        // If not, we use the time from token point's start to
-        if (lastPoint.checkpointTs < start) {
-            timeElapsed = _t - start;
-        } else {
-            timeElapsed = _t - lastPoint.checkpointTs;
-        }
-
-        return _getBias(timeElapsed, bias, slope) / 1e18;
+        return _getBias(_t - lastPoint.checkpointTs, bias, slope) / 1e18;
     }
 
     //// TODO: inheritdoc IEscrowCurveCore doesn't work.
     function supplyAt(uint256 _timestamp) external view returns (uint256) {
-        uint16 seasonIndex = IClockSeason(clock).seasonIndexAt(uint48(_timestamp));
-        return _supplyAt(_timestamp, seasonIndex);
+        return _supplyAt(_timestamp);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -301,33 +273,6 @@ contract LinearIncreasingEscrow is
         _checkpoint(_tokenId, _oldLocked, _newLocked);
     }
 
-    /// TODO: doesn't work inheritdoc IEscrowCurveCore
-    function resetCheckPoint(uint256 _amount, uint48 _ts, uint16 _seasonIndex) public {
-        if (msg.sender != escrow) revert OnlyEscrow();
-
-        _resetCheckPoint(_amount, _ts, _seasonIndex);
-    }
-
-    /// TODO: doesn't work inheritdoc IEscrowCurveCore
-    function _resetCheckPoint(uint256 _amount, uint48 _ts, uint16 _seasonIndex) internal {
-        int256 slope = _getLinearCoeff(_amount);
-
-        // The below check also ensures that new global point will be stored
-        // after the latest already stored global point, as latest stored global point
-        // either will have `block.timestamp` or less on its `.writtenTs`
-        if (_ts <= block.timestamp) {
-            revert("TODO: GIORGI better message");
-        }
-
-        slopeChanges[_seasonIndex][_ts + maxTime()] = slope;
-
-        _globalPointHistory[++globalPointLatestIndex] = GlobalPoint({
-            bias: _getConstantCoeff(_amount),
-            slope: slope,
-            writtenTs: _ts
-        });
-    }
-
     /// @notice Record gper-user data to checkpoints. Used by VotingEscrow system.
     /// @dev Curve finance style but just for users at this stage
     /// @param _tokenId NFT token ID.
@@ -340,6 +285,10 @@ contract LinearIncreasingEscrow is
     ) internal {
         // this implementation doesn't yet support manual checkpointing
         if (_tokenId == 0) revert InvalidTokenId();
+
+        if(_newLocked.start < _fromLocked.start) {
+            revert InvalidCheckpoint();
+        }
 
         uint256 _globalPointLatestIndex = globalPointLatestIndex;
 
@@ -359,10 +308,6 @@ contract LinearIncreasingEscrow is
             lastPoint = _globalPointHistory[_globalPointLatestIndex];
         }
 
-        // Get latest season index till current time.
-        uint16 seasonIndex = IClockSeason(clock).seasonIndexAt(uint48(block.timestamp));
-        mapping(uint256 => int256) storage slopeChanges_ = slopeChanges[seasonIndex];
-
         {
             uint256 checkpointInterval = IClock(clock).checkpointInterval();
 
@@ -376,7 +321,7 @@ contract LinearIncreasingEscrow is
                 if (t_i > block.timestamp) {
                     t_i = block.timestamp;
                 } else {
-                    dSlope = slopeChanges_[t_i];
+                    dSlope = slopeChanges[t_i];
                 }
 
                 lastPoint.bias += lastPoint.slope * int256(t_i - lastPointCheckpoint);
@@ -399,7 +344,7 @@ contract LinearIncreasingEscrow is
 
         uint256 newEnd = _newLocked.start + maxTime();
 
-        int256 newDSlope = slopeChanges_[newEnd];
+        int256 newDSlope = slopeChanges[newEnd];
 
         // If the newLocked hasn't ended, add its slope
         // to the latest global point. newLocked could be ended in case of
@@ -447,8 +392,8 @@ contract LinearIncreasingEscrow is
             }
 
             if (_fromLockedEnd != newEnd && _fromLockedEnd >= block.timestamp) {
-                int256 oldDSlope = slopeChanges_[_fromLockedEnd] - oldLockSlope;
-                slopeChanges_[_fromLockedEnd] = oldDSlope < 0 ? int256(0) : oldDSlope;
+                int256 oldDSlope = slopeChanges[_fromLockedEnd] - oldLockSlope;
+                slopeChanges[_fromLockedEnd] = oldDSlope < 0 ? int256(0) : oldDSlope;
             }
         }
 
@@ -459,7 +404,7 @@ contract LinearIncreasingEscrow is
         globalPointLatestIndex = _globalPointLatestIndex;
         _globalPointHistory[_globalPointLatestIndex] = lastPoint;
 
-        slopeChanges_[newEnd] = newDSlope < 0 ? int256(0) : newDSlope;
+        slopeChanges[newEnd] = newDSlope < 0 ? int256(0) : newDSlope;
 
         // Create new token point and store.
         TokenPoint memory tNew;
@@ -488,14 +433,15 @@ contract LinearIncreasingEscrow is
     function _getPastTokenPointInterval(
         uint256 _tokenId,
         uint256 _timestamp
-    ) internal view returns (uint256) {
+    ) internal view returns (uint256) {        
         uint256 tokenInterval = tokenPointLatestIndex[_tokenId];
+
         if (tokenInterval == 0) return 0;
 
         // if the most recent point is before the timestamp, return it
         if (_tokenPointHistory[_tokenId][tokenInterval].writtenTs <= _timestamp)
             return (tokenInterval);
-
+        
         // Check if the first balance is after the timestamp
         // this means that the first epoch has yet to start
         if (_tokenPointHistory[_tokenId][1].writtenTs > _timestamp) return 0;
@@ -546,9 +492,8 @@ contract LinearIncreasingEscrow is
 
     /// @notice Calculate total voting power at some point in the past
     /// @param _timestamp Time to calculate the total voting power at
-    /// @param _seasonIndex The season index to which the slope changes were stored for `_timestamp`.
     /// @return Total voting power at that time
-    function _supplyAt(uint256 _timestamp, uint16 _seasonIndex) internal view returns (uint256) {
+    function _supplyAt(uint256 _timestamp) internal view returns (uint256) {
         uint256 epoch_ = getPastGlobalPointIndex(_timestamp);
         // epoch 0 is an empty point
         if (epoch_ == 0) return 0;
@@ -556,8 +501,6 @@ contract LinearIncreasingEscrow is
         int256 bias = _point.bias;
         int256 slope = _point.slope;
         uint256 ts = _point.writtenTs; // changes in for loop.
-
-        mapping(uint256 => int256) storage slopeChanges_ = slopeChanges[_seasonIndex];
 
         uint256 checkpointInterval = IClock(clock).checkpointInterval();
 
@@ -569,7 +512,7 @@ contract LinearIncreasingEscrow is
             if (t_i > _timestamp) {
                 t_i = _timestamp;
             } else {
-                dSlope = slopeChanges_[t_i];
+                dSlope = slopeChanges[t_i];
             }
             bias += slope * int256(t_i - ts);
 

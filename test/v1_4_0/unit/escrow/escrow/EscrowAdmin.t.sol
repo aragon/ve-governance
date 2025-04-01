@@ -1,6 +1,6 @@
 pragma solidity ^0.8.17;
 
-import {EscrowBase} from "./EscrowBase.sol";
+import {EscrowBase} from "../../../base/EscrowBase.sol";
 
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
@@ -137,15 +137,6 @@ contract TestEscrowAdmin is EscrowBase {
             nftLock.enableTransfers();
         }
         vm.stopPrank();
-    }
-
-    // test unusued function revert
-    function testUnusedFunctionRevert() public {
-        vm.expectRevert();
-        escrow.totalVotingPowerAt(0);
-
-        vm.expectRevert();
-        escrow.totalVotingPower();
     }
 
     // test upgrading the lock

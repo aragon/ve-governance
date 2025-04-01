@@ -52,6 +52,15 @@ contract EscrowVotingPowerMock {
         return lockedBalances[_tokenId];
     }
 
+    function ownedTokens() public view returns(uint256[] memory) {
+        uint256[] memory tokens = new uint256[](3);
+        tokens[0] = 1;
+        tokens[1] = 2;
+        tokens[2] = 3;
+
+        return tokens;
+    }
+
     function votingPowerAt(uint256 _tokenId, uint256 _ts) external view returns (uint256) {
         Checkpoint[] storage tcps_ = tcps[_tokenId];
 
@@ -89,7 +98,7 @@ contract Base is Test {
     address bob = address(456);
 
     uint256[] singleId = [1];
-    uint256[] ids = [1, 2, 3];
+    uint256[] multiIds = [2, 3, 4];
 
     function setUp() public virtual {
         _deployDAO();

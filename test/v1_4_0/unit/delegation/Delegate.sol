@@ -10,10 +10,50 @@ import {ProxyLib} from "@libs/ProxyLib.sol";
 
 import {DelegationMapper} from "@delegation/DelegationMapper.sol";
 import {console2 as console} from "forge-std/console2.sol";
+import {IVotesUpgradeable} from "@openzeppelin/contracts-upgradeable/governance/utils/IVotesUpgradeable.sol";
 
 contract DelegateTest is Base {
     function setUp() public override {
         super.setUp();
+    }
+
+    event DelegateChanged(address indexed from, address indexed to, address indexed delegate);
+
+    modifier AutoDelegationEnabled() {
+        dg.setAutoDelegation(true);
+        _;
+    }
+
+    // ======================== IVotes Delegate ============================
+
+    function test_Sets_Delegatee_Without_Delegating_Tokens() public {
+        vm.expectEmit();
+        emit DelegateChanged(
+            address(this),
+            address(0),
+            alice
+        );
+
+        dg.delegate(alice);
+
+        assertEq(dg.delegates(address(this)), alice);
+        assertEq(dg.numberOfDelegatedTokens(alice), 0);
+    }
+
+    function test_Reverts_If_Atleast_one_token_is_delegated() public {
+        dg.delegate(alice);
+
+        dg.delegate(singleId);
+
+        vm.expectRevert(DelegationMapper.DelegationNotAllowed.selector);
+        dg.delegate(bob);
+    }
+
+    function test_Delegates_owned_tokens_automatically() public AutoDelegationEnabled() {
+        dg.delegate(alice);
+
+        // vm.mockCall(address(escrow), abi.encodeWithSelector(VotingEscrow.isApprovedOrOwner.selector), abi.encode(true));
+        // vm.mockCall(address(escrow), abi.encodeWithSelector(VotingEscrow.ownedTokens.selector), abi.encode(singleId));
     }
 
     function test_ggg() public {

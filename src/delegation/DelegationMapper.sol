@@ -48,6 +48,7 @@ contract DelegationMapper is
     error NotApprovedOrOwner();
     error InvalidTokenId();
     error DelegationNotAllowed();
+    error DelegateeNotSet();
 
     /*///////////////////////////////////////////////////////////////
                             Initialization
@@ -67,10 +68,10 @@ contract DelegationMapper is
     }
 
     function setAutoDelegation(bool _enabled) external {
-        address sender = _msgSender();
+        // address sender = _msgSender();
 
-        autoDelegationEnabled[sender] = _enabled;
-        emit AutoDelegationSet(sender, _enabled);
+        autoDelegationEnabled[msg.sender] = _enabled;
+        emit AutoDelegationSet(msg.sender, _enabled);
     }
 
     function delegate(address _delegatee) public {
@@ -80,9 +81,9 @@ contract DelegationMapper is
             revert DelegationNotAllowed();
         }
 
-        delegatees_[sender] = _delegatee;
-
         address oldDelegatee = delegates(_delegatee);
+
+        delegatees_[sender] = _delegatee;
 
         if (autoDelegationEnabled[sender]) {
             uint256[] memory tokenIds = VotingEscrow(escrow).ownedTokens(sender);
@@ -97,6 +98,10 @@ contract DelegationMapper is
 
         address delegatee = delegates(sender);
 
+        if(delegatee == address(0)) {
+            revert DelegateeNotSet();
+        }
+
         int256 totalBias;
         int256 totalSlope;
 
@@ -104,23 +109,23 @@ contract DelegationMapper is
             uint256 tokenId = _tokenIds[i];
 
             if (!IVotingEscrow(escrow).isApprovedOrOwner(sender, tokenId)) {
-                revert NotApprovedOrOwner();
+                // revert NotApprovedOrOwner();
             }
 
-            IVotingEscrow.LockedBalance memory locked = IVotingEscrow(escrow).locked(tokenId);
+            // IVotingEscrow.LockedBalance memory locked = IVotingEscrow(escrow).locked(tokenId);
 
-            // you can only delegate once but you can delegate tokens one at a time
-            if (!tokenIsDelegated[tokenId]) {
-                (int256 bias, int256 slope) = _getBiasAndSlope(delegatee, locked, _positive);
+            // // you can only delegate once but you can delegate tokens one at a time
+            // if (!tokenIsDelegated[tokenId]) {
+            //     (int256 bias, int256 slope) = _getBiasAndSlope(delegatee, locked, _positive);
 
-                totalBias += bias;
-                totalSlope += slope;
-            }
+            //     totalBias += bias;
+            //     totalSlope += slope;
+            // }
         }
 
-        numberOfDelegatedTokens[sender] += _tokenIds.length;
+        // numberOfDelegatedTokens[sender] += _tokenIds.length;
 
-        _checkpoint(totalBias, totalSlope, delegatee);
+        // _checkpoint(totalBias, totalSlope, delegatee);
     }
 
     function undelegate(uint256[] memory _tokenIds) public {

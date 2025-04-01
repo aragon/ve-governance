@@ -16,7 +16,21 @@ interface IDelegationMapper {
     function moveDelegateVotes(address _from, address _to, uint256 _tokenId) external;
 }
 
-interface IMerge is ILockedBalanceIncreasing {
+interface IMergeEventsAndErrors {
+    event Merged(
+        address indexed _sender,
+        uint256 indexed _from,
+        uint256 indexed _to,
+        uint208 _amountFrom,
+        uint208 _amountTo,
+        uint208 _amountFinal
+    );
+
+    error CannotMerge(uint256 _from, uint256 _to);
+    error SameNFT();
+}
+
+interface IMerge is ILockedBalanceIncreasing, IMergeEventsAndErrors {
     /// @notice Merge two tokens - i.e  `from` into `_to`.
     /// @param _from The token id from which merge is occuring
     /// @param _to The token id to which `_from` is merging
@@ -29,32 +43,9 @@ interface IMerge is ILockedBalanceIncreasing {
         LockedBalance memory _from,
         LockedBalance memory _to
     ) external view returns (bool);
-
-    event Merged(
-        address indexed _sender,
-        uint256 indexed _from,
-        uint256 indexed _to,
-        uint208 _amountFrom,
-        uint208 _amountTo,
-        uint208 _amountFinal
-    );
-
-    error CannotMerge(uint256 _from, uint256 _to);
-
-    error SameNFT();
 }
 
-interface ISplit {
-    /// @notice Split token into two new, separate tokens.
-    /// @param _from The token id that should be split
-    /// @param _value The amount that determines how token is split
-    /// @return _tokenId1 The token id of first token after splitting
-    /// @return _tokenId2 The token id of second token after splitting
-    function split(
-        uint256 _from,
-        uint256 _value
-    ) external returns (uint256 _tokenId1, uint256 _tokenId2);
-
+interface ISplitEventsAndErrors {
     event Split(
         uint256 indexed _from,
         uint256 indexed _tokenId1,
@@ -65,6 +56,18 @@ interface ISplit {
     );
 
     error SplitAmountTooBig();
+}
+
+interface ISplit is ISplitEventsAndErrors {
+    /// @notice Split token into two new, separate tokens.
+    /// @param _from The token id that should be split
+    /// @param _value The amount that determines how token is split
+    /// @return _tokenId1 The token id of first token after splitting
+    /// @return _tokenId2 The token id of second token after splitting
+    function split(
+        uint256 _from,
+        uint256 _value
+    ) external returns (uint256 _tokenId1, uint256 _tokenId2);
 }
 
 interface IVotingEscrowIncreasingV1_4_0 is

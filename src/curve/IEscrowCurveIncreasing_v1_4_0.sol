@@ -56,14 +56,6 @@ interface IEscrowCurveTokenV1_4_0 is IEscrowCurveTokenStorage {
     ) external view returns (TokenPoint memory);
 }
 
-interface IEscrowCurveCoreV1_4_0 is IEscrowCurveCore {
-    /// @notice Creates a new global point in the future at the start timestamp of the new season.
-    /// @param _amount The bias that the global point will store at `ts`.
-    /// @param _ts The timestamp at which this new global point will be recorded at.
-    /// @param _seasonIndex The seasonIndex makes sure to record the new slope changes at the correct storage.
-    function resetCheckPoint(uint256 _amount, uint48 _ts, uint16 _seasonIndex) external;
-}
-
 interface IEscrowCurveMaxTime is IEscrowCurveErrorsAndEvents {
     /// @return The max time allowed for the lock duration.
     function maxTime() external view returns (uint256);
@@ -74,7 +66,7 @@ interface IEscrowCurveMaxTime is IEscrowCurveErrorsAndEvents {
 //////////////////////////////////////////////////////////////*/
 
 interface IEscrowCurveIncreasingV1_4_0 is
-    IEscrowCurveCoreV1_4_0,
+    IEscrowCurveCore,
     IEscrowCurveMath,
     IEscrowCurveTokenV1_4_0,
     IEscrowCurveMaxTime,

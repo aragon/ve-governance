@@ -9,6 +9,7 @@ import {DAO, createTestDAO} from "@mocks/MockDAO.sol";
 import {Clock, QuadraticIncreasingEscrow, ILockedBalanceIncreasing, IVotingEscrowIncreasing as IVotingEscrow, IEscrowCurveIncreasing as IEscrowCurve} from "../../../versions.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
+import {FixedPointBase} from "../../../base/FixedPointBase.sol";
 
 contract MockEscrow {
     address public token;
@@ -27,7 +28,7 @@ contract MockEscrow {
     }
 }
 
-contract QuadraticCurveBase is TestHelpers, ILockedBalanceIncreasing {
+contract QuadraticCurveBase is TestHelpers, FixedPointBase, ILockedBalanceIncreasing {
     using ProxyLib for address;
     QuadraticIncreasingEscrow internal curve;
     MockEscrow internal escrow;
@@ -64,5 +65,7 @@ contract QuadraticCurveBase is TestHelpers, ILockedBalanceIncreasing {
         });
 
         escrow.setCurve(curve);
+
+        super.initialize(curve.maxTime(), clock.checkpointInterval());
     }
 }
