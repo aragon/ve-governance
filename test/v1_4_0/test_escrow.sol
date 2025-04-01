@@ -74,12 +74,8 @@ contract TestEscrow is
         return biasFP(_amount, _duration) / 1e18;
     }
 
-    function slopeChanges(uint16 _seasonIndex, uint256 _end) private view returns (int256 slope) {
-        return curve.slopeChanges(_seasonIndex, _end);
-    }
-
     function slopeChanges(uint256 _end) private view returns (int256 slope) {
-        return slopeChanges(0, _end);
+        return curve.slopeChanges(_end);
     }
 
     function assertTotalSupply(uint256 _t, int256 _amountFP) private view {

@@ -13,7 +13,6 @@ import {IEscrowCurveIncreasingV1_4_0 as IEscrowCurve} from "@curve/IEscrowCurveI
 import {IExitQueue} from "@queue/IExitQueue.sol";
 import {IVotingEscrowIncreasingV1_4_0 as IVotingEscrow, IVotingEscrowExiting, IMerge, ISplit} from "./IVotingEscrowIncreasing_v1_4_0.sol";
 import {IClockV1_4_0 as IClock} from "@clock/IClock_v1_4_0.sol";
-import {IClockSeason} from "@clock/IClockSeason.sol";
 import {ExitQueue} from "@queue/ExitQueue.sol";
 
 // libraries
@@ -133,8 +132,6 @@ contract VotingEscrowV1_4_0 is
         if (totalLocked < exitAmount) {
             revert UpgradeNotPossible();
         }
-
-        _addSeason(totalLocked - exitAmount);
 
         ExitQueue(queue).initializeFrom(exitAmount);
     }
@@ -416,11 +413,6 @@ contract VotingEscrowV1_4_0 is
         LockedBalance memory _fromLocked,
         LockedBalance memory _newLocked
     ) private {
-        (uint48 seasonStart, ) = IClockSeason(clock).seasonTsAt(uint48(block.timestamp));
-        if(seasonStart != 0) {
-            _fromLocked.start = seasonStart;
-            _newLocked.start = seasonStart;
-        }
         IEscrowCurve(curve).checkpoint(_tokenId, _fromLocked, _newLocked);
     }
 
@@ -435,21 +427,6 @@ contract VotingEscrowV1_4_0 is
         LockedBalance memory _newLocked
     ) private {
         IEscrowCurve(curve).checkpoint(_tokenId, _fromLocked, _newLocked);
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                        Season
-    //////////////////////////////////////////////////////////////*/
-    function addSeason() public auth(ESCROW_ADMIN_ROLE)  {
-        uint256 total = totalLocked - IExitQueue(queue).totalExiting();
-
-        _addSeason(total);
-    }
-
-    function _addSeason(uint256 _totalAmount) internal {
-        (uint48 start, uint16 seasonIndx) = IClockSeason(clock).newSeason();
-
-        IEscrowCurve(curve).resetCheckPoint(_totalAmount, start, seasonIndx);
     }
 
     /*//////////////////////////////////////////////////////////////
