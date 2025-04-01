@@ -42,7 +42,7 @@ jobs:
   test-gas-report:
     strategy:
       fail-fast: true
-    name: Gas Report and Coverage
+    name: Gas Report
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -68,7 +68,7 @@ jobs:
   test-coverage:
     strategy:
       fail-fast: true
-    name: Gas Report and Coverage
+    name: Coverage Report
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -90,6 +90,9 @@ jobs:
         run: |
           forge coverage --match-path "test/**/unit/**/*.sol" --no-match-coverage "test/" --report lcov
         id: coverage
+
+      - name: Setup LCOV
+        uses: hrishikesh-kadam/setup-lcov@v1
       
       - name: Report code coverage
         uses: zgosalvez/github-actions-report-lcov@v4
