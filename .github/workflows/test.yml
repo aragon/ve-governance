@@ -39,7 +39,7 @@ jobs:
           forge test --match-path "test/**/unit/**/*.sol"
         id: test
 
-  test-gas-report-and-coverage:
+  test-gas-report:
     strategy:
       fail-fast: true
     name: Gas Report and Coverage
@@ -64,11 +64,42 @@ jobs:
         run: |
           forge test --match-path "test/**/unit/**/*.sol" --gas-report
         id: test
-      
+
+  test-coverage:
+    strategy:
+      fail-fast: true
+    name: Gas Report and Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: foundry-toolchain
+        uses: foundry-rs/foundry-toolchain@v1.3.1
+
+      - name: Show Forge version
+        run: forge --version
+
+      - name: Run Forge build
+        run: |
+          forge build
+        id: build
+
       - name: Run Forge coverage
         run: |
-          forge coverage
+          forge coverage --match-path "test/**/unit/**/*.sol" --no-match-coverage "test/" --report lcov
         id: coverage
+      
+      - name: Report code coverage
+        uses: zgosalvez/github-actions-report-lcov@v4
+        with:
+          coverage-files: lcov.info
+          minimum-coverage: 60
+          artifact-name: code-coverage-report
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          working-directory: .
+          update-comment: true
 
   test-upgrade:
     strategy:
