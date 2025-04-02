@@ -339,7 +339,6 @@ contract LinearIncreasingEscrow is
         }
 
         uint256 newEnd = _newLocked.start + maxTime();
-
         int256 newDSlope = slopeChanges[newEnd];
 
         // If the newLocked hasn't ended, add its slope
@@ -380,23 +379,30 @@ contract LinearIncreasingEscrow is
                 newLockSlope += oldLockSlope;
                 newLockBias += oldLockBias;
 
-                // fromLocked's current end is in the future and since `fromLocked` gets destroyed,
-                // its slope must be recorded on the newLocked's end.
+                // fromLocked's current end is in the future and 
+                // since `fromLocked` gets destroyed, its slope must be 
+                // recorded on the newLocked's end. If both `ends` are equal, 
+                // old slope is already included/recorded when it was first stored.
                 if (_fromLockedEnd > block.timestamp && _fromLockedEnd != newEnd) {
                     newDSlope += oldLockSlope;
                 }
             }
 
+            // If ends are not equal and fromLocked's end 
+            // is in the future, we must clear it out.
             if (_fromLockedEnd != newEnd && _fromLockedEnd >= block.timestamp) {
                 int256 oldDSlope = slopeChanges[_fromLockedEnd] - oldLockSlope;
-                slopeChanges[_fromLockedEnd] = oldDSlope < 0 ? int256(0) : oldDSlope;
+                if(oldDSlope < 0) oldDSlope = 0;
+                slopeChanges[_fromLockedEnd] = oldDSlope;
             }
         }
 
         if (lastPoint.slope < 0) lastPoint.slope = 0;
         if (lastPoint.bias < 0) lastPoint.bias = 0;
+        if(newDSlope < 0) newDSlope = 0;
 
-        slopeChanges[newEnd] = newDSlope < 0 ? int256(0) : newDSlope;
+        // store new slope change
+        slopeChanges[newEnd] = newDSlope;
 
         // Record the latest global point.
         _storeLatestGlobalPoint(lastPoint, _globalPointLatestIndex);
