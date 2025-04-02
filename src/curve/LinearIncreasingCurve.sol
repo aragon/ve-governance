@@ -109,12 +109,12 @@ contract LinearIncreasingEscrow is
                               CURVE COEFFICIENTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @return The coefficient for the linear term of the quadratic curve, for the given amount
+    /// @return The coefficient for the curve's linear term, for the given amount
     function _getLinearCoeff(uint256 amount) internal pure returns (int256) {
         return int256(amount) * SHARED_LINEAR_COEFFICIENT;
     }
 
-    /// @return The constant coefficient of the quadratic curve, for the given amount
+    /// @return The constant coefficient of the increasing curve, for the given amount
     /// @dev In this case, the constant term is 1 so we just case the amount
     function _getConstantCoeff(uint256 amount) public pure returns (int256) {
         return int256(amount) * SHARED_CONSTANT_COEFFICIENT;
@@ -151,25 +151,25 @@ contract LinearIncreasingEscrow is
 
     /// @notice Returns the bias for the given time elapsed and amount, up to the maximum time
     function _getBias(
-        uint256 timeElapsed,
-        int256 constantCoeff,
-        int256 slope
+        uint256 _timeElapsed,
+        int256 _constantCoeff,
+        int256 _linearCoeff
     ) internal view returns (uint256) {
         uint256 MAX_TIME = maxTime();
-        timeElapsed = timeElapsed > MAX_TIME ? MAX_TIME : timeElapsed;
+        _timeElapsed = _timeElapsed > MAX_TIME ? MAX_TIME : _timeElapsed;
 
-        int256 bias = slope * int256(timeElapsed) + constantCoeff;
+        int256 bias = _linearCoeff * int256(_timeElapsed) + _constantCoeff;
         if (bias < 0) bias = 0;
 
         return bias.toUint256();
     }
 
     function _getBiasAndSlope(
-        uint256 timeElapsed,
-        uint256 amount
+        uint256 _timeElapsed,
+        uint256 _amount
     ) public view returns (int256, int256) {
-        int256 slope = _getLinearCoeff(amount);
-        uint256 bias = _getBias(timeElapsed, _getConstantCoeff(amount), slope);
+        int256 slope = _getLinearCoeff(_amount);
+        uint256 bias = _getBias(_timeElapsed, _getConstantCoeff(_amount), slope);
 
         return (int256(bias), slope);
     }
@@ -233,7 +233,7 @@ contract LinearIncreasingEscrow is
         return tokenPointLatestIndex[_tokenId];
     }
 
-    //// TODO: inheritdoc IEscrowCurveCore doesn't work.
+    /// @inheritdoc IEscrowCurveCore
     function votingPowerAt(uint256 _tokenId, uint256 _t) external view returns (uint256) {
         uint256 interval = _getPastTokenPointInterval(_tokenId, _t);
 
@@ -250,7 +250,7 @@ contract LinearIncreasingEscrow is
         return _getBias(_t - lastPoint.checkpointTs, bias, slope) / 1e18;
     }
 
-    //// TODO: inheritdoc IEscrowCurveCore doesn't work.
+    /// @inheritdoc IEscrowCurveCore
     function supplyAt(uint256 _timestamp) external view returns (uint256) {
         return _supplyAt(_timestamp);
     }
@@ -282,7 +282,7 @@ contract LinearIncreasingEscrow is
         // this implementation doesn't yet support manual checkpointing
         if (_tokenId == 0) revert InvalidTokenId();
 
-        if(_newLocked.start < _fromLocked.start) {
+        if (_newLocked.start < _fromLocked.start) {
             revert InvalidCheckpoint();
         }
 
@@ -429,7 +429,7 @@ contract LinearIncreasingEscrow is
     function _getPastTokenPointInterval(
         uint256 _tokenId,
         uint256 _timestamp
-    ) internal view returns (uint256) {        
+    ) internal view returns (uint256) {
         uint256 tokenInterval = tokenPointLatestIndex[_tokenId];
 
         if (tokenInterval == 0) return 0;
@@ -437,7 +437,7 @@ contract LinearIncreasingEscrow is
         // if the most recent point is before the timestamp, return it
         if (_tokenPointHistory[_tokenId][tokenInterval].writtenTs <= _timestamp)
             return (tokenInterval);
-        
+
         // Check if the first balance is after the timestamp
         // this means that the first epoch has yet to start
         if (_tokenPointHistory[_tokenId][1].writtenTs > _timestamp) return 0;
@@ -494,6 +494,7 @@ contract LinearIncreasingEscrow is
         // epoch 0 is an empty point
         if (epoch_ == 0) return 0;
         GlobalPoint memory _point = _globalPointHistory[epoch_];
+
         int256 bias = _point.bias;
         int256 slope = _point.slope;
         uint256 ts = _point.writtenTs; // changes in for loop.
@@ -505,11 +506,13 @@ contract LinearIncreasingEscrow is
         for (uint256 i = 0; i < 255; ++i) {
             t_i += checkpointInterval;
             int256 dSlope = 0;
+
             if (t_i > _timestamp) {
                 t_i = _timestamp;
             } else {
                 dSlope = slopeChanges[t_i];
             }
+
             bias += slope * int256(t_i - ts);
 
             if (t_i == _timestamp) {

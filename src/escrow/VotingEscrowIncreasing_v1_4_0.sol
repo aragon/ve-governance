@@ -116,13 +116,13 @@ contract VotingEscrowV1_4_0 is
         emit MinDepositSet(_initialMinDeposit);
     }
 
-     function initializeFrom(bool exitAmountIncluded, uint256 exitAmount) public {        
+    function initializeFrom(bool exitAmountIncluded, uint256 exitAmount) public {
         if (exitAmountIncluded) {
             // If `exitAmount` is passed, make sure the escrow is paused
             // so that incorrect upgrade doesn't go unnoticed. Otherwise,
             // upgrade transaction might be front-run by `beginWithdrawal`
             // causing the `exitAmount` to be wrong.
-            if(!paused()) {
+            if (!paused()) {
                 revert UpgradeNotPossible();
             }
         } else {
@@ -311,7 +311,7 @@ contract VotingEscrowV1_4_0 is
 
         if (!isApprovedOrOwner(sender, _from)) revert NotApprovedOrOwner();
         if (!isApprovedOrOwner(sender, _to)) revert NotApprovedOrOwner();
-        
+
         if (_from == _to) revert SameNFT();
 
         LockedBalance memory oldLockedFrom = _locked[_from];
@@ -334,7 +334,7 @@ contract VotingEscrowV1_4_0 is
 
         uint208 newLockedAmount = oldLockedFrom.amount + oldLockedTo.amount;
 
-        _locked[_to] = LockedBalance({start: oldLockedTo.start, amount: newLockedAmount});
+        _locked[_to] = LockedBalance(newLockedAmount, oldLockedTo.start);
 
         emit Merged(sender, _from, _to, oldLockedFrom.amount, oldLockedTo.amount, newLockedAmount);
     }
@@ -495,7 +495,6 @@ contract VotingEscrowV1_4_0 is
         // clear out the token data
         _locked[_tokenId] = LockedBalance(0, 0);
         totalLocked -= value;
-        
 
         // Burn the NFT and transfer the tokens to the user
         IERC721EMB(lockNFT).burn(_tokenId);
