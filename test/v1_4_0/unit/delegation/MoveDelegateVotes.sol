@@ -1,50 +1,94 @@
 pragma solidity ^0.8.17;
 
 import {Base} from "./Base.sol";
-
-import {Lock, Clock, VotingEscrow, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, IEscrowCurveTokenStorage, IGaugeVote} from "../../versions.sol";
-import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
-import {createTestDAO} from "@mocks/MockDAO.sol";
-import {ProxyLib} from "@libs/ProxyLib.sol";
 
-import {DelegationMapper} from "@delegation/DelegationMapper.sol";
-import {IDelegationMapper} from "@delegation/IDelegationMapper.sol";
-
-contract MoveDelegateVotes is Base {
+contract TestMoveDelegateVotes is Base {
     function setUp() public override {
         super.setUp();
     }
 
-    // function test_Reverts_IfSenderIsNotEscrow() public {
-    //     vm.expectRevert(IDelegationMapper.OnlyEscrow.selector);
-    //     dg.moveDelegateVotes(address(1), address(2), 1);
-    // }
+    function testRevert_IfNotCalledByEscrow() public {
+        vm.expectRevert(OnlyEscrow.selector);
+        dg.moveDelegateVotes(alice, bob, 1);
+    }
 
-    // function test_RemoveDelegateeAndBalance_After_Token_Transfer() public {
-    //     escrow.write(ids[0], 14);
-    //     escrow.write(ids[1], 15);
-    //     escrow.write(ids[2], 16);
+    function test_OnlyUpdatesFromDelegateeWhenToIsNotSet() public {
+        address tokenOwner = address(567);
+        uint256 start = weekStartTs((block.timestamp));
 
-    //     // Alice is delegatee
-    //     dg.delegate(ids, alice);
+        {
+            // make Alice delegate with tokenId = 1 and 2
+            vm.startPrank(tokenOwner);
+            dg.delegate(alice);
+            _mockLocked(1, 10, start);
+            _mockLocked(2, 15, start);
+            dg.delegate(getIds(1, 2));
+            vm.stopPrank();
+        }
 
-    //     vm.warp(block.timestamp + 10);
-    //     uint256 tokenTransferTs = block.timestamp;
+        uint256 token1Bias = bias(10, block.timestamp - start);
+        uint256 token2Bias = bias(15, block.timestamp - start);
+        uint256 total = token1Bias + token2Bias;
 
-    //     vm.prank(address(escrow));
-    //     dg.moveDelegateVotes(alice, bob, ids[0]);
+        assertEq(dg.getVotes(alice), total);
+        assertEq(dg.getVotes(bob), 0);
 
-    //     // Alice is not delegatee anymore for tokenId = ids[0]
-    //     assertDelegate(ids[0], block.timestamp, address(0));
+        vm.prank(address(escrow));
+        dg.moveDelegateVotes(tokenOwner, bob, 1);
 
-    //     // Alice is still delegatee for ids[1] and ids[2]
-    //     assertDelegate(ids[1], block.timestamp, alice);
-    //     assertDelegate(ids[2], block.timestamp, alice);
+        assertEq(dg.getVotes(alice), token2Bias);
+        assertEq(dg.getVotes(bob), 0);
+    }
 
-    //     assertEq(dg.getDelegationBalance(alice, block.timestamp), 15 + 16);
+     function test_OnlyUpdatesToDelegateeWhenFromIsNotSet() public {
+        address tokenReceiver = address(567);
+        vm.prank(tokenReceiver);
+        dg.delegate(bob);
 
-    //     // for the timestamp before token transfer, alice still should be delegatee.
-    //     assertDelegate(ids[0], tokenTransferTs - 1, alice);
-    // }
+        _mockLocked(1, 10, weekStartTs((block.timestamp)));
+        
+        assertEq(dg.getVotes(bob), 0);
+        
+        vm.prank(address(escrow));
+        dg.moveDelegateVotes(sender, tokenReceiver, 1);
+
+        assertEq(dg.getVotes(bob), bias(10, block.timestamp - weekStartTs((block.timestamp))));
+    }
+
+    function test_UpdateBothDelegates() public {
+        address tokenOwner = address(567);
+        address tokenReceiver = address(678);
+
+        uint256 start = weekStartTs((block.timestamp));
+        _mockLocked(1, 10, start);
+        _mockLocked(2, 15, start);
+        
+        {
+            // make Alice delegatee with tokenId = 1 and 2
+            vm.startPrank(tokenOwner);
+            dg.delegate(alice);
+            dg.delegate(getIds(1, 2));
+            vm.stopPrank();
+        }
+
+        {
+            // make Bob delegatee
+            vm.prank(tokenReceiver);
+            dg.delegate(bob);
+        }
+
+        uint256 token1Bias = bias(10, block.timestamp - start);
+        uint256 token2Bias = bias(15, block.timestamp - start);
+        uint256 total = token1Bias + token2Bias;
+
+        assertEq(dg.getVotes(alice), total);
+        assertEq(dg.getVotes(bob), 0);
+
+        vm.prank(address(escrow));
+        dg.moveDelegateVotes(tokenOwner, tokenReceiver, 1);
+
+        assertEq(dg.getVotes(alice), token2Bias);
+        assertEq(dg.getVotes(bob), token1Bias);
+    }
 }

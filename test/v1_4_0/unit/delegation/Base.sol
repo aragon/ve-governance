@@ -4,101 +4,48 @@ pragma solidity ^0.8.17;
 import {Test} from "forge-std/Test.sol";
 
 // aragon contracts
-import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {DelegationMapper} from "@delegation/DelegationMapper.sol";
 
 import {createTestDAO} from "@mocks/MockDAO.sol";
-import {Lock, Clock, VotingEscrow, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, IEscrowCurveTokenStorage, IGaugeVote, IVotingEscrowIncreasing} from "../../versions.sol";
+import {Clock, IClock, VotingEscrow} from "../../versions.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
-import {console2 as console} from "forge-std/console2.sol";
 import {ILockedBalanceIncreasing} from "@escrow/IVotingEscrowIncreasing.sol";
+import {IDelegationMapperStorage, IDelegationMapperErrorsAndEvents} from "@delegation/IDelegationMapper.sol";
+import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
+import {FixedPointBase} from "../../base/FixedPointBase.sol";
 
-contract EscrowVotingPowerMock {
-    struct Checkpoint {
-        uint256 timestamp;
-        uint256 value;
+contract EscrowVotingPowerMock {}
+
+contract DelegationMapperA is DelegationMapper {
+    function pointHistory_(
+        address _account,
+        uint256 _index
+    ) public view returns (GlobalPoint memory) {
+        return pointHistory[_account][_index];
     }
 
-    mapping(uint256 => Checkpoint[]) public tcps;
-    mapping(uint256 => mapping(uint256 => uint256)) vps;
-    mapping(uint256 => ILockedBalanceIncreasing.LockedBalance) lockedBalances;
-    bool isApproved = true;
-    uint256 vp = 0;
-
-    function write(uint256 _tokenId, uint256 _vp, uint256 _ts) public {
-        tcps[_tokenId].push(Checkpoint({timestamp: _ts, value: _vp}));
-    }
-
-    function write(uint256 _tokenId, uint256 _vp) external {
-        write(_tokenId, _vp, block.timestamp);
-    }
-
-    function writeLock(uint256 _tokenId, uint256 _amount, uint256 _start) external {
-        lockedBalances[_tokenId] = ILockedBalanceIncreasing.LockedBalance(
-            uint208(_amount),
-            uint48(_start)
-        );
-    }
-
-    function setApproved(bool _isApproved) public {
-        isApproved = _isApproved;
-    }
-
-    function locked(
-        uint256 _tokenId
-    ) public view returns (ILockedBalanceIncreasing.LockedBalance memory) {
-        return lockedBalances[_tokenId];
-    }
-
-    function ownedTokens() public view returns(uint256[] memory) {
-        uint256[] memory tokens = new uint256[](3);
-        tokens[0] = 1;
-        tokens[1] = 2;
-        tokens[2] = 3;
-
-        return tokens;
-    }
-
-    function votingPowerAt(uint256 _tokenId, uint256 _ts) external view returns (uint256) {
-        Checkpoint[] storage tcps_ = tcps[_tokenId];
-
-        uint256 val = 0;
-
-        // simple linear search (ok for test).
-        for (uint256 i = tcps_.length; i > 0; i--) {
-            if (tcps_[i - 1].timestamp <= _ts) {
-                val = tcps_[i - 1].value;
-                break;
-            }
-        }
-
-        return val;
-    }
-
-    function isApprovedOrOwner(
-        address /* _spender */,
-        uint256 /* _tokenId */
-    ) public view returns (bool) {
-        return isApproved;
+    function slopeChanges_(address _account, uint256 _end) public view returns (int256) {
+        return slopeChanges[_account][_end];
     }
 }
 
-contract Base is Test {
+contract Base is IDelegationMapperStorage, IDelegationMapperErrorsAndEvents, FixedPointBase, Test {
     using ProxyLib for address;
 
     EscrowVotingPowerMock public escrow;
-    DelegationMapper public dg;
+    DelegationMapperA public dg;
     DAO dao;
     Clock clock;
     address deployer = address(this);
 
     address alice = address(123);
     address bob = address(456);
+    address sender = address(this);
 
     uint256[] singleId = [1];
-    uint256[] multiIds = [2, 3, 4];
+    uint256[] multiIds = [1, 2];
 
     function setUp() public virtual {
         _deployDAO();
@@ -106,19 +53,16 @@ contract Base is Test {
 
         escrow = new EscrowVotingPowerMock();
         dg = _deployDelegationMapper(address(dao), address(clock), address(escrow));
-    }
 
-    // function assertDelegate(uint256 _tokenId, uint256 _ts, address _delegatee) internal {
-    //     (address delegatee, ) = dg.getDelegate(_tokenId, _ts);
-    //     assertEq(delegatee, _delegatee);
-    // }
+        _mockApprovedOwner(true);
+
+        uint256 maxTime = IClock(clock).epochDuration() * CurveConstantLib.MAX_EPOCHS;
+
+        super.initialize(maxTime, clock.checkpointInterval());
+    }
 
     function _deployDAO() internal {
         dao = createTestDAO(deployer);
-    }
-
-    function weekStartTs(uint256 _ts) public view returns (uint256) {
-        return (_ts / 1 weeks) * 1 weeks;
     }
 
     function _deployClock(address _dao) internal returns (Clock) {
@@ -131,13 +75,70 @@ contract Base is Test {
         address _dao,
         address _clock,
         address _escrow
-    ) public returns (DelegationMapper) {
-        DelegationMapper impl = new DelegationMapper();
+    ) public returns (DelegationMapperA) {
+        DelegationMapperA impl = new DelegationMapperA();
 
         bytes memory initCalldata = abi.encodeCall(
             DelegationMapper.initialize,
             (_dao, _escrow, _clock)
         );
-        return DelegationMapper(address(impl).deployUUPSProxy(initCalldata));
+        return DelegationMapperA(address(impl).deployUUPSProxy(initCalldata));
+    }
+
+    function getIds(uint256 _tokenId) internal view returns(uint256[] memory) {
+        uint256[] memory ids = new uint256[](1);
+        ids[0] = _tokenId;
+        return ids;
+    }
+
+    function getIds(uint256 _tokenId1, uint256 _tokenId2) internal view returns(uint256[] memory) {
+        uint256[] memory ids = new uint256[](2);
+        ids[0] = _tokenId1;
+        ids[1] = _tokenId2;
+        return ids;
+    }
+
+    function assertGlobalPoint(
+        address _account,
+        uint256 _expectedLatestIndex,
+        int256 _biasFP,
+        int256 _slopeFP,
+        uint256 _writtenTs
+    ) internal view {
+        uint256 latestIndex = dg.latestPointIndex(_account);
+        assertEq(latestIndex, _expectedLatestIndex);
+
+        GlobalPoint memory p = dg.pointHistory_(_account, latestIndex);
+        assertEq(p.writtenTs, _writtenTs);
+        assertEq(p.bias, _biasFP);
+        assertEq(p.slope, _slopeFP);
+    }
+
+    function assertSlopeChange(address _account, uint256 _end, uint256 _amount) internal view {
+        assertEq(dg.slopeChanges_(_account, _end), slopeFP(_amount));
+    }
+
+    function _mockApprovedOwner(bool _approved) internal {
+        vm.mockCall(
+            address(escrow),
+            abi.encodeWithSelector(VotingEscrow.isApprovedOrOwner.selector),
+            abi.encode(_approved)
+        );
+    }
+
+    function _mockOwnedTokens(address _account, uint256[] memory _ids) internal {
+        vm.mockCall(
+            address(escrow),
+            abi.encodeWithSelector(VotingEscrow.ownedTokens.selector, (_account)),
+            abi.encode(_ids)
+        );
+    }
+
+    function _mockLocked(uint256 _tokenId, uint256 _amount, uint256 _start) internal {
+        vm.mockCall(
+            address(escrow),
+            abi.encodeWithSelector(VotingEscrow.locked.selector, (_tokenId)),
+            abi.encode(ILockedBalanceIncreasing.LockedBalance(uint208(_amount), uint48(_start)))
+        );
     }
 }

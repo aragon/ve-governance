@@ -1,18 +1,9 @@
 pragma solidity ^0.8.17;
 
 import {Base} from "./Base.sol";
-
-import {Lock, Clock, VotingEscrow, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, IEscrowCurveTokenStorage, IGaugeVote} from "../../versions.sol";
-import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
-import {createTestDAO} from "@mocks/MockDAO.sol";
-import {ProxyLib} from "@libs/ProxyLib.sol";
 
-import {DelegationMapper} from "@delegation/DelegationMapper.sol";
-import {console2 as console} from "forge-std/console2.sol";
-import {IVotesUpgradeable} from "@openzeppelin/contracts-upgradeable/governance/utils/IVotesUpgradeable.sol";
-
-contract DelegateTest is Base {
+contract TestDelegate is Base {
     function setUp() public override {
         super.setUp();
     }
@@ -24,161 +15,116 @@ contract DelegateTest is Base {
         _;
     }
 
-    // ======================== IVotes Delegate ============================
+    /*//////////////////////////////////////////////////////////////
+                      IVotes Delegate
+    //////////////////////////////////////////////////////////////*/
 
     function test_Sets_Delegatee_Without_Delegating_Tokens() public {
         vm.expectEmit();
-        emit DelegateChanged(
-            address(this),
-            address(0),
-            alice
-        );
+        emit DelegateChanged(sender, address(0), alice);
 
         dg.delegate(alice);
 
-        assertEq(dg.delegates(address(this)), alice);
-        assertEq(dg.numberOfDelegatedTokens(alice), 0);
+        assertEq(dg.delegates(sender), alice);
+        assertEq(dg.numberOfDelegatedTokens(sender), 0);
     }
 
-    function test_Reverts_If_Atleast_one_token_is_delegated() public {
+    function test_Delegates_owned_tokens_automatically() public AutoDelegationEnabled {
+        _mockOwnedTokens(sender, singleId);
+        _mockLocked(singleId[0], 100, weekStartTs(block.timestamp));
+
         dg.delegate(alice);
 
+        assertEq(dg.numberOfDelegatedTokens(sender), 1);
+    }
+
+    function testRevert_CanNotDelegateToAnotherAddressIfTokenAlreadyDelegated() public {
+        dg.delegate(alice);
+
+        _mockLocked(singleId[0], 100, weekStartTs(block.timestamp));
         dg.delegate(singleId);
 
-        vm.expectRevert(DelegationMapper.DelegationNotAllowed.selector);
+        vm.expectRevert(DelegationNotAllowed.selector);
         dg.delegate(bob);
     }
 
-    function test_Delegates_owned_tokens_automatically() public AutoDelegationEnabled() {
+    function test_Updates_Delegatee() public {
         dg.delegate(alice);
 
-        // vm.mockCall(address(escrow), abi.encodeWithSelector(VotingEscrow.isApprovedOrOwner.selector), abi.encode(true));
-        // vm.mockCall(address(escrow), abi.encodeWithSelector(VotingEscrow.ownedTokens.selector), abi.encode(singleId));
+        assertEq(dg.delegates(sender), alice);
+
+        vm.expectEmit();
+        emit DelegateChanged(sender, alice, bob);
+        dg.delegate(bob);
+
+        assertEq(dg.delegates(sender), bob);
     }
 
-    function test_ggg() public {
-        vm.warp(10);
-        escrow.writeLock(1, 10, weekStartTs(block.timestamp));
-        dg.delegate(alice);
+    /*//////////////////////////////////////////////////////////////
+                    Delegate(uint256[] tokenIds)
+    //////////////////////////////////////////////////////////////*/
+    function testRevert_IfNoDelegateeIsSet() public {
+        vm.expectRevert(DelegateeNotSet.selector);
+
         dg.delegate(singleId);
-        vm.warp(block.timestamp + 10 weeks);
-        uint256[] memory idss = new uint256[](1);
-        idss[0] = 2;
-        escrow.writeLock(2, 50, block.timestamp + 3 weeks);
-
-        // idss[1] = 3;
-        // idss[2] = 4;
-        uint256 g1 = gasleft();
-
-        dg.delegate(idss);
-        uint256 g2 = gasleft();
-
-        console.log("fuckkkk", g1 - g2);
-
     }
 
-    // function test_CanNotDelegateIfNotOwner() public {
-    //     escrow.setApproved(false);
+    function testRevert_IfNotApprovedOrOwner() public {
+        dg.delegate(alice);
 
-    //     vm.expectRevert(DelegationMapper.NotApprovedOrOwner.selector);
+        _mockApprovedOwner(false);
 
-    //     dg.delegate(singleId, alice);
-    // }
+        vm.expectRevert(NotApprovedOrOwner.selector);
+        dg.delegate(singleId);
+    }
 
-    // function test_CanNotDelegateeToSameAddress() public {
-    //     dg.delegate(singleId, alice);
+    function testRevert_IfTokenAlreadyDelegated() public {
+        dg.delegate(alice);
 
-    //     vm.expectRevert(DelegationMapper.CanNotDelegateToSameAddress.selector);
+        _mockLocked(singleId[0], 10, weekStartTs(block.timestamp));
+        dg.delegate(singleId);
 
-    //     dg.delegate(singleId, alice);
-    // }
+        vm.expectRevert(
+            abi.encodeWithSelector(TokenAlreadyDelegated.selector, singleId[0])
+        );
 
-    // function test_Fuzz_SetDelegatee_UpdatesBalance_ForSingleToken(
-    //     uint256 _tokenId,
-    //     uint224 _vp
-    // ) public {
-    //     uint256[] memory _ids = new uint256[](1);
-    //     _ids[0] = _tokenId;
+        dg.delegate(singleId);
+    }
 
-    //     escrow.write(_ids[0], _vp);
+    function test_EmitsTheEvents() public {
+        dg.delegate(alice);
 
-    //     dg.delegate(_ids, alice);
+        _mockLocked(multiIds[0], 10, weekStartTs(block.timestamp));
+        _mockLocked(multiIds[1], 10, weekStartTs(block.timestamp));
 
-    //     (address delegatee, uint256 ts) = dg.getDelegate(_ids[0], block.timestamp);
+        vm.expectEmit();
+        emit TokensDelegated(sender, alice, multiIds);
 
-    //     assertEq(delegatee, alice);
-    //     assertEq(ts, block.timestamp);
+        dg.delegate(multiIds);
+    }
 
-    //     uint256 balance = dg.getDelegationBalance(alice, block.timestamp);
-    //     assertEq(balance, _vp);
+    function test_CorrectlySetsDelegatedTokenCount() public {
+        dg.delegate(alice);
+        uint256 start = weekStartTs((block.timestamp));
 
-    //     assertEq(dg.getVotes(alice), _vp);
-    //     assertEq(dg.getPastVotes(alice, block.timestamp), _vp);
-    //     assertEq(dg.getPastVotes(alice, block.timestamp - 1), 0);
-    //     assertEq(dg.getPastVotes(alice, block.timestamp + 1), _vp);
-    // }
+        _mockLocked(multiIds[0], 10, start);
+        _mockLocked(multiIds[1], 10, start);
+        dg.delegate(multiIds);
 
-    // function test_Fuzz_SetDelegatee_UpdatesBalance_ForMultipleTokens(
-    //     uint208[3] memory _vps
-    // ) public {
-    //     uint256 totalVp;
-    //     for (uint256 i = 0; i < ids.length; i++) {
-    //         escrow.write(ids[i], _vps[i]);
-    //         totalVp += _vps[i];
-    //     }
+        assertEq(dg.numberOfDelegatedTokens(sender), multiIds.length);
 
-    //     dg.delegate(ids, alice);
+        _mockLocked(3, 10, start);
+        
+        dg.delegate(getIds(3));
 
-    //     for (uint256 i = 0; i < ids.length; i++) {
-    //         (address delegatee, uint256 ts) = dg.getDelegate(ids[i], block.timestamp);
+        assertEq(dg.numberOfDelegatedTokens(sender), multiIds.length + 1);
+    }
 
-    //         assertEq(delegatee, alice);
-    //         assertEq(ts, block.timestamp);
-    //     }
+    function test_SetsDelegatedTokenToTrue() public {
+        dg.delegate(alice);
+        _mockLocked(1, 10, weekStartTs((block.timestamp)));
+        dg.delegate(getIds(1));
 
-    //     uint256 balance = dg.getDelegationBalance(alice, block.timestamp);
-    //     assertEq(balance, totalVp);
-
-    //     assertEq(dg.getVotes(alice), totalVp);
-    //     assertEq(dg.getPastVotes(alice, block.timestamp), totalVp);
-    //     assertEq(dg.getPastVotes(alice, block.timestamp - 1), 0);
-    //     assertEq(dg.getPastVotes(alice, block.timestamp + 1), totalVp);
-    // }
-
-    // function test_Fuzz_ReDelegate_UpdatesOldAndNewDelegateeBalances(uint208[3] memory _vps) public {
-    //     uint256 totalVp;
-    //     for (uint256 i = 0; i < ids.length; i++) {
-    //         escrow.write(ids[i], _vps[i]);
-    //         totalVp += _vps[i];
-    //     }
-
-    //     uint256 ts = block.timestamp;
-    //     dg.delegate(ids, alice);
-
-    //     vm.warp(block.timestamp + 10000);
-
-    //     dg.delegate(ids, bob);
-
-    //     // Alice must have lost delegation and
-    //     // Bob should have it at latest timestamp.
-    //     assertEq(dg.getDelegationBalance(alice, block.timestamp), 0);
-    //     assertEq(dg.getDelegationBalance(bob, block.timestamp), totalVp);
-    //     assertDelegate(ids[0], block.timestamp, bob);
-
-    //     // Before re-delegation occured, Alice still
-    //     // should be delegated and not Bob.
-    //     assertEq(dg.getDelegationBalance(alice, ts), totalVp);
-    //     assertEq(dg.getDelegationBalance(bob, ts), 0);
-    //     assertDelegate(ids[0], ts, alice);
-
-    //     // Bob must have votes at the latest timestamp.
-    //     assertEq(dg.getVotes(bob), totalVp);
-    //     assertEq(dg.getPastVotes(bob, block.timestamp), totalVp);
-    //     assertEq(dg.getPastVotes(bob, block.timestamp - 1), 0);
-
-    //     // Alice should only have votes before re-delegation occured.
-    //     assertEq(dg.getVotes(alice), 0);
-    //     assertEq(dg.getPastVotes(alice, block.timestamp), 0);
-    //     assertEq(dg.getPastVotes(alice, block.timestamp - 1), totalVp);
-    // }
+        assertEq(dg.tokenIsDelegated(1), true);
+    }
 }

@@ -3,9 +3,20 @@ pragma solidity ^0.8.0;
 
 interface IDelegationMapperErrorsAndEvents {
     event AutoDelegationSet(address indexed delegate, bool enabled);
+    event TokensDelegated(address indexed sender, address indexed delegatee, uint256[] tokenIds);
+    event TokensUndelegated(address indexed sender, address indexed delegatee, uint256[] tokenIds);
+
     error OnlyEscrow();
 
     error DelegateBySigNotSupported();
+
+    error NotApprovedOrOwner();
+    error InvalidTokenId();
+    error DelegationNotAllowed();
+    error DelegateeNotSet();
+
+    error TokenAlreadyDelegated(uint256 tokenId);
+    error TokenNotDelegated(uint256 tokenId);
 }
 
 interface IDelegationMapperStorage {

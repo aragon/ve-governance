@@ -1,63 +1,64 @@
 pragma solidity ^0.8.17;
 
 import {Base} from "./Base.sol";
-
-import {Lock, Clock, VotingEscrow, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, IEscrowCurveTokenStorage, IGaugeVote} from "../../versions.sol";
-import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
-import {createTestDAO} from "@mocks/MockDAO.sol";
-import {ProxyLib} from "@libs/ProxyLib.sol";
 
-import {DelegationMapper} from "@delegation/DelegationMapper.sol";
-
-contract UndelegateTest is Base {
+contract TestUndelegate is Base {
     function setUp() public override {
         super.setUp();
     }
 
-    // function test_Reverts_If_SenderIsNotOwner() public {
-    //     vm.warp(10);
+    modifier givenDelegatedTokens() {
+        dg.delegate(alice);
 
-    //     dg.delegate(ids, alice);
+        _mockLocked(multiIds[0], 10, weekStartTs((block.timestamp)));
+        _mockLocked(multiIds[1], 25, weekStartTs((block.timestamp)));
 
-    //     escrow.setApproved(false);
+        dg.delegate(multiIds);
+        _;
+    }
 
-    //     vm.prank(address(123));
-    //     vm.expectRevert(DelegationMapper.NotApprovedOrOwner.selector);
-    //     dg.undelegate(ids);
-    // }
-    
-    // function test_UpdateBalance_WithZero_And_Remove_Delegate() public {
-    //     escrow.write(ids[0], 14);
-    //     escrow.write(ids[1], 15);
-    //     escrow.write(ids[2], 16);
+    function testRevert_IfNotApprovedOrOwner() public givenDelegatedTokens {
+        _mockApprovedOwner(false);
 
-    //     dg.delegate(ids, alice);
+        vm.expectRevert(NotApprovedOrOwner.selector);
+        dg.undelegate(multiIds);
+    }
 
-    //     uint256 delegateTs = block.timestamp;
+    function testRevert_IfNoDelegateeSet() public {
+        vm.expectRevert(DelegateeNotSet.selector);
 
-    //     assertEq(dg.getDelegationBalance(alice, delegateTs), 45);
+        dg.undelegate(singleId);
+    }
 
-    //     vm.warp(block.timestamp + 10);
-    //     uint256 undelegateTs = block.timestamp;
+    function testRevert_IfTokenNotDelegated() public givenDelegatedTokens {
+        uint256 tokenId = 5;
+        _mockLocked(tokenId, 10, weekStartTs(block.timestamp));
 
-    //     dg.undelegate(ids);
+        vm.expectRevert(
+            abi.encodeWithSelector(TokenNotDelegated.selector, tokenId)
+        );
+        dg.undelegate(getIds(tokenId));
+    }
 
-    //     assertEq(dg.getDelegationBalance(alice, undelegateTs), 0);
+    function test_EmitsTheEvents() public givenDelegatedTokens {
+        vm.expectEmit();
+        emit TokensUndelegated(sender, alice, multiIds);
 
-    //     for(uint256 i = 0; i < ids.length; i++) {
-    //         (address delegatee, ) = dg.getDelegate(ids[i], undelegateTs);
-    //         assertEq(delegatee, address(0));
-    //     }
+        dg.undelegate(multiIds);
+    }
 
-    //     // Ensure that before undelegation timestamp, alice still is delegatee.
-    //     assertEq(dg.getDelegationBalance(alice, undelegateTs - 1), 45);
+    function test_CorrectlyDecreasesDelegatedTokenCount() public givenDelegatedTokens {
+        uint256 tokenCount = dg.numberOfDelegatedTokens(sender);
 
-    //     for(uint256 i = 0; i < ids.length; i++) {
-    //         (address delegatee, ) = dg.getDelegate(ids[i], undelegateTs - 1);
-    //         assertEq(delegatee, alice);
-    //     }
+        dg.undelegate(getIds(1));
 
-    // }
+        assertEq(dg.numberOfDelegatedTokens(sender), tokenCount - 1);
+    }
 
+    function test_SetsDelegatedTokenToFalse() public givenDelegatedTokens {
+        dg.undelegate(getIds(1));
+
+        assertEq(dg.tokenIsDelegated(1), false);
+    }
 }

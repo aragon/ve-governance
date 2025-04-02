@@ -45,11 +45,6 @@ contract DelegationMapper is
     int256 private sharedConstantCoefficient;
     uint256 private maxTime;
 
-    error NotApprovedOrOwner();
-    error InvalidTokenId();
-    error DelegationNotAllowed();
-    error DelegateeNotSet();
-
     /*///////////////////////////////////////////////////////////////
                             Initialization
     //////////////////////////////////////////////////////////////*/
@@ -68,10 +63,10 @@ contract DelegationMapper is
     }
 
     function setAutoDelegation(bool _enabled) external {
-        // address sender = _msgSender();
+        address sender = _msgSender();
 
-        autoDelegationEnabled[msg.sender] = _enabled;
-        emit AutoDelegationSet(msg.sender, _enabled);
+        autoDelegationEnabled[sender] = _enabled;
+        emit AutoDelegationSet(sender, _enabled);
     }
 
     function delegate(address _delegatee) public {
@@ -81,7 +76,7 @@ contract DelegationMapper is
             revert DelegationNotAllowed();
         }
 
-        address oldDelegatee = delegates(_delegatee);
+        address oldDelegatee = delegates(sender);
 
         delegatees_[sender] = _delegatee;
 
@@ -95,43 +90,11 @@ contract DelegationMapper is
 
     function delegate(uint256[] memory _tokenIds) public {
         address sender = _msgSender();
-
         address delegatee = delegates(sender);
 
-        if(delegatee == address(0)) {
+        if (delegatee == address(0)) {
             revert DelegateeNotSet();
         }
-
-        int256 totalBias;
-        int256 totalSlope;
-
-        for (uint256 i = 0; i < _tokenIds.length; i++) {
-            uint256 tokenId = _tokenIds[i];
-
-            if (!IVotingEscrow(escrow).isApprovedOrOwner(sender, tokenId)) {
-                // revert NotApprovedOrOwner();
-            }
-
-            // IVotingEscrow.LockedBalance memory locked = IVotingEscrow(escrow).locked(tokenId);
-
-            // // you can only delegate once but you can delegate tokens one at a time
-            // if (!tokenIsDelegated[tokenId]) {
-            //     (int256 bias, int256 slope) = _getBiasAndSlope(delegatee, locked, _positive);
-
-            //     totalBias += bias;
-            //     totalSlope += slope;
-            // }
-        }
-
-        // numberOfDelegatedTokens[sender] += _tokenIds.length;
-
-        // _checkpoint(totalBias, totalSlope, delegatee);
-    }
-
-    function undelegate(uint256[] memory _tokenIds) public {
-        address sender = _msgSender();
-
-        address delegatee = delegates(sender);
 
         int256 totalBias;
         int256 totalSlope;
@@ -143,19 +106,63 @@ contract DelegationMapper is
                 revert NotApprovedOrOwner();
             }
 
-            IVotingEscrow.LockedBalance memory locked = IVotingEscrow(escrow).locked(tokenId);
-
             if (tokenIsDelegated[tokenId]) {
-                (int256 bias, int256 slope) = _getBiasAndSlope(delegatee, locked, _negative);
-
-                totalBias += bias;
-                totalSlope += slope;
+                revert TokenAlreadyDelegated(tokenId);
             }
+
+            tokenIsDelegated[tokenId] = true;
+
+            IVotingEscrow.LockedBalance memory locked = IVotingEscrow(escrow).locked(tokenId);
+            (int256 bias, int256 slope) = _getBiasAndSlope(delegatee, locked, _positive);
+
+            totalBias += bias;
+            totalSlope += slope;
+        }
+
+        numberOfDelegatedTokens[sender] += _tokenIds.length;
+
+        _checkpoint(totalBias, totalSlope, delegatee);
+
+        emit TokensDelegated(sender, delegatee, _tokenIds);
+    }
+
+    function undelegate(uint256[] memory _tokenIds) public {
+        address sender = _msgSender();
+        address delegatee = delegates(sender);
+
+        if (delegatee == address(0)) {
+            revert DelegateeNotSet();
+        }
+
+        int256 totalBias;
+        int256 totalSlope;
+        uint256 count;
+
+        for (uint256 i = 0; i < _tokenIds.length; i++) {
+            uint256 tokenId = _tokenIds[i];
+
+            if (!IVotingEscrow(escrow).isApprovedOrOwner(sender, tokenId)) {
+                revert NotApprovedOrOwner();
+            } 
+
+            if (!tokenIsDelegated[tokenId]) {
+                revert TokenNotDelegated(tokenId);
+            }
+
+            tokenIsDelegated[tokenId] = false;
+
+            IVotingEscrow.LockedBalance memory locked = IVotingEscrow(escrow).locked(tokenId);
+            (int256 bias, int256 slope) = _getBiasAndSlope(delegatee, locked, _negative);
+
+            totalBias += bias;
+            totalSlope += slope;
         }
 
         numberOfDelegatedTokens[sender] -= _tokenIds.length;
 
         _checkpoint(totalBias, totalSlope, delegatee);
+
+        emit TokensUndelegated(sender, delegatee, _tokenIds);
     }
 
     function moveDelegateVotes(address _from, address _to, uint256 _tokenId) external {
@@ -191,10 +198,6 @@ contract DelegationMapper is
     function checkpointTransition(address _delegatee, uint256 _transitionCount) external {
         _checkpoint(0, 0, _delegatee, _transitionCount);
     }
-    
-    function checkpointTransition(uint256 _transitionCount) external {
-         _checkpoint(0, 0, _msgSender(), _transitionCount);
-    }
 
     function _checkpoint(int256 _totalBias, int256 _totalSlope, address _delegatee) internal {
         _checkpoint(_totalBias, _totalSlope, _delegatee, 255);
@@ -220,17 +223,27 @@ contract DelegationMapper is
         // Get slope changes for the delegatee
         mapping(uint256 => int256) storage slopeChanges_ = slopeChanges[_delegatee];
 
+        uint256 expectedWrittenTs;
+
         {
             uint256 checkpointInterval = IClock(clock).checkpointInterval();
             uint256 lastPointCheckpoint = lastPoint.writtenTs;
             uint256 t_i = (lastPointCheckpoint / checkpointInterval) * checkpointInterval;
 
+            // Since `_checkpoint` can be called manually due to transition,
+            // the global point's writtenTs shouldn't be block.timestamp
+            // by default, but whatever the transition's max week is.
+            expectedWrittenTs = t_i + _transitionCount * checkpointInterval;
+            if (expectedWrittenTs > block.timestamp) {
+                expectedWrittenTs = block.timestamp;
+            }
+
             for (uint256 i = 0; i < _transitionCount; ++i) {
                 t_i += checkpointInterval;
                 int256 dSlope;
 
-                if (t_i > block.timestamp) {
-                    t_i = block.timestamp;
+                if (t_i > expectedWrittenTs) {
+                    t_i = expectedWrittenTs;
                 } else {
                     dSlope = slopeChanges_[t_i];
                 }
@@ -243,7 +256,7 @@ contract DelegationMapper is
 
                 lastPointCheckpoint = t_i;
 
-                if(t_i == block.timestamp) {
+                if (t_i == expectedWrittenTs) {
                     break;
                 }
             }
@@ -253,6 +266,7 @@ contract DelegationMapper is
         // it will subtract instead of adding.
         lastPoint.bias += _totalBias;
         lastPoint.slope += _totalSlope;
+        lastPoint.writtenTs = uint48(expectedWrittenTs);
 
         if (lastPoint.slope < 0) lastPoint.slope = 0;
         if (lastPoint.bias < 0) lastPoint.bias = 0;
@@ -261,10 +275,10 @@ contract DelegationMapper is
         pointHistory[_delegatee][latestPointIndex_] = lastPoint;
     }
 
-     /*//////////////////////////////////////////////////////////////
+    /*//////////////////////////////////////////////////////////////
                       IVotes Function
     //////////////////////////////////////////////////////////////*/
-    
+
     function getVotes(address _account) external view returns (uint256) {
         return _delegateBalanceAt(_account, block.timestamp);
     }
@@ -281,14 +295,7 @@ contract DelegationMapper is
         return delegatees_[_account];
     }
 
-    function delegateBySig(
-        address,
-        uint256,
-        uint256,
-        uint8,
-        bytes32,
-        bytes32
-    ) public virtual {
+    function delegateBySig(address, uint256, uint256, uint8, bytes32, bytes32) public virtual {
         revert DelegateBySigNotSupported();
     }
 
@@ -367,7 +374,7 @@ contract DelegationMapper is
         }
 
         if (bias < 0) bias = 0;
-        
+
         return uint256(SignedFixedPointMath.fromFP(bias));
     }
 
