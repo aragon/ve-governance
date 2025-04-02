@@ -19,9 +19,6 @@ import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {ReentrancyGuardUpgradeable as ReentrancyGuard} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
-import {PausableUpgradeable as Pausable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
-
-import {console2 as console} from "forge-std/console2.sol";
 
 /// @title Linear Increasing Escrow
 contract LinearIncreasingEscrow is
@@ -143,10 +140,16 @@ contract LinearIncreasingEscrow is
                               CURVE BIAS
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Rounds `_elapsed` to maxTime if it's greater, otherwise returns `_elapsed`.
+    function boundElapsedMaxTime(uint256 _elapsed) private view returns (uint256) {
+        uint256 MAX_TIME = maxTime();
+        return _elapsed > MAX_TIME ? MAX_TIME : _elapsed;
+    }
+
     /// @notice Returns the bias for the given time elapsed and amount, up to the maximum time
     function getBias(uint256 timeElapsed, uint256 amount) public view returns (uint256) {
         int256[3] memory coefficients = _getCoefficients(amount);
-        return _getBias(timeElapsed, coefficients[0], coefficients[1]);
+        return _getBias(boundElapsedMaxTime(timeElapsed), coefficients[0], coefficients[1]);
     }
 
     /// @notice Returns the bias for the given time elapsed and amount, up to the maximum time
@@ -155,9 +158,6 @@ contract LinearIncreasingEscrow is
         int256 _constantCoeff,
         int256 _linearCoeff
     ) internal view returns (uint256) {
-        uint256 MAX_TIME = maxTime();
-        _timeElapsed = _timeElapsed > MAX_TIME ? MAX_TIME : _timeElapsed;
-
         int256 bias = _linearCoeff * int256(_timeElapsed) + _constantCoeff;
         if (bias < 0) bias = 0;
 
@@ -169,7 +169,11 @@ contract LinearIncreasingEscrow is
         uint256 _amount
     ) public view returns (int256, int256) {
         int256 slope = _getLinearCoeff(_amount);
-        uint256 bias = _getBias(_timeElapsed, _getConstantCoeff(_amount), slope);
+        uint256 bias = _getBias(
+            boundElapsedMaxTime(_timeElapsed),
+            _getConstantCoeff(_amount),
+            slope
+        );
 
         return (int256(bias), slope);
     }
@@ -247,7 +251,10 @@ contract LinearIncreasingEscrow is
         int256 bias = lastPoint.coefficients[0];
         int256 slope = lastPoint.coefficients[1];
 
-        return _getBias(_t - lastPoint.checkpointTs, bias, slope) / 1e18;
+        TokenPoint memory originalPoint = _tokenPointHistory[_tokenId][0];
+        uint256 elapsed = boundElapsedMaxTime(_t - originalPoint.checkpointTs);
+
+        return _getBias(elapsed - lastPoint.writtenTs, bias, slope) / 1e18;
     }
 
     /// @inheritdoc IEscrowCurveCore
@@ -342,7 +349,7 @@ contract LinearIncreasingEscrow is
         int256 newDSlope = slopeChanges[newEnd];
 
         // If the newLocked hasn't ended, add its slope
-        // to the latest global point. newLocked could be 
+        // to the latest global point. newLocked could be
         // ended in case of merge, when a token is already mature.
         if (block.timestamp < newEnd) {
             lastPoint.slope += newLockSlope;
@@ -379,27 +386,27 @@ contract LinearIncreasingEscrow is
                 newLockSlope += oldLockSlope;
                 newLockBias += oldLockBias;
 
-                // fromLocked's current end is in the future and 
-                // since `fromLocked` gets destroyed, its slope must be 
-                // recorded on the newLocked's end. If both `ends` are equal, 
+                // fromLocked's current end is in the future and
+                // since `fromLocked` gets destroyed, its slope must be
+                // recorded on the newLocked's end. If both `ends` are equal,
                 // old slope is already included/recorded when it was first stored.
                 if (_fromLockedEnd > block.timestamp && _fromLockedEnd != newEnd) {
                     newDSlope += oldLockSlope;
                 }
             }
 
-            // If ends are not equal and fromLocked's end 
+            // If ends are not equal and fromLocked's end
             // is in the future, we must clear it out.
             if (_fromLockedEnd != newEnd && _fromLockedEnd >= block.timestamp) {
                 int256 oldDSlope = slopeChanges[_fromLockedEnd] - oldLockSlope;
-                if(oldDSlope < 0) oldDSlope = 0;
+                if (oldDSlope < 0) oldDSlope = 0;
                 slopeChanges[_fromLockedEnd] = oldDSlope;
             }
         }
 
         if (lastPoint.slope < 0) lastPoint.slope = 0;
         if (lastPoint.bias < 0) lastPoint.bias = 0;
-        if(newDSlope < 0) newDSlope = 0;
+        if (newDSlope < 0) newDSlope = 0;
 
         // store new slope change
         slopeChanges[newEnd] = newDSlope;
