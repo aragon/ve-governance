@@ -44,6 +44,8 @@ jobs:
       fail-fast: true
     name: Gas Report
     runs-on: ubuntu-latest
+    env:
+      FOUNDRY_PROFILE=: "ci"
     steps:
       - uses: actions/checkout@v4
         with:

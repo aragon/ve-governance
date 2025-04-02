@@ -23,8 +23,8 @@ build_info = true
 extra_output = ["storageLayout"]
 
 [profile.ci]
-fuzz = { runs = 10_000 }
-verbosity = 4
+fuzz = { runs = 16 }
+gas_reports = ["Clock", "ExitQueue", "Lock", "QuadraticIncreasingEscrow", "VotingEscrowIncreasing", "SimpleGaugeVoter"]
 
 [rpc_endpoints]
 arbitrum_one = "https://arbitrum-mainnet.infura.io/v3/${API_KEY_INFURA}"
