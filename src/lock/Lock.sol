@@ -87,11 +87,29 @@ contract Lock is ILock, ERC721Enumerable, UUPSUpgradeable, DaoAuthorizable, Reen
     /// @dev Override the transfer to check if the recipient is whitelisted
     /// This avoids needing to check for mint/burn but is less idomatic than beforeTokenTransfer
     function _transfer(address _from, address _to, uint256 _tokenId) internal override {
-        if(!whitelisted[WHITELIST_ANY_ADDRESS] && !whitelisted[_to]) {
+        if (!whitelisted[WHITELIST_ANY_ADDRESS] && !whitelisted[_to]) {
             revert NotWhitelisted();
         }
 
         super._transfer(_from, _to, _tokenId);
+    }
+
+    /// @dev Hook that is called before any token transfer - including mint/burn.
+    function _beforeTokenTransfer(
+        address _from,
+        address _to,
+        uint256 _tokenId,
+        uint256
+    ) internal virtual override {
+        // `burn` can only be called by escrow which only calls
+        // it upon `beginWithdrawal`. This means that before actual
+        // `burn`, it would first transfer the token to escrow contract,
+        // which wouldn't update the checkpoint for escrow delegatee.
+        // See `moveDelegateVotes` in DelegationMapper. For gas efficiency,
+        // we skip calling `moveDelegateVotes` in such case.
+        if (_to == address(0)) {
+            return;
+        }
 
         IVotingEscrow(escrow).moveDelegateVotes(_from, _to, _tokenId);
     }

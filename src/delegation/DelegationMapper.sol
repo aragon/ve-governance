@@ -136,14 +136,13 @@ contract DelegationMapper is
 
         int256 totalBias;
         int256 totalSlope;
-        uint256 count;
 
         for (uint256 i = 0; i < _tokenIds.length; i++) {
             uint256 tokenId = _tokenIds[i];
 
             if (!IVotingEscrow(escrow).isApprovedOrOwner(sender, tokenId)) {
                 revert NotApprovedOrOwner();
-            } 
+            }
 
             if (!tokenIsDelegated[tokenId]) {
                 revert TokenNotDelegated(tokenId);
@@ -170,24 +169,50 @@ contract DelegationMapper is
             revert OnlyEscrow();
         }
 
-        address from = delegates(_from);
-        address to = delegates(_to);
+        address fromDelegatee = delegates(_from);
+        address toDelegatee = delegates(_to);
 
-        // `_tokenId` already has the same delegatee, so skip.
-        if (from == to) {
+        if (_from == _to || fromDelegatee == toDelegatee) {
+            return;
+        }
+
+        // burn is occuring, but we don't need to do anything
+        // as prior to this, `beginWithdrawal` would have been
+        // called, transfering token to escrow contract.
+        if (_to == address(0)) {
             return;
         }
 
         IVotingEscrow.LockedBalance memory locked = IVotingEscrow(escrow).locked(_tokenId);
 
-        if (from != address(0)) {
-            (int256 bias, int256 slope) = _getBiasAndSlope(from, locked, _negative);
-            _checkpoint(bias, slope, from);
+        // mint is occuring and the receiver already has a delegatee.
+        // Increase the delegatee's voting power.
+        if (_from == address(0) && toDelegatee != address(0)) {
+            (int256 bias, int256 slope) = _getBiasAndSlope(toDelegatee, locked, _positive);
+            _checkpoint(bias, slope, toDelegatee);
+
+            tokenIsDelegated[_tokenId] = true;
+            numberOfDelegatedTokens[_to]++;
+
+            return;
         }
 
-        if (to != address(0)) {
-            (int256 bias, int256 slope) = _getBiasAndSlope(to, locked, _positive);
-            _checkpoint(bias, slope, to);
+        if (fromDelegatee != address(0)) {
+            (int256 bias, int256 slope) = _getBiasAndSlope(fromDelegatee, locked, _negative);
+            _checkpoint(bias, slope, fromDelegatee);
+
+            numberOfDelegatedTokens[_from]--;
+        }
+
+        if (_to == address(escrow)) {
+            // transfering to address(escrow) is the same as `beginWithdrawal`, i.e burn.
+            tokenIsDelegated[_tokenId] = false;
+        } else if (toDelegatee != address(0)) {
+            (int256 bias, int256 slope) = _getBiasAndSlope(toDelegatee, locked, _positive);
+            _checkpoint(bias, slope, toDelegatee);
+
+            numberOfDelegatedTokens[_to]++;
+            tokenIsDelegated[_tokenId] = true;
         }
     }
 
