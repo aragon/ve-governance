@@ -343,8 +343,8 @@ contract LinearIncreasingEscrow is
         int256 newDSlope = slopeChanges[newEnd];
 
         // If the newLocked hasn't ended, add its slope
-        // to the latest global point. newLocked could be ended in case of
-        // merge, when a token is already mature.
+        // to the latest global point. newLocked could be 
+        // ended in case of merge, when a token is already mature.
         if (block.timestamp < newEnd) {
             lastPoint.slope += newLockSlope;
             newDSlope += newLockSlope;
@@ -396,11 +396,10 @@ contract LinearIncreasingEscrow is
         if (lastPoint.slope < 0) lastPoint.slope = 0;
         if (lastPoint.bias < 0) lastPoint.bias = 0;
 
-        // TODO: see aerodome..
-        globalPointLatestIndex = _globalPointLatestIndex;
-        _globalPointHistory[_globalPointLatestIndex] = lastPoint;
-
         slopeChanges[newEnd] = newDSlope < 0 ? int256(0) : newDSlope;
+
+        // Record the latest global point.
+        _storeLatestGlobalPoint(lastPoint, _globalPointLatestIndex);
 
         // Create new token point and store.
         TokenPoint memory tNew;
@@ -408,14 +407,41 @@ contract LinearIncreasingEscrow is
         tNew.checkpointTs = _newLocked.start;
         tNew.coefficients = [newLockBias, newLockSlope, 0];
 
-        if (
-            tokenLatestIndex != 0 &&
-            _tokenPointHistory[_tokenId][tokenLatestIndex].writtenTs == block.timestamp
-        ) {
-            _tokenPointHistory[_tokenId][tokenLatestIndex] = tNew;
+        // Record the latest token point.
+        _storeLatestTokenPoint(tNew, _tokenId, tokenLatestIndex);
+    }
+
+    /// @dev The private helper function to either store latest global point on a new index or overwrite it.
+    ///      In case of overwriting, the latest global point index is not incremented.
+    function _storeLatestGlobalPoint(GlobalPoint memory _p, uint256 _index) private {
+        // If the timestamp of last stored global point is the same as
+        // current timestamp, overwrite it, otherwise store a new one
+        // to reduce unnecessary global points in the history for
+        // gas costs and binary search efficiency.
+        if (_index != 1 && _globalPointHistory[_index - 1].writtenTs == block.timestamp) {
+            _globalPointHistory[_index - 1] = _p;
         } else {
-            tokenPointLatestIndex[_tokenId] = ++tokenLatestIndex;
-            _tokenPointHistory[_tokenId][tokenLatestIndex] = tNew;
+            globalPointLatestIndex = _index;
+            _globalPointHistory[_index] = _p;
+        }
+    }
+
+    /// @dev The private helper function to either store latest token point on a new index or overwrite it.
+    ///      In case of overwriting, the latest token point index is not incremented.
+    function _storeLatestTokenPoint(
+        TokenPoint memory _p,
+        uint256 _tokenId,
+        uint256 _index
+    ) private {
+        // If the timestamp of last stored token point is the same as
+        // current timestamp, overwrite it, otherwise store a new one
+        // to reduce unnecessary global points in the history for
+        // gas costs and binary search efficiency.
+        if (_index != 0 && _tokenPointHistory[_tokenId][_index].writtenTs == block.timestamp) {
+            _tokenPointHistory[_tokenId][_index] = _p;
+        } else {
+            tokenPointLatestIndex[_tokenId] = ++_index;
+            _tokenPointHistory[_tokenId][_index] = _p;
         }
     }
 

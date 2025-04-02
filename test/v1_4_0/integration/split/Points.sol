@@ -57,7 +57,7 @@ contract TestSplit_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage
 
         // 3
         assertGlobalPoint(
-            5,
+            3,
             biasFP(Lock_1_Amount, elapsed),
             slopeFP(Lock_1_Amount),
             block.timestamp
@@ -107,7 +107,7 @@ contract TestSplit_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage
         );
 
         // 3
-        uint256 lastIndex = (block.timestamp - Lock_1_start) / checkpointInterval + 4;
+        uint256 lastIndex = (block.timestamp - Lock_1_start) / checkpointInterval + 2;
         assertGlobalPoint(lastIndex, biasFP(Lock_1_Amount, elapsed), 0, block.timestamp);
 
         // 4
