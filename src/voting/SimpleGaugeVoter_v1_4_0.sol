@@ -70,9 +70,6 @@ contract SimpleGaugeVoterV1_4_0 is
     }
 
     function initializeFrom(address _delegationMapper) public {
-        __PluginUUPSUpgradeable_init(IDAO(_delegationMapper));
-        __ReentrancyGuard_init();
-        __Pausable_init();
         delegationMapper = _delegationMapper;
     }
 
