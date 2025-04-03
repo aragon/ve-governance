@@ -93,6 +93,11 @@ contract SimpleGaugeVoterV1_4_0 is
         _;
     }
 
+    modifier onlyDelegationMapper() {
+        if (msg.sender != delegationMapper) revert OnlyDelegationMapper();
+        _;
+    }
+
     /*///////////////////////////////////////////////////////////////
                                Voting
     //////////////////////////////////////////////////////////////*/
@@ -111,6 +116,8 @@ contract SimpleGaugeVoterV1_4_0 is
         address _address,
         GaugeVote[] calldata _votes
     ) public nonReentrant whenNotPaused whenVotingActive {
+        // Check voter address is == _address
+        if (msg.sender != _address) revert NotApprovedOrOwner();
         _vote(_address, _votes);
     }
 
@@ -159,12 +166,6 @@ contract SimpleGaugeVoterV1_4_0 is
 
     /// @notice Cast the vote of an tokenId to the selected gauges
     function _vote(address _address, GaugeVote[] memory _votes) internal {
-        // Check voter address is == _address or is delegatedMapper contract
-        if (msg.sender != _address) {
-            if (delegationMapper == address(0)) revert NotApprovedOrOwner();
-            if (msg.sender != delegationMapper) revert NotApprovedOrOwner();
-        }
-
         uint256 votingPower = IVotes(delegationMapper).getVotes(_address);
         if (votingPower == 0) revert NoVotingPower();
 
@@ -202,10 +203,7 @@ contract SimpleGaugeVoterV1_4_0 is
     }
 
     function reset(address _address) external nonReentrant whenNotPaused whenVotingActive {
-        if (msg.sender != _address) {
-            if (delegationMapper == address(0)) revert NotApprovedOrOwner();
-            if (msg.sender != delegationMapper) revert NotApprovedOrOwner();
-        }
+        if (msg.sender != _address) revert NotApprovedOrOwner();
         if (!isVoting(_address)) revert NotCurrentlyVoting();
         _reset(_address);
     }
@@ -246,11 +244,7 @@ contract SimpleGaugeVoterV1_4_0 is
         voteData.gaugesVotedFor = new address[](0);
     }
 
-    function updateVotingPower(address _address) external {
-        if (msg.sender != _address) {
-            if (delegationMapper == address(0)) revert NotApprovedOrOwner();
-            if (msg.sender != delegationMapper) revert NotApprovedOrOwner();
-        }
+    function updateVotingPower(address _address) external onlyDelegationMapper {
         if (!isVoting(_address)) revert NotCurrentlyVoting();
 
         uint16 season = IClockSeason(clock).currentSeasonIndex();

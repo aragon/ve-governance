@@ -103,6 +103,7 @@ interface IGaugeVoterErrors {
     error NoVotes();
     error NoVotingPower();
     error NotCurrentlyVoting();
+    error OnlyDelegationMapper();
 }
 
 interface IGaugeVoter is IGaugeVoterEvents, IGaugeVoterErrors, IGaugeVote {
