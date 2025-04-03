@@ -118,6 +118,8 @@ interface IGaugeVoter is IGaugeVoterEvents, IGaugeVoterErrors, IGaugeVote {
 
     /// @notice Can be called to check if an address is currently voting
     function isVoting(address _address) external view returns (bool);
+
+    function updateVotingPower(address _address) external;
 }
 
 /*///////////////////////////////////////////////////////////////

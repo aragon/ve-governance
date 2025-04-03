@@ -10,6 +10,7 @@ import {IClockSeason} from "@clock/IClockSeason.sol";
 import {ReentrancyGuardUpgradeable as ReentrancyGuard} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {PluginUUPSUpgradeable} from "@aragon/osx/core/plugin/PluginUUPSUpgradeable.sol";
 import {IVotes, IDelegationMapper} from "./IDelegationMapper.sol";
+import {ISimpleGaugeVoter} from "../voting/ISimpleGaugeVoter_v1_4_0.sol";
 import {MathUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 import {SafeCastUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/math/SafeCastUpgradeable.sol";
 import {console2 as console} from "forge-std/console2.sol";
@@ -28,6 +29,9 @@ contract DelegationMapper is
 
     /// @notice Clock contract for epoch duration
     address public clock;
+
+    /// @notice Voter contract
+    address public voter;
 
     struct DelegateCheckpoint {
         address delegatee;
@@ -166,6 +170,7 @@ contract DelegationMapper is
 
         _updateLatestBalance(currentDelegatee, getVP(_tokenId, ts), 0);
         _updateLatestDelegate(_tokenId, address(0));
+        ISimpleGaugeVoter(voter).updateVotingPower(_msgSender());
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -272,9 +277,9 @@ contract DelegationMapper is
         }
 
         uint256 pos = _upperBinaryLookup(cps, _when);
-        
+
         BalanceCheckpoint storage lastCp = cps[length - 1];
-        
+
         // if `pos` is equal to the length of array or more, that means
         // no element was found with greater timestamp than our `_when`.
         // In this case, it's a normal push operation only without
