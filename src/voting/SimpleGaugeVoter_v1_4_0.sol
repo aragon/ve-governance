@@ -385,5 +385,5 @@ contract SimpleGaugeVoterV1_4_0 is
     }
 
     /// Rest of UUPS logic is handled by OSx plugin
-    uint256[43] private __gap;
+    uint256[42] private __gap;
 }
