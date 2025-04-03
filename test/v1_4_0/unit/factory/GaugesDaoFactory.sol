@@ -16,7 +16,7 @@ import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {Addresslist} from "@aragon/osx/plugins/utils/Addresslist.sol";
 import {MultisigSetup as MultisigPluginSetup} from "@aragon/osx/plugins/governance/multisig/MultisigSetup.sol";
 
-import {SimpleGaugeVoterSetup, VotingEscrow, Clock, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, GaugesDaoFactory, Deployment, DeploymentParameters, TokenParameters} from "../../versions.sol";
+import {SimpleGaugeVoterSetup, VotingEscrow, Clock, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, GaugesDaoFactory, Deployment, DeploymentParameters, TokenParameters, DelegationMapper} from "../../versions.sol";
 
 contract GaugesDaoFactoryTest is Test {
     function test_ShouldStoreTheSettings_1() public {
@@ -31,7 +31,8 @@ contract GaugesDaoFactoryTest is Test {
             address(new ExitQueue()),
             address(new VotingEscrow()),
             address(new Clock()),
-            address(new Lock())
+            address(new Lock()),
+            address(new DelegationMapper())
         );
 
         MockPluginRepoRegistry pRepoRegistry = new MockPluginRepoRegistry();
@@ -197,7 +198,8 @@ contract GaugesDaoFactoryTest is Test {
             address(new ExitQueue()),
             address(new VotingEscrow()),
             address(new Clock()),
-            address(new Lock())
+            address(new Lock()),
+            address(new DelegationMapper())
         );
 
         MockPluginRepoRegistry pRepoRegistry = new MockPluginRepoRegistry();
@@ -378,7 +380,8 @@ contract GaugesDaoFactoryTest is Test {
             address(new ExitQueue()),
             address(new VotingEscrow()),
             address(new Clock()),
-            address(new Lock())
+            address(new Lock()),
+            address(new DelegationMapper())
         );
 
         TokenParameters[] memory tokenParameters = new TokenParameters[](2);
@@ -763,7 +766,8 @@ contract GaugesDaoFactoryTest is Test {
             address(new ExitQueue()),
             address(new VotingEscrow()),
             address(new Clock()),
-            address(new Lock())
+            address(new Lock()),
+            address(new DelegationMapper())
         );
 
         TokenParameters[] memory tokenParameters = new TokenParameters[](3);
@@ -1257,7 +1261,8 @@ contract GaugesDaoFactoryTest is Test {
             address(new ExitQueue()),
             address(new VotingEscrow()),
             address(new Clock()),
-            address(new Lock())
+            address(new Lock()),
+            address(new DelegationMapper())
         );
 
         TokenParameters[] memory tokenParameters = new TokenParameters[](3);

@@ -18,7 +18,7 @@ import {hashHelpers, PluginSetupRef} from "@aragon/osx/framework/plugin/setup/Pl
 import {SimpleGaugeVoterSetup, VotingEscrow, Clock, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, ISimpleGaugeVoterSetupParams} from "@setup/SimpleGaugeVoterSetup.sol";
 import {GaugesDaoFactory, Deployment as DeploymentV1_0_0, DeploymentParameters as DeploymentParametersV1_0_0, GaugePluginSet as GaugePluginSetV1_0_0} from "../GaugesDaoFactory.sol";
 
-import {Clock as ClockV1_4_0, QuadraticIncreasingEscrow as LinearIncreasingCurve, SimpleGaugeVoter as SimpleGaugeVoterV1_1_0, VotingEscrow as VotingEscrowV1_4_0, SimpleGaugeVoterSetupV1_4_0, ISimpleGaugeVoterSetupParams as ISimpleGaugeVoterSetupParamsV1_4_0} from "@setup/SimpleGaugeVoterSetup_v1_4_0.sol";
+import {Clock as ClockV1_4_0, QuadraticIncreasingEscrow as LinearIncreasingCurve, SimpleGaugeVoter as SimpleGaugeVoterV1_1_0, VotingEscrow as VotingEscrowV1_4_0, SimpleGaugeVoterSetupV1_4_0, ISimpleGaugeVoterSetupParams as ISimpleGaugeVoterSetupParamsV1_4_0, DelegationMapper} from "@setup/SimpleGaugeVoterSetup_v1_4_0.sol";
 
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
@@ -88,6 +88,7 @@ struct GaugePluginSet {
     VotingEscrowV1_4_0 votingEscrow;
     ClockV1_4_0 clock;
     Lock nftLock;
+    DelegationMapper delegation;
 }
 
 /// @notice Contains the artifacts that resulted from running a deployment
@@ -189,11 +190,14 @@ contract UpgradeGaugesFactoryV1_0_0__V1_4_0 {
         bool validate,
         ClockV1_4_0 clockUpgrade,
         LinearIncreasingCurve curveUpgrade,
-        VotingEscrowV1_4_0 escrowUpgrade
+        VotingEscrowV1_4_0 escrowUpgrade,
+        DelegationMapper delegationMapper
     ) public {
         if (validate) {
             validateUpgrade();
         }
+
+        _deployDelegationMapper(address(delegationMapper));
         _upgradeContracts(clockUpgrade, curveUpgrade, escrowUpgrade);
     }
 
@@ -214,6 +218,23 @@ contract UpgradeGaugesFactoryV1_0_0__V1_4_0 {
             pluginSet.clock.upgradeTo(address(clockUpgrade));
             pluginSet.curve.upgradeTo(address(curveUpgrade));
             pluginSet.votingEscrow.upgradeTo(address(escrowUpgrade));
+        }
+    }
+
+    function _deployDelegationMapper(address base) internal {
+        // set the delegation mapper in the plugin set
+        for (uint i = 0; i < deployment.gaugeVoterPluginSets.length; i++) {
+            address delegation = base.deployUUPSProxy(
+                abi.encodeCall(
+                    DelegationMapper.initialize,
+                    (
+                        address(deployment.dao),
+                        address(deployment.gaugeVoterPluginSets[i].votingEscrow),
+                        address(deployment.gaugeVoterPluginSets[i].clock)
+                    )
+                )
+            );
+            deployment.gaugeVoterPluginSets[i].delegation = DelegationMapper(delegation);
         }
     }
 

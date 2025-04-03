@@ -18,7 +18,7 @@ import {Addresslist} from "@aragon/osx/plugins/utils/Addresslist.sol";
 import {Multisig, MultisigSetup as MultisigPluginSetup} from "@aragon/osx/plugins/governance/multisig/MultisigSetup.sol";
 
 import {SimpleGaugeVoterSetup, IGaugeVote, VotingEscrow, Clock, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, GaugesDaoFactory as GaugesDaoFactoryV1_0_0, Deployment, DeploymentParameters, TokenParameters, GaugePluginSet} from "test/v1_0_0/versions.sol";
-import {Clock as ClockV1_4_0, QuadraticIncreasingEscrow as LinearEscrowCurve, VotingEscrow as VotingEscrowV1_4_0} from "test/v1_4_0/versions.sol";
+import {Clock as ClockV1_4_0, QuadraticIncreasingEscrow as LinearEscrowCurve, VotingEscrow as VotingEscrowV1_4_0, DelegationMapper} from "test/v1_4_0/versions.sol";
 import {UpgradeGaugesFactoryV1_0_0__V1_4_0 as UpgradeFactory, Deployment as DeploymentUpgrade, DeploymentParameters as DeploymentParametersUpgrade, GaugePluginSet as GaugePluginSetUpgrade} from "@factory/upgrades/UpgradeFactory_v1_0_0__v1_4_0.sol";
 
 import {Upgrades} from "@foundry-upgrades/LegacyUpgrades.sol";
@@ -158,7 +158,8 @@ contract RegressionV1_0_0__to__V1_4_0 is Test, IGaugeVote {
                 false,
                 new ClockV1_4_0(),
                 new LinearEscrowCurve(),
-                new VotingEscrowV1_4_0()
+                new VotingEscrowV1_4_0(),
+                new DelegationMapper()
             );
         }
         vm.stopPrank();
