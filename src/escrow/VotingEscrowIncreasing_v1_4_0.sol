@@ -24,6 +24,7 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {ReentrancyGuardUpgradeable as ReentrancyGuard} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {PausableUpgradeable as Pausable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
+import {IDelegationMapper} from "../delegation/IDelegationMapper.sol";
 
 contract VotingEscrowV1_4_0 is
     IVotingEscrow,
@@ -89,6 +90,9 @@ contract VotingEscrowV1_4_0 is
 
     bool private _lockNFTSet;
 
+    // added in 0.2
+    address public delegationMapper;
+
     error UpgradeNotPossible();
 
     /*//////////////////////////////////////////////////////////////
@@ -99,6 +103,9 @@ contract VotingEscrowV1_4_0 is
         _disableInitializers();
     }
 
+    // TODO: GIORGI add `address _delegationMapper` as a param.
+    // Currently, I didn't as compilation fails due to
+    // 1.4.0 tests not expecting this argument.
     function initialize(
         address _token,
         address _dao,
@@ -116,24 +123,30 @@ contract VotingEscrowV1_4_0 is
         emit MinDepositSet(_initialMinDeposit);
     }
 
-     function initializeFrom(bool exitAmountIncluded, uint256 exitAmount) public {        
-        if (exitAmountIncluded) {
+    function initializeFrom(
+        address _delegationMapper,
+        bool _exitAmountIncluded,
+        uint256 _exitAmount
+    ) public {
+        if (_exitAmountIncluded) {
             // If `exitAmount` is passed, make sure the escrow is paused
             // so that incorrect upgrade doesn't go unnoticed. Otherwise,
             // upgrade transaction might be front-run by `beginWithdrawal`
             // causing the `exitAmount` to be wrong.
-            if(!paused()) {
+            if (!paused()) {
                 revert UpgradeNotPossible();
             }
         } else {
-            exitAmount = currentExitingAmount();
+            _exitAmount = currentExitingAmount();
         }
 
-        if (totalLocked < exitAmount) {
+        if (totalLocked < _exitAmount) {
             revert UpgradeNotPossible();
         }
 
-        ExitQueue(queue).initializeFrom(exitAmount);
+        ExitQueue(queue).initializeFrom(_exitAmount);
+
+        delegationMapper = _delegationMapper;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -321,6 +334,15 @@ contract VotingEscrowV1_4_0 is
             revert CannotMerge(_from, _to);
         }
 
+        // Note that this function must be called before we
+        // empty `lockedFrom`'s amount to 0. `moveDelegateVotes` 
+        // relies that lock still contains the amount.
+        IDelegationMapper(delegationMapper).moveDelegateVotes(
+            IERC721EMB(lockNFT).ownerOf(_from),
+            IERC721EMB(lockNFT).ownerOf(_to),
+            _from
+        );
+
         // Update for `_from`.
         IERC721EMB(lockNFT).burn(_from);
         _locked[_from] = LockedBalance(0, 0);
@@ -334,7 +356,7 @@ contract VotingEscrowV1_4_0 is
 
         uint208 newLockedAmount = oldLockedFrom.amount + oldLockedTo.amount;
 
-        _locked[_to] = LockedBalance({start: oldLockedTo.start, amount: newLockedAmount});
+        _locked[_to] = LockedBalance(newLockedAmount, oldLockedTo.start);
 
         emit Merged(sender, _from, _to, oldLockedFrom.amount, oldLockedTo.amount, newLockedAmount);
     }
@@ -495,7 +517,6 @@ contract VotingEscrowV1_4_0 is
         // clear out the token data
         _locked[_tokenId] = LockedBalance(0, 0);
         totalLocked -= value;
-        
 
         // Burn the NFT and transfer the tokens to the user
         IERC721EMB(lockNFT).burn(_tokenId);
@@ -532,6 +553,10 @@ contract VotingEscrowV1_4_0 is
 
         IERC721EMB(lockNFT).transferFrom(address(this), _to, _tokenId);
         emit SweepNFT(_to, _tokenId);
+    }
+    
+    function moveDelegateVotes(address _from, address _to, uint256 _tokenId) public {
+        IDelegationMapper(delegationMapper).moveDelegateVotes(_from, _to, _tokenId);
     }
 
     /*///////////////////////////////////////////////////////////////

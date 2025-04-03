@@ -13,6 +13,7 @@ utils/=test/utils/
 @lock/=src/lock/
 @queue/=src/queue/
 @curve/=src/curve/
+@delegation/=src/delegation/
 @escrow-interfaces/=src/escrow/increasing/interfaces/
 @voting/=src/voting/
 @setup/=src/setup/
