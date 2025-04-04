@@ -263,6 +263,7 @@ contract SimpleGaugeVoterV1_4_0 is
         // update the voting power of the sender
         _updateVotingPower(_from);
 
+        // TODO: Is this necessary?
         if (_from == _to) return;
 
         // update the voting power of the receiver

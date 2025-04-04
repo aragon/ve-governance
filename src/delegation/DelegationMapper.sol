@@ -127,6 +127,8 @@ contract DelegationMapper is
 
         _checkpoint(totalBias, totalSlope, delegatee);
 
+        ISimpleGaugeVoter(voter).updateVotingPower(sender, delegatee);
+
         emit TokensDelegated(sender, delegatee, _tokenIds);
     }
 
@@ -165,6 +167,8 @@ contract DelegationMapper is
 
         _checkpoint(totalBias, totalSlope, delegatee);
 
+        ISimpleGaugeVoter(voter).updateVotingPower(sender, delegatee);
+
         emit TokensUndelegated(sender, delegatee, _tokenIds);
     }
 
@@ -197,6 +201,8 @@ contract DelegationMapper is
 
             tokenIsDelegated[_tokenId] = true;
             numberOfDelegatedTokens[_to]++;
+
+            ISimpleGaugeVoter(voter).updateVotingPower(_from, _to);
 
             return;
         }
