@@ -184,14 +184,17 @@ contract UpgradeGaugesFactoryV1_0_0__V1_4_0 {
         options.referenceContract = "Clock.sol";
         Upgrades.validateUpgrade("Clock_v1_4_0.sol:ClockV1_4_0", options);
 
-        options.referenceContract = "QuadraticIncreasingCurve.sol:QuadraticIncreasingEscrow";
-        Upgrades.validateUpgrade("LinearIncreasingCurve.sol:LinearIncreasingEscrow", options);
-
-        options.referenceContract = "VotingEscrow.sol";
+        options.referenceContract = "VotingEscrowIncreasing.sol:VotingEscrow";
         Upgrades.validateUpgrade("VotingEscrowIncreasing_v1_4_0.sol:VotingEscrowV1_4_0", options);
 
         options.referenceContract = "Lock.sol";
         Upgrades.validateUpgrade("Lock_v1_4_0.sol:LockV1_4_0", options);
+
+        // we choose to rename the tokenPointInterval variable
+        // TODO: should we?
+        options.unsafeAllowRenames = true;
+        options.referenceContract = "QuadraticIncreasingCurve.sol:QuadraticIncreasingEscrow";
+        Upgrades.validateUpgrade("LinearIncreasingCurve.sol:LinearIncreasingEscrow", options);
     }
 
     function upgrade(

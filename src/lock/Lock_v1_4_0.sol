@@ -47,6 +47,7 @@ contract LockV1_4_0 is ILock, ERC721Enumerable, UUPSUpgradeable, DaoAuthorizable
                               Initializer
     //////////////////////////////////////////////////////////////*/
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }

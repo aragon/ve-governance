@@ -99,6 +99,7 @@ contract VotingEscrowV1_4_0 is
                               Initialization
     //////////////////////////////////////////////////////////////*/
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }
@@ -552,5 +553,5 @@ contract VotingEscrowV1_4_0 is
     function _authorizeUpgrade(address) internal virtual override auth(ESCROW_ADMIN_ROLE) {}
 
     /// @dev Reserved storage space to allow for layout changes in the future.
-    uint256[39] private __gap;
+    uint256[38] private __gap;
 }

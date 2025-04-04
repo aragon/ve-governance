@@ -25,6 +25,8 @@ import {UpgradeGaugesFactoryV1_0_0__V1_4_0 as UpgradeFactory, Deployment as Depl
 import {Upgrades} from "@foundry-upgrades/LegacyUpgrades.sol";
 import {Options} from "@foundry-upgrades/Options.sol";
 
+import {CachedView, CachedViewArguments, fetchState} from "./CurveHelper.sol";
+
 contract RegressionV1_0_0__to__V1_4_0 is Test, IGaugeVote {
     GaugesDaoFactoryV1_0_0 factory;
 
@@ -57,6 +59,9 @@ contract RegressionV1_0_0__to__V1_4_0 is Test, IGaugeVote {
 
     uint256 bobVPSnapshot;
     uint256 aliceVPSnapshot;
+
+    CachedView vCache;
+    CachedViewArguments args;
 
     function setUp() public {
         vm.warp(1);
@@ -124,6 +129,15 @@ contract RegressionV1_0_0__to__V1_4_0 is Test, IGaugeVote {
         }
         vm.stopPrank();
 
+        args = CachedViewArguments({
+            tokenId: aliceToken,
+            timestamp: block.timestamp,
+            amount: 1_000 ether,
+            tokenInterval: 1
+        });
+
+        vCache = fetchState(curve, args);
+
         upgradeFactory = new UpgradeFactory(address(factory));
     }
 
@@ -131,7 +145,7 @@ contract RegressionV1_0_0__to__V1_4_0 is Test, IGaugeVote {
         upgradeFactory.validateUpgrade();
     }
 
-    function testInitialState() public view {
+    function testInitialState() public {
         // alice is locked and has voting power
         assertEq(escrow.locked(aliceToken).amount, 1_000 ether);
         assertGt(escrow.votingPower(aliceToken), 1_000 ether);
@@ -248,6 +262,32 @@ contract RegressionV1_0_0__to__V1_4_0 is Test, IGaugeVote {
         // david is locked and can exit
         assertEq(escrow.locked(davidToken).amount, 1_000 ether);
         assertTrue(queue.canExit(davidToken));
+
+        _compareCurveState();
+    }
+
+    function _compareCurveState() internal {
+        CachedView memory vLatest = fetchState(curve, args);
+
+        // 4. Assert all fields are unchanged
+        assertEq(vCache.escrow, vLatest.escrow);
+        assertEq(vCache.clock, vLatest.clock);
+        assertEq(vCache.warmupPeriod, vLatest.warmupPeriod);
+
+        assertEq(vCache.tokenPointInterval, vLatest.tokenPointInterval);
+        console.log("is this a bug?");
+        assertEq(vCache.maxBias, vLatest.maxBias);
+        assertEq(vCache.isWarm, vLatest.isWarm);
+        assertEq(vCache.bias, vLatest.bias);
+        assertEq(vCache.votingPower, vLatest.votingPower);
+
+        for (uint i = 0; i < 3; i++) {
+            assertEq(vCache.coefficientsPlain[i], vLatest.coefficientsPlain[i]);
+        }
+
+        assertEq(vCache.tokenPointHistory.bias, vLatest.tokenPointHistory.bias);
+        assertEq(vCache.tokenPointHistory.checkpointTs, vLatest.tokenPointHistory.checkpointTs);
+        assertEq(vCache.tokenPointHistory.writtenTs, vLatest.tokenPointHistory.writtenTs);
     }
 
     ////////////////////////////////////////////////

@@ -57,15 +57,8 @@ contract LinearIncreasingEscrow is
     mapping(uint256 => TokenPoint[1_000_000_000]) internal _tokenPointHistory;
 
     /*//////////////////////////////////////////////////////////////
-                                ADDED: 0.2.0
+                                MATH
     //////////////////////////////////////////////////////////////*/
-
-    /// @dev The latest global point index.
-    uint256 public globalPointLatestIndex;
-
-    // endTime => summed up slopes at that endTime
-    mapping(uint256 => int256) public slopeChanges;
-    mapping(uint256 => GlobalPoint) internal _globalPointHistory;
 
     /// @dev precomputed coefficients of the quadratic curve
     int256 private constant SHARED_QUADRATIC_COEFFICIENT =
@@ -78,12 +71,26 @@ contract LinearIncreasingEscrow is
 
     uint256 private constant MAX_EPOCHS = CurveConstantLib.MAX_EPOCHS;
 
+    /*//////////////////////////////////////////////////////////////
+                            ADDED: TOTAL SUPPLY
+    //////////////////////////////////////////////////////////////*/
+
+    /// @dev The latest global point index.
+    uint256 public globalPointLatestIndex;
+
+    // endTime => summed up slopes at that endTime
+    mapping(uint256 => int256) public slopeChanges;
+
+    /// @dev The global point history
+    mapping(uint256 => GlobalPoint) internal _globalPointHistory;
+
     error UpgradeNotPossible();
 
     /*//////////////////////////////////////////////////////////////
                               INITIALIZATION
     //////////////////////////////////////////////////////////////*/
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }
@@ -99,8 +106,8 @@ contract LinearIncreasingEscrow is
         warmupPeriod = _warmupPeriod;
         clock = _clock;
 
-        __DaoAuthorizableUpgradeable_init(IDAO(_dao));
         __ReentrancyGuard_init();
+        __DaoAuthorizableUpgradeable_init(IDAO(_dao));
 
         // other initializers are empty
     }
@@ -282,7 +289,7 @@ contract LinearIncreasingEscrow is
         // this implementation doesn't yet support manual checkpointing
         if (_tokenId == 0) revert InvalidTokenId();
 
-        if(_newLocked.start < _fromLocked.start) {
+        if (_newLocked.start < _fromLocked.start) {
             revert InvalidCheckpoint();
         }
 
@@ -429,7 +436,7 @@ contract LinearIncreasingEscrow is
     function _getPastTokenPointInterval(
         uint256 _tokenId,
         uint256 _timestamp
-    ) internal view returns (uint256) {        
+    ) internal view returns (uint256) {
         uint256 tokenInterval = tokenPointLatestIndex[_tokenId];
 
         if (tokenInterval == 0) return 0;
@@ -437,7 +444,7 @@ contract LinearIncreasingEscrow is
         // if the most recent point is before the timestamp, return it
         if (_tokenPointHistory[_tokenId][tokenInterval].writtenTs <= _timestamp)
             return (tokenInterval);
-        
+
         // Check if the first balance is after the timestamp
         // this means that the first epoch has yet to start
         if (_tokenPointHistory[_tokenId][1].writtenTs > _timestamp) return 0;
@@ -538,5 +545,5 @@ contract LinearIncreasingEscrow is
     function _authorizeUpgrade(address) internal virtual override auth(CURVE_ADMIN_ROLE) {}
 
     /// @dev gap for upgradeable contract
-    uint256[45] private __gap;
+    uint256[42] private __gap;
 }
