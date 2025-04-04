@@ -13,6 +13,7 @@ import {IClockUser, IClockV1_4_0 as IClock} from "@clock/IClock_v1_4_0.sol";
 
 import {PluginUUPSUpgradeable} from "@aragon/osx/core/plugin/PluginUUPSUpgradeable.sol";
 import {IDelegationMapper} from "./IDelegationMapper.sol";
+import {ISimpleGaugeVoter} from "../voting/ISimpleGaugeVoter_v1_4_0.sol";
 import {console2 as console} from "forge-std/console2.sol";
 import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 import {SignedFixedPointMath} from "@libs/SignedFixedPointMathLib.sol";
@@ -31,6 +32,9 @@ contract DelegationMapper is
 
     /// @notice Clock contract for epoch duration
     address public clock;
+
+    /// @notice Voter contract
+    address public voter;
 
     mapping(address => mapping(uint256 => int256)) internal slopeChanges;
     mapping(address => mapping(uint256 => GlobalPoint)) internal pointHistory;
@@ -214,6 +218,8 @@ contract DelegationMapper is
             numberOfDelegatedTokens[_to]++;
             tokenIsDelegated[_tokenId] = true;
         }
+
+        ISimpleGaugeVoter(voter).updateVotingPower(_from, _to);
     }
 
     /*//////////////////////////////////////////////////////////////
