@@ -90,7 +90,7 @@ contract VotingEscrowV1_4_0 is
 
     bool private _lockNFTSet;
 
-    // added in 0.2
+    // added in 1.4.0
     address public delegationMapper;
 
     error UpgradeNotPossible();
@@ -123,35 +123,14 @@ contract VotingEscrowV1_4_0 is
         emit MinDepositSet(_initialMinDeposit);
     }
 
-    function initializeFrom(
-        address _delegationMapper,
-        bool _exitAmountIncluded,
-        uint256 _exitAmount
-    ) public {
-        if (_exitAmountIncluded) {
-            // If `exitAmount` is passed, make sure the escrow is paused
-            // so that incorrect upgrade doesn't go unnoticed. Otherwise,
-            // upgrade transaction might be front-run by `beginWithdrawal`
-            // causing the `exitAmount` to be wrong.
-            if (!paused()) {
-                revert UpgradeNotPossible();
-            }
-        } else {
-            _exitAmount = currentExitingAmount();
-        }
-
-        if (totalLocked < _exitAmount) {
-            revert UpgradeNotPossible();
-        }
-
-        ExitQueue(queue).initializeFrom(_exitAmount);
-
-        delegationMapper = _delegationMapper;
-    }
-
     /*//////////////////////////////////////////////////////////////
                               Admin Setters
     //////////////////////////////////////////////////////////////*/
+
+    /// @notice Added in 1.4.0 to set the delegation mapper
+    function setDelegationMapper(address _delegationMapper) external auth(ESCROW_ADMIN_ROLE) {
+        delegationMapper = _delegationMapper;
+    }
 
     /// @notice Sets the curve contract that calculates the voting power
     function setCurve(address _curve) external auth(ESCROW_ADMIN_ROLE) {
@@ -324,7 +303,7 @@ contract VotingEscrowV1_4_0 is
 
         if (!isApprovedOrOwner(sender, _from)) revert NotApprovedOrOwner();
         if (!isApprovedOrOwner(sender, _to)) revert NotApprovedOrOwner();
-        
+
         if (_from == _to) revert SameNFT();
 
         LockedBalance memory oldLockedFrom = _locked[_from];
@@ -335,7 +314,7 @@ contract VotingEscrowV1_4_0 is
         }
 
         // Note that this function must be called before we
-        // empty `lockedFrom`'s amount to 0. `moveDelegateVotes` 
+        // empty `lockedFrom`'s amount to 0. `moveDelegateVotes`
         // relies that lock still contains the amount.
         IDelegationMapper(delegationMapper).moveDelegateVotes(
             IERC721EMB(lockNFT).ownerOf(_from),
@@ -554,7 +533,7 @@ contract VotingEscrowV1_4_0 is
         IERC721EMB(lockNFT).transferFrom(address(this), _to, _tokenId);
         emit SweepNFT(_to, _tokenId);
     }
-    
+
     function moveDelegateVotes(address _from, address _to, uint256 _tokenId) public {
         IDelegationMapper(delegationMapper).moveDelegateVotes(_from, _to, _tokenId);
     }

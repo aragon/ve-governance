@@ -18,7 +18,7 @@ import {VotingEscrowV1_4_0 as VotingEscrow} from "@escrow/VotingEscrowIncreasing
 import {ExitQueue} from "@queue/ExitQueue.sol";
 import {LinearIncreasingEscrow as QuadraticIncreasingEscrow} from "@curve/LinearIncreasingCurve.sol";
 import {ClockV1_4_0 as Clock} from "@clock/Clock_v1_4_0.sol";
-import {Lock} from "@lock/Lock.sol";
+import {LockV1_4_0 as Lock} from "@lock/Lock_v1_4_0.sol";
 import {DelegationMapper} from "@delegation/DelegationMapper.sol";
 
 /// @param isPaused Whether the voter contract is deployed in a paused state

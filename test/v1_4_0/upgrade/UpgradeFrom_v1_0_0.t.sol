@@ -16,9 +16,10 @@ import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {Addresslist} from "@aragon/osx/plugins/utils/Addresslist.sol";
 import {Multisig, MultisigSetup as MultisigPluginSetup} from "@aragon/osx/plugins/governance/multisig/MultisigSetup.sol";
+import {PermissionLib} from "@aragon/osx/core/permission/PermissionLib.sol";
 
 import {SimpleGaugeVoterSetup, IGaugeVote, VotingEscrow, Clock, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, GaugesDaoFactory as GaugesDaoFactoryV1_0_0, Deployment, DeploymentParameters, TokenParameters, GaugePluginSet} from "test/v1_0_0/versions.sol";
-import {Clock as ClockV1_4_0, QuadraticIncreasingEscrow as LinearEscrowCurve, VotingEscrow as VotingEscrowV1_4_0, DelegationMapper} from "test/v1_4_0/versions.sol";
+import {Clock as ClockV1_4_0, QuadraticIncreasingEscrow as LinearEscrowCurve, VotingEscrow as VotingEscrowV1_4_0, DelegationMapper, Lock as LockV1_4_0} from "test/v1_4_0/versions.sol";
 import {UpgradeGaugesFactoryV1_0_0__V1_4_0 as UpgradeFactory, Deployment as DeploymentUpgrade, DeploymentParameters as DeploymentParametersUpgrade, GaugePluginSet as GaugePluginSetUpgrade} from "@factory/upgrades/UpgradeFactory_v1_0_0__v1_4_0.sol";
 
 import {Upgrades} from "@foundry-upgrades/LegacyUpgrades.sol";
@@ -42,6 +43,8 @@ contract RegressionV1_0_0__to__V1_4_0 is Test, IGaugeVote {
     ClockV1_4_0 clockUpgrade;
     VotingEscrowV1_4_0 escrowUpgrade;
     LinearEscrowCurve curveUpgrade;
+    LockV1_4_0 lockUpgrade;
+    DelegationMapper delegation;
     UpgradeFactory upgradeFactory;
 
     uint aliceToken;
@@ -60,7 +63,7 @@ contract RegressionV1_0_0__to__V1_4_0 is Test, IGaugeVote {
         vm.roll(1);
 
         factory = _deployViaFactory();
-        upgradeFactory = new UpgradeFactory(address(factory));
+        // upgradeFactory = new UpgradeFactory(address(factory));
         Deployment memory deployment = factory.getDeployment();
         GaugePluginSet memory pluginSet = deployment.gaugeVoterPluginSets[0];
 
@@ -120,6 +123,8 @@ contract RegressionV1_0_0__to__V1_4_0 is Test, IGaugeVote {
             escrow.beginWithdrawal(davidToken);
         }
         vm.stopPrank();
+
+        upgradeFactory = new UpgradeFactory(address(factory));
     }
 
     function testValidateUpgradeGaugeVoter_v1_0_0__v1_4_0() public {
@@ -149,18 +154,41 @@ contract RegressionV1_0_0__to__V1_4_0 is Test, IGaugeVote {
     function testUpgrade() public {
         // simple upgrade for testing
         // deploy the new implementations
+        PermissionLib.MultiTargetPermission[] memory grant0 = upgradeFactory.getPermissions(
+            PermissionLib.Operation.Grant,
+            0
+        );
+        PermissionLib.MultiTargetPermission[] memory grant1 = upgradeFactory.getPermissions(
+            PermissionLib.Operation.Grant,
+            1
+        );
+        PermissionLib.MultiTargetPermission[] memory revoke0 = upgradeFactory.getPermissions(
+            PermissionLib.Operation.Revoke,
+            0
+        );
+
+        PermissionLib.MultiTargetPermission[] memory revoke1 = upgradeFactory.getPermissions(
+            PermissionLib.Operation.Revoke,
+            1
+        );
 
         // upgrade the contracts
         vm.startPrank(address(dao));
         {
-            // safe upgrade
+            dao.applyMultiTargetPermissions(grant0);
+            dao.applyMultiTargetPermissions(grant1);
+
             upgradeFactory.upgrade(
                 false,
                 new ClockV1_4_0(),
                 new LinearEscrowCurve(),
                 new VotingEscrowV1_4_0(),
+                new LockV1_4_0(),
                 new DelegationMapper()
             );
+
+            dao.applyMultiTargetPermissions(revoke0);
+            dao.applyMultiTargetPermissions(revoke1);
         }
         vm.stopPrank();
 

@@ -18,7 +18,7 @@ import {hashHelpers, PluginSetupRef} from "@aragon/osx/framework/plugin/setup/Pl
 import {SimpleGaugeVoterSetup, VotingEscrow, Clock, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, ISimpleGaugeVoterSetupParams} from "@setup/SimpleGaugeVoterSetup.sol";
 import {GaugesDaoFactory, Deployment as DeploymentV1_0_0, DeploymentParameters as DeploymentParametersV1_0_0, GaugePluginSet as GaugePluginSetV1_0_0} from "../GaugesDaoFactory.sol";
 
-import {Clock as ClockV1_4_0, QuadraticIncreasingEscrow as LinearIncreasingCurve, SimpleGaugeVoter as SimpleGaugeVoterV1_1_0, VotingEscrow as VotingEscrowV1_4_0, SimpleGaugeVoterSetupV1_4_0, ISimpleGaugeVoterSetupParams as ISimpleGaugeVoterSetupParamsV1_4_0, DelegationMapper} from "@setup/SimpleGaugeVoterSetup_v1_4_0.sol";
+import {Clock as ClockV1_4_0, QuadraticIncreasingEscrow as LinearIncreasingCurve, SimpleGaugeVoter as SimpleGaugeVoterV1_1_0, VotingEscrow as VotingEscrowV1_4_0, SimpleGaugeVoterSetupV1_4_0, ISimpleGaugeVoterSetupParams as ISimpleGaugeVoterSetupParamsV1_4_0, DelegationMapper, Lock as LockV1_4_0} from "@setup/SimpleGaugeVoterSetup_v1_4_0.sol";
 
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
@@ -87,7 +87,7 @@ struct GaugePluginSet {
     ExitQueue exitQueue;
     VotingEscrowV1_4_0 votingEscrow;
     ClockV1_4_0 clock;
-    Lock nftLock;
+    LockV1_4_0 nftLock;
     DelegationMapper delegation;
 }
 
@@ -123,8 +123,13 @@ contract UpgradeGaugesFactoryV1_0_0__V1_4_0 {
 
             GaugePluginSet memory newPluginSet;
 
-            // copy the non-changing versions over
-            newPluginSet.nftLock = oldPluginSet.nftLock;
+            // copy the contracts over - for now casting them
+            // todo good idea?
+            newPluginSet.plugin = SimpleGaugeVoterV1_1_0(address(oldPluginSet.plugin));
+            newPluginSet.curve = LinearIncreasingCurve(address(oldPluginSet.curve));
+            newPluginSet.votingEscrow = VotingEscrowV1_4_0(address(oldPluginSet.votingEscrow));
+            newPluginSet.clock = ClockV1_4_0(address(oldPluginSet.clock));
+            newPluginSet.nftLock = LockV1_4_0(address(oldPluginSet.nftLock));
             newPluginSet.exitQueue = oldPluginSet.exitQueue;
 
             deployment.gaugeVoterPluginSets.push(newPluginSet);
@@ -184,6 +189,9 @@ contract UpgradeGaugesFactoryV1_0_0__V1_4_0 {
 
         options.referenceContract = "VotingEscrow.sol";
         Upgrades.validateUpgrade("VotingEscrowIncreasing_v1_4_0.sol:VotingEscrowV1_4_0", options);
+
+        options.referenceContract = "Lock.sol";
+        Upgrades.validateUpgrade("Lock_v1_4_0.sol:LockV1_4_0", options);
     }
 
     function upgrade(
@@ -191,6 +199,7 @@ contract UpgradeGaugesFactoryV1_0_0__V1_4_0 {
         ClockV1_4_0 clockUpgrade,
         LinearIncreasingCurve curveUpgrade,
         VotingEscrowV1_4_0 escrowUpgrade,
+        LockV1_4_0 lockUpgrade,
         DelegationMapper delegationMapper
     ) public {
         if (validate) {
@@ -198,7 +207,10 @@ contract UpgradeGaugesFactoryV1_0_0__V1_4_0 {
         }
 
         _deployDelegationMapper(address(delegationMapper));
-        _upgradeContracts(clockUpgrade, curveUpgrade, escrowUpgrade);
+        _upgradeContracts(clockUpgrade, curveUpgrade, escrowUpgrade, lockUpgrade);
+
+        // set the delegation mapper on the escrow
+        _setDelegationMapper();
     }
 
     ////////////////////////////////////////////////
@@ -208,7 +220,8 @@ contract UpgradeGaugesFactoryV1_0_0__V1_4_0 {
     function _upgradeContracts(
         ClockV1_4_0 clockUpgrade,
         LinearIncreasingCurve curveUpgrade,
-        VotingEscrowV1_4_0 escrowUpgrade
+        VotingEscrowV1_4_0 escrowUpgrade,
+        LockV1_4_0 lockUpgrade
     ) internal {
         DAO dao = deployment.dao;
 
@@ -218,6 +231,7 @@ contract UpgradeGaugesFactoryV1_0_0__V1_4_0 {
             pluginSet.clock.upgradeTo(address(clockUpgrade));
             pluginSet.curve.upgradeTo(address(curveUpgrade));
             pluginSet.votingEscrow.upgradeTo(address(escrowUpgrade));
+            pluginSet.nftLock.upgradeTo(address(lockUpgrade));
         }
     }
 
@@ -236,6 +250,75 @@ contract UpgradeGaugesFactoryV1_0_0__V1_4_0 {
             );
             deployment.gaugeVoterPluginSets[i].delegation = DelegationMapper(delegation);
         }
+    }
+
+    function _setDelegationMapper() internal {
+        // set the delegation mapper in the plugin set
+        for (uint i = 0; i < deployment.gaugeVoterPluginSets.length; i++) {
+            DelegationMapper delegationMapper = deployment.gaugeVoterPluginSets[i].delegation;
+            VotingEscrowV1_4_0 votingEscrow = deployment.gaugeVoterPluginSets[i].votingEscrow;
+
+            votingEscrow.setDelegationMapper(address(delegationMapper));
+        }
+    }
+
+    ////////////////////////////////////////////////
+    ///---------------- View -------------------///
+    ///////////////////////////////////////////////
+
+    /// @notice Returns the permissions required for the upgrade install and uninstall.
+    /// @param _grantOrRevoke The operation to perform
+    function getPermissions(
+        PermissionLib.Operation _grantOrRevoke,
+        uint pluginSetIndex
+    ) public view returns (PermissionLib.MultiTargetPermission[] memory) {
+        PermissionLib.MultiTargetPermission[]
+            memory permissions = new PermissionLib.MultiTargetPermission[](5);
+
+        address upgrade = address(this);
+        GaugePluginSet memory p = deployment.gaugeVoterPluginSets[pluginSetIndex];
+
+        permissions[0] = PermissionLib.MultiTargetPermission({
+            permissionId: p.votingEscrow.ESCROW_ADMIN_ROLE(),
+            where: address(p.votingEscrow),
+            who: upgrade,
+            operation: _grantOrRevoke,
+            condition: PermissionLib.NO_CONDITION
+        });
+
+        permissions[1] = PermissionLib.MultiTargetPermission({
+            permissionId: p.curve.CURVE_ADMIN_ROLE(),
+            where: address(p.curve),
+            who: upgrade,
+            operation: _grantOrRevoke,
+            condition: PermissionLib.NO_CONDITION
+        });
+
+        permissions[2] = PermissionLib.MultiTargetPermission({
+            permissionId: p.plugin.UPGRADE_PLUGIN_PERMISSION_ID(),
+            where: address(p.plugin),
+            who: upgrade,
+            operation: _grantOrRevoke,
+            condition: PermissionLib.NO_CONDITION
+        });
+
+        permissions[3] = PermissionLib.MultiTargetPermission({
+            permissionId: p.clock.CLOCK_ADMIN_ROLE(),
+            where: address(p.clock),
+            who: upgrade,
+            operation: _grantOrRevoke,
+            condition: PermissionLib.NO_CONDITION
+        });
+
+        permissions[4] = PermissionLib.MultiTargetPermission({
+            permissionId: p.nftLock.LOCK_ADMIN_ROLE(),
+            where: address(p.nftLock),
+            who: upgrade,
+            operation: _grantOrRevoke,
+            condition: PermissionLib.NO_CONDITION
+        });
+
+        return permissions;
     }
 
     function getOldDeployment() public view returns (DeploymentV1_0_0 memory) {
