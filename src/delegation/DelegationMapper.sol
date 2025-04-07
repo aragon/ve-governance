@@ -27,6 +27,9 @@ contract DelegationMapper is
 {
     using SafeCastUpgradeable for uint256;
 
+    /// @notice The Gauge admin can can create and manage voting gauges for token holders
+    bytes32 public constant DELEGATION_ADMIN_ROLE = keccak256("DELEGATION_ADMIN");
+
     /// @notice Address of the voting escrow contract that will track voting power
     address public escrow;
 
@@ -64,6 +67,10 @@ contract DelegationMapper is
         clock = _clock;
 
         maxTime = IClock(clock).epochDuration() * CurveConstantLib.MAX_EPOCHS;
+    }
+
+    function setVoter(address _voter) external auth(DELEGATION_ADMIN_ROLE) {
+        voter = _voter;
     }
 
     function setAutoDelegation(bool _enabled) external {

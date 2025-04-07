@@ -1,4 +1,3 @@
-
 /// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
@@ -19,7 +18,7 @@ interface IGaugeVote {
     /// @dev this changes so we need an historic snapshot
     /// @param lastVoted is the last time the user voted
     struct AddressVoteData {
-        mapping(address => uint256) votes;
+        mapping(address => uint256) voteWeights;
         address[] gaugesVotedFor;
         uint256 usedVotingPower;
         uint256 lastVoted;
