@@ -202,7 +202,7 @@ contract DelegationMapper is
             tokenIsDelegated[_tokenId] = true;
             numberOfDelegatedTokens[_to]++;
 
-            ISimpleGaugeVoter(voter).updateVotingPower(_from, _to);
+            ISimpleGaugeVoter(voter).updateVotingPower(fromDelegatee, toDelegatee);
 
             return;
         }
@@ -225,7 +225,7 @@ contract DelegationMapper is
             tokenIsDelegated[_tokenId] = true;
         }
 
-        ISimpleGaugeVoter(voter).updateVotingPower(_from, _to);
+        ISimpleGaugeVoter(voter).updateVotingPower(fromDelegatee, toDelegatee);
     }
 
     /*//////////////////////////////////////////////////////////////
