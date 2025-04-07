@@ -45,6 +45,10 @@ contract VotingEscrowV1_4_0 is
     /// @notice Role required to withdraw underlying tokens from the contract
     bytes32 public constant SWEEPER_ROLE = keccak256("SWEEPER");
 
+    /// @dev enables transfers without whitelisting
+    address public constant SPLIT_WHITELIST_ANY_ADDRESS =
+        address(uint160(uint256(keccak256("SPLIT_WHITELIST_ANY_ADDRESS"))));
+
     /*//////////////////////////////////////////////////////////////
                               NFT Data
     //////////////////////////////////////////////////////////////*/
@@ -185,6 +189,12 @@ contract VotingEscrowV1_4_0 is
     ) external auth(ESCROW_ADMIN_ROLE) {
         splitWhitelisted[_account] = _isWhitelisted;
         emit SplitWhitelistSet(_account, _isWhitelisted);
+    }
+
+    /// @notice Enable split to any address without whitelisting
+    function enableSplit() external auth(ESCROW_ADMIN_ROLE) {
+        splitWhitelisted[SPLIT_WHITELIST_ANY_ADDRESS] = true;
+        emit SplitWhitelistSet(SPLIT_WHITELIST_ANY_ADDRESS, true);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -382,7 +392,7 @@ contract VotingEscrowV1_4_0 is
         address sender = _msgSender();
 
         // Only allow split to whitelisted accounts.
-        if (!splitWhitelisted[sender]) {
+        if (!splitWhitelisted[SPLIT_WHITELIST_ANY_ADDRESS] && !splitWhitelisted[sender]) {
             revert SplitNotWhitelisted();
         }
 

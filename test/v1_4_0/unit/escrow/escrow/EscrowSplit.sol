@@ -62,6 +62,15 @@ contract TestEscrowSplit is EscrowBase {
         escrow.split(from, Lock_1_Amount);
     }
 
+    function test_shouldSucceed_IfAnyAddrWhitelisted() public {
+        escrow.setEnableSplit(address(this), false);
+
+        escrow.enableSplit();
+        
+        uint256 from = escrow.createLock(Lock_1_Amount);
+        escrow.split(from, Lock_1_Amount - 10);
+    }
+
     function test_fromTokenIsCorrectlyBurnt() public {
         vm.warp(checkpointInterval + 1 hours);
 
