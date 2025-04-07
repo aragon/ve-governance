@@ -45,7 +45,7 @@ contract VotingEscrowV1_4_0 is
     /// @notice Role required to withdraw underlying tokens from the contract
     bytes32 public constant SWEEPER_ROLE = keccak256("SWEEPER");
 
-    /// @dev enables transfers without whitelisting
+    /// @dev enables splits without whitelisting
     address public constant SPLIT_WHITELIST_ANY_ADDRESS =
         address(uint160(uint256(keccak256("SPLIT_WHITELIST_ANY_ADDRESS"))));
 
