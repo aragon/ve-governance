@@ -348,13 +348,13 @@ contract VotingEscrowV1_4_0 is
     ) public view returns (bool) {
         uint256 maxTime = IEscrowCurve(curve).maxTime();
 
-        uint48 oldLockedFromEnd = uint48(_fromLocked.start + maxTime);
-        uint48 oldLockedToEnd = uint48(_toLocked.start + maxTime);
+        uint256 fromLockedEnd = _fromLocked.start + maxTime;
+        uint256 toLockedEnd = _toLocked.start + maxTime;
 
+        // Tokens either must have the same start dates or both must be mature.
         if (
             (_toLocked.start != _fromLocked.start) &&
-            // TODO: GIORGI <= sign or < ?
-            (block.timestamp <= oldLockedToEnd || block.timestamp <= oldLockedFromEnd)
+            (toLockedEnd >= block.timestamp || fromLockedEnd >= block.timestamp)
         ) {
             return false;
         }
@@ -553,5 +553,5 @@ contract VotingEscrowV1_4_0 is
     function _authorizeUpgrade(address) internal virtual override auth(ESCROW_ADMIN_ROLE) {}
 
     /// @dev Reserved storage space to allow for layout changes in the future.
-    uint256[38] private __gap;
+    uint256[39] private __gap;
 }

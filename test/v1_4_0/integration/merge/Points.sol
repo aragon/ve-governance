@@ -56,7 +56,7 @@ contract TestMerge_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage
         );
 
         // 3
-        assertGlobalPoint(4, currentTotalBiasFP, totalSlopeFP, currentTs);
+        assertGlobalPoint(1, currentTotalBiasFP, totalSlopeFP, currentTs);
 
         // 4
         assertEq(slopeChanges(weekStartTs + maxTime), totalSlopeFP);
@@ -94,7 +94,7 @@ contract TestMerge_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage
         assertTokenPoint(to, 2, currentTotalBiasFP, totalSlopeFP, weekStartTs, currentTs);
 
         // 3
-        uint256 lastIndex = (currentTs - Lock_1_start) / checkpointInterval + 4;
+        uint256 lastIndex = (currentTs - Lock_1_start) / checkpointInterval + 2;
         assertGlobalPoint(lastIndex, currentTotalBiasFP, 0, currentTs);
 
         // 4
@@ -148,7 +148,7 @@ contract TestMerge_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage
         );
 
         // 3
-        uint256 lastIndex = (currentTs - Lock_1_start) / checkpointInterval + 4;
+        uint256 lastIndex = (currentTs - Lock_1_start) / checkpointInterval + 3;
         assertGlobalPoint(lastIndex, currentTotalBiasFP, 0, currentTs);
 
         // 4

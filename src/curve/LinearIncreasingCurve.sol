@@ -19,9 +19,6 @@ import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {ReentrancyGuardUpgradeable as ReentrancyGuard} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
-import {PausableUpgradeable as Pausable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
-
-import {console2 as console} from "forge-std/console2.sol";
 
 /// @title Linear Increasing Escrow
 contract LinearIncreasingEscrow is
@@ -116,12 +113,12 @@ contract LinearIncreasingEscrow is
                               CURVE COEFFICIENTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @return The coefficient for the linear term of the quadratic curve, for the given amount
+    /// @return The coefficient for the curve's linear term, for the given amount
     function _getLinearCoeff(uint256 amount) internal pure returns (int256) {
         return int256(amount) * SHARED_LINEAR_COEFFICIENT;
     }
 
-    /// @return The constant coefficient of the quadratic curve, for the given amount
+    /// @return The constant coefficient of the increasing curve, for the given amount
     /// @dev In this case, the constant term is 1 so we just case the amount
     function _getConstantCoeff(uint256 amount) public pure returns (int256) {
         return int256(amount) * SHARED_CONSTANT_COEFFICIENT;
@@ -150,33 +147,40 @@ contract LinearIncreasingEscrow is
                               CURVE BIAS
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Rounds `_elapsed` to maxTime if it's greater, otherwise returns `_elapsed`.
+    function boundElapsedMaxTime(uint256 _elapsed) private view returns (uint256) {
+        uint256 MAX_TIME = maxTime();
+        return _elapsed > MAX_TIME ? MAX_TIME : _elapsed;
+    }
+
     /// @notice Returns the bias for the given time elapsed and amount, up to the maximum time
     function getBias(uint256 timeElapsed, uint256 amount) public view returns (uint256) {
         int256[3] memory coefficients = _getCoefficients(amount);
-        return _getBias(timeElapsed, coefficients[0], coefficients[1]);
+        return _getBias(boundElapsedMaxTime(timeElapsed), coefficients[0], coefficients[1]);
     }
 
     /// @notice Returns the bias for the given time elapsed and amount, up to the maximum time
     function _getBias(
-        uint256 timeElapsed,
-        int256 constantCoeff,
-        int256 slope
+        uint256 _timeElapsed,
+        int256 _constantCoeff,
+        int256 _linearCoeff
     ) internal view returns (uint256) {
-        uint256 MAX_TIME = maxTime();
-        timeElapsed = timeElapsed > MAX_TIME ? MAX_TIME : timeElapsed;
-
-        int256 bias = slope * int256(timeElapsed) + constantCoeff;
+        int256 bias = _linearCoeff * int256(_timeElapsed) + _constantCoeff;
         if (bias < 0) bias = 0;
 
         return bias.toUint256();
     }
 
     function _getBiasAndSlope(
-        uint256 timeElapsed,
-        uint256 amount
+        uint256 _timeElapsed,
+        uint256 _amount
     ) public view returns (int256, int256) {
-        int256 slope = _getLinearCoeff(amount);
-        uint256 bias = _getBias(timeElapsed, _getConstantCoeff(amount), slope);
+        int256 slope = _getLinearCoeff(_amount);
+        uint256 bias = _getBias(
+            boundElapsedMaxTime(_timeElapsed),
+            _getConstantCoeff(_amount),
+            slope
+        );
 
         return (int256(bias), slope);
     }
@@ -240,7 +244,7 @@ contract LinearIncreasingEscrow is
         return tokenPointLatestIndex[_tokenId];
     }
 
-    //// TODO: inheritdoc IEscrowCurveCore doesn't work.
+    /// @inheritdoc IEscrowCurveCore
     function votingPowerAt(uint256 _tokenId, uint256 _t) external view returns (uint256) {
         uint256 interval = _getPastTokenPointInterval(_tokenId, _t);
 
@@ -254,10 +258,13 @@ contract LinearIncreasingEscrow is
         int256 bias = lastPoint.coefficients[0];
         int256 slope = lastPoint.coefficients[1];
 
-        return _getBias(_t - lastPoint.checkpointTs, bias, slope) / 1e18;
+        TokenPoint memory originalPoint = _tokenPointHistory[_tokenId][0];
+        uint256 elapsed = boundElapsedMaxTime(_t - originalPoint.checkpointTs);
+
+        return _getBias(elapsed - lastPoint.writtenTs, bias, slope) / 1e18;
     }
 
-    //// TODO: inheritdoc IEscrowCurveCore doesn't work.
+    /// @inheritdoc IEscrowCurveCore
     function supplyAt(uint256 _timestamp) external view returns (uint256) {
         return _supplyAt(_timestamp);
     }
@@ -346,12 +353,11 @@ contract LinearIncreasingEscrow is
         }
 
         uint256 newEnd = _newLocked.start + maxTime();
-
         int256 newDSlope = slopeChanges[newEnd];
 
         // If the newLocked hasn't ended, add its slope
-        // to the latest global point. newLocked could be ended in case of
-        // merge, when a token is already mature.
+        // to the latest global point. newLocked could be
+        // ended in case of merge, when a token is already mature.
         if (block.timestamp < newEnd) {
             lastPoint.slope += newLockSlope;
             newDSlope += newLockSlope;
@@ -387,27 +393,33 @@ contract LinearIncreasingEscrow is
                 newLockSlope += oldLockSlope;
                 newLockBias += oldLockBias;
 
-                // fromLocked's current end is in the future and since `fromLocked` gets destroyed,
-                // its slope must be recorded on the newLocked's end.
+                // fromLocked's current end is in the future and
+                // since `fromLocked` gets destroyed, its slope must be
+                // recorded on the newLocked's end. If both `ends` are equal,
+                // old slope is already included/recorded when it was first stored.
                 if (_fromLockedEnd > block.timestamp && _fromLockedEnd != newEnd) {
                     newDSlope += oldLockSlope;
                 }
             }
 
+            // If ends are not equal and fromLocked's end
+            // is in the future, we must clear it out.
             if (_fromLockedEnd != newEnd && _fromLockedEnd >= block.timestamp) {
                 int256 oldDSlope = slopeChanges[_fromLockedEnd] - oldLockSlope;
-                slopeChanges[_fromLockedEnd] = oldDSlope < 0 ? int256(0) : oldDSlope;
+                if (oldDSlope < 0) oldDSlope = 0;
+                slopeChanges[_fromLockedEnd] = oldDSlope;
             }
         }
 
         if (lastPoint.slope < 0) lastPoint.slope = 0;
         if (lastPoint.bias < 0) lastPoint.bias = 0;
+        if (newDSlope < 0) newDSlope = 0;
 
-        // TODO: see aerodome..
-        globalPointLatestIndex = _globalPointLatestIndex;
-        _globalPointHistory[_globalPointLatestIndex] = lastPoint;
+        // store new slope change
+        slopeChanges[newEnd] = newDSlope;
 
-        slopeChanges[newEnd] = newDSlope < 0 ? int256(0) : newDSlope;
+        // Record the latest global point.
+        _storeLatestGlobalPoint(lastPoint, _globalPointLatestIndex);
 
         // Create new token point and store.
         TokenPoint memory tNew;
@@ -415,14 +427,41 @@ contract LinearIncreasingEscrow is
         tNew.checkpointTs = _newLocked.start;
         tNew.coefficients = [newLockBias, newLockSlope, 0];
 
-        if (
-            tokenLatestIndex != 0 &&
-            _tokenPointHistory[_tokenId][tokenLatestIndex].writtenTs == block.timestamp
-        ) {
-            _tokenPointHistory[_tokenId][tokenLatestIndex] = tNew;
+        // Record the latest token point.
+        _storeLatestTokenPoint(tNew, _tokenId, tokenLatestIndex);
+    }
+
+    /// @dev The private helper function to either store latest global point on a new index or overwrite it.
+    ///      In case of overwriting, the latest global point index is not incremented.
+    function _storeLatestGlobalPoint(GlobalPoint memory _p, uint256 _index) private {
+        // If the timestamp of last stored global point is the same as
+        // current timestamp, overwrite it, otherwise store a new one
+        // to reduce unnecessary global points in the history for
+        // gas costs and binary search efficiency.
+        if (_index != 1 && _globalPointHistory[_index - 1].writtenTs == block.timestamp) {
+            _globalPointHistory[_index - 1] = _p;
         } else {
-            tokenPointLatestIndex[_tokenId] = ++tokenLatestIndex;
-            _tokenPointHistory[_tokenId][tokenLatestIndex] = tNew;
+            globalPointLatestIndex = _index;
+            _globalPointHistory[_index] = _p;
+        }
+    }
+
+    /// @dev The private helper function to either store latest token point on a new index or overwrite it.
+    ///      In case of overwriting, the latest token point index is not incremented.
+    function _storeLatestTokenPoint(
+        TokenPoint memory _p,
+        uint256 _tokenId,
+        uint256 _index
+    ) private {
+        // If the timestamp of last stored token point is the same as
+        // current timestamp, overwrite it, otherwise store a new one
+        // to reduce unnecessary global points in the history for
+        // gas costs and binary search efficiency.
+        if (_index != 0 && _tokenPointHistory[_tokenId][_index].writtenTs == block.timestamp) {
+            _tokenPointHistory[_tokenId][_index] = _p;
+        } else {
+            tokenPointLatestIndex[_tokenId] = ++_index;
+            _tokenPointHistory[_tokenId][_index] = _p;
         }
     }
 
@@ -501,6 +540,7 @@ contract LinearIncreasingEscrow is
         // epoch 0 is an empty point
         if (epoch_ == 0) return 0;
         GlobalPoint memory _point = _globalPointHistory[epoch_];
+
         int256 bias = _point.bias;
         int256 slope = _point.slope;
         uint256 ts = _point.writtenTs; // changes in for loop.
@@ -512,11 +552,13 @@ contract LinearIncreasingEscrow is
         for (uint256 i = 0; i < 255; ++i) {
             t_i += checkpointInterval;
             int256 dSlope = 0;
+
             if (t_i > _timestamp) {
                 t_i = _timestamp;
             } else {
                 dSlope = slopeChanges[t_i];
             }
+
             bias += slope * int256(t_i - ts);
 
             if (t_i == _timestamp) {
