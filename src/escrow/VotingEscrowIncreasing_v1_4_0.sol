@@ -24,6 +24,7 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {ReentrancyGuardUpgradeable as ReentrancyGuard} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {PausableUpgradeable as Pausable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
+import {IDelegationMapper} from "../delegation/IDelegationMapper.sol";
 
 contract VotingEscrowV1_4_0 is
     IVotingEscrow,
@@ -89,16 +90,23 @@ contract VotingEscrowV1_4_0 is
 
     bool private _lockNFTSet;
 
+    // added in 1.4.0
+    address public delegationMapper;
+
     error UpgradeNotPossible();
 
     /*//////////////////////////////////////////////////////////////
                               Initialization
     //////////////////////////////////////////////////////////////*/
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }
 
+    // TODO: GIORGI add `address _delegationMapper` as a param.
+    // Currently, I didn't as compilation fails due to
+    // 1.4.0 tests not expecting this argument.
     function initialize(
         address _token,
         address _dao,
@@ -116,29 +124,14 @@ contract VotingEscrowV1_4_0 is
         emit MinDepositSet(_initialMinDeposit);
     }
 
-    function initializeFrom(bool exitAmountIncluded, uint256 exitAmount) public {
-        if (exitAmountIncluded) {
-            // If `exitAmount` is passed, make sure the escrow is paused
-            // so that incorrect upgrade doesn't go unnoticed. Otherwise,
-            // upgrade transaction might be front-run by `beginWithdrawal`
-            // causing the `exitAmount` to be wrong.
-            if (!paused()) {
-                revert UpgradeNotPossible();
-            }
-        } else {
-            exitAmount = currentExitingAmount();
-        }
-
-        if (totalLocked < exitAmount) {
-            revert UpgradeNotPossible();
-        }
-
-        ExitQueue(queue).initializeFrom(exitAmount);
-    }
-
     /*//////////////////////////////////////////////////////////////
                               Admin Setters
     //////////////////////////////////////////////////////////////*/
+
+    /// @notice Added in 1.4.0 to set the delegation mapper
+    function setDelegationMapper(address _delegationMapper) external auth(ESCROW_ADMIN_ROLE) {
+        delegationMapper = _delegationMapper;
+    }
 
     /// @notice Sets the curve contract that calculates the voting power
     function setCurve(address _curve) external auth(ESCROW_ADMIN_ROLE) {
@@ -320,6 +313,15 @@ contract VotingEscrowV1_4_0 is
         if (!canMerge(oldLockedFrom, oldLockedTo)) {
             revert CannotMerge(_from, _to);
         }
+
+        // Note that this function must be called before we
+        // empty `lockedFrom`'s amount to 0. `moveDelegateVotes`
+        // relies that lock still contains the amount.
+        IDelegationMapper(delegationMapper).moveDelegateVotes(
+            IERC721EMB(lockNFT).ownerOf(_from),
+            IERC721EMB(lockNFT).ownerOf(_to),
+            _from
+        );
 
         // Update for `_from`.
         IERC721EMB(lockNFT).burn(_from);
@@ -531,6 +533,10 @@ contract VotingEscrowV1_4_0 is
 
         IERC721EMB(lockNFT).transferFrom(address(this), _to, _tokenId);
         emit SweepNFT(_to, _tokenId);
+    }
+
+    function moveDelegateVotes(address _from, address _to, uint256 _tokenId) public {
+        IDelegationMapper(delegationMapper).moveDelegateVotes(_from, _to, _tokenId);
     }
 
     /*///////////////////////////////////////////////////////////////

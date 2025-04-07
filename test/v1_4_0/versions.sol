@@ -4,7 +4,7 @@ pragma solidity ^0.8.17;
 // import files here in your tests instead of from src
 
 // contracts
-import {Clock, Lock, QuadraticIncreasingEscrow, ExitQueue, VotingEscrow, SimpleGaugeVoter, SimpleGaugeVoterSetupV1_4_0 as SimpleGaugeVoterSetup} from "@setup/SimpleGaugeVoterSetup_v1_4_0.sol";
+import {Clock, Lock, QuadraticIncreasingEscrow, ExitQueue, VotingEscrow, DelegationMapper, SimpleGaugeVoter, SimpleGaugeVoterSetupV1_4_0 as SimpleGaugeVoterSetup} from "@setup/SimpleGaugeVoterSetup_v1_4_0.sol";
 import {GaugesDaoFactoryV1_4_0 as GaugesDaoFactory, Deployment, DeploymentParameters, TokenParameters, GaugePluginSet} from "@factory/GaugesDaoFactory_v1_4_0.sol";
 import {LinearIncreasingEscrow} from "@curve/LinearIncreasingCurve.sol";
 

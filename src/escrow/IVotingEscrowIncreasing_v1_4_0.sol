@@ -10,6 +10,12 @@ interface IVotingEscrowExiting {
     function currentExitingAmount() external view returns (uint256);
 }
 
+interface IDelegationMapper {
+    /// @notice Called upon the transfer to update delegation checkpoints.
+    /// TODO: GIORGI add natspec for params.
+    function moveDelegateVotes(address _from, address _to, uint256 _tokenId) external;
+}
+
 interface IMergeEventsAndErrors {
     event Merged(
         address indexed _sender,
@@ -68,5 +74,6 @@ interface IVotingEscrowIncreasingV1_4_0 is
     IVotingEscrowIncreasing,
     IVotingEscrowExiting,
     IMerge,
-    ISplit
+    ISplit,
+    IDelegationMapper
 {}

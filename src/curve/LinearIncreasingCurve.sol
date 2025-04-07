@@ -54,15 +54,8 @@ contract LinearIncreasingEscrow is
     mapping(uint256 => TokenPoint[1_000_000_000]) internal _tokenPointHistory;
 
     /*//////////////////////////////////////////////////////////////
-                                ADDED: 0.2.0
+                                MATH
     //////////////////////////////////////////////////////////////*/
-
-    /// @dev The latest global point index.
-    uint256 public globalPointLatestIndex;
-
-    // endTime => summed up slopes at that endTime
-    mapping(uint256 => int256) public slopeChanges;
-    mapping(uint256 => GlobalPoint) internal _globalPointHistory;
 
     /// @dev precomputed coefficients of the quadratic curve
     int256 private constant SHARED_QUADRATIC_COEFFICIENT =
@@ -75,12 +68,26 @@ contract LinearIncreasingEscrow is
 
     uint256 private constant MAX_EPOCHS = CurveConstantLib.MAX_EPOCHS;
 
+    /*//////////////////////////////////////////////////////////////
+                            ADDED: TOTAL SUPPLY
+    //////////////////////////////////////////////////////////////*/
+
+    /// @dev The latest global point index.
+    uint256 public globalPointLatestIndex;
+
+    // endTime => summed up slopes at that endTime
+    mapping(uint256 => int256) public slopeChanges;
+
+    /// @dev The global point history
+    mapping(uint256 => GlobalPoint) internal _globalPointHistory;
+
     error UpgradeNotPossible();
 
     /*//////////////////////////////////////////////////////////////
                               INITIALIZATION
     //////////////////////////////////////////////////////////////*/
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }
@@ -96,8 +103,8 @@ contract LinearIncreasingEscrow is
         warmupPeriod = _warmupPeriod;
         clock = _clock;
 
-        __DaoAuthorizableUpgradeable_init(IDAO(_dao));
         __ReentrancyGuard_init();
+        __DaoAuthorizableUpgradeable_init(IDAO(_dao));
 
         // other initializers are empty
     }
@@ -580,5 +587,5 @@ contract LinearIncreasingEscrow is
     function _authorizeUpgrade(address) internal virtual override auth(CURVE_ADMIN_ROLE) {}
 
     /// @dev gap for upgradeable contract
-    uint256[45] private __gap;
+    uint256[42] private __gap;
 }
