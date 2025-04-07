@@ -13,6 +13,7 @@ import {MockPluginSetupProcessor} from "@mocks/osx/MockPSP.sol";
 import {MockDAOFactory} from "@mocks/osx/MockDAOFactory.sol";
 import {MockERC20} from "@mocks/MockERC20.sol";
 import {createTestDAO} from "@mocks/MockDAO.sol";
+import {DelegationMapper} from "@delegation/DelegationMapper.sol";
 
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
@@ -60,6 +61,7 @@ contract EscrowBase is
     SimpleGaugeVoter voter;
     ExitQueue queue;
     Clock clock;
+    DelegationMapper delegationMapper;
 
     DAO dao;
     Multisig multisig;
@@ -96,6 +98,7 @@ contract EscrowBase is
         escrow = _deployEscrow(address(token), address(dao), address(clock), 1);
         curve = _deployCurve(address(escrow), address(dao), warmupPeriod, address(clock));
         nftLock = _deployLock(address(escrow), name, symbol, address(dao));
+        delegationMapper = _deployDelegationMapper(address(dao), address(escrow), address(clock));
 
         super.initialize(curve.maxTime(), clock.checkpointInterval());
 
@@ -147,6 +150,7 @@ contract EscrowBase is
         escrow.setVoter(address(voter));
         escrow.setQueue(address(queue));
         escrow.setLockNFT(address(nftLock));
+        escrow.setDelegationMapper(address(delegationMapper));
     }
 
     modifier givenExistingLock() {
@@ -249,6 +253,20 @@ contract EscrowBase is
             (_token, _dao, _clock, _minDeposit)
         );
         return VotingEscrow(address(impl).deployUUPSProxy(initCalldata));
+    }
+
+    function _deployDelegationMapper(
+        address _dao,
+        address _escrow,
+        address _clock
+    ) public returns (DelegationMapper) {
+        DelegationMapper impl = new DelegationMapper();
+
+        bytes memory initCalldata = abi.encodeCall(
+            DelegationMapper.initialize,
+            (_dao, _escrow, _clock)
+        );
+        return DelegationMapper(address(impl).deployUUPSProxy(initCalldata));
     }
 
     function _deployLock(

@@ -103,10 +103,7 @@ contract VotingEscrowV1_4_0 is
     constructor() {
         _disableInitializers();
     }
-
-    // TODO: GIORGI add `address _delegationMapper` as a param.
-    // Currently, I didn't as compilation fails due to
-    // 1.4.0 tests not expecting this argument.
+    
     function initialize(
         address _token,
         address _dao,
