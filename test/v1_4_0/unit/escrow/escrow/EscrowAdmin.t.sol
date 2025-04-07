@@ -110,6 +110,18 @@ contract TestEscrowAdmin is EscrowBase {
         escrow.withdraw(100);
     }
 
+    function testSplitWhitelist() public {
+        address addr = address(1);
+        vm.expectEmit(true, false, false, true);
+        emit SplitWhitelistSet(addr, true);
+
+        assertFalse(escrow.splitWhitelisted(addr));
+        escrow.setEnableSplit(addr, true);
+        assertTrue(escrow.splitWhitelisted(addr));
+        escrow.setEnableSplit(addr, false);
+        assertFalse(escrow.splitWhitelisted(addr));
+    }
+
     function testWhitelist() public {
         address addr = address(1);
         vm.expectEmit(true, false, false, true);

@@ -55,6 +55,9 @@ interface ISplitEventsAndErrors {
         uint208 _splitAmount2
     );
 
+    event SplitWhitelistSet(address indexed account, bool status);
+
+    error SplitNotWhitelisted();
     error SplitAmountTooBig();
 }
 
