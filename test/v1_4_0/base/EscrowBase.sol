@@ -30,6 +30,7 @@ import {
     IVotingEscrowEventsStorageErrorsEvents, 
     IWhitelistErrors, 
     IWhitelistEvents, 
+    ISplitEventsAndErrors,
     IEscrowCurveTokenStorage, 
     IEscrowCurveGlobalStorage
 } from "../versions.sol";
@@ -44,7 +45,8 @@ contract EscrowBase is
     IEscrowCurveTokenStorage,
     IEscrowCurveGlobalStorage,
     IWhitelistErrors,
-    IWhitelistEvents
+    IWhitelistEvents,
+    ISplitEventsAndErrors
 {
     using ProxyLib for address;
     string name = "Voting Escrow";

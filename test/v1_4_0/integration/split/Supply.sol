@@ -17,6 +17,8 @@ contract TestSplit_Supply is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage
         super.setUp();
 
         super.mintAndApproveEscrow();
+
+        escrow.setEnableSplit(address(this), true);
     }
 
     function test_Split_TokenNotMature() public {
