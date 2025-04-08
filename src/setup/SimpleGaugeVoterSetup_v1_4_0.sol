@@ -13,7 +13,8 @@ import {ProxyLib} from "@libs/ProxyLib.sol";
 import {PermissionLib} from "@aragon/osx/core/permission/PermissionLib.sol";
 import {PluginSetup} from "@aragon/osx/framework/plugin/setup/PluginSetup.sol";
 
-import {SimpleGaugeVoterV1_1_0 as SimpleGaugeVoter} from "@voting/SimpleGaugeVoter_v1_1_0.sol";
+import {DelegationMapper} from "@delegation/DelegationMapper.sol";
+import {SimpleGaugeVoterV1_4_0 as SimpleGaugeVoter} from "@voting/SimpleGaugeVoter_v1_4_0.sol";
 import {VotingEscrowV1_4_0 as VotingEscrow} from "@escrow/VotingEscrowIncreasing_v1_4_0.sol";
 import {ExitQueue} from "@queue/ExitQueue.sol";
 import {LinearIncreasingEscrow as QuadraticIncreasingEscrow} from "@curve/LinearIncreasingCurve.sol";
@@ -42,6 +43,15 @@ struct ISimpleGaugeVoterSetupParams {
     uint48 minLock;
     // curve
     uint48 warmup;
+}
+
+enum HelperType {
+    Curve,
+    Queue,
+    Escrow,
+    Clock,
+    NFT,
+    DelegationMapper
 }
 
 contract SimpleGaugeVoterSetupV1_4_0 is PluginSetup {
@@ -107,87 +117,113 @@ contract SimpleGaugeVoterSetupV1_4_0 is PluginSetup {
         address _dao,
         bytes calldata _data
     ) external returns (address plugin, PreparedSetupData memory preparedSetupData) {
+        address[] memory helpers = new address[](6);
+
         ISimpleGaugeVoterSetupParams memory params = abi.decode(
             _data,
             (ISimpleGaugeVoterSetupParams)
         );
 
         // deploy the clock
-        address clock = address(
+        helpers[uint(HelperType.Clock)] = address(
             Clock(
                 clockBase.deployUUPSProxy(abi.encodeWithSelector(Clock.initialize.selector, _dao))
             )
         );
 
         // deploy the escrow locker
-        VotingEscrow escrow = VotingEscrow(
-            escrowBase.deployUUPSProxy(
-                abi.encodeCall(
-                    VotingEscrow.initialize,
-                    (params.token, _dao, clock, params.minDeposit)
+        helpers[uint(HelperType.Escrow)] = address(
+            VotingEscrow(
+                escrowBase.deployUUPSProxy(
+                    abi.encodeCall(
+                        VotingEscrow.initialize,
+                        (params.token, _dao, helpers[uint(HelperType.Clock)], params.minDeposit)
+                    )
+                )
+            )
+        );
+
+        helpers[uint(HelperType.DelegationMapper)] = address(
+            DelegationMapper(
+                delegationMapperBase.deployUUPSProxy(
+                    abi.encodeWithSelector(
+                        DelegationMapper.initialize.selector,
+                        _dao,
+                        helpers[uint(HelperType.Escrow)],
+                        helpers[uint(HelperType.Clock)]
+                    )
                 )
             )
         );
 
         // deploy the voting contract (plugin)
-        SimpleGaugeVoter voter = SimpleGaugeVoter(
-            voterBase.deployUUPSProxy(
-                abi.encodeCall(
-                    SimpleGaugeVoter.initialize,
-                    (_dao, address(escrow), params.isPaused, clock)
+        plugin = address(
+            SimpleGaugeVoter(
+                voterBase.deployUUPSProxy(
+                    abi.encodeCall(
+                        SimpleGaugeVoter.initialize,
+                        (
+                            _dao,
+                            helpers[uint(HelperType.Escrow)],
+                            params.isPaused,
+                            helpers[uint(HelperType.Clock)],
+                            helpers[uint(HelperType.DelegationMapper)]
+                        )
+                    )
                 )
             )
         );
-        plugin = address(voter);
+
+        DelegationMapper(helpers[uint(HelperType.DelegationMapper)]).setVoter(plugin);
 
         // deploy the curve
-        address curve = curveBase.deployUUPSProxy(
+        helpers[uint(HelperType.Curve)] = curveBase.deployUUPSProxy(
             abi.encodeCall(
                 QuadraticIncreasingEscrow.initialize,
-                (address(escrow), _dao, params.warmup, clock)
+                (
+                    helpers[uint(HelperType.Escrow)],
+                    _dao,
+                    params.warmup,
+                    helpers[uint(HelperType.Clock)]
+                )
             )
         );
 
         // deploy the exit queue
-        address exitQueue = queueBase.deployUUPSProxy(
+        helpers[uint(HelperType.Queue)] = queueBase.deployUUPSProxy(
             abi.encodeCall(
                 ExitQueue.initialize,
-                (address(escrow), params.cooldown, _dao, params.feePercent, clock, params.minLock)
+                (
+                    helpers[uint(HelperType.Escrow)],
+                    params.cooldown,
+                    _dao,
+                    params.feePercent,
+                    helpers[uint(HelperType.Clock)],
+                    params.minLock
+                )
             )
         );
 
         // deploy the escrow NFT
-        address nftLock = nftBase.deployUUPSProxy(
+        helpers[uint(HelperType.NFT)] = nftBase.deployUUPSProxy(
             abi.encodeCall(
                 Lock.initialize,
-                (address(escrow), params.veTokenName, params.veTokenSymbol, _dao)
+                (helpers[uint(HelperType.Escrow)], params.veTokenName, params.veTokenSymbol, _dao)
             )
-        );
-
-        address delegationMapper = delegationMapperBase.deployUUPSProxy(
-            abi.encodeCall(DelegationMapper.initialize, (_dao, address(escrow), clock))
         );
 
         // encode our setup data with permissions and helpers
         PermissionLib.MultiTargetPermission[] memory permissions = getPermissions(
             _dao,
             plugin,
-            curve,
-            exitQueue,
-            address(escrow),
-            clock,
-            nftLock,
+            helpers[uint(HelperType.Curve)],
+            helpers[uint(HelperType.Queue)],
+            helpers[uint(HelperType.Escrow)],
+            helpers[uint(HelperType.Clock)],
+            helpers[uint(HelperType.NFT)],
+            helpers[uint(HelperType.DelegationMapper)],
             PermissionLib.Operation.Grant
         );
-
-        address[] memory helpers = new address[](6);
-
-        helpers[0] = curve;
-        helpers[1] = exitQueue;
-        helpers[2] = address(escrow);
-        helpers[3] = clock;
-        helpers[4] = nftLock;
-        helpers[5] = delegationMapper;
 
         preparedSetupData.helpers = helpers;
         preparedSetupData.permissions = permissions;
@@ -208,6 +244,7 @@ contract SimpleGaugeVoterSetupV1_4_0 is PluginSetup {
         address escrow = _payload.currentHelpers[2];
         address clock = _payload.currentHelpers[3];
         address nftLock = _payload.currentHelpers[4];
+        address delegationMapper = _payload.currentHelpers[5];
 
         permissions = getPermissions(
             _dao,
@@ -217,6 +254,7 @@ contract SimpleGaugeVoterSetupV1_4_0 is PluginSetup {
             escrow,
             clock,
             nftLock,
+            delegationMapper,
             PermissionLib.Operation.Revoke
         );
     }
@@ -233,6 +271,7 @@ contract SimpleGaugeVoterSetupV1_4_0 is PluginSetup {
         address _escrow,
         address _clock,
         address _nft,
+        address _delegationMapper,
         PermissionLib.Operation _grantOrRevoke
     ) public view returns (PermissionLib.MultiTargetPermission[] memory) {
         PermissionLib.MultiTargetPermission[]
@@ -313,6 +352,14 @@ contract SimpleGaugeVoterSetupV1_4_0 is PluginSetup {
         permissions[9] = PermissionLib.MultiTargetPermission({
             permissionId: ExitQueue(_queue).WITHDRAW_ROLE(),
             where: _queue,
+            who: _dao,
+            operation: _grantOrRevoke,
+            condition: PermissionLib.NO_CONDITION
+        });
+
+        permissions[10] = PermissionLib.MultiTargetPermission({
+            permissionId: DelegationMapper(_delegationMapper).DELEGATION_ADMIN_ROLE(),
+            where: _delegationMapper,
             who: _dao,
             operation: _grantOrRevoke,
             condition: PermissionLib.NO_CONDITION

@@ -104,6 +104,7 @@ interface IGaugeVoterErrors {
     error NoVotingPower();
     error NotCurrentlyVoting();
     error OnlyDelegationMapper();
+    error UpdateVotingPowerHookNotEnabled();
 }
 
 interface IGaugeVoter is IGaugeVoterEvents, IGaugeVoterErrors, IGaugeVote {
@@ -112,8 +113,7 @@ interface IGaugeVoter is IGaugeVoterEvents, IGaugeVoterErrors, IGaugeVote {
     function vote(GaugeVote[] memory _votes) external;
 
     /// @notice Called by users to reset voting state. Required when withdrawing or transferring veNFT.
-    /// @param _address Address that is voting.
-    function reset(address _address) external;
+    function reset() external;
 
     /// @notice Can be called to check if an address is currently voting
     function isVoting(address _address) external view returns (bool);

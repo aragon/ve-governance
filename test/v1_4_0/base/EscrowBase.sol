@@ -20,21 +20,7 @@ import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Recei
 import "@helpers/OSxHelpers.sol";
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
-import {
-    Lock, 
-    Clock, 
-    VotingEscrow, 
-    LinearIncreasingEscrow, 
-    ExitQueue, 
-    SimpleGaugeVoter, 
-    SimpleGaugeVoterSetup, 
-    IVotingEscrowEventsStorageErrorsEvents, 
-    IWhitelistErrors, 
-    IWhitelistEvents, 
-    ISplitEventsAndErrors,
-    IEscrowCurveTokenStorage, 
-    IEscrowCurveGlobalStorage
-} from "../versions.sol";
+import {Lock, Clock, VotingEscrow, LinearIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, IVotingEscrowEventsStorageErrorsEvents, IWhitelistErrors, IWhitelistEvents, ISplitEventsAndErrors, IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage} from "../versions.sol";
 
 import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 import {FixedPointBase} from "./FixedPointBase.sol";
@@ -105,7 +91,13 @@ contract EscrowBase is
         super.initialize(curve.maxTime(), clock.checkpointInterval());
 
         // to be added as proxies
-        voter = _deployVoter(address(dao), address(escrow), false, address(clock));
+        voter = _deployVoter(
+            address(dao),
+            address(escrow),
+            false,
+            address(clock),
+            address(delegationMapper)
+        );
         queue = _deployExitQueue(address(escrow), 3 days, address(dao), 0, address(clock), 1);
 
         // grant this contract admin privileges
@@ -152,7 +144,7 @@ contract EscrowBase is
         escrow.setVoter(address(voter));
         escrow.setQueue(address(queue));
         escrow.setLockNFT(address(nftLock));
-        escrow.setDelegationMapper(address(delegationMapper));
+        //escrow.setDelegationMapper(address(delegationMapper));
     }
 
     modifier givenExistingLock() {
@@ -257,20 +249,6 @@ contract EscrowBase is
         return VotingEscrow(address(impl).deployUUPSProxy(initCalldata));
     }
 
-    function _deployDelegationMapper(
-        address _dao,
-        address _escrow,
-        address _clock
-    ) public returns (DelegationMapper) {
-        DelegationMapper impl = new DelegationMapper();
-
-        bytes memory initCalldata = abi.encodeCall(
-            DelegationMapper.initialize,
-            (_dao, _escrow, _clock)
-        );
-        return DelegationMapper(address(impl).deployUUPSProxy(initCalldata));
-    }
-
     function _deployLock(
         address _escrow,
         string memory _name,
@@ -304,17 +282,32 @@ contract EscrowBase is
         return LinearIncreasingEscrow(address(impl).deployUUPSProxy(initCalldata));
     }
 
+    function _deployDelegationMapper(
+        address _dao,
+        address _escrow,
+        address _clock
+    ) public returns (DelegationMapper) {
+        DelegationMapper impl = new DelegationMapper();
+
+        bytes memory initCalldata = abi.encodeCall(
+            DelegationMapper.initialize,
+            (_dao, _escrow, _clock)
+        );
+        return DelegationMapper(address(impl).deployUUPSProxy(initCalldata));
+    }
+
     function _deployVoter(
         address _dao,
         address _escrow,
         bool _reset,
-        address _clock
+        address _clock,
+        address _delegationMapper
     ) public returns (SimpleGaugeVoter) {
         SimpleGaugeVoter impl = new SimpleGaugeVoter();
 
         bytes memory initCalldata = abi.encodeCall(
             SimpleGaugeVoter.initialize,
-            (_dao, _escrow, _reset, _clock)
+            (_dao, _escrow, _reset, _clock, _delegationMapper)
         );
         return SimpleGaugeVoter(address(impl).deployUUPSProxy(initCalldata));
     }

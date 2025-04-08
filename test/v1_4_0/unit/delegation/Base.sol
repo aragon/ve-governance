@@ -8,7 +8,7 @@ import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {DelegationMapper} from "@delegation/DelegationMapper.sol";
 
 import {createTestDAO} from "@mocks/MockDAO.sol";
-import {Clock, IClock, VotingEscrow} from "../../versions.sol";
+import {Clock, IClock, VotingEscrow, SimpleGaugeVoter} from "../../versions.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
 import {ILockedBalanceIncreasing} from "@escrow/IVotingEscrowIncreasing.sol";
@@ -36,6 +36,7 @@ contract Base is IDelegationMapperStorage, IDelegationMapperErrorsAndEvents, Fix
 
     EscrowVotingPowerMock public escrow;
     DelegationMapperA public dg;
+    SimpleGaugeVoter public voter;
     DAO dao;
     Clock clock;
     address deployer = address(this);
@@ -50,11 +51,12 @@ contract Base is IDelegationMapperStorage, IDelegationMapperErrorsAndEvents, Fix
     function setUp() public virtual {
         _deployDAO();
         clock = _deployClock(address(dao));
-
         escrow = new EscrowVotingPowerMock();
         dg = _deployDelegationMapper(address(dao), address(clock), address(escrow));
+        voter = _deployVoter(address(dao), address(clock), address(escrow), address(dg));
 
         _mockApprovedOwner(true);
+        _mockPermissions();
 
         uint256 maxTime = IClock(clock).epochDuration() * CurveConstantLib.MAX_EPOCHS;
 
@@ -71,6 +73,24 @@ contract Base is IDelegationMapperStorage, IDelegationMapperErrorsAndEvents, Fix
         return Clock(impl.deployUUPSProxy(initCalldata));
     }
 
+    function _deployVoter(
+        address _dao,
+        address _clock,
+        address _escrow,
+        address _delegationMapper
+    ) internal returns (SimpleGaugeVoter) {
+        address impl = address(new SimpleGaugeVoter());
+        bytes memory initCalldata = abi.encodeWithSelector(
+            SimpleGaugeVoter.initialize.selector,
+            _dao,
+            _escrow,
+            false,
+            _clock,
+            _delegationMapper
+        );
+        return SimpleGaugeVoter(impl.deployUUPSProxy(initCalldata));
+    }
+
     function _deployDelegationMapper(
         address _dao,
         address _clock,
@@ -85,13 +105,13 @@ contract Base is IDelegationMapperStorage, IDelegationMapperErrorsAndEvents, Fix
         return DelegationMapperA(address(impl).deployUUPSProxy(initCalldata));
     }
 
-    function getIds(uint256 _tokenId) internal view returns(uint256[] memory) {
+    function getIds(uint256 _tokenId) internal view returns (uint256[] memory) {
         uint256[] memory ids = new uint256[](1);
         ids[0] = _tokenId;
         return ids;
     }
 
-    function getIds(uint256 _tokenId1, uint256 _tokenId2) internal view returns(uint256[] memory) {
+    function getIds(uint256 _tokenId1, uint256 _tokenId2) internal view returns (uint256[] memory) {
         uint256[] memory ids = new uint256[](2);
         ids[0] = _tokenId1;
         ids[1] = _tokenId2;
@@ -123,6 +143,15 @@ contract Base is IDelegationMapperStorage, IDelegationMapperErrorsAndEvents, Fix
             address(escrow),
             abi.encodeWithSelector(VotingEscrow.isApprovedOrOwner.selector),
             abi.encode(_approved)
+        );
+    }
+
+    // DAO::hasPermission(ERC1967Proxy: [0x03A6a84cD762D9707A21605b548aaaB891562aAb], TestVotingWithDelegation: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], 0xfda1ae526c1fb38407f23e8b7712f7cfacc146f3e340a04221488331e0d42014, 0x071d21710000000000000000000000000000000000000000000000000000000000000777000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000086d65746164617461000000000000000000000000000000000000000000000000)
+    function _mockPermissions() internal {
+        vm.mockCall(
+            address(dao),
+            abi.encodeWithSelector(DAO.hasPermission.selector),
+            abi.encode(true)
         );
     }
 

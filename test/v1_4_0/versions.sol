@@ -16,7 +16,7 @@ import {IEscrowCurveGlobalStorage, IEscrowCurveIncreasingV1_4_0 as IEscrowCurveI
 import {IExitQueue, ITicket, IExitQueueErrorsAndEvents} from "@queue/IExitQueue.sol";
 import {ILock, IWhitelistErrors, IWhitelistEvents} from "@lock/ILock.sol";
 import {IMerge, ISplit, IVotingEscrowIncreasing, IWithdrawalQueueErrors, ILockedBalanceIncreasing, IVotingEscrowEventsStorageErrorsEvents, IVotingEscrowCoreErrors, IMergeEventsAndErrors, ISplitEventsAndErrors} from "@escrow/IVotingEscrowIncreasing_v1_4_0.sol";
-import {IGaugeVote, ISimpleGaugeVoterStorageEventsErrors} from "@voting/ISimpleGaugeVoter.sol";
+import {IGaugeVote, ISimpleGaugeVoterStorageEventsErrors} from "@voting/ISimpleGaugeVoter_v1_4_0.sol";
 
 // other
 import {DeployGaugesV1_4_0 as DeployGauges} from "script/deploy/DeployGauges_v1_4_0.s.sol";

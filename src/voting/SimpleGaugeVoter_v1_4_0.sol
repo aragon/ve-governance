@@ -211,10 +211,9 @@ contract SimpleGaugeVoterV1_4_0 is
         return _votes;
     }
 
-    function reset(address _address) external nonReentrant whenNotPaused whenVotingActive {
-        if (msg.sender != _address) revert NotApprovedOrOwner();
-        if (!isVoting(_address)) revert NotCurrentlyVoting();
-        _reset(_address);
+    function reset() external nonReentrant whenNotPaused whenVotingActive {
+        if (!isVoting(msg.sender)) revert NotCurrentlyVoting();
+        _reset(msg.sender);
     }
 
     function _reset(address _account) internal {
@@ -253,6 +252,7 @@ contract SimpleGaugeVoterV1_4_0 is
     }
 
     function _updateVotingPower(address _account) internal {
+        if (!enableUpdateVotingPowerHook) revert UpdateVotingPowerHookNotEnabled();
         // Skip as `_account` hasn't voted so no need to update it.
         if (!isVoting(_account)) return;
 
@@ -435,32 +435,32 @@ contract SimpleGaugeVoterV1_4_0 is
     }
 
     function isVoting(address _address) public view returns (bool) {
-        uint256 epoch = getEpochId();
+        uint256 epoch = getWriteEpochId();
         return epochTokenVoteData[epoch][_address].lastVoted > 0;
     }
 
     function votes(address _address, address _gauge) external view returns (uint256) {
-        uint256 epoch = getEpochId();
+        uint256 epoch = getWriteEpochId();
         return epochTokenVoteData[epoch][_address].voteWeights[_gauge];
     }
 
     function gaugesVotedFor(address _address) external view returns (address[] memory) {
-        uint256 epoch = getEpochId();
+        uint256 epoch = getWriteEpochId();
         return epochTokenVoteData[epoch][_address].gaugesVotedFor;
     }
 
     function usedVotingPower(address _address) external view returns (uint256) {
-        uint256 epoch = getEpochId();
+        uint256 epoch = getWriteEpochId();
         return epochTokenVoteData[epoch][_address].usedVotingPower;
     }
 
     function totalVotingPowerCast() public view returns (uint256) {
-        uint256 epoch = getEpochId();
+        uint256 epoch = getWriteEpochId();
         return epochTotalVotingPowerCast[epoch];
     }
 
     function gaugeVotes(address _address) public view returns (uint256) {
-        uint256 epoch = getEpochId();
+        uint256 epoch = getWriteEpochId();
         return epochGaugeVotes[epoch][_address];
     }
 
