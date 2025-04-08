@@ -12,19 +12,40 @@ import {ProxyLib} from "@libs/ProxyLib.sol";
 
 import {Clock, IClock, Lock, VotingEscrow, LinearIncreasingEscrow, IVotingEscrowIncreasing, IEscrowCurveIncreasing, IVotingEscrowIncreasing, IVotingEscrowCoreErrors, IMerge, ISplit, ILockedBalanceIncreasing, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage, ISplitEventsAndErrors} from "../../../versions.sol";
 
-contract TestEscrowSplit is EscrowBase, ISplitEventsAndErrors {
+contract TestEscrowSplit is EscrowBase {
     function setUp() public override {
         super.setUp();
 
         super.mintAndApproveEscrow();
+
+        escrow.setEnableSplit(address(this), true);
+    }
+
+    function test_shouldRevert_ifNotWhitelisted() public {
+        uint256 from = escrow.createLock(Lock_1_Amount);
+
+        vm.expectRevert(SplitNotWhitelisted.selector);
+        vm.prank(address(123));
+        escrow.split(from, 10);
     }
 
     function test_shouldRevert_IfSenderIsNotApprovedOrOwner() public {
         uint256 from = escrow.createLock(Lock_1_Amount);
 
-        vm.startPrank(address(999));
+        address sender = address(999);
+        escrow.setEnableSplit(sender, true);
+
+        vm.startPrank(sender);
         vm.expectRevert(IVotingEscrowCoreErrors.NotApprovedOrOwner.selector);
         escrow.split(from, 10);
+    }
+
+    function test_shouldRevert_IfNewAmountsLessThanMinDeposit() public {
+        escrow.setMinDeposit(50);
+        uint256 from = escrow.createLock(70);
+
+        vm.expectRevert(IVotingEscrowCoreErrors.AmountTooSmall.selector);
+        escrow.split(from, 40);
     }
 
     function test_shouldRevert_ifAmountZero() public {
@@ -39,6 +60,15 @@ contract TestEscrowSplit is EscrowBase, ISplitEventsAndErrors {
 
         vm.expectRevert(SplitAmountTooBig.selector);
         escrow.split(from, Lock_1_Amount);
+    }
+
+    function test_shouldSucceed_IfAnyAddrWhitelisted() public {
+        escrow.setEnableSplit(address(this), false);
+
+        escrow.enableSplit();
+        
+        uint256 from = escrow.createLock(Lock_1_Amount);
+        escrow.split(from, Lock_1_Amount - 10);
     }
 
     function test_fromTokenIsCorrectlyBurnt() public {

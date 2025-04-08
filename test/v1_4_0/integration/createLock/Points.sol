@@ -69,7 +69,7 @@ contract TestCreateLock_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalSt
         assertTokenPoint(2, 1, token2BiasFP, slopeFP(Lock_2_Amount), weekStartTs, currentTs);
 
         assertGlobalPoint(
-            2,
+            1,
             token1BiasFP + token2BiasFP,
             slopeFP(Lock_1_Amount) + slopeFP(Lock_2_Amount),
             currentTs

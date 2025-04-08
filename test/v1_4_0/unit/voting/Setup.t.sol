@@ -163,6 +163,7 @@ contract VoterSetupTest is GaugeVotingBase {
             address(0),
             address(0),
             address(0),
+            address(0),
             address(0)
         );
     }

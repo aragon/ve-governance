@@ -16,6 +16,7 @@ import {Multisig} from "@aragon/osx/plugins/governance/multisig/Multisig.sol";
 import {MultisigSetup as MultisigPluginSetup} from "@aragon/osx/plugins/governance/multisig/MultisigSetup.sol";
 import {createERC1967Proxy} from "@aragon/osx/utils/Proxy.sol";
 import {PermissionLib} from "@aragon/osx/core/permission/PermissionLib.sol";
+import {DelegationMapper} from "@delegation/DelegationMapper.sol";
 
 /// @notice The struct containing all the parameters to deploy the DAO
 /// @param minApprovals The amount of approvals required for the multisig to be able to execute a proposal on the DAO
@@ -72,6 +73,7 @@ struct GaugePluginSet {
     VotingEscrow votingEscrow;
     Clock clock;
     Lock nftLock;
+    DelegationMapper delegationMapper;
 }
 
 /// @notice Contains the artifacts that resulted from running a deployment
@@ -317,7 +319,8 @@ contract GaugesDaoFactoryV1_4_0 {
             exitQueue: ExitQueue(helpers[1]),
             votingEscrow: VotingEscrow(helpers[2]),
             clock: Clock(helpers[3]),
-            nftLock: Lock(helpers[4])
+            nftLock: Lock(helpers[4]),
+            delegationMapper: DelegationMapper(helpers[5])
         });
 
         return (pluginSet, pluginRepo, preparedSetupData);
@@ -355,7 +358,7 @@ contract GaugesDaoFactoryV1_4_0 {
         pluginSet.votingEscrow.setQueue(address(pluginSet.exitQueue));
         pluginSet.votingEscrow.setVoter(address(pluginSet.plugin));
         pluginSet.votingEscrow.setLockNFT(address(pluginSet.nftLock));
-
+        pluginSet.votingEscrow.setDelegationMapper(address(pluginSet.delegationMapper));
         dao.revoke(
             address(pluginSet.votingEscrow),
             address(this),

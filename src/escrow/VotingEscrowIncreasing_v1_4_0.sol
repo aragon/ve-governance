@@ -45,6 +45,10 @@ contract VotingEscrowV1_4_0 is
     /// @notice Role required to withdraw underlying tokens from the contract
     bytes32 public constant SWEEPER_ROLE = keccak256("SWEEPER");
 
+    /// @dev enables splits without whitelisting
+    address public constant SPLIT_WHITELIST_ANY_ADDRESS =
+        address(uint160(uint256(keccak256("SPLIT_WHITELIST_ANY_ADDRESS"))));
+
     /*//////////////////////////////////////////////////////////////
                               NFT Data
     //////////////////////////////////////////////////////////////*/
@@ -90,8 +94,11 @@ contract VotingEscrowV1_4_0 is
 
     bool private _lockNFTSet;
 
-    // added in 0.2
+    // added in 1.4.0
     address public delegationMapper;
+
+    /// @notice Whitelisted contracts that are allowed to split
+    mapping(address => bool) public splitWhitelisted;
 
     error UpgradeNotPossible();
 
@@ -99,13 +106,11 @@ contract VotingEscrowV1_4_0 is
                               Initialization
     //////////////////////////////////////////////////////////////*/
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }
-
-    // TODO: GIORGI add `address _delegationMapper` as a param.
-    // Currently, I didn't as compilation fails due to
-    // 1.4.0 tests not expecting this argument.
+    
     function initialize(
         address _token,
         address _dao,
@@ -123,35 +128,14 @@ contract VotingEscrowV1_4_0 is
         emit MinDepositSet(_initialMinDeposit);
     }
 
-    function initializeFrom(
-        address _delegationMapper,
-        bool _exitAmountIncluded,
-        uint256 _exitAmount
-    ) public {
-        if (_exitAmountIncluded) {
-            // If `exitAmount` is passed, make sure the escrow is paused
-            // so that incorrect upgrade doesn't go unnoticed. Otherwise,
-            // upgrade transaction might be front-run by `beginWithdrawal`
-            // causing the `exitAmount` to be wrong.
-            if (!paused()) {
-                revert UpgradeNotPossible();
-            }
-        } else {
-            _exitAmount = currentExitingAmount();
-        }
-
-        if (totalLocked < _exitAmount) {
-            revert UpgradeNotPossible();
-        }
-
-        ExitQueue(queue).initializeFrom(_exitAmount);
-
-        delegationMapper = _delegationMapper;
-    }
-
     /*//////////////////////////////////////////////////////////////
                               Admin Setters
     //////////////////////////////////////////////////////////////*/
+
+    /// @notice Added in 1.4.0 to set the delegation mapper
+    function setDelegationMapper(address _delegationMapper) external auth(ESCROW_ADMIN_ROLE) {
+        delegationMapper = _delegationMapper;
+    }
 
     /// @notice Sets the curve contract that calculates the voting power
     function setCurve(address _curve) external auth(ESCROW_ADMIN_ROLE) {
@@ -193,6 +177,21 @@ contract VotingEscrowV1_4_0 is
     function setMinDeposit(uint256 _minDeposit) external auth(ESCROW_ADMIN_ROLE) {
         minDeposit = _minDeposit;
         emit MinDepositSet(_minDeposit);
+    }
+
+    /// @notice Split disabled by default, only whitelisted addresses can split.
+    function setEnableSplit(
+        address _account,
+        bool _isWhitelisted
+    ) external auth(ESCROW_ADMIN_ROLE) {
+        splitWhitelisted[_account] = _isWhitelisted;
+        emit SplitWhitelistSet(_account, _isWhitelisted);
+    }
+
+    /// @notice Enable split to any address without whitelisting
+    function enableSplit() external auth(ESCROW_ADMIN_ROLE) {
+        splitWhitelisted[SPLIT_WHITELIST_ANY_ADDRESS] = true;
+        emit SplitWhitelistSet(SPLIT_WHITELIST_ANY_ADDRESS, true);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -300,7 +299,7 @@ contract VotingEscrowV1_4_0 is
         _locked[newTokenId] = lock;
 
         // we don't allow edits in this implementation, so only the new lock is used
-        _checkpointCreateLock(newTokenId, LockedBalance(0, 0), lock);
+        _checkpoint(newTokenId, LockedBalance(0, 0), lock);
 
         uint256 balanceBefore = IERC20(token).balanceOf(address(this));
 
@@ -324,7 +323,7 @@ contract VotingEscrowV1_4_0 is
 
         if (!isApprovedOrOwner(sender, _from)) revert NotApprovedOrOwner();
         if (!isApprovedOrOwner(sender, _to)) revert NotApprovedOrOwner();
-        
+
         if (_from == _to) revert SameNFT();
 
         LockedBalance memory oldLockedFrom = _locked[_from];
@@ -335,7 +334,7 @@ contract VotingEscrowV1_4_0 is
         }
 
         // Note that this function must be called before we
-        // empty `lockedFrom`'s amount to 0. `moveDelegateVotes` 
+        // empty `lockedFrom`'s amount to 0. `moveDelegateVotes`
         // relies that lock still contains the amount.
         IDelegationMapper(delegationMapper).moveDelegateVotes(
             IERC721EMB(lockNFT).ownerOf(_from),
@@ -368,13 +367,13 @@ contract VotingEscrowV1_4_0 is
     ) public view returns (bool) {
         uint256 maxTime = IEscrowCurve(curve).maxTime();
 
-        uint48 oldLockedFromEnd = uint48(_fromLocked.start + maxTime);
-        uint48 oldLockedToEnd = uint48(_toLocked.start + maxTime);
+        uint256 fromLockedEnd = _fromLocked.start + maxTime;
+        uint256 toLockedEnd = _toLocked.start + maxTime;
 
+        // Tokens either must have the same start dates or both must be mature.
         if (
             (_toLocked.start != _fromLocked.start) &&
-            // TODO: GIORGI <= sign or < ?
-            (block.timestamp <= oldLockedToEnd || block.timestamp <= oldLockedFromEnd)
+            (toLockedEnd >= block.timestamp || fromLockedEnd >= block.timestamp)
         ) {
             return false;
         }
@@ -387,20 +386,31 @@ contract VotingEscrowV1_4_0 is
         uint256 _from,
         uint256 _value
     ) public returns (uint256 _tokenId1, uint256 _tokenId2) {
+        address sender = _msgSender();
+
+        // Only allow split to whitelisted accounts.
+        if (!splitWhitelisted[SPLIT_WHITELIST_ANY_ADDRESS] && !splitWhitelisted[sender]) {
+            revert SplitNotWhitelisted();
+        }
+
         LockedBalance memory locked_ = _locked[_from];
 
-        address sender = _msgSender();
         if (!isApprovedOrOwner(sender, _from)) revert NotApprovedOrOwner();
 
         if (_value == 0) revert ZeroAmount();
         if (locked_.amount <= _value) revert SplitAmountTooBig();
 
+        // Ensure that amounts of new tokens will be greater than `minDeposit`.
+        uint208 amount1 = locked_.amount - _value.toUint208();
+        uint208 amount2 = _value.toUint208();
+
+        if (amount1 < minDeposit || amount2 < minDeposit) {
+            revert AmountTooSmall();
+        }
+
         IERC721EMB(lockNFT).burn(_from);
         _locked[_from] = LockedBalance(0, 0);
         _checkpoint(_from, locked_, LockedBalance(0, locked_.start));
-
-        uint208 amount1 = locked_.amount - _value.toUint208();
-        uint208 amount2 = _value.toUint208();
 
         locked_.amount = amount1;
         _tokenId1 = _createSplitNFT(sender, locked_);
@@ -431,19 +441,6 @@ contract VotingEscrowV1_4_0 is
     /// @param _fromLocked New locked amount / start lock time for the user
     /// @param _newLocked New locked amount / start lock time for the user
     function _checkpoint(
-        uint256 _tokenId,
-        LockedBalance memory _fromLocked,
-        LockedBalance memory _newLocked
-    ) private {
-        IEscrowCurve(curve).checkpoint(_tokenId, _fromLocked, _newLocked);
-    }
-
-    /// @notice Record per-user data to checkpoints. Used by VotingEscrow system.
-    /// @param _tokenId NFT token ID.
-    /// @dev Old locked balance is unused in the increasing case, at least in this implementation.
-    /// @param _fromLocked New locked amount / start lock time for the user
-    /// @param _newLocked New locked amount / start lock time for the user
-    function _checkpointCreateLock(
         uint256 _tokenId,
         LockedBalance memory _fromLocked,
         LockedBalance memory _newLocked
@@ -554,7 +551,7 @@ contract VotingEscrowV1_4_0 is
         IERC721EMB(lockNFT).transferFrom(address(this), _to, _tokenId);
         emit SweepNFT(_to, _tokenId);
     }
-    
+
     function moveDelegateVotes(address _from, address _to, uint256 _tokenId) public {
         IDelegationMapper(delegationMapper).moveDelegateVotes(_from, _to, _tokenId);
     }
