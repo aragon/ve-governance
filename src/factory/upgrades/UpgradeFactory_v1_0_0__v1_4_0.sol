@@ -12,13 +12,42 @@ import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {Addresslist} from "@aragon/osx/plugins/utils/Addresslist.sol";
 import {IPluginSetup} from "@aragon/osx/framework/plugin/setup/IPluginSetup.sol";
 import {PermissionLib} from "@aragon/osx/core/permission/PermissionLib.sol";
-import {Multisig, MultisigSetup as MultisigPluginSetup} from "@aragon/osx/plugins/governance/multisig/MultisigSetup.sol";
-import {hashHelpers, PluginSetupRef} from "@aragon/osx/framework/plugin/setup/PluginSetupProcessorHelpers.sol";
+import {
+    Multisig,
+    MultisigSetup as MultisigPluginSetup
+} from "@aragon/osx/plugins/governance/multisig/MultisigSetup.sol";
+import {
+    hashHelpers,
+    PluginSetupRef
+} from "@aragon/osx/framework/plugin/setup/PluginSetupProcessorHelpers.sol";
 
-import {SimpleGaugeVoterSetup, VotingEscrow, Clock, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, ISimpleGaugeVoterSetupParams} from "@setup/SimpleGaugeVoterSetup.sol";
-import {GaugesDaoFactory, Deployment as DeploymentV1_0_0, DeploymentParameters as DeploymentParametersV1_0_0, GaugePluginSet as GaugePluginSetV1_0_0} from "../GaugesDaoFactory.sol";
+import {
+    SimpleGaugeVoterSetup,
+    VotingEscrow,
+    Clock,
+    Lock,
+    Curve,
+    ExitQueue,
+    SimpleGaugeVoter,
+    ISimpleGaugeVoterSetupParams
+} from "@setup/SimpleGaugeVoterSetup.sol";
+import {
+    GaugesDaoFactory,
+    Deployment as DeploymentV1_0_0,
+    DeploymentParameters as DeploymentParametersV1_0_0,
+    GaugePluginSet as GaugePluginSetV1_0_0
+} from "../GaugesDaoFactory.sol";
 
-import {Clock as ClockV1_4_0, QuadraticIncreasingEscrow as LinearIncreasingCurve, SimpleGaugeVoter as SimpleGaugeVoterV1_1_0, VotingEscrow as VotingEscrowV1_4_0, SimpleGaugeVoterSetupV1_4_0, ISimpleGaugeVoterSetupParams as ISimpleGaugeVoterSetupParamsV1_4_0, DelegationMapper, Lock as LockV1_4_0} from "@setup/SimpleGaugeVoterSetup_v1_4_0.sol";
+import {
+    Clock as ClockV1_4_0,
+    Curve as LinearIncreasingCurve,
+    SimpleGaugeVoter as SimpleGaugeVoterV1_1_0,
+    VotingEscrow as VotingEscrowV1_4_0,
+    SimpleGaugeVoterSetupV1_4_0,
+    ISimpleGaugeVoterSetupParams as ISimpleGaugeVoterSetupParamsV1_4_0,
+    EscrowIVotesAdapter,
+    Lock as LockV1_4_0
+} from "@setup/SimpleGaugeVoterSetup_v1_4_0.sol";
 
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
@@ -88,7 +117,7 @@ struct GaugePluginSet {
     VotingEscrowV1_4_0 votingEscrow;
     ClockV1_4_0 clock;
     LockV1_4_0 nftLock;
-    DelegationMapper delegation;
+    EscrowIVotesAdapter delegation;
 }
 
 /// @notice Contains the artifacts that resulted from running a deployment
@@ -193,7 +222,7 @@ contract UpgradeGaugesFactoryV1_0_0__V1_4_0 {
         // we choose to rename the tokenPointInterval variable
         // TODO: should we?
         options.unsafeAllowRenames = true;
-        options.referenceContract = "QuadraticIncreasingCurve.sol:QuadraticIncreasingEscrow";
+        options.referenceContract = "QuadraticIncreasingCurve.sol:Curve";
         Upgrades.validateUpgrade("LinearIncreasingCurve.sol:LinearIncreasingEscrow", options);
     }
 
@@ -203,17 +232,17 @@ contract UpgradeGaugesFactoryV1_0_0__V1_4_0 {
         LinearIncreasingCurve curveUpgrade,
         VotingEscrowV1_4_0 escrowUpgrade,
         LockV1_4_0 lockUpgrade,
-        DelegationMapper delegationMapper
+        EscrowIVotesAdapter delegationMapper
     ) public {
         if (validate) {
             validateUpgrade();
         }
 
-        _deployDelegationMapper(address(delegationMapper));
+        _deployEscrowIVotesAdapter(address(delegationMapper));
         _upgradeContracts(clockUpgrade, curveUpgrade, escrowUpgrade, lockUpgrade);
 
         // set the delegation mapper on the escrow
-        _setDelegationMapper();
+        _setEscrowIVotesAdapter();
     }
 
     ////////////////////////////////////////////////
@@ -238,12 +267,12 @@ contract UpgradeGaugesFactoryV1_0_0__V1_4_0 {
         }
     }
 
-    function _deployDelegationMapper(address base) internal {
+    function _deployEscrowIVotesAdapter(address base) internal {
         // set the delegation mapper in the plugin set
         for (uint i = 0; i < deployment.gaugeVoterPluginSets.length; i++) {
             address delegation = base.deployUUPSProxy(
                 abi.encodeCall(
-                    DelegationMapper.initialize,
+                    EscrowIVotesAdapter.initialize,
                     (
                         address(deployment.dao),
                         address(deployment.gaugeVoterPluginSets[i].votingEscrow),
@@ -251,17 +280,17 @@ contract UpgradeGaugesFactoryV1_0_0__V1_4_0 {
                     )
                 )
             );
-            deployment.gaugeVoterPluginSets[i].delegation = DelegationMapper(delegation);
+            deployment.gaugeVoterPluginSets[i].delegation = EscrowIVotesAdapter(delegation);
         }
     }
 
-    function _setDelegationMapper() internal {
+    function _setEscrowIVotesAdapter() internal {
         // set the delegation mapper in the plugin set
         for (uint i = 0; i < deployment.gaugeVoterPluginSets.length; i++) {
-            DelegationMapper delegationMapper = deployment.gaugeVoterPluginSets[i].delegation;
+            EscrowIVotesAdapter delegationMapper = deployment.gaugeVoterPluginSets[i].delegation;
             VotingEscrowV1_4_0 votingEscrow = deployment.gaugeVoterPluginSets[i].votingEscrow;
 
-            votingEscrow.setDelegationMapper(address(delegationMapper));
+            votingEscrow.setDelegationAdapter(address(delegationMapper));
         }
     }
 
@@ -278,13 +307,13 @@ contract UpgradeGaugesFactoryV1_0_0__V1_4_0 {
         PermissionLib.MultiTargetPermission[]
             memory permissions = new PermissionLib.MultiTargetPermission[](5);
 
-        address upgrade = address(this);
+        address here = address(this);
         GaugePluginSet memory p = deployment.gaugeVoterPluginSets[pluginSetIndex];
 
         permissions[0] = PermissionLib.MultiTargetPermission({
             permissionId: p.votingEscrow.ESCROW_ADMIN_ROLE(),
             where: address(p.votingEscrow),
-            who: upgrade,
+            who: here,
             operation: _grantOrRevoke,
             condition: PermissionLib.NO_CONDITION
         });
@@ -292,7 +321,7 @@ contract UpgradeGaugesFactoryV1_0_0__V1_4_0 {
         permissions[1] = PermissionLib.MultiTargetPermission({
             permissionId: p.curve.CURVE_ADMIN_ROLE(),
             where: address(p.curve),
-            who: upgrade,
+            who: here,
             operation: _grantOrRevoke,
             condition: PermissionLib.NO_CONDITION
         });
@@ -300,7 +329,7 @@ contract UpgradeGaugesFactoryV1_0_0__V1_4_0 {
         permissions[2] = PermissionLib.MultiTargetPermission({
             permissionId: p.plugin.UPGRADE_PLUGIN_PERMISSION_ID(),
             where: address(p.plugin),
-            who: upgrade,
+            who: here,
             operation: _grantOrRevoke,
             condition: PermissionLib.NO_CONDITION
         });
@@ -308,7 +337,7 @@ contract UpgradeGaugesFactoryV1_0_0__V1_4_0 {
         permissions[3] = PermissionLib.MultiTargetPermission({
             permissionId: p.clock.CLOCK_ADMIN_ROLE(),
             where: address(p.clock),
-            who: upgrade,
+            who: here,
             operation: _grantOrRevoke,
             condition: PermissionLib.NO_CONDITION
         });
@@ -316,7 +345,7 @@ contract UpgradeGaugesFactoryV1_0_0__V1_4_0 {
         permissions[4] = PermissionLib.MultiTargetPermission({
             permissionId: p.nftLock.LOCK_ADMIN_ROLE(),
             where: address(p.nftLock),
-            who: upgrade,
+            who: here,
             operation: _grantOrRevoke,
             condition: PermissionLib.NO_CONDITION
         });

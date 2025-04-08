@@ -1,27 +1,35 @@
 /// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
-import {IVotesUpgradeable} from "@openzeppelin/contracts-upgradeable/governance/utils/IVotesUpgradeable.sol";
-import {SafeCastUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/math/SafeCastUpgradeable.sol";
-import {ReentrancyGuardUpgradeable as ReentrancyGuard} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import {
+    IVotesUpgradeable
+} from "@openzeppelin/contracts-upgradeable/governance/utils/IVotesUpgradeable.sol";
+import {
+    SafeCastUpgradeable
+} from "@openzeppelin/contracts-upgradeable/utils/math/SafeCastUpgradeable.sol";
+import {
+    ReentrancyGuardUpgradeable as ReentrancyGuard
+} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
-import {IVotingEscrowIncreasingV1_4_0 as IVotingEscrow} from "@escrow/IVotingEscrowIncreasing_v1_4_0.sol";
+import {
+    IVotingEscrowIncreasingV1_4_0 as IVotingEscrow
+} from "@escrow/IVotingEscrowIncreasing_v1_4_0.sol";
 import {VotingEscrowV1_4_0 as VotingEscrow} from "@escrow/VotingEscrowIncreasing_v1_4_0.sol";
 
 import {IClockUser, IClockV1_4_0 as IClock} from "@clock/IClock_v1_4_0.sol";
 
 import {PluginUUPSUpgradeable} from "@aragon/osx/core/plugin/PluginUUPSUpgradeable.sol";
-import {IDelegationMapper} from "./IDelegationMapper.sol";
+import {IEscrowIVotesAdapter} from "./IEscrowIVotesAdapter.sol";
 import {ISimpleGaugeVoter} from "../voting/ISimpleGaugeVoter_v1_4_0.sol";
 import {console2 as console} from "forge-std/console2.sol";
 import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 import {SignedFixedPointMath} from "@libs/SignedFixedPointMathLib.sol";
 
-contract DelegationMapper is
+contract EscrowIVotesAdapter is
     IClockUser,
     ReentrancyGuard,
-    IDelegationMapper,
+    IEscrowIVotesAdapter,
     IVotesUpgradeable,
     PluginUUPSUpgradeable
 {

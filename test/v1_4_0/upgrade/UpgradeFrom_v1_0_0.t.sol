@@ -15,12 +15,40 @@ import {PluginRepo} from "@aragon/osx/framework/plugin/repo/PluginRepo.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {Addresslist} from "@aragon/osx/plugins/utils/Addresslist.sol";
-import {Multisig, MultisigSetup as MultisigPluginSetup} from "@aragon/osx/plugins/governance/multisig/MultisigSetup.sol";
+import {
+    Multisig,
+    MultisigSetup as MultisigPluginSetup
+} from "@aragon/osx/plugins/governance/multisig/MultisigSetup.sol";
 import {PermissionLib} from "@aragon/osx/core/permission/PermissionLib.sol";
 
-import {SimpleGaugeVoterSetup, IGaugeVote, VotingEscrow, Clock, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, GaugesDaoFactory as GaugesDaoFactoryV1_0_0, Deployment, DeploymentParameters, TokenParameters, GaugePluginSet} from "test/v1_0_0/versions.sol";
-import {Clock as ClockV1_4_0, QuadraticIncreasingEscrow as LinearEscrowCurve, VotingEscrow as VotingEscrowV1_4_0, DelegationMapper, Lock as LockV1_4_0} from "test/v1_4_0/versions.sol";
-import {UpgradeGaugesFactoryV1_0_0__V1_4_0 as UpgradeFactory, Deployment as DeploymentUpgrade, DeploymentParameters as DeploymentParametersUpgrade, GaugePluginSet as GaugePluginSetUpgrade} from "@factory/upgrades/UpgradeFactory_v1_0_0__v1_4_0.sol";
+import {
+    SimpleGaugeVoterSetup,
+    IGaugeVote,
+    VotingEscrow,
+    Clock,
+    Lock,
+    QuadraticIncreasingEscrow,
+    ExitQueue,
+    SimpleGaugeVoter,
+    GaugesDaoFactory as GaugesDaoFactoryV1_0_0,
+    Deployment,
+    DeploymentParameters,
+    TokenParameters,
+    GaugePluginSet
+} from "test/v1_0_0/versions.sol";
+import {
+    Clock as ClockV1_4_0,
+    QuadraticIncreasingEscrow as LinearEscrowCurve,
+    VotingEscrow as VotingEscrowV1_4_0,
+    EscrowIVotesAdapter,
+    Lock as LockV1_4_0
+} from "test/v1_4_0/versions.sol";
+import {
+    UpgradeGaugesFactoryV1_0_0__V1_4_0 as UpgradeFactory,
+    Deployment as DeploymentUpgrade,
+    DeploymentParameters as DeploymentParametersUpgrade,
+    GaugePluginSet as GaugePluginSetUpgrade
+} from "@factory/upgrades/UpgradeFactory_v1_0_0__v1_4_0.sol";
 
 import {Upgrades} from "@foundry-upgrades/LegacyUpgrades.sol";
 import {Options} from "@foundry-upgrades/Options.sol";
@@ -46,7 +74,7 @@ contract RegressionV1_0_0__to__V1_4_0 is Test, IGaugeVote {
     VotingEscrowV1_4_0 escrowUpgrade;
     LinearEscrowCurve curveUpgrade;
     LockV1_4_0 lockUpgrade;
-    DelegationMapper delegation;
+    EscrowIVotesAdapter delegation;
     UpgradeFactory upgradeFactory;
 
     uint aliceToken;
@@ -198,7 +226,7 @@ contract RegressionV1_0_0__to__V1_4_0 is Test, IGaugeVote {
                 new LinearEscrowCurve(),
                 new VotingEscrowV1_4_0(),
                 new LockV1_4_0(),
-                new DelegationMapper()
+                new EscrowIVotesAdapter()
             );
 
             dao.applyMultiTargetPermissions(revoke0);

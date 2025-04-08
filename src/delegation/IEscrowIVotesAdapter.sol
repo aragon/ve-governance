@@ -1,7 +1,7 @@
 /// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-interface IDelegationMapperErrorsAndEvents {
+interface IEscrowIVotesAdapterErrorsAndEvents {
     event AutoDelegationSet(address indexed delegate, bool enabled);
     event TokensDelegated(address indexed sender, address indexed delegatee, uint256[] tokenIds);
     event TokensUndelegated(address indexed sender, address indexed delegatee, uint256[] tokenIds);
@@ -19,7 +19,7 @@ interface IDelegationMapperErrorsAndEvents {
     error TokenNotDelegated(uint256 tokenId);
 }
 
-interface IDelegationMapperStorage {
+interface IEscrowIVotesAdapterStorage {
     struct GlobalPoint {
         int256 bias;
         int256 slope;
@@ -27,7 +27,7 @@ interface IDelegationMapperStorage {
     }
 }
 
-interface IDelegationMapper is IDelegationMapperErrorsAndEvents, IDelegationMapperStorage {
+interface IEscrowIVotesAdapter is IEscrowIVotesAdapterErrorsAndEvents, IEscrowIVotesAdapterStorage {
     function delegate(uint256[] calldata _tokenIds) external;
 
     function moveDelegateVotes(address _from, address _to, uint256 _tokenId) external;

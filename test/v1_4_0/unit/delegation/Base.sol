@@ -5,20 +5,25 @@ import {Test} from "forge-std/Test.sol";
 
 // aragon contracts
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
-import {DelegationMapper} from "@delegation/DelegationMapper.sol";
 
 import {createTestDAO} from "@mocks/MockDAO.sol";
-import {Clock, IClock, VotingEscrow} from "../../versions.sol";
+import {
+    ILockedBalanceIncreasing,
+    Clock,
+    IClock,
+    VotingEscrow,
+    EscrowIVotesAdapter,
+    IEscrowIVotesAdapterStorage,
+    IEscrowIVotesAdapterErrorsAndEvents
+} from "../../versions.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
-import {ILockedBalanceIncreasing} from "@escrow/IVotingEscrowIncreasing.sol";
-import {IDelegationMapperStorage, IDelegationMapperErrorsAndEvents} from "@delegation/IDelegationMapper.sol";
 import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 import {FixedPointBase} from "../../base/FixedPointBase.sol";
 
 contract EscrowVotingPowerMock {}
 
-contract DelegationMapperA is DelegationMapper {
+contract EscrowIVotesAdapterA is EscrowIVotesAdapter {
     function pointHistory_(
         address _account,
         uint256 _index
@@ -31,11 +36,16 @@ contract DelegationMapperA is DelegationMapper {
     }
 }
 
-contract Base is IDelegationMapperStorage, IDelegationMapperErrorsAndEvents, FixedPointBase, Test {
+contract Base is
+    IEscrowIVotesAdapterStorage,
+    IEscrowIVotesAdapterErrorsAndEvents,
+    FixedPointBase,
+    Test
+{
     using ProxyLib for address;
 
     EscrowVotingPowerMock public escrow;
-    DelegationMapperA public dg;
+    EscrowIVotesAdapterA public dg;
     DAO dao;
     Clock clock;
     address deployer = address(this);
@@ -52,7 +62,7 @@ contract Base is IDelegationMapperStorage, IDelegationMapperErrorsAndEvents, Fix
         clock = _deployClock(address(dao));
 
         escrow = new EscrowVotingPowerMock();
-        dg = _deployDelegationMapper(address(dao), address(clock), address(escrow));
+        dg = _deployEscrowIVotesAdapter(address(dao), address(clock), address(escrow));
 
         _mockApprovedOwner(true);
 
@@ -71,27 +81,27 @@ contract Base is IDelegationMapperStorage, IDelegationMapperErrorsAndEvents, Fix
         return Clock(impl.deployUUPSProxy(initCalldata));
     }
 
-    function _deployDelegationMapper(
+    function _deployEscrowIVotesAdapter(
         address _dao,
         address _clock,
         address _escrow
-    ) public returns (DelegationMapperA) {
-        DelegationMapperA impl = new DelegationMapperA();
+    ) public returns (EscrowIVotesAdapterA) {
+        EscrowIVotesAdapterA impl = new EscrowIVotesAdapterA();
 
         bytes memory initCalldata = abi.encodeCall(
-            DelegationMapper.initialize,
+            EscrowIVotesAdapter.initialize,
             (_dao, _escrow, _clock)
         );
-        return DelegationMapperA(address(impl).deployUUPSProxy(initCalldata));
+        return EscrowIVotesAdapterA(address(impl).deployUUPSProxy(initCalldata));
     }
 
-    function getIds(uint256 _tokenId) internal view returns(uint256[] memory) {
+    function getIds(uint256 _tokenId) internal view returns (uint256[] memory) {
         uint256[] memory ids = new uint256[](1);
         ids[0] = _tokenId;
         return ids;
     }
 
-    function getIds(uint256 _tokenId1, uint256 _tokenId2) internal view returns(uint256[] memory) {
+    function getIds(uint256 _tokenId1, uint256 _tokenId2) internal view returns (uint256[] memory) {
         uint256[] memory ids = new uint256[](2);
         ids[0] = _tokenId1;
         ids[1] = _tokenId2;

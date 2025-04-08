@@ -2,29 +2,50 @@
 pragma solidity ^0.8.17;
 
 // token interfaces
-import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import {IERC20MetadataUpgradeable as IERC20Metadata} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
+import {
+    IERC20Upgradeable as IERC20
+} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import {
+    IERC20MetadataUpgradeable as IERC20Metadata
+} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
 import {IERC721EnumerableMintableBurnable as IERC721EMB} from "@lock/IERC721EMB.sol";
 
 // veGovernance
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {ISimpleGaugeVoter} from "@voting/ISimpleGaugeVoter.sol";
-import {IEscrowCurveIncreasingV1_4_0 as IEscrowCurve} from "@curve/IEscrowCurveIncreasing_v1_4_0.sol";
+import {
+    IEscrowCurveIncreasingV1_4_0 as IEscrowCurve
+} from "@curve/IEscrowCurveIncreasing_v1_4_0.sol";
 import {IExitQueue} from "@queue/IExitQueue.sol";
-import {IVotingEscrowIncreasingV1_4_0 as IVotingEscrow, IVotingEscrowExiting, IMerge, ISplit} from "./IVotingEscrowIncreasing_v1_4_0.sol";
+import {
+    IVotingEscrowIncreasingV1_4_0 as IVotingEscrow,
+    IVotingEscrowExiting,
+    IMerge,
+    ISplit
+} from "./IVotingEscrowIncreasing_v1_4_0.sol";
 import {IClockV1_4_0 as IClock} from "@clock/IClock_v1_4_0.sol";
 import {ExitQueue} from "@queue/ExitQueue.sol";
 
 // libraries
-import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
-import {SafeCastUpgradeable as SafeCast} from "@openzeppelin/contracts-upgradeable/utils/math/SafeCastUpgradeable.sol";
+import {
+    SafeERC20Upgradeable as SafeERC20
+} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import {
+    SafeCastUpgradeable as SafeCast
+} from "@openzeppelin/contracts-upgradeable/utils/math/SafeCastUpgradeable.sol";
 
 // parents
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {ReentrancyGuardUpgradeable as ReentrancyGuard} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import {PausableUpgradeable as Pausable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
-import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
-import {IDelegationMapper} from "../delegation/IDelegationMapper.sol";
+import {
+    ReentrancyGuardUpgradeable as ReentrancyGuard
+} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import {
+    PausableUpgradeable as Pausable
+} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import {
+    DaoAuthorizableUpgradeable as DaoAuthorizable
+} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
+import {IEscrowIVotesAdapter} from "../delegation/IEscrowIVotesAdapter.sol";
 
 contract VotingEscrowV1_4_0 is
     IVotingEscrow,
@@ -95,7 +116,7 @@ contract VotingEscrowV1_4_0 is
     bool private _lockNFTSet;
 
     // added in 1.4.0
-    address public delegationMapper;
+    address public delegationAdapter;
 
     /// @notice Whitelisted contracts that are allowed to split
     mapping(address => bool) public splitWhitelisted;
@@ -110,7 +131,7 @@ contract VotingEscrowV1_4_0 is
     constructor() {
         _disableInitializers();
     }
-    
+
     function initialize(
         address _token,
         address _dao,
@@ -132,9 +153,9 @@ contract VotingEscrowV1_4_0 is
                               Admin Setters
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Added in 1.4.0 to set the delegation mapper
-    function setDelegationMapper(address _delegationMapper) external auth(ESCROW_ADMIN_ROLE) {
-        delegationMapper = _delegationMapper;
+    /// @notice Added in 1.4.0 to set the delegation adapter
+    function setDelegationAdapter(address _delegationAdapter) external auth(ESCROW_ADMIN_ROLE) {
+        delegationAdapter = _delegationAdapter;
     }
 
     /// @notice Sets the curve contract that calculates the voting power
@@ -336,7 +357,7 @@ contract VotingEscrowV1_4_0 is
         // Note that this function must be called before we
         // empty `lockedFrom`'s amount to 0. `moveDelegateVotes`
         // relies that lock still contains the amount.
-        IDelegationMapper(delegationMapper).moveDelegateVotes(
+        IEscrowIVotesAdapter(delegationAdapter).moveDelegateVotes(
             IERC721EMB(lockNFT).ownerOf(_from),
             IERC721EMB(lockNFT).ownerOf(_to),
             _from
@@ -553,7 +574,7 @@ contract VotingEscrowV1_4_0 is
     }
 
     function moveDelegateVotes(address _from, address _to, uint256 _tokenId) public {
-        IDelegationMapper(delegationMapper).moveDelegateVotes(_from, _to, _tokenId);
+        IEscrowIVotesAdapter(delegationAdapter).moveDelegateVotes(_from, _to, _tokenId);
     }
 
     /*///////////////////////////////////////////////////////////////

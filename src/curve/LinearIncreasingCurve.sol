@@ -20,8 +20,8 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {ReentrancyGuardUpgradeable as ReentrancyGuard} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
 
-/// @title Linear Increasing Escrow
-contract LinearIncreasingEscrow is
+/// @title Linear Increasing Escrow Curve
+contract LinearIncreasingCurve is
     IEscrowCurve,
     IClockUser,
     ReentrancyGuard,

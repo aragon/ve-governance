@@ -16,10 +16,10 @@ import {PluginSetup} from "@aragon/osx/framework/plugin/setup/PluginSetup.sol";
 import {SimpleGaugeVoterV1_1_0 as SimpleGaugeVoter} from "@voting/SimpleGaugeVoter_v1_1_0.sol";
 import {VotingEscrowV1_4_0 as VotingEscrow} from "@escrow/VotingEscrowIncreasing_v1_4_0.sol";
 import {ExitQueue} from "@queue/ExitQueue.sol";
-import {LinearIncreasingEscrow as QuadraticIncreasingEscrow} from "@curve/LinearIncreasingCurve.sol";
+import {LinearIncreasingCurve as Curve} from "@curve/LinearIncreasingCurve.sol";
 import {ClockV1_4_0 as Clock} from "@clock/Clock_v1_4_0.sol";
 import {LockV1_4_0 as Lock} from "@lock/Lock_v1_4_0.sol";
-import {DelegationMapper} from "@delegation/DelegationMapper.sol";
+import {EscrowIVotesAdapter} from "@delegation/EscrowIVotesAdapter.sol";
 
 /// @param isPaused Whether the voter contract is deployed in a paused state
 /// @param veTokenName The name of the voting escrow token
@@ -75,8 +75,8 @@ contract SimpleGaugeVoterSetupV1_4_0 is PluginSetup {
     /// @dev implementation of the escrow NFT
     address nftBase;
 
-    /// @dev implementation of the delegation mapper
-    address delegationMapperBase;
+    /// @dev implementation of the delegation adapter
+    address ivotesAdapterBase;
 
     /// @notice Deploys the setup by binding the implementation contracts required during installation.
     constructor(
@@ -94,7 +94,7 @@ contract SimpleGaugeVoterSetupV1_4_0 is PluginSetup {
         escrowBase = _escrowBase;
         clockBase = _clockBase;
         nftBase = _nftBase;
-        delegationMapperBase = _delegationMapperBase;
+        ivotesAdapterBase = _delegationMapperBase;
     }
 
     function implementation() external view returns (address) {
@@ -142,10 +142,7 @@ contract SimpleGaugeVoterSetupV1_4_0 is PluginSetup {
 
         // deploy the curve
         address curve = curveBase.deployUUPSProxy(
-            abi.encodeCall(
-                QuadraticIncreasingEscrow.initialize,
-                (address(escrow), _dao, params.warmup, clock)
-            )
+            abi.encodeCall(Curve.initialize, (address(escrow), _dao, params.warmup, clock))
         );
 
         // deploy the exit queue
@@ -164,8 +161,8 @@ contract SimpleGaugeVoterSetupV1_4_0 is PluginSetup {
             )
         );
 
-        address delegationMapper = delegationMapperBase.deployUUPSProxy(
-            abi.encodeCall(DelegationMapper.initialize, (_dao, address(escrow), clock))
+        address ivotesAdapter = ivotesAdapterBase.deployUUPSProxy(
+            abi.encodeCall(EscrowIVotesAdapter.initialize, (_dao, address(escrow), clock))
         );
 
         // encode our setup data with permissions and helpers
@@ -187,7 +184,7 @@ contract SimpleGaugeVoterSetupV1_4_0 is PluginSetup {
         helpers[2] = address(escrow);
         helpers[3] = clock;
         helpers[4] = nftLock;
-        helpers[5] = delegationMapper;
+        helpers[5] = ivotesAdapter;
 
         preparedSetupData.helpers = helpers;
         preparedSetupData.permissions = permissions;
@@ -263,7 +260,7 @@ contract SimpleGaugeVoterSetupV1_4_0 is PluginSetup {
         });
 
         permissions[3] = PermissionLib.MultiTargetPermission({
-            permissionId: QuadraticIncreasingEscrow(_curve).CURVE_ADMIN_ROLE(),
+            permissionId: Curve(_curve).CURVE_ADMIN_ROLE(),
             where: _curve,
             who: _dao,
             operation: _grantOrRevoke,

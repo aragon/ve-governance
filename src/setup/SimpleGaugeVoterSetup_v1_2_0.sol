@@ -13,11 +13,11 @@ import {ProxyLib} from "@libs/ProxyLib.sol";
 import {PermissionLib} from "@aragon/osx/core/permission/PermissionLib.sol";
 import {PluginSetup} from "@aragon/osx/framework/plugin/setup/PluginSetup.sol";
 
-import {SimpleGaugeVoterV1_2_0 as SimpleGaugeVoter} from "@voting/SimpleGaugeVoter_v1_2_0.sol";
+import {SimpleGaugeVoterSeason as SimpleGaugeVoter} from "@voting/SimpleGaugeVoterSeason.sol";
 import {VotingEscrow} from "@escrow/VotingEscrowIncreasing.sol";
 import {ExitQueue} from "@queue/ExitQueue.sol";
-import {QuadraticIncreasingEscrowV1_2_0 as QuadraticIncreasingEscrow} from "@curve/QuadraticIncreasingCurve_v1_2_0.sol";
-import {ClockV1_2_0 as Clock} from "@clock/Clock_v1_2_0.sol";
+import {QuadraticIncreasingCurveSeason as Curve} from "@curve/QuadraticIncreasingCurveSeason.sol";
+import {ClockSeason as Clock} from "@clock/ClockSeason.sol";
 import {Lock} from "@lock/Lock.sol";
 
 /// @param isPaused Whether the voter contract is deployed in a paused state
@@ -136,10 +136,7 @@ contract SimpleGaugeVoterSetupV1_2_0 is PluginSetup {
 
         // deploy the curve
         address curve = curveBase.deployUUPSProxy(
-            abi.encodeCall(
-                QuadraticIncreasingEscrow.initialize,
-                (address(escrow), _dao, params.warmup, clock)
-            )
+            abi.encodeCall(Curve.initialize, (address(escrow), _dao, params.warmup, clock))
         );
 
         // deploy the exit queue
@@ -252,7 +249,7 @@ contract SimpleGaugeVoterSetupV1_2_0 is PluginSetup {
         });
 
         permissions[3] = PermissionLib.MultiTargetPermission({
-            permissionId: QuadraticIncreasingEscrow(_curve).CURVE_ADMIN_ROLE(),
+            permissionId: Curve(_curve).CURVE_ADMIN_ROLE(),
             where: _curve,
             who: _dao,
             operation: _grantOrRevoke,
