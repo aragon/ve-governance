@@ -84,9 +84,7 @@ contract TestDelegate is Base {
         _mockLocked(singleId[0], 10, weekStartTs(block.timestamp));
         dg.delegate(singleId);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(TokenAlreadyDelegated.selector, singleId[0])
-        );
+        vm.expectRevert(abi.encodeWithSelector(TokenAlreadyDelegated.selector, singleId[0]));
 
         dg.delegate(singleId);
     }
@@ -114,7 +112,7 @@ contract TestDelegate is Base {
         assertEq(dg.numberOfDelegatedTokens(sender), multiIds.length);
 
         _mockLocked(3, 10, start);
-        
+
         dg.delegate(getIds(3));
 
         assertEq(dg.numberOfDelegatedTokens(sender), multiIds.length + 1);

@@ -65,7 +65,8 @@ contract SimpleGaugeVoterV1_4_0 is
         address _escrow,
         bool _startPaused,
         address _clock,
-        address _delegationMapper
+        address _delegationMapper,
+        bool _enableUpdateVotingPowerHook
     ) external initializer {
         __PluginUUPSUpgradeable_init(IDAO(_dao));
         __ReentrancyGuard_init();
@@ -73,6 +74,7 @@ contract SimpleGaugeVoterV1_4_0 is
         escrow = _escrow;
         clock = _clock;
         delegationMapper = _delegationMapper;
+        enableUpdateVotingPowerHook = _enableUpdateVotingPowerHook;
         if (_startPaused) _pause();
     }
 
@@ -122,7 +124,9 @@ contract SimpleGaugeVoterV1_4_0 is
     }
 
     function _vote(address _account, GaugeVote[] memory _votes) internal {
-        uint256 votingPower = IVotes(delegationMapper).getVotes(_account);
+        uint256 votingPower = enableUpdateVotingPowerHook
+            ? IVotes(delegationMapper).getVotes(_account)
+            : IVotes(delegationMapper).getPastVotes(_account, currentEpochStart());
         if (votingPower == 0) revert NoVotingPower();
 
         uint256 numVotes = _votes.length;
@@ -267,8 +271,8 @@ contract SimpleGaugeVoterV1_4_0 is
         uint256 votingPower = IVotes(delegationMapper).getVotes(_account);
 
         // If the new voting power is less than the used voting power
-        // then we can re-cast the votes.
-        //if (voteData.usedVotingPower > votingPower) return;
+        // then we can re-cast the votes otherwise we skip.
+        if (voteData.usedVotingPower < votingPower) return;
 
         GaugeVote[] memory newVoteData = new GaugeVote[](pastVotes.length);
 
@@ -286,7 +290,7 @@ contract SimpleGaugeVoterV1_4_0 is
         _reset(_account);
 
         // Re-cast the votes with the new voting power.
-        for (uint256 i = 0; i < pastVotes.length; i++) {
+        for (uint256 i = 0; i < newVoteData.length; i++) {
             _castVote(
                 newVoteData[i],
                 epoch,
@@ -339,7 +343,7 @@ contract SimpleGaugeVoterV1_4_0 is
     /// @notice This function is used to get the epoch id in the case of delegation mapper
     /// does not exist or the hook is not activated.
     function getWriteEpochId() public view returns (uint256) {
-        return (!enableUpdateVotingPowerHook || delegationMapper == address(0)) ? epochId() : 0;
+        return enableUpdateVotingPowerHook ? 0 : epochId();
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -408,6 +412,11 @@ contract SimpleGaugeVoterV1_4_0 is
     }
 
     /// @notice timestamp of the start of the next epoch
+    function currentEpochStart() public view returns (uint256) {
+        return IClock(clock).epochStartTs() - IClock(clock).epochDuration();
+    }
+
+    /// @notice timestamp of the start of the next epoch
     function epochStart() external view returns (uint256) {
         return IClock(clock).epochStartTs();
     }
@@ -441,7 +450,11 @@ contract SimpleGaugeVoterV1_4_0 is
 
     function votes(address _address, address _gauge) external view returns (uint256) {
         uint256 epoch = getWriteEpochId();
-        return epochTokenVoteData[epoch][_address].voteWeights[_gauge];
+        return
+            _votesForGauge(
+                epochTokenVoteData[epoch][_address].voteWeights[_gauge],
+                epochTokenVoteData[epoch][_address].usedVotingPower
+            );
     }
 
     function gaugesVotedFor(address _address) external view returns (address[] memory) {

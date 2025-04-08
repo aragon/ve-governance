@@ -167,7 +167,8 @@ contract SimpleGaugeVoterSetupV1_4_0 is PluginSetup {
                             helpers[uint(HelperType.Escrow)],
                             params.isPaused,
                             helpers[uint(HelperType.Clock)],
-                            helpers[uint(HelperType.DelegationMapper)]
+                            helpers[uint(HelperType.DelegationMapper)],
+                            true
                         )
                     )
                 )

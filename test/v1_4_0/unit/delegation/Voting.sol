@@ -49,17 +49,27 @@ contract TestVotingWithDelegation is Base {
         assertEq(dg.getVotes(alice), total);
         assertEq(dg.getVotes(bob), 0);
 
+        vm.warp(clock.epochVoteStartTs());
+
+        IGaugeVote.GaugeVote[] memory votes = new IGaugeVote.GaugeVote[](1);
+        votes[0] = IGaugeVote.GaugeVote({gauge: gauge, weight: 1});
+
+        assertEq(voter.votes(alice, gauge), 0);
+        assertEq(voter.votes(bob, gauge), 0);
+
+        vm.prank(alice);
+        voter.vote(votes);
+
+        assertEq(voter.votes(alice, gauge), total);
+        assertEq(voter.votes(bob, gauge), 0);
+
         vm.prank(address(escrow));
         dg.moveDelegateVotes(tokenOwner, tokenReceiver, 1);
 
         assertEq(dg.getVotes(alice), token2Bias);
         assertEq(dg.getVotes(bob), token1Bias);
 
-        IGaugeVote.GaugeVote[] memory votes = new IGaugeVote.GaugeVote[](1);
-        votes[0] = IGaugeVote.GaugeVote({gauge: gauge, weight: 1});
-
-        vm.prank(alice);
-        voter.vote(votes);
-        //assertEq(voter.getVotes(1), token2Bias);
+        assertEq(voter.votes(alice, gauge), token2Bias);
+        assertEq(voter.votes(bob, gauge), 0);
     }
 }

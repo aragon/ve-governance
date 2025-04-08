@@ -58,6 +58,8 @@ contract Base is IDelegationMapperStorage, IDelegationMapperErrorsAndEvents, Fix
         _mockApprovedOwner(true);
         _mockPermissions();
 
+        dg.setVoter(address(voter));
+
         uint256 maxTime = IClock(clock).epochDuration() * CurveConstantLib.MAX_EPOCHS;
 
         super.initialize(maxTime, clock.checkpointInterval());
@@ -86,7 +88,8 @@ contract Base is IDelegationMapperStorage, IDelegationMapperErrorsAndEvents, Fix
             _escrow,
             false,
             _clock,
-            _delegationMapper
+            _delegationMapper,
+            true
         );
         return SimpleGaugeVoter(impl.deployUUPSProxy(initCalldata));
     }

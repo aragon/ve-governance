@@ -144,7 +144,7 @@ contract EscrowBase is
         escrow.setVoter(address(voter));
         escrow.setQueue(address(queue));
         escrow.setLockNFT(address(nftLock));
-        //escrow.setDelegationMapper(address(delegationMapper));
+        escrow.setDelegationMapper(address(delegationMapper));
     }
 
     modifier givenExistingLock() {
@@ -307,7 +307,7 @@ contract EscrowBase is
 
         bytes memory initCalldata = abi.encodeCall(
             SimpleGaugeVoter.initialize,
-            (_dao, _escrow, _reset, _clock, _delegationMapper)
+            (_dao, _escrow, _reset, _clock, _delegationMapper, true)
         );
         return SimpleGaugeVoter(address(impl).deployUUPSProxy(initCalldata));
     }
