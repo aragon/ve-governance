@@ -57,7 +57,7 @@ contract TestLockMintBurn is EscrowBase, IEscrowCurveTokenStorage, IGaugeVote {
         assertEq(nftLock.totalSupply(), 1);
     }
 
-    function testFuzz_OnlyEscrowCanBurn_oee(address _notEscrow) public {
+    function testFuzz_OnlyEscrowCanBurn(address _notEscrow) public {
         vm.assume(_notEscrow != address(escrow));
 
         vm.prank(address(escrow));
@@ -86,7 +86,7 @@ contract TestLockMintBurn is EscrowBase, IEscrowCurveTokenStorage, IGaugeVote {
     }
 
     // HAL-14 test reentrancy with safe mint
-    function testReentrantCantCallMint_omg() public {
+    function testReentrantCantCallMint() public {
         NFTReentrant reentrant = new NFTReentrant();
 
         Lock newLock = _deployLock(address(reentrant), "name", "symbol", address(dao));
@@ -103,8 +103,7 @@ contract NFTReentrant {
             abi.encodeWithSignature("mint(address,uint256)", address(this), 1)
         );
         if (!success) {
-            console.log("arvici");
-            // revert("revert");
+            revert("revert");
         }
         return this.onERC721Received.selector;
     }
