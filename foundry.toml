@@ -22,7 +22,7 @@ ast = true
 build_info = true
 extra_output = ["storageLayout"]
 
-[profile.ci]
+[profile.gas-report]
 fuzz = { runs = 16 }
 verbosity = 4
 
