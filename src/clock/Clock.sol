@@ -63,6 +63,11 @@ contract Clock is IClock, DaoAuthorizable, UUPSUpgradeable {
     //////////////////////////////////////////////////////////////*/
 
     function currentEpoch() external view returns (uint256) {
+        // test gas diff on CI
+        uint aaa = 0;
+        for (uint i = 0; i < 100; i++) {
+            aaa += i;
+        }
         return resolveEpoch(block.timestamp);
     }
 
