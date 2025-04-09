@@ -45,7 +45,7 @@ jobs:
     name: Gas Report
     runs-on: ubuntu-latest
     env:
-      FOUNDRY_PROFILE: "ci"
+      FOUNDRY_PROFILE: "gas-report"
     steps:
       - uses: actions/checkout@v4
         with:
