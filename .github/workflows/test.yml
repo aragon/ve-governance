@@ -112,7 +112,7 @@ jobs:
 
       - name: Run Forge coverage
         run: |
-          forge coverage --match-path "test/**/unit/**/*.sol" --no-match-coverage "test/" --report lcov
+          forge coverage --match-path "test/**/unit/**/*.sol" --no-match-coverage "test/" --report lcov --report summary
         id: coverage
 
       - name: Setup LCOV
@@ -126,7 +126,7 @@ jobs:
           artifact-name: code-coverage-report
           github-token: ${{ secrets.GITHUB_TOKEN }}
           working-directory: .
-          update-comment: true
+          update-comment: false
 
   test-upgrade:
     strategy:
