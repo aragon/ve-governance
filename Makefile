@@ -10,6 +10,11 @@ install :; make allow-scripts && forge build
 
 # create an HTML coverage report in ./report (requires lcov & genhtml)
 coverage:; ./coverage.sh
+
+# retrieve the deployment values from a factory
+get-deployment-values :; forge script script/utils/GetDeploymentValues.sol:GetFactoryValues \
+    --rpc-url=$(RPC_URL) \
+    -vvvv
 	
 # run unit tests
 test-unit :; forge test --match-path "test/**/unit/**/*.sol"
