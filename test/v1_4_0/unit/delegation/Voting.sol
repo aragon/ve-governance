@@ -148,8 +148,11 @@ contract TestVotingWithDelegation is Base {
         assertEq(dg.getVotes(alice), token2Bias);
         assertEq(dg.getVotes(bob), token1Bias);
 
+        vm.prank(bob);
+        voter.vote(votes);
+
         assertEq(voter.votes(alice, gauge), token2Bias);
-        assertEq(voter.votes(bob, gauge), 0);
+        assertEq(voter.votes(bob, gauge), token1Bias);
 
         vm.prank(address(escrow));
         dg.moveDelegateVotes(tokenReceiver, tokenOwner, 1);
@@ -157,6 +160,7 @@ contract TestVotingWithDelegation is Base {
         assertEq(dg.getVotes(alice), total);
         assertEq(dg.getVotes(bob), 0);
 
+        // Votes are not updated after moving votes because newVp > vp
         assertEq(voter.votes(alice, gauge), token2Bias);
         assertEq(voter.votes(bob, gauge), 0);
     }
