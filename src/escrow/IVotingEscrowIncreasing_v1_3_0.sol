@@ -73,7 +73,7 @@ interface ISplit is ISplitEventsAndErrors {
     ) external returns (uint256 _tokenId1, uint256 _tokenId2);
 }
 
-interface IVotingEscrowIncreasingV1_4_0 is
+interface IVotingEscrowIncreasingV1_3_0 is
     IVotingEscrowIncreasing,
     IVotingEscrowExiting,
     IMerge,

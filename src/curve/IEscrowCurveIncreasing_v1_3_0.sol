@@ -32,7 +32,7 @@ interface IEscrowCurveGlobal is IEscrowCurveGlobalStorage {
                         Token Curve
 //////////////////////////////////////////////////////////////*/
 
-interface IEscrowCurveTokenV1_4_0 is IEscrowCurveTokenStorage {
+interface IEscrowCurveTokenV1_3_0 is IEscrowCurveTokenStorage {
     /// @notice Returns the latest index of the tokenId which can be used
     ///         to retrive token point from `tokenPointHistory` function.
     /// @dev This has been renamed to `tokenPointLatestIndex` in the latest upgrade, but
@@ -65,10 +65,10 @@ interface IEscrowCurveMaxTime is IEscrowCurveErrorsAndEvents {
                         INCREASING CURVE
 //////////////////////////////////////////////////////////////*/
 
-interface IEscrowCurveIncreasingV1_4_0 is
+interface IEscrowCurveIncreasingV1_3_0 is
     IEscrowCurveCore,
     IEscrowCurveMath,
-    IEscrowCurveTokenV1_4_0,
+    IEscrowCurveTokenV1_3_0,
     IEscrowCurveMaxTime,
     IWarmup,
     IEscrowCurveGlobal

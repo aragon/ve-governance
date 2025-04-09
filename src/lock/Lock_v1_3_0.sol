@@ -2,15 +2,23 @@
 pragma solidity ^0.8.17;
 
 import {ILock} from "./ILock.sol";
-import {ERC721EnumerableUpgradeable as ERC721Enumerable} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
-import {ReentrancyGuardUpgradeable as ReentrancyGuard} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import {
+    ERC721EnumerableUpgradeable as ERC721Enumerable
+} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
+import {
+    ReentrancyGuardUpgradeable as ReentrancyGuard
+} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
+import {
+    DaoAuthorizableUpgradeable as DaoAuthorizable
+} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
-import {IVotingEscrowIncreasingV1_4_0 as IVotingEscrow} from "@escrow/IVotingEscrowIncreasing_v1_4_0.sol";
+import {
+    IVotingEscrowIncreasingV1_3_0 as IVotingEscrow
+} from "@escrow/IVotingEscrowIncreasing_v1_3_0.sol";
 
 /// @title NFT representation of an escrow locking mechanism
-contract LockV1_4_0 is ILock, ERC721Enumerable, UUPSUpgradeable, DaoAuthorizable, ReentrancyGuard {
+contract LockV1_3_0 is ILock, ERC721Enumerable, UUPSUpgradeable, DaoAuthorizable, ReentrancyGuard {
     /// @dev enables transfers without whitelisting
     address public constant WHITELIST_ANY_ADDRESS =
         address(uint160(uint256(keccak256("WHITELIST_ANY_ADDRESS"))));

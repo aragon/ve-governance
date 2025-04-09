@@ -14,11 +14,11 @@ import {PermissionLib} from "@aragon/osx/core/permission/PermissionLib.sol";
 import {PluginSetup} from "@aragon/osx/framework/plugin/setup/PluginSetup.sol";
 
 import {SimpleGaugeVoterV1_1_0 as SimpleGaugeVoter} from "@voting/SimpleGaugeVoter_v1_1_0.sol";
-import {VotingEscrowV1_4_0 as VotingEscrow} from "@escrow/VotingEscrowIncreasing_v1_4_0.sol";
+import {VotingEscrowV1_3_0 as VotingEscrow} from "@escrow/VotingEscrowIncreasing_v1_3_0.sol";
 import {ExitQueue} from "@queue/ExitQueue.sol";
 import {LinearIncreasingCurve as Curve} from "@curve/LinearIncreasingCurve.sol";
-import {ClockV1_4_0 as Clock} from "@clock/Clock_v1_4_0.sol";
-import {LockV1_4_0 as Lock} from "@lock/Lock_v1_4_0.sol";
+import {ClockV1_3_0 as Clock} from "@clock/Clock_v1_3_0.sol";
+import {LockV1_3_0 as Lock} from "@lock/Lock_v1_3_0.sol";
 import {EscrowIVotesAdapter} from "@delegation/EscrowIVotesAdapter.sol";
 
 /// @param isPaused Whether the voter contract is deployed in a paused state

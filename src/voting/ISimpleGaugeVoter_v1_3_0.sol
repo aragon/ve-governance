@@ -126,9 +126,7 @@ interface IGaugeVoter is IGaugeVoterEvents, IGaugeVoterErrors, IGaugeVote {
                         Simple Gauge Voter
 //////////////////////////////////////////////////////////////*/
 
-interface ISimpleGaugeVoter is IGaugeVoter, IGaugeManager, IGauge {
-
-}
+interface ISimpleGaugeVoter is IGaugeVoter, IGaugeManager, IGauge {}
 
 interface ISimpleGaugeVoterStorageEventsErrors is
     IGaugeManagerEvents,

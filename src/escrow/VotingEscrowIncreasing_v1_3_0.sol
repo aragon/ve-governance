@@ -14,16 +14,16 @@ import {IERC721EnumerableMintableBurnable as IERC721EMB} from "@lock/IERC721EMB.
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {ISimpleGaugeVoter} from "@voting/ISimpleGaugeVoter.sol";
 import {
-    IEscrowCurveIncreasingV1_4_0 as IEscrowCurve
-} from "@curve/IEscrowCurveIncreasing_v1_4_0.sol";
+    IEscrowCurveIncreasingV1_3_0 as IEscrowCurve
+} from "@curve/IEscrowCurveIncreasing_v1_3_0.sol";
 import {IExitQueue} from "@queue/IExitQueue.sol";
 import {
-    IVotingEscrowIncreasingV1_4_0 as IVotingEscrow,
+    IVotingEscrowIncreasingV1_3_0 as IVotingEscrow,
     IVotingEscrowExiting,
     IMerge,
     ISplit
-} from "./IVotingEscrowIncreasing_v1_4_0.sol";
-import {IClockV1_4_0 as IClock} from "@clock/IClock_v1_4_0.sol";
+} from "./IVotingEscrowIncreasing_v1_3_0.sol";
+import {IClockV1_3_0 as IClock} from "@clock/IClock_v1_3_0.sol";
 import {ExitQueue} from "@queue/ExitQueue.sol";
 
 // libraries
@@ -47,7 +47,7 @@ import {
 } from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
 import {IEscrowIVotesAdapter} from "../delegation/IEscrowIVotesAdapter.sol";
 
-contract VotingEscrowV1_4_0 is
+contract VotingEscrowV1_3_0 is
     IVotingEscrow,
     ReentrancyGuard,
     Pausable,

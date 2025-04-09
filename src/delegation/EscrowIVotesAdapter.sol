@@ -13,15 +13,15 @@ import {
 
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {
-    IVotingEscrowIncreasingV1_4_0 as IVotingEscrow
-} from "@escrow/IVotingEscrowIncreasing_v1_4_0.sol";
-import {VotingEscrowV1_4_0 as VotingEscrow} from "@escrow/VotingEscrowIncreasing_v1_4_0.sol";
+    IVotingEscrowIncreasingV1_3_0 as IVotingEscrow
+} from "@escrow/IVotingEscrowIncreasing_v1_3_0.sol";
+import {VotingEscrowV1_3_0 as VotingEscrow} from "@escrow/VotingEscrowIncreasing_v1_3_0.sol";
 
-import {IClockUser, IClockV1_4_0 as IClock} from "@clock/IClock_v1_4_0.sol";
+import {IClockUser, IClockV1_3_0 as IClock} from "@clock/IClock_v1_3_0.sol";
 
 import {PluginUUPSUpgradeable} from "@aragon/osx/core/plugin/PluginUUPSUpgradeable.sol";
 import {IEscrowIVotesAdapter} from "./IEscrowIVotesAdapter.sol";
-import {ISimpleGaugeVoter} from "../voting/ISimpleGaugeVoter_v1_4_0.sol";
+import {ISimpleGaugeVoter} from "@voting/ISimpleGaugeVoter_v1_3_0.sol";
 import {console2 as console} from "forge-std/console2.sol";
 import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 import {SignedFixedPointMath} from "@libs/SignedFixedPointMathLib.sol";
