@@ -1,6 +1,6 @@
 pragma solidity ^0.8.17;
 
-import {EscrowBase} from "./EscrowBase.sol";
+import {EscrowBase} from "../../../base/EscrowBase.sol";
 
 import {console2 as console} from "forge-std/console2.sol";
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
@@ -11,7 +11,7 @@ import {ProxyLib} from "@libs/ProxyLib.sol";
 
 import {Lock, Clock, VotingEscrow, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, IEscrowCurveTokenStorage, IGaugeVote, ILock} from "../../../versions.sol";
 
-contract TestLockMintBurn is EscrowBase, IEscrowCurveTokenStorage, IGaugeVote {
+contract TestLockMintBurn is IEscrowCurveTokenStorage, IGaugeVote, EscrowBase {
     function testDeploy(
         string memory _name,
         string memory _symbol,
@@ -76,7 +76,7 @@ contract TestLockMintBurn is EscrowBase, IEscrowCurveTokenStorage, IGaugeVote {
     function testCannotMintToNonReceiver() public {
         vm.prank(address(escrow));
         vm.expectRevert("ERC721: transfer to non ERC721Receiver implementer");
-        nftLock.mint(address(this), 1);
+        nftLock.mint(address(escrow), 1);
     }
 
     // HAL-14 test reentrancy with safe mint

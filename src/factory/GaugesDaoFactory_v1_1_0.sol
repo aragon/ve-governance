@@ -6,14 +6,28 @@ import {DAOFactory} from "@aragon/osx/framework/dao/DAOFactory.sol";
 import {IEscrowCurveTokenStorage} from "@curve/IEscrowCurveIncreasing.sol";
 import {IWithdrawalQueueErrors} from "@escrow/IVotingEscrowIncreasing.sol";
 import {IGaugeVote} from "src/voting/ISimpleGaugeVoter.sol";
-import {VotingEscrow, Clock, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetupV1_1_0 as SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams} from "@setup/SimpleGaugeVoterSetup_v1_1_0.sol";
+import {
+    VotingEscrow,
+    Clock,
+    Lock,
+    Curve,
+    ExitQueue,
+    SimpleGaugeVoter,
+    SimpleGaugeVoterSetupV1_1_0 as SimpleGaugeVoterSetup,
+    ISimpleGaugeVoterSetupParams
+} from "@setup/SimpleGaugeVoterSetup_v1_1_0.sol";
 import {PluginSetupProcessor} from "@aragon/osx/framework/plugin/setup/PluginSetupProcessor.sol";
-import {hashHelpers, PluginSetupRef} from "@aragon/osx/framework/plugin/setup/PluginSetupProcessorHelpers.sol";
+import {
+    hashHelpers,
+    PluginSetupRef
+} from "@aragon/osx/framework/plugin/setup/PluginSetupProcessorHelpers.sol";
 import {PluginRepoFactory} from "@aragon/osx/framework/plugin/repo/PluginRepoFactory.sol";
 import {PluginRepo} from "@aragon/osx/framework/plugin/repo/PluginRepo.sol";
 import {IPluginSetup} from "@aragon/osx/framework/plugin/setup/IPluginSetup.sol";
 import {Multisig} from "@aragon/osx/plugins/governance/multisig/Multisig.sol";
-import {MultisigSetup as MultisigPluginSetup} from "@aragon/osx/plugins/governance/multisig/MultisigSetup.sol";
+import {
+    MultisigSetup as MultisigPluginSetup
+} from "@aragon/osx/plugins/governance/multisig/MultisigSetup.sol";
 import {createERC1967Proxy} from "@aragon/osx/utils/Proxy.sol";
 import {PermissionLib} from "@aragon/osx/core/permission/PermissionLib.sol";
 
@@ -67,7 +81,7 @@ struct TokenParameters {
 /// @notice Struct containing the plugin and all of its helpers
 struct GaugePluginSet {
     SimpleGaugeVoter plugin;
-    QuadraticIncreasingEscrow curve;
+    Curve curve;
     ExitQueue exitQueue;
     VotingEscrow votingEscrow;
     Clock clock;
@@ -313,7 +327,7 @@ contract GaugesDaoFactoryV1_1_0 {
         address[] memory helpers = preparedSetupData.helpers;
         GaugePluginSet memory pluginSet = GaugePluginSet({
             plugin: SimpleGaugeVoter(plugin),
-            curve: QuadraticIncreasingEscrow(helpers[0]),
+            curve: Curve(helpers[0]),
             exitQueue: ExitQueue(helpers[1]),
             votingEscrow: VotingEscrow(helpers[2]),
             clock: Clock(helpers[3]),

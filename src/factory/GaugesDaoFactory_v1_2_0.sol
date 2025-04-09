@@ -3,19 +3,34 @@ pragma solidity ^0.8.17;
 
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {DAOFactory} from "@aragon/osx/framework/dao/DAOFactory.sol";
-import {IEscrowCurveTokenStorage} from "@curve/IEscrowCurveIncreasing.sol";
+import {IGaugeVote} from "src/voting/ISimpleGaugeVoter.sol";
 import {IWithdrawalQueueErrors} from "@escrow/IVotingEscrowIncreasing.sol";
 import {IGaugeVote} from "src/voting/ISimpleGaugeVoter.sol";
-import {VotingEscrow, Clock, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetupV1_2_0 as SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams} from "@setup/SimpleGaugeVoterSetup_v1_2_0.sol";
+import {
+    VotingEscrow,
+    Clock,
+    Lock,
+    Curve,
+    ExitQueue,
+    SimpleGaugeVoter,
+    SimpleGaugeVoterSetupV1_2_0 as SimpleGaugeVoterSetup,
+    ISimpleGaugeVoterSetupParams
+} from "@setup/SimpleGaugeVoterSetup_v1_2_0.sol";
 import {PluginSetupProcessor} from "@aragon/osx/framework/plugin/setup/PluginSetupProcessor.sol";
-import {hashHelpers, PluginSetupRef} from "@aragon/osx/framework/plugin/setup/PluginSetupProcessorHelpers.sol";
+import {
+    hashHelpers,
+    PluginSetupRef
+} from "@aragon/osx/framework/plugin/setup/PluginSetupProcessorHelpers.sol";
 import {PluginRepoFactory} from "@aragon/osx/framework/plugin/repo/PluginRepoFactory.sol";
 import {PluginRepo} from "@aragon/osx/framework/plugin/repo/PluginRepo.sol";
 import {IPluginSetup} from "@aragon/osx/framework/plugin/setup/IPluginSetup.sol";
 import {Multisig} from "@aragon/osx/plugins/governance/multisig/Multisig.sol";
-import {MultisigSetup as MultisigPluginSetup} from "@aragon/osx/plugins/governance/multisig/MultisigSetup.sol";
+import {
+    MultisigSetup as MultisigPluginSetup
+} from "@aragon/osx/plugins/governance/multisig/MultisigSetup.sol";
 import {createERC1967Proxy} from "@aragon/osx/utils/Proxy.sol";
 import {PermissionLib} from "@aragon/osx/core/permission/PermissionLib.sol";
+import {EscrowIVotesAdapter} from "@delegation/EscrowIVotesAdapter.sol";
 
 /// @notice The struct containing all the parameters to deploy the DAO
 /// @param minApprovals The amount of approvals required for the multisig to be able to execute a proposal on the DAO
@@ -67,11 +82,12 @@ struct TokenParameters {
 /// @notice Struct containing the plugin and all of its helpers
 struct GaugePluginSet {
     SimpleGaugeVoter plugin;
-    QuadraticIncreasingEscrow curve;
+    Curve curve;
     ExitQueue exitQueue;
     VotingEscrow votingEscrow;
     Clock clock;
     Lock nftLock;
+    EscrowIVotesAdapter delegationAdapter;
 }
 
 /// @notice Contains the artifacts that resulted from running a deployment
@@ -313,11 +329,12 @@ contract GaugesDaoFactoryV1_2_0 {
         address[] memory helpers = preparedSetupData.helpers;
         GaugePluginSet memory pluginSet = GaugePluginSet({
             plugin: SimpleGaugeVoter(plugin),
-            curve: QuadraticIncreasingEscrow(helpers[0]),
+            curve: Curve(helpers[0]),
             exitQueue: ExitQueue(helpers[1]),
             votingEscrow: VotingEscrow(helpers[2]),
             clock: Clock(helpers[3]),
-            nftLock: Lock(helpers[4])
+            nftLock: Lock(helpers[4]),
+            delegationAdapter: EscrowIVotesAdapter(helpers[5])
         });
 
         return (pluginSet, pluginRepo, preparedSetupData);
@@ -355,7 +372,7 @@ contract GaugesDaoFactoryV1_2_0 {
         pluginSet.votingEscrow.setQueue(address(pluginSet.exitQueue));
         pluginSet.votingEscrow.setVoter(address(pluginSet.plugin));
         pluginSet.votingEscrow.setLockNFT(address(pluginSet.nftLock));
-
+        pluginSet.votingEscrow.setIVotesAdapter(address(pluginSet.delegationAdapter));
         dao.revoke(
             address(pluginSet.votingEscrow),
             address(this),
