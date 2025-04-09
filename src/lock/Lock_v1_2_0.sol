@@ -108,8 +108,11 @@ contract LockV1_2_0 is ILock, ERC721Enumerable, UUPSUpgradeable, DaoAuthorizable
         address _from,
         address _to,
         uint256 _tokenId,
-        uint256
+        uint256 _data
     ) internal virtual override {
+        // Calls ERC721Enumerable's `_beforeTokenTransfer`
+        super._beforeTokenTransfer(_from, _to, _tokenId, _data);
+
         // `burn` can only be called by escrow which only calls
         // it upon `beginWithdrawal`. This means that before actual
         // `burn`, it would first transfer the token to escrow contract,

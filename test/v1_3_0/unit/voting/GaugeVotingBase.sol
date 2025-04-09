@@ -57,6 +57,7 @@ contract GaugeVotingBase is
     QuadraticIncreasingEscrow curve;
     SimpleGaugeVoter voter;
     ExitQueue queue;
+    EscrowIVotesAdapter ivotesAdapter;
 
     DAO dao;
     Clock clock;
@@ -158,6 +159,7 @@ contract GaugeVotingBase is
         escrow = VotingEscrow(helpers[2]);
         clock = Clock(helpers[3]);
         nftLock = Lock(helpers[4]);
+        ivotesAdapter = EscrowIVotesAdapter(helpers[5]);
 
         // set the permissions
         for (uint i = 0; i < preparedSetupData.permissions.length; i++) {

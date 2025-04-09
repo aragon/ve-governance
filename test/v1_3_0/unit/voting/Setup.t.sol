@@ -48,7 +48,7 @@ contract VoterSetupTest is GaugeVotingBase {
         // Prepare uninstallation and revoke permissions
         IPluginSetup.SetupPayload memory payload = IPluginSetup.SetupPayload({
             plugin: address(voter),
-            currentHelpers: new address[](5),
+            currentHelpers: new address[](6),
             data: bytes("")
         });
 
@@ -57,6 +57,7 @@ contract VoterSetupTest is GaugeVotingBase {
         payload.currentHelpers[2] = address(escrow);
         payload.currentHelpers[3] = address(clock);
         payload.currentHelpers[4] = address(nftLock);
+        payload.currentHelpers[5] = address(ivotesAdapter);
 
         PermissionLib.MultiTargetPermission[] memory revokePermissions = voterSetup
             .prepareUninstallation(address(dao), payload);
