@@ -5,17 +5,19 @@ import {Test} from "forge-std/Test.sol";
 
 // aragon contracts
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
-import {EscrowIVotesAdapter} from "@delegation/EscrowIVotesAdapter.sol";
 
 import {createTestDAO} from "@mocks/MockDAO.sol";
-import {Clock, IClock, VotingEscrow} from "../../versions.sol";
-
-import {ProxyLib} from "@libs/ProxyLib.sol";
-import {ILockedBalanceIncreasing} from "@escrow/IVotingEscrowIncreasing.sol";
 import {
+    ILockedBalanceIncreasing,
+    Clock,
+    IClock,
+    VotingEscrow,
+    EscrowIVotesAdapter,
     IEscrowIVotesAdapterStorage,
     IEscrowIVotesAdapterErrorsAndEvents
-} from "@delegation/IEscrowIVotesAdapter.sol";
+} from "../../versions.sol";
+
+import {ProxyLib} from "@libs/ProxyLib.sol";
 import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 import {FixedPointBase} from "../../base/FixedPointBase.sol";
 

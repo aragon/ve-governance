@@ -15,6 +15,7 @@ import {
     Lock,
     Curve,
     ExitQueue,
+    EscrowIVotesAdapter,
     SimpleGaugeVoter,
     SimpleGaugeVoterSetupV1_2_0 as SimpleGaugeVoterSetup,
     ISimpleGaugeVoterSetupParams
@@ -119,7 +120,8 @@ contract DeployGaugesV1_2_0 is Script {
             address(new ExitQueue()),
             address(new VotingEscrow()),
             address(new Clock()),
-            address(new Lock())
+            address(new Lock()),
+            address(new EscrowIVotesAdapter())
         );
     }
 

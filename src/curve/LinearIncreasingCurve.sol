@@ -5,16 +5,16 @@ pragma solidity ^0.8.17;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {
-    IVotingEscrowIncreasingV1_3_0 as IVotingEscrow
-} from "@escrow/IVotingEscrowIncreasing_v1_3_0.sol";
+    IVotingEscrowIncreasingV1_2_0 as IVotingEscrow
+} from "@escrow/IVotingEscrowIncreasing_v1_2_0.sol";
 import {
-    IEscrowCurveIncreasingV1_3_0 as IEscrowCurve,
+    IEscrowCurveIncreasingV1_2_0 as IEscrowCurve,
     IEscrowCurveGlobal,
     IEscrowCurveCore,
-    IEscrowCurveTokenV1_3_0 as IEscrowCurveToken
-} from "@curve/IEscrowCurveIncreasing_v1_3_0.sol";
+    IEscrowCurveTokenV1_2_0 as IEscrowCurveToken
+} from "@curve/IEscrowCurveIncreasing_v1_2_0.sol";
 
-import {IClockUser, IClockV1_3_0 as IClock} from "@clock/IClock_v1_3_0.sol";
+import {IClockUser, IClockV1_2_0 as IClock} from "@clock/IClock_v1_2_0.sol";
 
 // libraries
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";

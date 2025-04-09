@@ -3,7 +3,7 @@ pragma solidity ^0.8.17;
 
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {DAOFactory} from "@aragon/osx/framework/dao/DAOFactory.sol";
-import {IEscrowCurveTokenStorage} from "@curve/IEscrowCurveIncreasing.sol";
+import {IGaugeVote} from "src/voting/ISimpleGaugeVoter.sol";
 import {IWithdrawalQueueErrors} from "@escrow/IVotingEscrowIncreasing.sol";
 import {IGaugeVote} from "src/voting/ISimpleGaugeVoter.sol";
 import {
@@ -30,6 +30,7 @@ import {
 } from "@aragon/osx/plugins/governance/multisig/MultisigSetup.sol";
 import {createERC1967Proxy} from "@aragon/osx/utils/Proxy.sol";
 import {PermissionLib} from "@aragon/osx/core/permission/PermissionLib.sol";
+import {EscrowIVotesAdapter} from "@delegation/EscrowIVotesAdapter.sol";
 
 /// @notice The struct containing all the parameters to deploy the DAO
 /// @param minApprovals The amount of approvals required for the multisig to be able to execute a proposal on the DAO
@@ -86,6 +87,7 @@ struct GaugePluginSet {
     VotingEscrow votingEscrow;
     Clock clock;
     Lock nftLock;
+    EscrowIVotesAdapter delegationAdapter;
 }
 
 /// @notice Contains the artifacts that resulted from running a deployment
@@ -331,7 +333,8 @@ contract GaugesDaoFactoryV1_2_0 {
             exitQueue: ExitQueue(helpers[1]),
             votingEscrow: VotingEscrow(helpers[2]),
             clock: Clock(helpers[3]),
-            nftLock: Lock(helpers[4])
+            nftLock: Lock(helpers[4]),
+            delegationAdapter: EscrowIVotesAdapter(helpers[5])
         });
 
         return (pluginSet, pluginRepo, preparedSetupData);
@@ -369,7 +372,7 @@ contract GaugesDaoFactoryV1_2_0 {
         pluginSet.votingEscrow.setQueue(address(pluginSet.exitQueue));
         pluginSet.votingEscrow.setVoter(address(pluginSet.plugin));
         pluginSet.votingEscrow.setLockNFT(address(pluginSet.nftLock));
-
+        pluginSet.votingEscrow.setDelegationAdapter(address(pluginSet.delegationAdapter));
         dao.revoke(
             address(pluginSet.votingEscrow),
             address(this),

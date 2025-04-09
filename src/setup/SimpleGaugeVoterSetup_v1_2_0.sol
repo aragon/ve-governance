@@ -13,12 +13,13 @@ import {ProxyLib} from "@libs/ProxyLib.sol";
 import {PermissionLib} from "@aragon/osx/core/permission/PermissionLib.sol";
 import {PluginSetup} from "@aragon/osx/framework/plugin/setup/PluginSetup.sol";
 
-import {SimpleGaugeVoterSeason as SimpleGaugeVoter} from "@voting/SimpleGaugeVoterSeason.sol";
-import {VotingEscrow} from "@escrow/VotingEscrowIncreasing.sol";
+import {SimpleGaugeVoterV1_1_0 as SimpleGaugeVoter} from "@voting/SimpleGaugeVoter_v1_1_0.sol";
+import {VotingEscrowV1_2_0 as VotingEscrow} from "@escrow/VotingEscrowIncreasing_v1_2_0.sol";
 import {ExitQueue} from "@queue/ExitQueue.sol";
-import {QuadraticIncreasingCurveSeason as Curve} from "@curve/QuadraticIncreasingCurveSeason.sol";
-import {ClockSeason as Clock} from "@clock/ClockSeason.sol";
-import {Lock} from "@lock/Lock.sol";
+import {LinearIncreasingEscrowNoSupply as Curve} from "@curve/LinearIncreasingCurveNoSupply.sol";
+import {ClockV1_2_0 as Clock} from "@clock/Clock_v1_2_0.sol";
+import {LockV1_2_0 as Lock} from "@lock/Lock_v1_2_0.sol";
+import {EscrowIVotesAdapter} from "@delegation/EscrowIVotesAdapter.sol";
 
 /// @param isPaused Whether the voter contract is deployed in a paused state
 /// @param veTokenName The name of the voting escrow token
@@ -74,6 +75,9 @@ contract SimpleGaugeVoterSetupV1_2_0 is PluginSetup {
     /// @dev implementation of the escrow NFT
     address nftBase;
 
+    /// @dev implementation of the delegation mapper
+    address ivotesMapperBase;
+
     /// @notice Deploys the setup by binding the implementation contracts required during installation.
     constructor(
         address _voterBase,
@@ -81,7 +85,8 @@ contract SimpleGaugeVoterSetupV1_2_0 is PluginSetup {
         address _queueBase,
         address _escrowBase,
         address _clockBase,
-        address _nftBase
+        address _nftBase,
+        address _delegationMapperBase
     ) PluginSetup() {
         voterBase = _voterBase;
         curveBase = _curveBase;
@@ -89,6 +94,7 @@ contract SimpleGaugeVoterSetupV1_2_0 is PluginSetup {
         escrowBase = _escrowBase;
         clockBase = _clockBase;
         nftBase = _nftBase;
+        ivotesMapperBase = _delegationMapperBase;
     }
 
     function implementation() external view returns (address) {
@@ -155,6 +161,10 @@ contract SimpleGaugeVoterSetupV1_2_0 is PluginSetup {
             )
         );
 
+        address ivotesAdapter = ivotesMapperBase.deployUUPSProxy(
+            abi.encodeCall(EscrowIVotesAdapter.initialize, (_dao, address(escrow), clock))
+        );
+
         // encode our setup data with permissions and helpers
         PermissionLib.MultiTargetPermission[] memory permissions = getPermissions(
             _dao,
@@ -167,13 +177,14 @@ contract SimpleGaugeVoterSetupV1_2_0 is PluginSetup {
             PermissionLib.Operation.Grant
         );
 
-        address[] memory helpers = new address[](5);
+        address[] memory helpers = new address[](6);
 
         helpers[0] = curve;
         helpers[1] = exitQueue;
         helpers[2] = address(escrow);
         helpers[3] = clock;
-        helpers[4] = address(nftLock);
+        helpers[4] = nftLock;
+        helpers[5] = ivotesAdapter;
 
         preparedSetupData.helpers = helpers;
         preparedSetupData.permissions = permissions;
@@ -185,7 +196,7 @@ contract SimpleGaugeVoterSetupV1_2_0 is PluginSetup {
         SetupPayload calldata _payload
     ) external view returns (PermissionLib.MultiTargetPermission[] memory permissions) {
         // check the helpers length
-        if (_payload.currentHelpers.length != 5) {
+        if (_payload.currentHelpers.length != 6) {
             revert WrongHelpersArrayLength(_payload.currentHelpers.length);
         }
 

@@ -1,6 +1,6 @@
 pragma solidity ^0.8.17;
 
-import {EscrowBase} from "./EscrowBase.sol";
+import {EscrowBase} from "../../../base/EscrowBase.sol";
 
 import {console2 as console} from "forge-std/console2.sol";
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
@@ -11,7 +11,7 @@ import {ProxyLib} from "@libs/ProxyLib.sol";
 
 import {Lock, Clock, VotingEscrow, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, IEscrowCurveTokenStorage, IGaugeVote} from "../../../versions.sol";
 
-contract TestSweep is EscrowBase, IEscrowCurveTokenStorage, IGaugeVote {
+contract TestSweep is IEscrowCurveTokenStorage, IGaugeVote, EscrowBase {
     function setUp() public override {
         super.setUp();
 
@@ -145,15 +145,5 @@ contract TestSweep is EscrowBase, IEscrowCurveTokenStorage, IGaugeVote {
 
         assertEq(nftLock.balanceOf(address(this)), 1);
         assertEq(nftLock.balanceOf(address(escrow)), 0);
-    }
-
-    // Needed for the ERC721Receiver interface
-    function onERC721Received(
-        address,
-        address,
-        uint256,
-        bytes calldata
-    ) external pure returns (bytes4) {
-        return this.onERC721Received.selector;
     }
 }

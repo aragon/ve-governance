@@ -14,9 +14,24 @@ import {PluginRepo} from "@aragon/osx/framework/plugin/repo/PluginRepo.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {Addresslist} from "@aragon/osx/plugins/utils/Addresslist.sol";
-import {MultisigSetup as MultisigPluginSetup} from "@aragon/osx/plugins/governance/multisig/MultisigSetup.sol";
+import {
+    MultisigSetup as MultisigPluginSetup
+} from "@aragon/osx/plugins/governance/multisig/MultisigSetup.sol";
 
-import {SimpleGaugeVoterSetup, VotingEscrow, Clock, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, GaugesDaoFactory, Deployment, DeploymentParameters, TokenParameters} from "../../versions.sol";
+import {
+    SimpleGaugeVoterSetup,
+    VotingEscrow,
+    Clock,
+    Lock,
+    Curve,
+    ExitQueue,
+    SimpleGaugeVoter,
+    GaugesDaoFactory,
+    Deployment,
+    DeploymentParameters,
+    TokenParameters,
+    EscrowIVotesAdapter
+} from "../../versions.sol";
 
 contract GaugesDaoFactoryTest is Test {
     function test_ShouldStoreTheSettings_1() public {
@@ -27,11 +42,12 @@ contract GaugesDaoFactoryTest is Test {
 
         SimpleGaugeVoterSetup gaugeVoterPluginSetup = new SimpleGaugeVoterSetup(
             address(new SimpleGaugeVoter()),
-            address(new QuadraticIncreasingEscrow()),
+            address(new Curve()),
             address(new ExitQueue()),
             address(new VotingEscrow()),
             address(new Clock()),
-            address(new Lock())
+            address(new Lock()),
+            address(new EscrowIVotesAdapter())
         );
 
         MockPluginRepoRegistry pRepoRegistry = new MockPluginRepoRegistry();
@@ -193,11 +209,12 @@ contract GaugesDaoFactoryTest is Test {
 
         SimpleGaugeVoterSetup gaugeVoterPluginSetup = new SimpleGaugeVoterSetup(
             address(new SimpleGaugeVoter()),
-            address(new QuadraticIncreasingEscrow()),
+            address(new Curve()),
             address(new ExitQueue()),
             address(new VotingEscrow()),
             address(new Clock()),
-            address(new Lock())
+            address(new Lock()),
+            address(new EscrowIVotesAdapter())
         );
 
         MockPluginRepoRegistry pRepoRegistry = new MockPluginRepoRegistry();
@@ -374,11 +391,12 @@ contract GaugesDaoFactoryTest is Test {
 
         SimpleGaugeVoterSetup gaugeVoterPluginSetup = new SimpleGaugeVoterSetup(
             address(new SimpleGaugeVoter()),
-            address(new QuadraticIncreasingEscrow()),
+            address(new Curve()),
             address(new ExitQueue()),
             address(new VotingEscrow()),
             address(new Clock()),
-            address(new Lock())
+            address(new Lock()),
+            address(new EscrowIVotesAdapter())
         );
 
         TokenParameters[] memory tokenParameters = new TokenParameters[](2);
@@ -759,11 +777,12 @@ contract GaugesDaoFactoryTest is Test {
 
         SimpleGaugeVoterSetup gaugeVoterPluginSetup = new SimpleGaugeVoterSetup(
             address(new SimpleGaugeVoter()),
-            address(new QuadraticIncreasingEscrow()),
+            address(new Curve()),
             address(new ExitQueue()),
             address(new VotingEscrow()),
             address(new Clock()),
-            address(new Lock())
+            address(new Lock()),
+            address(new EscrowIVotesAdapter())
         );
 
         TokenParameters[] memory tokenParameters = new TokenParameters[](3);
@@ -1253,11 +1272,12 @@ contract GaugesDaoFactoryTest is Test {
 
         SimpleGaugeVoterSetup gaugeVoterPluginSetup = new SimpleGaugeVoterSetup(
             address(new SimpleGaugeVoter()),
-            address(new QuadraticIncreasingEscrow()),
+            address(new Curve()),
             address(new ExitQueue()),
             address(new VotingEscrow()),
             address(new Clock()),
-            address(new Lock())
+            address(new Lock()),
+            address(new EscrowIVotesAdapter())
         );
 
         TokenParameters[] memory tokenParameters = new TokenParameters[](3);

@@ -14,11 +14,11 @@ import {PermissionLib} from "@aragon/osx/core/permission/PermissionLib.sol";
 import {PluginSetup} from "@aragon/osx/framework/plugin/setup/PluginSetup.sol";
 
 import {SimpleGaugeVoterV1_1_0 as SimpleGaugeVoter} from "@voting/SimpleGaugeVoter_v1_1_0.sol";
-import {VotingEscrowV1_3_0 as VotingEscrow} from "@escrow/VotingEscrowIncreasing_v1_3_0.sol";
+import {VotingEscrowV1_2_0 as VotingEscrow} from "@escrow/VotingEscrowIncreasing_v1_2_0.sol";
 import {ExitQueue} from "@queue/ExitQueue.sol";
-import {LinearIncreasingEscrowNoSupply as Curve} from "@curve/LinearIncreasingCurveNoSupply.sol";
-import {ClockV1_3_0 as Clock} from "@clock/Clock_v1_3_0.sol";
-import {LockV1_3_0 as Lock} from "@lock/Lock_v1_3_0.sol";
+import {LinearIncreasingCurve as Curve} from "@curve/LinearIncreasingCurve.sol";
+import {ClockV1_2_0 as Clock} from "@clock/Clock_v1_2_0.sol";
+import {LockV1_2_0 as Lock} from "@lock/Lock_v1_2_0.sol";
 import {EscrowIVotesAdapter} from "@delegation/EscrowIVotesAdapter.sol";
 
 /// @param isPaused Whether the voter contract is deployed in a paused state
@@ -75,8 +75,8 @@ contract SimpleGaugeVoterSetupV1_3_0 is PluginSetup {
     /// @dev implementation of the escrow NFT
     address nftBase;
 
-    /// @dev implementation of the delegation mapper
-    address ivotesMapperBase;
+    /// @dev implementation of the delegation adapter
+    address ivotesAdapterBase;
 
     /// @notice Deploys the setup by binding the implementation contracts required during installation.
     constructor(
@@ -94,7 +94,7 @@ contract SimpleGaugeVoterSetupV1_3_0 is PluginSetup {
         escrowBase = _escrowBase;
         clockBase = _clockBase;
         nftBase = _nftBase;
-        ivotesMapperBase = _delegationMapperBase;
+        ivotesAdapterBase = _delegationMapperBase;
     }
 
     function implementation() external view returns (address) {
@@ -161,7 +161,7 @@ contract SimpleGaugeVoterSetupV1_3_0 is PluginSetup {
             )
         );
 
-        address ivotesAdapter = ivotesMapperBase.deployUUPSProxy(
+        address ivotesAdapter = ivotesAdapterBase.deployUUPSProxy(
             abi.encodeCall(EscrowIVotesAdapter.initialize, (_dao, address(escrow), clock))
         );
 

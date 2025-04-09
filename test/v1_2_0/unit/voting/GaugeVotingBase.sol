@@ -16,7 +16,23 @@ import {ProxyLib} from "@libs/ProxyLib.sol";
 
 import "@helpers/OSxHelpers.sol";
 
-import {Clock, ISeasonErrors, VotingEscrow, Lock, ILock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams, IGaugeVote, IEscrowCurveTokenStorage, ISimpleGaugeVoterStorageEventsErrors} from "../../versions.sol";
+import {
+    IEscrowCurveTokenStorage,
+    ISeasonErrors,
+    Clock,
+    VotingEscrow,
+    Lock,
+    Curve,
+    QuadraticIncreasingEscrow,
+    ExitQueue,
+    SimpleGaugeVoter,
+    SimpleGaugeVoterSetup,
+    ISimpleGaugeVoterSetupParams,
+    IGaugeVote,
+    IEscrowCurveTokenStorage,
+    ISimpleGaugeVoterStorageEventsErrors,
+    EscrowIVotesAdapter
+} from "../../versions.sol";
 
 contract GaugeVotingBase is
     Test,
@@ -39,7 +55,7 @@ contract GaugeVotingBase is
 
     Lock nftLock;
     VotingEscrow escrow;
-    QuadraticIncreasingEscrow curve;
+    Curve curve;
     SimpleGaugeVoter voter;
     ExitQueue queue;
 
@@ -107,11 +123,12 @@ contract GaugeVotingBase is
         // deploy setup
         voterSetup = new SimpleGaugeVoterSetup(
             voterBase,
-            address(new QuadraticIncreasingEscrow()),
+            address(new Curve()),
             address(new ExitQueue()),
             address(new VotingEscrow()),
             address(new Clock()),
-            address(new Lock())
+            address(new Lock()),
+            address(new EscrowIVotesAdapter())
         );
 
         // push to the PSP
@@ -137,7 +154,7 @@ contract GaugeVotingBase is
         // fetch the contracts
         voter = SimpleGaugeVoter(pluginAddress);
         address[] memory helpers = preparedSetupData.helpers;
-        curve = QuadraticIncreasingEscrow(helpers[0]);
+        curve = Curve(helpers[0]);
         queue = ExitQueue(helpers[1]);
         escrow = VotingEscrow(helpers[2]);
         clock = Clock(helpers[3]);
