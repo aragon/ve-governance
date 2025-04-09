@@ -1,15 +1,32 @@
 pragma solidity ^0.8.17;
 
-import {SimpleGaugeVoterSetup, IGaugeVote, IEscrowCurveIncreasing, VotingEscrow, Clock, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, GaugesDaoFactory as GaugesDaoFactoryV1_0_0, Deployment, DeploymentParameters, TokenParameters, GaugePluginSet} from "test/v1_0_0/versions.sol";
+import {
+    SimpleGaugeVoterSetup,
+    IGaugeVote,
+    IEscrowCurveIncreasing,
+    VotingEscrow,
+    Clock,
+    Lock,
+    QuadraticIncreasingEscrow,
+    ExitQueue,
+    SimpleGaugeVoter,
+    GaugesDaoFactory as GaugesDaoFactoryV1_0_0,
+    Deployment,
+    DeploymentParameters,
+    TokenParameters,
+    GaugePluginSet
+} from "test/v1_0_0/versions.sol";
 
-struct CachedViewArguments {
+struct CachedViewArgumentsCurve {
     uint256 tokenId;
     uint256 timestamp;
     uint256 amount;
     uint256 tokenInterval;
+    uint256 maturity;
+    uint256 sampleTime;
 }
 
-struct CachedView {
+struct CachedViewCurve {
     address escrow;
     address clock;
     uint48 warmupPeriod;
@@ -20,12 +37,14 @@ struct CachedView {
     int256[3] coefficientsPlain;
     uint256 bias;
     uint256 votingPower;
+    uint256 votingPowerSample;
+    uint256 votingPowerMaturity;
 }
 
-function fetchState(
+function fetchStateCurve(
     QuadraticIncreasingEscrow target,
-    CachedViewArguments memory args
-) view returns (CachedView memory state) {
+    CachedViewArgumentsCurve memory args
+) view returns (CachedViewCurve memory state) {
     state.escrow = target.escrow();
     state.clock = target.clock();
     state.warmupPeriod = target.warmupPeriod();
@@ -39,4 +58,6 @@ function fetchState(
 
     state.isWarm = target.isWarm(args.tokenId);
     state.votingPower = target.votingPowerAt(args.tokenId, args.timestamp);
+    state.votingPowerSample = target.votingPowerAt(args.tokenId, args.sampleTime);
+    state.votingPowerMaturity = target.votingPowerAt(args.tokenId, args.maturity);
 }
