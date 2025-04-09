@@ -57,7 +57,3 @@ deploy-mode-sepolia-110 :; forge script DeployGaugesV1_1_0 \
 	--verifier blockscout \
 	--verifier-url https://sepolia.explorer.mode.network/api\? \
 	-vvvvv
-
-get-factory-params :; forge script script/GetDeploymentValues.sol:GetFactoryValues \
-    --rpc-url= $(RPC_URL) \
-    -vvvv
