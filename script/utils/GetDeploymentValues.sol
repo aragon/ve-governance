@@ -3,7 +3,7 @@ pragma solidity ^0.8.17;
 
 import {Script, console2 as console} from "forge-std/Script.sol";
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {GaugesDaoFactory, DeploymentParameters} from "../../src/factory/GaugesDaoFactory.sol";
+import {GaugesDaoFactory, DeploymentParameters} from "@factory/GaugesDaoFactory.sol";
 
 contract GetFactoryValues is Script {
     GaugesDaoFactory public factory;
