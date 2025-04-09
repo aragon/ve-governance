@@ -2,18 +2,14 @@
 pragma solidity ^0.8.0;
 
 import "./IVotingEscrowIncreasing.sol";
+import {IEscrowIVotesAdapter} from "@delegation/IEscrowIVotesAdapter.sol";
+import {IDelegateMoveVote} from "../delegation/IEscrowIVotesAdapter.sol";
 
 interface IVotingEscrowExiting {
     /// @notice How much amount has been exiting.
     /// @return total The total amount for which beginWithdrawal has been called
     ///         but withdraw has not yet been executed.
     function currentExitingAmount() external view returns (uint256);
-}
-
-interface IDelegationMapper {
-    /// @notice Called upon the transfer to update delegation checkpoints.
-    /// TODO: GIORGI add natspec for params.
-    function moveDelegateVotes(address _from, address _to, uint256 _tokenId) external;
 }
 
 interface IMergeEventsAndErrors {
@@ -78,5 +74,5 @@ interface IVotingEscrowIncreasingV1_2_0 is
     IVotingEscrowExiting,
     IMerge,
     ISplit,
-    IDelegationMapper
+    IDelegateMoveVote
 {}

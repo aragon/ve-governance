@@ -232,13 +232,13 @@ contract UpgradeGaugesFactoryV1_0_0__V1_3_0 {
         LinearIncreasingCurve curveUpgrade,
         VotingEscrowV1_2_0 escrowUpgrade,
         LockV1_2_0 lockUpgrade,
-        EscrowIVotesAdapter delegationMapper
+        EscrowIVotesAdapter ivotesAdapter
     ) public {
         if (validate) {
             validateUpgrade();
         }
 
-        _deployEscrowIVotesAdapter(address(delegationMapper));
+        _deployEscrowIVotesAdapter(address(ivotesAdapter));
         _upgradeContracts(clockUpgrade, curveUpgrade, escrowUpgrade, lockUpgrade);
 
         // set the delegation mapper on the escrow
@@ -287,10 +287,10 @@ contract UpgradeGaugesFactoryV1_0_0__V1_3_0 {
     function _setEscrowIVotesAdapter() internal {
         // set the delegation mapper in the plugin set
         for (uint i = 0; i < deployment.gaugeVoterPluginSets.length; i++) {
-            EscrowIVotesAdapter delegationMapper = deployment.gaugeVoterPluginSets[i].delegation;
+            EscrowIVotesAdapter ivotesAdapter = deployment.gaugeVoterPluginSets[i].delegation;
             VotingEscrowV1_2_0 votingEscrow = deployment.gaugeVoterPluginSets[i].votingEscrow;
 
-            votingEscrow.setDelegationAdapter(address(delegationMapper));
+            votingEscrow.setIVotesAdapter(address(ivotesAdapter));
         }
     }
 

@@ -18,7 +18,7 @@ interface IGaugeVote {
     /// @dev this changes so we need an historic snapshot
     /// @param lastVoted is the last time the user voted
     struct AddressVoteData {
-        mapping(address => uint256) votes;
+        mapping(address => uint256) voteWeights;
         address[] gaugesVotedFor;
         uint256 usedVotingPower;
         uint256 lastVoted;
@@ -103,18 +103,17 @@ interface IGaugeVoterErrors {
     error NoVotes();
     error NoVotingPower();
     error NotCurrentlyVoting();
-    error OnlyDelegationMapper();
+    error OnlyIVotesAdapter();
+    error UpdateVotingPowerHookNotEnabled();
 }
 
 interface IGaugeVoter is IGaugeVoterEvents, IGaugeVoterErrors, IGaugeVote {
     /// @notice Called by users to vote for pools. Votes distributed proportionally based on weights.
-    /// @param _address     Address that is voting.
     /// @param _votes       Array of votes to be cast, contains gauge address and weight.
-    function vote(address _address, GaugeVote[] memory _votes) external;
+    function vote(GaugeVote[] memory _votes) external;
 
     /// @notice Called by users to reset voting state. Required when withdrawing or transferring veNFT.
-    /// @param _address Address that is voting.
-    function reset(address _address) external;
+    function reset() external;
 
     /// @notice Can be called to check if an address is currently voting
     function isVoting(address _address) external view returns (bool);

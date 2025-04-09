@@ -48,7 +48,7 @@ contract TestWithdraw is IEscrowCurveTokenStorage, IGaugeVote, ITicket, EscrowBa
             vm.warp(block.timestamp + 2 weeks + 1 hours);
 
             // make a vote
-            voter.vote(tokenId, votes);
+            voter.vote(votes);
         }
         vm.stopPrank();
 
@@ -129,7 +129,7 @@ contract TestWithdraw is IEscrowCurveTokenStorage, IGaugeVote, ITicket, EscrowBa
             vm.warp(block.timestamp + 2 weeks + 1 hours);
 
             // make a vote
-            voter.vote(tokenId, votes);
+            voter.vote(votes);
         }
         vm.stopPrank();
 
@@ -193,7 +193,7 @@ contract TestWithdraw is IEscrowCurveTokenStorage, IGaugeVote, ITicket, EscrowBa
             vm.warp(block.timestamp + 2 weeks);
 
             // make a vote
-            voter.vote(tokenId, votes);
+            voter.vote(votes);
 
             // warp so cooldown crosses the week boundary
             vm.warp(block.timestamp + clock.checkpointInterval() - queue.cooldown() + 1);
@@ -225,6 +225,7 @@ contract TestWithdraw is IEscrowCurveTokenStorage, IGaugeVote, ITicket, EscrowBa
         assertEq(nftLock.balanceOf(address(escrow)), 0);
         assertEq(escrow.totalLocked(), 0);
     }
+
     // HAL-13: locks are re-used causing reverts and duplications
     function testCanCreateLockAfterBurning() public {
         address USER1 = address(1);

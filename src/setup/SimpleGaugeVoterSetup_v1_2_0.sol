@@ -86,7 +86,7 @@ contract SimpleGaugeVoterSetupV1_2_0 is PluginSetup {
         address _escrowBase,
         address _clockBase,
         address _nftBase,
-        address _delegationMapperBase
+        address _ivotesAdapterBase
     ) PluginSetup() {
         voterBase = _voterBase;
         curveBase = _curveBase;
@@ -94,7 +94,7 @@ contract SimpleGaugeVoterSetupV1_2_0 is PluginSetup {
         escrowBase = _escrowBase;
         clockBase = _clockBase;
         nftBase = _nftBase;
-        ivotesMapperBase = _delegationMapperBase;
+        ivotesMapperBase = _ivotesAdapterBase;
     }
 
     function implementation() external view returns (address) {

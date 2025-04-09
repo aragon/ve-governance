@@ -372,7 +372,7 @@ contract GaugesDaoFactoryV1_2_0 {
         pluginSet.votingEscrow.setQueue(address(pluginSet.exitQueue));
         pluginSet.votingEscrow.setVoter(address(pluginSet.plugin));
         pluginSet.votingEscrow.setLockNFT(address(pluginSet.nftLock));
-        pluginSet.votingEscrow.setDelegationAdapter(address(pluginSet.delegationAdapter));
+        pluginSet.votingEscrow.setIVotesAdapter(address(pluginSet.delegationAdapter));
         dao.revoke(
             address(pluginSet.votingEscrow),
             address(this),

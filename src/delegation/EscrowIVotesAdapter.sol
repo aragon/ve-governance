@@ -35,6 +35,9 @@ contract EscrowIVotesAdapter is
 {
     using SafeCastUpgradeable for uint256;
 
+    /// @notice The Gauge admin can can create and manage voting gauges for token holders
+    bytes32 public constant DELEGATION_ADMIN_ROLE = keccak256("DELEGATION_ADMIN");
+
     /// @notice Address of the voting escrow contract that will track voting power
     address public escrow;
 
@@ -72,6 +75,10 @@ contract EscrowIVotesAdapter is
         clock = _clock;
 
         maxTime = IClock(clock).epochDuration() * CurveConstantLib.MAX_EPOCHS;
+    }
+
+    function setVoter(address _voter) external auth(DELEGATION_ADMIN_ROLE) {
+        voter = _voter;
     }
 
     function setAutoDelegation(bool _enabled) external {
@@ -210,7 +217,7 @@ contract EscrowIVotesAdapter is
             tokenIsDelegated[_tokenId] = true;
             numberOfDelegatedTokens[_to]++;
 
-            ISimpleGaugeVoter(voter).updateVotingPower(_from, _to);
+            ISimpleGaugeVoter(voter).updateVotingPower(fromDelegatee, toDelegatee);
 
             return;
         }
@@ -233,7 +240,7 @@ contract EscrowIVotesAdapter is
             tokenIsDelegated[_tokenId] = true;
         }
 
-        ISimpleGaugeVoter(voter).updateVotingPower(_from, _to);
+        ISimpleGaugeVoter(voter).updateVotingPower(fromDelegatee, toDelegatee);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -439,10 +446,10 @@ contract EscrowIVotesAdapter is
         int256 amount = uint256(_locked.amount).toInt256();
 
         // TODO: Probably better if we could get this constants by calling the contract.
-        // The reasoning is delegationMapper might not be useful for some clients in the beginning,
+        // The reasoning is EscrowIVotesAdapter might not be useful for some clients in the beginning,
         // but might become useful later on. But when the time comes that we decide to deploy this for them,
         // curveconstant coefficients might have changed and this could result in a problem.
-        // Clearly, this delegationMapper only expects `escrow` address in `initialize`, but those functions
+        // Clearly, this EscrowIVotesAdapter only expects `escrow` address in `initialize`, but those functions
         // that return constant coefficients live inside curve. Passing `curve` address just for this reason
         // is ideal ? even if we do so, we also have to make the functions public (see curve).
 

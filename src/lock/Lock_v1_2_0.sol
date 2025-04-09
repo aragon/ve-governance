@@ -117,7 +117,7 @@ contract LockV1_2_0 is ILock, ERC721Enumerable, UUPSUpgradeable, DaoAuthorizable
         // it upon `beginWithdrawal`. This means that before actual
         // `burn`, it would first transfer the token to escrow contract,
         // which wouldn't update the checkpoint for escrow delegatee.
-        // See `moveDelegateVotes` in DelegationMapper. For gas efficiency,
+        // See `moveDelegateVotes` in EscrowIVotesAdapter. For gas efficiency,
         // we skip calling `moveDelegateVotes` in such case.
         if (_to == address(0)) {
             return;

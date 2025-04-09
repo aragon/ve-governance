@@ -46,6 +46,7 @@ import {
     DaoAuthorizableUpgradeable as DaoAuthorizable
 } from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
 import {IEscrowIVotesAdapter} from "../delegation/IEscrowIVotesAdapter.sol";
+import {IDelegateMoveVote} from "../delegation/IEscrowIVotesAdapter.sol";
 
 contract VotingEscrowV1_2_0 is
     IVotingEscrow,
@@ -115,8 +116,8 @@ contract VotingEscrowV1_2_0 is
 
     bool private _lockNFTSet;
 
-    // added in 1.4.0
-    address public delegationAdapter;
+    // added in 1.2.0
+    address public ivotesAdapter;
 
     /// @notice Whitelisted contracts that are allowed to split
     mapping(address => bool) public splitWhitelisted;
@@ -153,9 +154,9 @@ contract VotingEscrowV1_2_0 is
                               Admin Setters
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Added in 1.4.0 to set the delegation adapter
-    function setDelegationAdapter(address _delegationAdapter) external auth(ESCROW_ADMIN_ROLE) {
-        delegationAdapter = _delegationAdapter;
+    /// @notice Added in 1.2.0 to set the ivotes adapter
+    function setIVotesAdapter(address _ivotesAdapter) external auth(ESCROW_ADMIN_ROLE) {
+        ivotesAdapter = _ivotesAdapter;
     }
 
     /// @notice Sets the curve contract that calculates the voting power
@@ -357,7 +358,7 @@ contract VotingEscrowV1_2_0 is
         // Note that this function must be called before we
         // empty `lockedFrom`'s amount to 0. `moveDelegateVotes`
         // relies that lock still contains the amount.
-        IEscrowIVotesAdapter(delegationAdapter).moveDelegateVotes(
+        IEscrowIVotesAdapter(ivotesAdapter).moveDelegateVotes(
             IERC721EMB(lockNFT).ownerOf(_from),
             IERC721EMB(lockNFT).ownerOf(_to),
             _from
@@ -574,7 +575,7 @@ contract VotingEscrowV1_2_0 is
     }
 
     function moveDelegateVotes(address _from, address _to, uint256 _tokenId) public {
-        IEscrowIVotesAdapter(delegationAdapter).moveDelegateVotes(_from, _to, _tokenId);
+        IEscrowIVotesAdapter(ivotesAdapter).moveDelegateVotes(_from, _to, _tokenId);
     }
 
     /*///////////////////////////////////////////////////////////////

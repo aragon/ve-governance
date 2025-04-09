@@ -19,6 +19,10 @@ interface IEscrowIVotesAdapterErrorsAndEvents {
     error TokenNotDelegated(uint256 tokenId);
 }
 
+interface IDelegateMoveVote {
+    function moveDelegateVotes(address _from, address _to, uint256 _tokenId) external;
+}
+
 interface IEscrowIVotesAdapterStorage {
     struct GlobalPoint {
         int256 bias;
@@ -27,8 +31,8 @@ interface IEscrowIVotesAdapterStorage {
     }
 }
 
-interface IEscrowIVotesAdapter is IEscrowIVotesAdapterErrorsAndEvents, IEscrowIVotesAdapterStorage {
+interface IEscrowIVotesAdapter is IEscrowIVotesAdapterErrorsAndEvents, IEscrowIVotesAdapterStorage, IDelegateMoveVote {
     function delegate(uint256[] calldata _tokenIds) external;
 
-    function moveDelegateVotes(address _from, address _to, uint256 _tokenId) external;
+    function undelegate(uint256[] calldata _tokenIds) external;
 }

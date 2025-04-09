@@ -63,7 +63,7 @@ contract EscrowBase is
     SimpleGaugeVoter voter;
     ExitQueue queue;
     Clock clock;
-    EscrowIVotesAdapter delegationMapper;
+    EscrowIVotesAdapter ivotesAdapter;
 
     DAO dao;
     Multisig multisig;
@@ -100,7 +100,7 @@ contract EscrowBase is
         escrow = _deployEscrow(address(token), address(dao), address(clock), 1);
         curve = _deployCurve(address(escrow), address(dao), warmupPeriod, address(clock));
         nftLock = _deployLock(address(escrow), name, symbol, address(dao));
-        delegationMapper = _deployEscrowIVotesAdapter(
+        ivotesAdapter = _deployEscrowIVotesAdapter(
             address(dao),
             address(escrow),
             address(clock)
@@ -156,7 +156,7 @@ contract EscrowBase is
         escrow.setVoter(address(voter));
         escrow.setQueue(address(queue));
         escrow.setLockNFT(address(nftLock));
-        escrow.setDelegationAdapter(address(delegationMapper));
+        escrow.setIVotesAdapter(address(ivotesAdapter));
     }
 
     modifier givenExistingLock() {
