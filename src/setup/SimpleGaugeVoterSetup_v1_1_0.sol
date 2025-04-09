@@ -16,7 +16,7 @@ import {PluginSetup} from "@aragon/osx/framework/plugin/setup/PluginSetup.sol";
 import {SimpleGaugeVoterV1_1_0 as SimpleGaugeVoter} from "@voting/SimpleGaugeVoter_v1_1_0.sol";
 import {VotingEscrow} from "@escrow/VotingEscrowIncreasing.sol";
 import {ExitQueue} from "@queue/ExitQueue.sol";
-import {QuadraticIncreasingEscrow} from "@curve/QuadraticIncreasingCurve.sol";
+import {QuadraticIncreasingEscrow as Curve} from "@curve/QuadraticIncreasingCurve.sol";
 import {Clock} from "@clock/Clock.sol";
 import {Lock} from "@lock/Lock.sol";
 
@@ -136,10 +136,7 @@ contract SimpleGaugeVoterSetupV1_1_0 is PluginSetup {
 
         // deploy the curve
         address curve = curveBase.deployUUPSProxy(
-            abi.encodeCall(
-                QuadraticIncreasingEscrow.initialize,
-                (address(escrow), _dao, params.warmup, clock)
-            )
+            abi.encodeCall(Curve.initialize, (address(escrow), _dao, params.warmup, clock))
         );
 
         // deploy the exit queue
@@ -252,7 +249,7 @@ contract SimpleGaugeVoterSetupV1_1_0 is PluginSetup {
         });
 
         permissions[3] = PermissionLib.MultiTargetPermission({
-            permissionId: QuadraticIncreasingEscrow(_curve).CURVE_ADMIN_ROLE(),
+            permissionId: Curve(_curve).CURVE_ADMIN_ROLE(),
             where: _curve,
             who: _dao,
             operation: _grantOrRevoke,

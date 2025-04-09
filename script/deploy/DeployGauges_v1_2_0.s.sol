@@ -3,9 +3,26 @@ pragma solidity ^0.8.17;
 
 import {Script, console} from "forge-std/Script.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
-import {GaugesDaoFactoryV1_2_0 as GaugesDaoFactory, DeploymentParameters, Deployment, TokenParameters} from "@factory/GaugesDaoFactory_v1_2_0.sol";
-import {VotingEscrow, Clock, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetupV1_2_0 as SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams} from "@setup/SimpleGaugeVoterSetup_v1_2_0.sol";
-import {MultisigSetup as MultisigPluginSetup} from "@aragon/osx/plugins/governance/multisig/MultisigSetup.sol";
+import {
+    GaugesDaoFactoryV1_2_0 as GaugesDaoFactory,
+    DeploymentParameters,
+    Deployment,
+    TokenParameters
+} from "@factory/GaugesDaoFactory_v1_2_0.sol";
+import {
+    VotingEscrow,
+    Clock,
+    Lock,
+    Curve,
+    ExitQueue,
+    EscrowIVotesAdapter,
+    SimpleGaugeVoter,
+    SimpleGaugeVoterSetupV1_2_0 as SimpleGaugeVoterSetup,
+    ISimpleGaugeVoterSetupParams
+} from "@setup/SimpleGaugeVoterSetup_v1_2_0.sol";
+import {
+    MultisigSetup as MultisigPluginSetup
+} from "@aragon/osx/plugins/governance/multisig/MultisigSetup.sol";
 
 import {PluginRepo} from "@aragon/osx/framework/plugin/repo/PluginRepo.sol";
 import {PluginRepoFactory} from "@aragon/osx/framework/plugin/repo/PluginRepoFactory.sol";
@@ -99,11 +116,12 @@ contract DeployGaugesV1_2_0 is Script {
     function deploySimpleGaugeVoterPluginSetup() internal returns (SimpleGaugeVoterSetup result) {
         result = new SimpleGaugeVoterSetup(
             address(new SimpleGaugeVoter()),
-            address(new QuadraticIncreasingEscrow()),
+            address(new Curve()),
             address(new ExitQueue()),
             address(new VotingEscrow()),
             address(new Clock()),
-            address(new Lock())
+            address(new Lock()),
+            address(new EscrowIVotesAdapter())
         );
     }
 

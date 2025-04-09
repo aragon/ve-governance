@@ -1,6 +1,6 @@
 pragma solidity ^0.8.17;
 
-import {EscrowBase} from "./EscrowBase.sol";
+import {EscrowBase} from "../../../base/EscrowBase.sol";
 
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
@@ -110,6 +110,35 @@ contract TestEscrowAdmin is EscrowBase {
         escrow.withdraw(100);
     }
 
+    function testSplitWhitelist() public {
+        address addr = address(1);
+        vm.expectEmit(true, false, false, true);
+        emit SplitWhitelistSet(addr, true);
+
+        assertFalse(escrow.splitWhitelisted(addr));
+        escrow.setEnableSplit(addr, true);
+        assertTrue(escrow.splitWhitelisted(addr));
+        escrow.setEnableSplit(addr, false);
+        assertFalse(escrow.splitWhitelisted(addr));
+
+        escrow.enableSplit();
+        assertTrue(
+            escrow.splitWhitelisted(address(uint160(uint256(keccak256("SPLIT_WHITELIST_ANY_ADDRESS")))))
+        );
+
+        bytes memory err = _authErr(attacker, address(escrow), escrow.ESCROW_ADMIN_ROLE());
+
+        vm.startPrank(attacker);
+        {
+            vm.expectRevert(err);
+            escrow.setEnableSplit(addr, true);
+
+            vm.expectRevert(err);
+            escrow.enableSplit();
+        }
+        vm.stopPrank();
+    }
+
     function testWhitelist() public {
         address addr = address(1);
         vm.expectEmit(true, false, false, true);
@@ -137,15 +166,6 @@ contract TestEscrowAdmin is EscrowBase {
             nftLock.enableTransfers();
         }
         vm.stopPrank();
-    }
-
-    // test unusued function revert
-    function testUnusedFunctionRevert() public {
-        vm.expectRevert();
-        escrow.totalVotingPowerAt(0);
-
-        vm.expectRevert();
-        escrow.totalVotingPower();
     }
 
     // test upgrading the lock
