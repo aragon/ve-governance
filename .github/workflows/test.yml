@@ -126,7 +126,7 @@ jobs:
           artifact-name: code-coverage-report
           github-token: ${{ secrets.GITHUB_TOKEN }}
           working-directory: .
-          update-comment: false
+          update-comment: true
 
   test-upgrade:
     strategy:
