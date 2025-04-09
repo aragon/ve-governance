@@ -39,6 +39,95 @@ jobs:
           forge test --match-path "test/**/unit/**/*.sol"
         id: test
 
+  test-gas-report:
+    strategy:
+      fail-fast: true
+    name: Gas Report
+    runs-on: ubuntu-latest
+    env:
+      FOUNDRY_PROFILE: "ci"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: foundry-toolchain
+        uses: foundry-rs/foundry-toolchain@v1.3.1
+
+      - name: Show Forge version
+        run: forge --version
+
+      - name: Run Forge build
+        run: |
+          forge build
+        id: build
+
+      - name: Run Forge tests
+        run: |
+          forge test --match-path "test/**/unit/**/*.sol" --gas-report > gasreport.ansi
+        env:
+          # make fuzzing semi-deterministic to avoid noisy gas cost estimation
+          # due to non-deterministic fuzzing (but still use pseudo-random fuzzing seeds)
+          FOUNDRY_FUZZ_SEED: 0x${{ github.event.pull_request.base.sha || github.sha }}
+        id: test
+
+      - name: Compare gas reports
+        uses: Rubilmax/foundry-gas-diff@v3
+        with:
+          summaryQuantile: 0.8 # only display the 20% most significant gas diffs in the summary (defaults to 20%)
+          sortCriteria: avg,max # sort diff rows by criteria
+          sortOrders: desc,asc # and directions
+          ignore: test-foundry/**/* # filter out gas reports from specific paths (test/ is included by default)
+        id: gas_diff
+
+      - name: Add gas diff to sticky comment
+        if: github.event_name == 'pull_request' || github.event_name == 'pull_request_target'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: Gas cost changes
+          # delete the comment in case changes no longer impact gas costs
+          delete: ${{ !steps.gas_diff.outputs.markdown }}
+          message: ${{ steps.gas_diff.outputs.markdown }}
+
+  test-coverage:
+    strategy:
+      fail-fast: true
+    name: Coverage Report
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: foundry-toolchain
+        uses: foundry-rs/foundry-toolchain@v1.3.1
+
+      - name: Show Forge version
+        run: forge --version
+
+      - name: Run Forge build
+        run: |
+          forge build
+        id: build
+
+      - name: Run Forge coverage
+        run: |
+          forge coverage --match-path "test/**/unit/**/*.sol" --no-match-coverage "test/" --report lcov --report summary
+        id: coverage
+
+      - name: Setup LCOV
+        uses: hrishikesh-kadam/setup-lcov@v1
+      
+      - name: Report code coverage
+        uses: zgosalvez/github-actions-report-lcov@v4
+        with:
+          coverage-files: lcov.info
+          minimum-coverage: 60
+          artifact-name: code-coverage-report
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          working-directory: .
+          update-comment: true
+
   test-upgrade:
     strategy:
       fail-fast: true

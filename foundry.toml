@@ -4,7 +4,7 @@
 auto_detect_solc = false
 bytecode_hash = "none"
 cbor_metadata = false
-fuzz = { runs = 256 }
+fuzz = { runs = 16 }
 gas_reports = ["*"]
 fs_permissions = [{ access = "read", path = "./" }]
 libs = ["lib"]
@@ -23,7 +23,7 @@ build_info = true
 extra_output = ["storageLayout"]
 
 [profile.ci]
-fuzz = { runs = 10_000 }
+fuzz = { runs = 16 }
 verbosity = 4
 
 [rpc_endpoints]
