@@ -100,11 +100,7 @@ contract EscrowBase is
         escrow = _deployEscrow(address(token), address(dao), address(clock), 1);
         curve = _deployCurve(address(escrow), address(dao), warmupPeriod, address(clock));
         nftLock = _deployLock(address(escrow), name, symbol, address(dao));
-        ivotesAdapter = _deployEscrowIVotesAdapter(
-            address(dao),
-            address(escrow),
-            address(clock)
-        );
+        ivotesAdapter = _deployEscrowIVotesAdapter(address(dao), address(escrow), address(clock));
 
         super.initialize(curve.maxTime(), clock.checkpointInterval());
 
@@ -192,24 +188,6 @@ contract EscrowBase is
         assertEq(tokenP.coefficients[1], _slopeFP);
         assertEq(tokenP.checkpointTs, _checkpointTs);
         assertEq(tokenP.writtenTs, _writtenTs);
-    }
-
-    function assertGlobalPoint(
-        uint256 _expectedLatestIndex,
-        int256 _biasFP,
-        int256 _slopeFP,
-        uint256 _writtenTs
-    ) internal view {
-        uint256 latestIndex = curve.globalPointLatestIndex();
-        assertEq(latestIndex, _expectedLatestIndex);
-        GlobalPoint memory p = curve.globalPointHistory(latestIndex);
-        assertEq(p.writtenTs, _writtenTs);
-        assertEq(p.bias, _biasFP);
-        assertEq(p.slope, _slopeFP);
-    }
-
-    function assertTotalSupply(uint256 _t, int256 _amountFP) internal view {
-        assertEq(curve.supplyAt(_t), uint256(_amountFP / 1e18));
     }
 
     function assertVotingPower(uint256 _tokenId, int256 _amountFP) internal view {
