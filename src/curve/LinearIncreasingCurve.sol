@@ -19,7 +19,7 @@ import {IClockUser, IClockV1_2_0 as IClock} from "@clock/IClock_v1_2_0.sol";
 // libraries
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import {SignedFixedPointMath} from "@libs/SignedFixedPointMathLib.sol";
+import {SignedFixedPointMath, WAD} from "@libs/SignedFixedPointMathLib.sol";
 import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 
 // contracts
@@ -272,7 +272,7 @@ contract LinearIncreasingCurve is
         TokenPoint memory originalPoint = _tokenPointHistory[_tokenId][0];
         uint256 elapsed = boundElapsedMaxTime(_t - originalPoint.checkpointTs);
 
-        return _getBias(elapsed - lastPoint.writtenTs, bias, slope) / 1e18;
+        return _getBias(elapsed - lastPoint.writtenTs, bias, slope) / uint256(WAD);
     }
 
     /// @inheritdoc IEscrowCurveCore
@@ -581,7 +581,7 @@ contract LinearIncreasingCurve is
 
         if (bias < 0) bias = 0;
 
-        return uint256(bias / 1e18); // TODO: USE safe cast
+        return uint256(bias / WAD);
     }
 
     /*///////////////////////////////////////////////////////////////
