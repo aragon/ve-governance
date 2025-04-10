@@ -103,7 +103,7 @@ interface IGaugeVoterErrors {
     error NoVotes();
     error NoVotingPower();
     error NotCurrentlyVoting();
-    error OnlyIVotesAdapter();
+    error OnlyEscrow();
     error UpdateVotingPowerHookNotEnabled();
 }
 
@@ -125,7 +125,9 @@ interface IGaugeVoter is IGaugeVoterEvents, IGaugeVoterErrors, IGaugeVote {
                         Simple Gauge Voter
 //////////////////////////////////////////////////////////////*/
 
-interface ISimpleGaugeVoterV1_2_0 is IGaugeVoter, IGaugeManager, IGauge {}
+interface ISimpleGaugeVoterV1_2_0 is IGaugeVoter, IGaugeManager, IGauge {
+
+}
 
 interface ISimpleGaugeVoterStorageEventsErrors is
     IGaugeManagerEvents,
