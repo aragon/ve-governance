@@ -80,7 +80,7 @@ contract LinearIncreasingCurve is
     uint256 private constant MAX_EPOCHS = CurveConstantLib.MAX_EPOCHS;
 
     /*//////////////////////////////////////////////////////////////
-                            ADDED: TOTAL SUPPLY
+                            ADDED: TOTAL SUPPLY(1.2.0)
     //////////////////////////////////////////////////////////////*/
 
     /// @dev The latest global point index.
@@ -126,13 +126,13 @@ contract LinearIncreasingCurve is
 
     /// @return The coefficient for the curve's linear term, for the given amount
     function _getLinearCoeff(uint256 amount) internal pure returns (int256) {
-        return int256(amount) * SHARED_LINEAR_COEFFICIENT;
+        return amount.toInt256() * SHARED_LINEAR_COEFFICIENT;
     }
 
     /// @return The constant coefficient of the increasing curve, for the given amount
     /// @dev In this case, the constant term is 1 so we just case the amount
     function _getConstantCoeff(uint256 amount) public pure returns (int256) {
-        return int256(amount) * SHARED_CONSTANT_COEFFICIENT;
+        return amount.toInt256() * SHARED_CONSTANT_COEFFICIENT;
     }
 
     /// @return The coefficients of the quadratic curve, for the given amount
@@ -581,7 +581,7 @@ contract LinearIncreasingCurve is
 
         if (bias < 0) bias = 0;
 
-        return uint256(bias / 1e18); // TODO: USE safe cast
+        return uint256(bias / 1e18);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -597,6 +597,6 @@ contract LinearIncreasingCurve is
     /// @notice Internal method authorizing the upgrade of the contract via the [upgradeability mechanism for UUPS proxies](https://docs.openzeppelin.com/contracts/4.x/api/proxy#UUPSUpgradeable) (see [ERC-1822](https://eips.ethereum.org/EIPS/eip-1822)).
     function _authorizeUpgrade(address) internal virtual override auth(CURVE_ADMIN_ROLE) {}
 
-    /// @dev gap for upgradeable contract
+    /// @dev Reserved storage space to allow for layout changes in the future.
     uint256[42] private __gap;
 }

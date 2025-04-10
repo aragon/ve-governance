@@ -25,6 +25,8 @@ interface IVotingEscrowCoreErrors {
     error MustBe18Decimals();
     error TransferBalanceIncorrect();
     error AmountTooSmall();
+    error OnlyLockNFT();
+    error OnlyIVotesAdapter();
 }
 
 interface IVotingEscrowCoreEvents {

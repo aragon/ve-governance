@@ -359,6 +359,6 @@ contract SimpleGaugeVoterSeason is
         return seasonGaugeVotes[season][_address];
     }
 
-    /// Rest of UUPS logic is handled by OSx plugin
+    /// @dev Reserved storage space to allow for layout changes in the future.
     uint256[43] private __gap;
 }

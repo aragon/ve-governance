@@ -12,7 +12,7 @@ import {IERC721EnumerableMintableBurnable as IERC721EMB} from "@lock/IERC721EMB.
 
 // veGovernance
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
-import {ISimpleGaugeVoter} from "@voting/ISimpleGaugeVoter.sol";
+import {ISimpleGaugeVoterV1_2_0 as ISimpleGaugeVoter} from "@voting/ISimpleGaugeVoter_v1_2_0.sol";
 import {
     IEscrowCurveIncreasingV1_2_0 as IEscrowCurve
 } from "@curve/IEscrowCurveIncreasing_v1_2_0.sol";
@@ -45,8 +45,7 @@ import {
 import {
     DaoAuthorizableUpgradeable as DaoAuthorizable
 } from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
-import {IEscrowIVotesAdapter} from "../delegation/IEscrowIVotesAdapter.sol";
-import {IDelegateMoveVote} from "../delegation/IEscrowIVotesAdapter.sol";
+import {IDelegateMoveVote, IDelegateUpdateVotingPower, IEscrowIVotesAdapter} from "../delegation/IEscrowIVotesAdapter.sol";
 
 contract VotingEscrowV1_2_0 is
     IVotingEscrow,
@@ -116,13 +115,17 @@ contract VotingEscrowV1_2_0 is
 
     bool private _lockNFTSet;
 
-    // added in 1.2.0
-    address public ivotesAdapter;
+    /*//////////////////////////////////////////////////////////////
+                            ADDED: in 1.2.0
+    //////////////////////////////////////////////////////////////*/
 
     /// @notice Whitelisted contracts that are allowed to split
     mapping(address => bool) public splitWhitelisted;
 
+    address public ivotesAdapter;
+
     error UpgradeNotPossible();
+
 
     /*//////////////////////////////////////////////////////////////
                               Initialization
@@ -281,9 +284,15 @@ contract VotingEscrowV1_2_0 is
         }
     }
 
-    /// @notice Checks if the NFT is currently voting. We require the user to reset their votes if so.
-    function isVoting(uint256 _tokenId) public view returns (bool) {
-        return ISimpleGaugeVoter(voter).isVoting(_tokenId);
+     /// @notice Checks if the NFT is currently voting. We require the user to reset their votes if so.
+     function isVoting(uint256 _tokenId) public view returns (bool) {
+        bool isTokenDelegated = IEscrowIVotesAdapter(ivotesAdapter).tokenIsDelegated(_tokenId);
+        if(!isTokenDelegated) return false;
+
+        address owner = IERC721EMB(lockNFT).ownerOf(_tokenId);
+        address delegatee = IEscrowIVotesAdapter(ivotesAdapter).delegates(owner);
+        
+        return ISimpleGaugeVoter(voter).isVoting(delegatee);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -487,8 +496,9 @@ contract VotingEscrowV1_2_0 is
 
     /// @notice Resets the votes and begins the withdrawal process for a given tokenId
     /// @dev Convenience function, the user must have authorized this contract to act on their behalf.
+    ///      For backwards compatibility, even though `reset` call to gauge voter has been removed,
+    ///      we still keep the function with the same name.
     function resetVotesAndBeginWithdrawal(uint256 _tokenId) external whenNotPaused {
-        ISimpleGaugeVoter(voter).reset(_tokenId);
         beginWithdrawal(_tokenId);
     }
 
@@ -574,8 +584,18 @@ contract VotingEscrowV1_2_0 is
         emit SweepNFT(_to, _tokenId);
     }
 
+    /// @inheritdoc IDelegateMoveVote
     function moveDelegateVotes(address _from, address _to, uint256 _tokenId) public {
+        if (msg.sender != lockNFT) revert OnlyLockNFT();
+
         IEscrowIVotesAdapter(ivotesAdapter).moveDelegateVotes(_from, _to, _tokenId);
+    }
+
+    /// @inheritdoc IDelegateUpdateVotingPower
+    function updateVotingPower(address _from, address _to) public {
+        if (msg.sender != ivotesAdapter) revert OnlyIVotesAdapter();
+
+        ISimpleGaugeVoter(voter).updateVotingPower(_from, _to);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -592,5 +612,9 @@ contract VotingEscrowV1_2_0 is
     function _authorizeUpgrade(address) internal virtual override auth(ESCROW_ADMIN_ROLE) {}
 
     /// @dev Reserved storage space to allow for layout changes in the future.
-    uint256[39] private __gap;
+    ///      Please note that the reserved slot number in previous version(39) was set 
+    ///      incorrectly as 39 instead of 40. Changing it to 40 now would overwrite existing slot values, 
+    ///      resulting in the loss of state. Therefore, we will continue using 37 in this version. 
+    ///      For future versions, any new variables should be added by subtracting from 37.
+    uint256[37] private __gap;
 }

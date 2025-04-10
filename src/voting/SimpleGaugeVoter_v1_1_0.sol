@@ -335,6 +335,6 @@ contract SimpleGaugeVoterV1_1_0 is
         return tokenVoteData[_tokenId].usedVotingPower;
     }
 
-    /// Rest of UUPS logic is handled by OSx plugin
+    /// @dev Reserved storage space to allow for layout changes in the future.
     uint256[43] private __gap;
 }
