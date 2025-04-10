@@ -101,7 +101,7 @@ contract VotingEscrow is
     address public lockNFT;
 
     bool private _lockNFTSet;
-
+    
     /*//////////////////////////////////////////////////////////////
                               Initialization
     //////////////////////////////////////////////////////////////*/
@@ -422,5 +422,10 @@ contract VotingEscrow is
     function _authorizeUpgrade(address) internal virtual override auth(ESCROW_ADMIN_ROLE) {}
 
     /// @dev Reserved storage space to allow for layout changes in the future.
+    ///      Please note that the reserved slot number 39 was set incorrectly as 39 instead of 40. 
+    ///      Changing it to 40 now would overwrite existing slot values, resulting in the loss of state. 
+    ///      Therefore, we will continue using 39 in this version. For future versions, any new variables 
+    ///      should be added by subtracting from 39 rather than 40. Essentially, it's as though we 
+    ///      originally reserved 49 slots for this contract, instead of 50.
     uint256[39] private __gap;
 }

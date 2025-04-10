@@ -116,13 +116,17 @@ contract VotingEscrowV1_2_0 is
 
     bool private _lockNFTSet;
 
-    // added in 1.2.0
-    address public ivotesAdapter;
+    /*//////////////////////////////////////////////////////////////
+                            ADDED: in 1.2.0
+    //////////////////////////////////////////////////////////////*/
 
     /// @notice Whitelisted contracts that are allowed to split
     mapping(address => bool) public splitWhitelisted;
 
+    address public ivotesAdapter;
+
     error UpgradeNotPossible();
+
 
     /*//////////////////////////////////////////////////////////////
                               Initialization
@@ -592,5 +596,9 @@ contract VotingEscrowV1_2_0 is
     function _authorizeUpgrade(address) internal virtual override auth(ESCROW_ADMIN_ROLE) {}
 
     /// @dev Reserved storage space to allow for layout changes in the future.
-    uint256[39] private __gap;
+    ///      Please note that the reserved slot number in previous version(39) was set 
+    ///      incorrectly as 39 instead of 40. Changing it to 40 now would overwrite existing slot values, 
+    ///      resulting in the loss of state. Therefore, we will continue using 37 in this version. 
+    ///      For future versions, any new variables should be added by subtracting from 37.
+    uint256[37] private __gap;
 }

@@ -80,7 +80,7 @@ contract LinearIncreasingCurve is
     uint256 private constant MAX_EPOCHS = CurveConstantLib.MAX_EPOCHS;
 
     /*//////////////////////////////////////////////////////////////
-                            ADDED: TOTAL SUPPLY
+                            ADDED: TOTAL SUPPLY(1.2.0)
     //////////////////////////////////////////////////////////////*/
 
     /// @dev The latest global point index.
@@ -597,6 +597,6 @@ contract LinearIncreasingCurve is
     /// @notice Internal method authorizing the upgrade of the contract via the [upgradeability mechanism for UUPS proxies](https://docs.openzeppelin.com/contracts/4.x/api/proxy#UUPSUpgradeable) (see [ERC-1822](https://eips.ethereum.org/EIPS/eip-1822)).
     function _authorizeUpgrade(address) internal virtual override auth(CURVE_ADMIN_ROLE) {}
 
-    /// @dev gap for upgradeable contract
+    /// @dev Reserved storage space to allow for layout changes in the future.
     uint256[42] private __gap;
 }
