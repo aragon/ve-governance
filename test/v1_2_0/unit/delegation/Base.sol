@@ -18,8 +18,13 @@ import {
 } from "@delegation/IEscrowIVotesAdapter.sol";
 import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 import {FixedPointBase} from "../../base/FixedPointBase.sol";
+import {IDelegateUpdateVotingPower} from "@delegation/IEscrowIVotesAdapter.sol";
 
-contract EscrowVotingPowerMock {}
+contract EscrowVotingPowerMock is IDelegateUpdateVotingPower {
+    function updateVotingPower(address a, address b) external {
+
+    }
+}
 
 contract EscrowIVotesAdapterA is EscrowIVotesAdapter {
     function pointHistory_(

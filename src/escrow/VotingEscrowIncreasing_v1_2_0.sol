@@ -282,7 +282,8 @@ contract VotingEscrowV1_2_0 is
 
     /// @notice Checks if the NFT is currently voting. We require the user to reset their votes if so.
     function isVoting(uint256 _tokenId) public view returns (bool) {
-        return ISimpleGaugeVoter(voter).isVoting(_tokenId);
+        // TODO: for backwards compatibility, shall we remove this function at all or leave it without calling internal `isVoting` ?
+        // return ISimpleGaugeVoter(voter).isVoting(_tokenId);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -486,8 +487,9 @@ contract VotingEscrowV1_2_0 is
 
     /// @notice Resets the votes and begins the withdrawal process for a given tokenId
     /// @dev Convenience function, the user must have authorized this contract to act on their behalf.
+    ///      For backwards compatibility, even though `reset` call to gauge voter has been removed,
+    ///      we still keep the function with the same name.
     function resetVotesAndBeginWithdrawal(uint256 _tokenId) external whenNotPaused {
-        ISimpleGaugeVoter(voter).reset(_tokenId);
         beginWithdrawal(_tokenId);
     }
 

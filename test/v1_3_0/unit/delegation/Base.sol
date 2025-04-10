@@ -2,6 +2,7 @@
 pragma solidity ^0.8.17;
 
 import {Test} from "forge-std/Test.sol";
+import {console2 as console} from "forge-std/console2.sol";
 
 // aragon contracts
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
@@ -20,9 +21,15 @@ import {
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
 import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
+import {IDelegateUpdateVotingPower} from "@delegation/IEscrowIVotesAdapter.sol";
+
 import {FixedPointBase} from "../../base/FixedPointBase.sol";
 
-contract EscrowVotingPowerMock {}
+contract EscrowVotingPowerMock is IDelegateUpdateVotingPower {
+    function updateVotingPower(address a, address b) external {
+
+    }
+}
 
 contract EscrowIVotesAdapterA is EscrowIVotesAdapter {
     function pointHistory_(
@@ -63,8 +70,8 @@ contract Base is
         _deployDAO();
         clock = _deployClock(address(dao));
         escrow = new EscrowVotingPowerMock();
-        voter = _deployVoter(address(dao), address(clock), address(escrow), address(dg));
         dg = _deployEscrowIVotesAdapter(address(dao), address(clock), address(escrow));
+        voter = _deployVoter(address(dao), address(clock), address(escrow), address(dg));
 
         _mockApprovedOwner(true);
         _mockPermissions();
