@@ -30,7 +30,6 @@ contract EscrowIVotesAdapter is
     IClockUser,
     ReentrancyGuard,
     IEscrowIVotesAdapter,
-    IVotesUpgradeable,
     PluginUUPSUpgradeable
 {
     using SafeCastUpgradeable for uint256;
@@ -44,9 +43,6 @@ contract EscrowIVotesAdapter is
     /// @notice Clock contract for epoch duration
     address public clock;
 
-    /// @notice Voter contract
-    address public voter;
-
     mapping(address => mapping(uint256 => int256)) internal slopeChanges;
     mapping(address => mapping(uint256 => GlobalPoint)) internal pointHistory;
     mapping(address => address) private delegatees_;
@@ -56,8 +52,6 @@ contract EscrowIVotesAdapter is
     mapping(address => uint) public numberOfDelegatedTokens;
     mapping(address => bool) public autoDelegationEnabled;
 
-    int256 private sharedLinearCoefficient;
-    int256 private sharedConstantCoefficient;
     uint256 private maxTime;
 
     /*///////////////////////////////////////////////////////////////
@@ -75,10 +69,6 @@ contract EscrowIVotesAdapter is
         clock = _clock;
 
         maxTime = IClock(clock).epochDuration() * CurveConstantLib.MAX_EPOCHS;
-    }
-
-    function setVoter(address _voter) external auth(DELEGATION_ADMIN_ROLE) {
-        voter = _voter;
     }
 
     function setAutoDelegation(bool _enabled) external {
@@ -142,7 +132,7 @@ contract EscrowIVotesAdapter is
 
         _checkpoint(totalBias, totalSlope, delegatee);
 
-        ISimpleGaugeVoter(voter).updateVotingPower(sender, delegatee);
+        IVotingEscrow(escrow).updateVotingPower(sender, delegatee);
 
         emit TokensDelegated(sender, delegatee, _tokenIds);
     }
@@ -182,7 +172,7 @@ contract EscrowIVotesAdapter is
 
         _checkpoint(totalBias, totalSlope, delegatee);
 
-        ISimpleGaugeVoter(voter).updateVotingPower(sender, delegatee);
+        IVotingEscrow(escrow).updateVotingPower(sender, delegatee);
 
         emit TokensUndelegated(sender, delegatee, _tokenIds);
     }
@@ -217,7 +207,7 @@ contract EscrowIVotesAdapter is
             tokenIsDelegated[_tokenId] = true;
             numberOfDelegatedTokens[_to]++;
 
-            ISimpleGaugeVoter(voter).updateVotingPower(fromDelegatee, toDelegatee);
+            IVotingEscrow(escrow).updateVotingPower(fromDelegatee, toDelegatee);
 
             return;
         }
@@ -240,7 +230,7 @@ contract EscrowIVotesAdapter is
             tokenIsDelegated[_tokenId] = true;
         }
 
-        ISimpleGaugeVoter(voter).updateVotingPower(fromDelegatee, toDelegatee);
+        IVotingEscrow(escrow).updateVotingPower(fromDelegatee, toDelegatee);
     }
 
     /*//////////////////////////////////////////////////////////////
