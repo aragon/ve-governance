@@ -5,7 +5,7 @@ import {IGaugeVote} from "../../versions.sol";
 import {Base} from "./Base.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 
-contract TestVotingWithDelegation_great is Base {
+contract TestVotingWithDelegation is Base {
     address gauge = address(0x777);
 
     function setUp() public override {
@@ -95,7 +95,7 @@ contract TestVotingWithDelegation_great is Base {
         assertEq(voter.votes(alice, gauge), total);
     }
 
-    function test_Vote_And_Transfer_Delegated_Tokens_ahahaha() public {
+    function test_Vote_And_Transfer_Delegated_Tokens() public {
         address tokenOwner = address(567);
         address tokenReceiver = address(678);
 
