@@ -10,23 +10,7 @@ import {MockERC20} from "@mocks/MockERC20.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
-import {
-    Clock,
-    IClock,
-    Lock,
-    VotingEscrow,
-    LinearIncreasingEscrow,
-    IVotingEscrowIncreasing,
-    IEscrowCurveIncreasing,
-    IVotingEscrowIncreasing,
-    IVotingEscrowCoreErrors,
-    IMerge,
-    ISplit,
-    ILockedBalanceIncreasing,
-    IEscrowCurveGlobalStorage,
-    IEscrowCurveTokenStorage,
-    IEscrowCurveGlobalStorage
-} from "../../versions.sol";
+import {Clock, IClock, Lock, VotingEscrow, LinearIncreasingEscrow, IVotingEscrowIncreasing, IEscrowCurveIncreasing, IVotingEscrowIncreasing, IVotingEscrowCoreErrors, IMerge, ISplit, ILockedBalanceIncreasing, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage} from "../../versions.sol";
 
 contract TestCreateLock_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage, EscrowBase {
     function setUp() public override {
@@ -55,6 +39,13 @@ contract TestCreateLock_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalSt
             currentTs
         );
 
+        assertGlobalPoint(
+            1,
+            biasFP(Lock_1_Amount, currentTs - weekStartTs),
+            slopeFP(Lock_1_Amount),
+            currentTs
+        );
+
         // 3
         assertEq(slopeChanges(weekStartTs + maxTime), slopeFP(Lock_1_Amount));
     }
@@ -76,6 +67,13 @@ contract TestCreateLock_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalSt
 
         assertTokenPoint(1, 1, token1BiasFP, slopeFP(Lock_1_Amount), weekStartTs, currentTs);
         assertTokenPoint(2, 1, token2BiasFP, slopeFP(Lock_2_Amount), weekStartTs, currentTs);
+
+        assertGlobalPoint(
+            1,
+            token1BiasFP + token2BiasFP,
+            slopeFP(Lock_1_Amount) + slopeFP(Lock_2_Amount),
+            currentTs
+        );
 
         // 4
         assertEq(
@@ -103,6 +101,15 @@ contract TestCreateLock_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalSt
 
         assertTokenPoint(1, 1, token1BiasFP, slopeFP(Lock_1_Amount), Lock_1_start, Lock_1_ts);
         assertTokenPoint(2, 1, token2BiasFP, slopeFP(Lock_2_Amount), weekStartTs, currentTs);
+
+        // epoch is 3 because there's a week between the locks
+        // which must be updated upon 2nd lock's insert.
+        assertGlobalPoint(
+            3,
+            biasFP(Lock_1_Amount, currentTs - Lock_1_start) + token2BiasFP,
+            slopeFP(Lock_1_Amount) + slopeFP(Lock_2_Amount),
+            currentTs
+        );
 
         // 4
         assertEq(slopeChanges(Lock_1_start + maxTime), slopeFP(Lock_1_Amount));
@@ -132,6 +139,17 @@ contract TestCreateLock_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalSt
 
         assertTokenPoint(1, 1, token1BiasFP, slopeFP(Lock_1_Amount), Lock_1_start, Lock_1_ts);
         assertTokenPoint(2, 1, token2BiasFP, slopeFP(Lock_2_Amount), weekStartTs, currentTs);
+
+        // 2, 3
+        // lastIndex is `howManyWeeksBetween + 2`. We add 2 because the first lock and last lock.
+        // Calculate how many weeks between our locks + 2 as last lock's record and new lock's record.
+        uint256 lastIndex = (currentTime - Lock_1_start) / checkpointInterval + 2;
+        assertGlobalPoint(
+            lastIndex,
+            biasFP(Lock_1_Amount, Lock_1_end - Lock_1_start) + token2BiasFP,
+            slopeFP(Lock_2_Amount),
+            currentTs
+        );
 
         // 4
         assertEq(slopeChanges(Lock_1_end), slopeFP(Lock_1_Amount));

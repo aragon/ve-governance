@@ -185,12 +185,9 @@ contract TestGaugeManage is GaugeVotingBase {
         uint256[] memory tokenIds;
 
         vm.expectRevert(err);
-        voter.vote(0, votes);
+        voter.vote(votes);
 
         vm.expectRevert(err);
-        voter.voteMultiple(tokenIds, votes);
-
-        vm.expectRevert(err);
-        voter.reset(0);
+        voter.reset();
     }
 }

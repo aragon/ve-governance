@@ -54,7 +54,11 @@ import {
 import {Upgrades} from "@foundry-upgrades/LegacyUpgrades.sol";
 import {Options} from "@foundry-upgrades/Options.sol";
 
-import {CachedView, CachedViewArguments, fetchState} from "./CurveHelper.sol";
+import {
+    CachedViewCurve as CachedView,
+    CachedViewArgumentsCurve as CachedViewArguments,
+    fetchStateCurve as fetchState
+} from "./CurveHelper.sol";
 
 contract RegressionV1_0_0__to__V1_3_0 is Test, IGaugeVote {
     GaugesDaoFactoryV1_0_0 factory;

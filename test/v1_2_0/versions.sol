@@ -47,7 +47,10 @@ import {
     IMergeEventsAndErrors,
     ISplitEventsAndErrors
 } from "@escrow/IVotingEscrowIncreasing_v1_2_0.sol";
-import {IGaugeVote, ISimpleGaugeVoterStorageEventsErrors} from "@voting/ISimpleGaugeVoter.sol";
+import {
+    IAddressGaugeVote as IGaugeVote,
+    IAddressGaugeVoterStorageEventsErrors as ISimpleGaugeVoterStorageEventsErrors
+} from "@voting/IAddressGaugeVoter.sol";
 import {
     IEscrowIVotesAdapterStorage,
     IEscrowIVotesAdapterErrorsAndEvents

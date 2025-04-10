@@ -10,23 +10,7 @@ import {MockERC20} from "@mocks/MockERC20.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
-import {
-    Clock,
-    IClock,
-    Lock,
-    VotingEscrow,
-    LinearIncreasingEscrow,
-    IVotingEscrowIncreasing,
-    IEscrowCurveIncreasing,
-    IVotingEscrowIncreasing,
-    IVotingEscrowCoreErrors,
-    IMerge,
-    ISplit,
-    ILockedBalanceIncreasing,
-    IEscrowCurveGlobalStorage,
-    IEscrowCurveTokenStorage,
-    IEscrowCurveGlobalStorage
-} from "../../versions.sol";
+import {Clock, IClock, Lock, VotingEscrow, LinearIncreasingEscrow, IVotingEscrowIncreasing, IEscrowCurveIncreasing, IVotingEscrowIncreasing, IVotingEscrowCoreErrors, IMerge, ISplit, ILockedBalanceIncreasing, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage} from "../../versions.sol";
 
 contract TestSplit_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage, EscrowBase {
     function setUp() public override {
@@ -73,6 +57,14 @@ contract TestSplit_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage
 
         assertTokenPoint(3, 1, biasFP(value, elapsed), slope2, weekStartTs, block.timestamp);
 
+        // 3
+        assertGlobalPoint(
+            3,
+            biasFP(Lock_1_Amount, elapsed),
+            slopeFP(Lock_1_Amount),
+            block.timestamp
+        );
+
         // 4
         assertEq(slopeChanges(endTs), slope1 + slope2);
     }
@@ -115,6 +107,10 @@ contract TestSplit_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage
             weekStartTs,
             block.timestamp
         );
+
+        // 3
+        uint256 lastIndex = (block.timestamp - Lock_1_start) / checkpointInterval + 2;
+        assertGlobalPoint(lastIndex, biasFP(Lock_1_Amount, elapsed), 0, block.timestamp);
 
         // 4
         assertEq(slopeChanges(endTs), slopeFP(Lock_1_Amount));

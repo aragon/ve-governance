@@ -3,7 +3,7 @@ pragma solidity ^0.8.17;
 
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {IClockUser, IClockV1_2_0 as IClock} from "@clock/IClock_v1_2_0.sol";
-import {IAddressGaugeVoter} from "./IAddressGaugeVoter_v1_2_0.sol";
+import {IAddressGaugeVoter} from "./IAddressGaugeVoter.sol";
 
 import {
     ReentrancyGuardUpgradeable as ReentrancyGuard

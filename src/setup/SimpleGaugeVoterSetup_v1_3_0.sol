@@ -13,7 +13,7 @@ import {ProxyLib} from "@libs/ProxyLib.sol";
 import {PermissionLib} from "@aragon/osx/core/permission/PermissionLib.sol";
 import {PluginSetup} from "@aragon/osx/framework/plugin/setup/PluginSetup.sol";
 
-import {SimpleGaugeVoterV1_2_0 as SimpleGaugeVoter} from "@voting/SimpleGaugeVoter_v1_2_0.sol";
+import {AddressGaugeVoter as SimpleGaugeVoter} from "@voting/AddressGaugeVoter.sol";
 import {VotingEscrowV1_2_0 as VotingEscrow} from "@escrow/VotingEscrowIncreasing_v1_2_0.sol";
 import {ExitQueue} from "@queue/ExitQueue.sol";
 import {LinearIncreasingCurve as Curve} from "@curve/LinearIncreasingCurve.sol";
@@ -131,7 +131,10 @@ contract SimpleGaugeVoterSetupV1_3_0 is PluginSetup {
 
         // deploy the escrow locker
         deps.escrow = escrowBase.deployUUPSProxy(
-            abi.encodeCall(VotingEscrow.initialize, (params.token, _dao, deps.clock, params.minDeposit))
+            abi.encodeCall(
+                VotingEscrow.initialize,
+                (params.token, _dao, deps.clock, params.minDeposit)
+            )
         );
 
         deps.ivotesAdapter = ivotesAdapterBase.deployUUPSProxy(

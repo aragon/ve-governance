@@ -10,23 +10,7 @@ import {MockERC20} from "@mocks/MockERC20.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
-import {
-    Clock,
-    IClock,
-    Lock,
-    VotingEscrow,
-    LinearIncreasingEscrow,
-    IVotingEscrowIncreasing,
-    IEscrowCurveIncreasing,
-    IVotingEscrowIncreasing,
-    IVotingEscrowCoreErrors,
-    IMerge,
-    ISplit,
-    ILockedBalanceIncreasing,
-    IEscrowCurveGlobalStorage,
-    IEscrowCurveTokenStorage,
-    IEscrowCurveGlobalStorage
-} from "../../versions.sol";
+import {Clock, IClock, Lock, VotingEscrow, LinearIncreasingEscrow, IVotingEscrowIncreasing, IEscrowCurveIncreasing, IVotingEscrowIncreasing, IVotingEscrowCoreErrors, IMerge, ISplit, ILockedBalanceIncreasing, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage} from "../../versions.sol";
 
 contract TestMerge_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage, EscrowBase {
     function setUp() public override {
@@ -71,6 +55,9 @@ contract TestMerge_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage
             currentTs
         );
 
+        // 3
+        assertGlobalPoint(1, currentTotalBiasFP, totalSlopeFP, currentTs);
+
         // 4
         assertEq(slopeChanges(weekStartTs + maxTime), totalSlopeFP);
     }
@@ -105,6 +92,10 @@ contract TestMerge_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage
         int256 totalSlopeFP = slopeFP(Lock_1_Amount + Lock_2_Amount);
 
         assertTokenPoint(to, 2, currentTotalBiasFP, totalSlopeFP, weekStartTs, currentTs);
+
+        // 3
+        uint256 lastIndex = (currentTs - Lock_1_start) / checkpointInterval + 2;
+        assertGlobalPoint(lastIndex, currentTotalBiasFP, 0, currentTs);
 
         // 4
         assertEq(slopeChanges(end), totalSlopeFP);
@@ -155,6 +146,10 @@ contract TestMerge_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage
             toLockWeekStart,
             currentTs
         );
+
+        // 3
+        uint256 lastIndex = (currentTs - Lock_1_start) / checkpointInterval + 3;
+        assertGlobalPoint(lastIndex, currentTotalBiasFP, 0, currentTs);
 
         // 4
         assertEq(slopeChanges(fromLockEnd), slopeFP(Lock_1_Amount));

@@ -1,7 +1,14 @@
 /// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {IGaugeManager, IGauge, IGaugeVoterErrors} from "./ISimpleGaugeVoter.sol";
+import {
+    IGaugeManager,
+    IGauge,
+    IGaugeVoterEvents,
+    IGaugeVoterErrors,
+    IGaugeManagerEvents,
+    IGaugeManagerErrors
+} from "./ISimpleGaugeVoter.sol";
 
 interface IAddressGaugeVote {
     /// @param votes gauge => votes cast at that time
@@ -56,14 +63,24 @@ interface IAddressGaugeVoterEvents {
     );
 }
 
-interface IAddressGaugeVoterErrors is IGaugeVoterErrors {
+interface IAddressGaugeVoterErrors {
+    error VotingInactive();
+    error NotApprovedOrOwner();
+    error GaugeDoesNotExist(address _pool);
+    error GaugeInactive(address _gauge);
+    error DoubleVote();
+    error NoVotes();
+    error NoVotingPower();
+    error NotCurrentlyVoting();
+    error OnlyIVotesAdapter();
+    error UpdateVotingPowerHookNotEnabled();
     error AlreadyVoted(address _address);
 }
 
-interface IAddresssGaugeVoter is
-    IAddresssGaugeVoterEvents,
-    IAddresssGaugeVoterErrors,
-    IAddresssGaugeVote,
+interface IAddressGaugeVoter is
+    IAddressGaugeVoterEvents,
+    IAddressGaugeVoterErrors,
+    IAddressGaugeVote,
     IGaugeManager,
     IGauge
 {
@@ -87,6 +104,6 @@ interface IAddresssGaugeVoter is
 interface IAddressGaugeVoterStorageEventsErrors is
     IGaugeManagerEvents,
     IGaugeManagerErrors,
-    IGaugeVoterEvents,
-    IGaugeVoterErrors
+    IAddressGaugeVoterEvents,
+    IAddressGaugeVoterErrors
 {}
