@@ -56,43 +56,63 @@ contract SimpleGaugeVoterSetupV1_2_0 is PluginSetup {
     /// @param length The array length of passed helpers.
     error WrongHelpersArrayLength(uint256 length);
 
-    /// @dev implementation of the gaugevoting plugin
-    address voterBase;
+    /// @dev implementation of the gaugevoting plugin or proxy
+    address voterAddress;
 
-    /// @dev implementation of the escrow voting curve
-    address curveBase;
+    /// @dev implementation of the escrow voting curve or proxy
+    address curveAddress;
 
-    /// @dev implementation of the exit queue
-    address queueBase;
+    /// @dev implementation of the exit queue or proxy
+    address queueAddress;
 
-    /// @dev implementation of the escrow locker
-    address escrowBase;
+    /// @dev implementation of the escrow locker or proxy
+    address escrowAddress;
 
-    /// @dev implementation of the clock
-    address clockBase;
+    /// @dev implementation of the clock or proxy
+    address clockAddress;
 
-    /// @dev implementation of the escrow NFT
-    address nftBase;
+    /// @dev implementation of the escrow NFT or proxy
+    address nftAddress;
+
+    /// @dev whether the address is a proxy or not
+    bool isVoterProxy;
+    bool isCurveProxy;
+    bool isQueueProxy;
+    bool isEscrowProxy;
+    bool isClockProxy;
+    bool isNftProxy;
 
     /// @notice Deploys the setup by binding the implementation contracts required during installation.
     constructor(
-        address _voterBase,
-        address _curveBase,
-        address _queueBase,
-        address _escrowBase,
-        address _clockBase,
-        address _nftBase
+        address _voterAddress,
+        bool _isVoterProxy,
+        address _curveAddress,
+        bool _isCurveProxy,
+        address _queueAddress,
+        bool _isQueueProxy,
+        address _escrowAddress,
+        bool _isEscrowProxy,
+        address _clockAddress,
+        bool _isClockProxy,
+        address _nftAddress,
+        bool _isNftProxy
     ) PluginSetup() {
-        voterBase = _voterBase;
-        curveBase = _curveBase;
-        queueBase = _queueBase;
-        escrowBase = _escrowBase;
-        clockBase = _clockBase;
-        nftBase = _nftBase;
+        voterAddress = _voterAddress;
+        isVoterProxy = _isVoterProxy;
+        curveAddress = _curveAddress;
+        isCurveProxy = _isCurveProxy;
+        queueAddress = _queueAddress;
+        isQueueProxy = _isQueueProxy;
+        escrowAddress = _escrowAddress;
+        isEscrowProxy = _isEscrowProxy;
+        clockAddress = _clockAddress;
+        isClockProxy = _isClockProxy;
+        nftAddress = _nftAddress;
+        isNftProxy = _isNftProxy;
     }
 
     function implementation() external view returns (address) {
-        return voterBase;
+        return voterAddress;
     }
 
     /// @inheritdoc IPluginSetup
@@ -105,17 +125,16 @@ contract SimpleGaugeVoterSetupV1_2_0 is PluginSetup {
             _data,
             (ISimpleGaugeVoterSetupParams)
         );
-
         // deploy the clock
-        address clock = address(
+        address clock = isClockProxy ? clockAddress : address(
             Clock(
-                clockBase.deployUUPSProxy(abi.encodeWithSelector(Clock.initialize.selector, _dao))
+                clockAddress.deployUUPSProxy(abi.encodeWithSelector(Clock.initialize.selector, _dao))
             )
         );
 
         // deploy the escrow locker
-        VotingEscrow escrow = VotingEscrow(
-            escrowBase.deployUUPSProxy(
+        VotingEscrow escrow = isEscrowProxy ? VotingEscrow(escrowAddress) : VotingEscrow(
+            escrowAddress.deployUUPSProxy(
                 abi.encodeCall(
                     VotingEscrow.initialize,
                     (params.token, _dao, clock, params.minDeposit)
@@ -124,8 +143,8 @@ contract SimpleGaugeVoterSetupV1_2_0 is PluginSetup {
         );
 
         // deploy the voting contract (plugin)
-        SimpleGaugeVoter voter = SimpleGaugeVoter(
-            voterBase.deployUUPSProxy(
+        SimpleGaugeVoter voter = isVoterProxy ? SimpleGaugeVoter(voterAddress) : SimpleGaugeVoter(
+            voterAddress.deployUUPSProxy(
                 abi.encodeCall(
                     SimpleGaugeVoter.initialize,
                     (_dao, address(escrow), params.isPaused, clock)
@@ -135,26 +154,38 @@ contract SimpleGaugeVoterSetupV1_2_0 is PluginSetup {
         plugin = address(voter);
 
         // deploy the curve
-        address curve = curveBase.deployUUPSProxy(
-            abi.encodeCall(
-                QuadraticIncreasingEscrow.initialize,
-                (address(escrow), _dao, params.warmup, clock)
+        address curve = isCurveProxy ? curveAddress : address(
+            QuadraticIncreasingEscrow(
+            curveAddress.deployUUPSProxy(
+                abi.encodeCall(
+                    QuadraticIncreasingEscrow.initialize,
+                    (address(escrow), _dao, params.warmup, clock)
+                )
+            )
             )
         );
 
         // deploy the exit queue
-        address exitQueue = queueBase.deployUUPSProxy(
-            abi.encodeCall(
-                ExitQueue.initialize,
-                (address(escrow), params.cooldown, _dao, params.feePercent, clock, params.minLock)
+        address exitQueue = isQueueProxy ? queueAddress : address(
+            ExitQueue(
+            queueAddress.deployUUPSProxy(
+                abi.encodeCall(
+                    ExitQueue.initialize,
+                    (address(escrow), params.cooldown, _dao, params.feePercent, clock, params.minLock)
+                )
+            )
             )
         );
 
         // deploy the escrow NFT
-        address nftLock = nftBase.deployUUPSProxy(
-            abi.encodeCall(
-                Lock.initialize,
-                (address(escrow), params.veTokenName, params.veTokenSymbol, _dao)
+        address nftLock = isNftProxy ? nftAddress : address(
+            Lock(
+            nftAddress.deployUUPSProxy(
+                abi.encodeCall(
+                    Lock.initialize,
+                    (address(escrow), params.veTokenName, params.veTokenSymbol, _dao)
+                )
+            )
             )
         );
 

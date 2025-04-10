@@ -161,7 +161,6 @@ contract TestGaugeTime is GaugeVotingBase {
         assertEq(seasonStart, 2 weeks);
         assertEq(seasonEnd, 0);
 
-        // +1 week: next season starts
         vm.warp(block.timestamp + 1 weeks);
 
         clock.newSeason();

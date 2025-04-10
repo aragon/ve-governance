@@ -112,11 +112,17 @@ contract GaugeVotingBase is
         // deploy setup
         voterSetup = new SimpleGaugeVoterSetup(
             voterBase,
+            false,
             address(new QuadraticIncreasingEscrow()),
+            false,
             address(new ExitQueue()),
+            false,
             address(new VotingEscrow()),
+            false,
             address(new Clock()),
-            address(new Lock())
+            false,
+            address(new Lock()),
+            false
         );
 
         // push to the PSP

@@ -12,23 +12,45 @@ import {PluginSetupProcessor} from "@aragon/osx/framework/plugin/setup/PluginSet
 import {PluginRepoFactory} from "@aragon/osx/framework/plugin/repo/PluginRepoFactory.sol";
 import {PluginRepoRegistry} from "@aragon/osx/framework/plugin/repo/PluginRepoRegistry.sol";
 import {PluginRepo} from "@aragon/osx/framework/plugin/repo/PluginRepo.sol";
+import {createERC1967Proxy} from "@aragon/osx/utils/Proxy.sol";
+import {ENSSubdomainRegistrar} from "@aragon/osx/framework/utils/ens/ENSSubdomainRegistrar.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {Addresslist} from "@aragon/osx/plugins/utils/Addresslist.sol";
+import {IPluginSetup} from "@aragon/osx/framework/plugin/setup/IPluginSetup.sol";
 import {Multisig, MultisigSetup as MultisigPluginSetup} from "@aragon/osx/plugins/governance/multisig/MultisigSetup.sol";
+import {hashHelpers, PluginSetupRef} from "@aragon/osx/framework/plugin/setup/PluginSetupProcessorHelpers.sol";
 
 import {SimpleGaugeVoterSetup, IGaugeVote, VotingEscrow, Clock, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, GaugesDaoFactory as GaugesDaoFactoryV1_1_0, Deployment, DeploymentParameters, TokenParameters, GaugePluginSet} from "test/v1_1_0/versions.sol";
 import {
+    ISimpleGaugeVoterSetupParams as ISimpleGaugeVoterSetupParamsV1_2_0,
+    SimpleGaugeVoterSetup as SimpleGaugeVoterSetupV1_2_0,
     SimpleGaugeVoter as SimpleGaugeVoterV1_2_0,
     Clock as ClockV1_2_0,
     QuadraticIncreasingEscrow as QuadraticIncreasingEscrowV1_2_0
 } from "test/v1_2_0/versions.sol";
 
+import {UpgradeGaugesFactoryV1_2_0} from "src/factory/UpgradeGaugesFactory_v1_2_0.sol";
+
+import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
+import {Address} from "@openzeppelin/contracts/utils/Address.sol";
+import {ERC165Checker} from "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
+import {ProxyLib} from "@libs/ProxyLib.sol";
+
 import {Upgrades} from "@foundry-upgrades/LegacyUpgrades.sol";
 import {Options} from "@foundry-upgrades/Options.sol";
 
 contract RegressionV1_1_0__to__V1_2_0 is Test, IGaugeVote {
+    using Address for address;
+    using Clones for address;
+    using ERC165Checker for address;
+    using ProxyLib for address;
+
     GaugesDaoFactoryV1_1_0 factory;
+    UpgradeGaugesFactoryV1_2_0 upgradeFactory;
+
+    GaugePluginSet[] oldPluginSets;
+    GaugePluginSet[] pluginSets;
 
     SimpleGaugeVoterV1_2_0 voterV1_2_0;
 
@@ -38,9 +60,13 @@ contract RegressionV1_1_0__to__V1_2_0 is Test, IGaugeVote {
     Lock lock;
     ExitQueue queue;
     QuadraticIncreasingEscrow curve;
+
     DAO dao;
     Multisig multisig;
     MockERC20 token;
+
+    PluginRepoFactory pluginRepoFactory;
+    MockPluginSetupProcessor pluginSetupProcessor;
 
     uint aliceToken;
     uint bobToken;
@@ -58,7 +84,20 @@ contract RegressionV1_1_0__to__V1_2_0 is Test, IGaugeVote {
         vm.roll(1);
 
         factory = _deployViaFactory();
+        DeploymentParameters memory parameters = factory.getDeploymentParameters();
         Deployment memory deployment = factory.getDeployment();
+
+        for (uint i = 0; i < deployment.gaugeVoterPluginSets.length; i++) {
+            oldPluginSets.push(deployment.gaugeVoterPluginSets[i]);
+        }
+
+        upgradeFactory = new UpgradeGaugesFactoryV1_2_0(factory);
+        Deployment memory upgradeDeployment = upgradeFactory.getDeployment();
+
+        for (uint i = 0; i < upgradeDeployment.gaugeVoterPluginSets.length; i++) {
+            pluginSets.push(upgradeDeployment.gaugeVoterPluginSets[i]);
+        }
+
         GaugePluginSet memory pluginSet = deployment.gaugeVoterPluginSets[0];
 
         // deconstruct the plugin set
@@ -68,8 +107,12 @@ contract RegressionV1_1_0__to__V1_2_0 is Test, IGaugeVote {
         lock = Lock(pluginSet.nftLock);
         queue = ExitQueue(pluginSet.exitQueue);
         curve = QuadraticIncreasingEscrow(pluginSet.curve);
+
         dao = DAO(deployment.dao);
         multisig = Multisig(deployment.multisigPlugin);
+
+        pluginRepoFactory = PluginRepoFactory(parameters.pluginRepoFactory);
+        pluginSetupProcessor = MockPluginSetupProcessor(address(parameters.pluginSetupProcessor));
         token = MockERC20(escrow.token());
 
         // setup gauge and unpause the voter
@@ -168,17 +211,26 @@ contract RegressionV1_1_0__to__V1_2_0 is Test, IGaugeVote {
         // upgrade the contracts
         vm.startPrank(address(dao));
         {
-            // unsafe upgrade
-            // lock.upgradeTo(address(lockV1_2_0));
-            // voter.upgradeTo(address(voterV1_2_0));
-
             // safe upgrade
             _safeUpgradeContracts();
         }
         vm.stopPrank();
 
+        // setup gauge and unpause the voter
+        vm.startPrank(address(dao));
+        {
+            voterV1_2_0.createGauge(gauge, "metadata");
+        }
+        vm.stopPrank();
+
         // retest the initial state
         testInitialState();
+
+        assertFalse(voterV1_2_0.isVoting(aliceToken));
+        assertFalse(voterV1_2_0.isVoting(bobToken));
+        assertFalse(voterV1_2_0.isVoting(carolToken));
+        assertFalse(voterV1_2_0.isVoting(davidToken));
+        assertEq(voterV1_2_0.seasonTotalVotingPowerCast(0), 0);
 
         // attempt to move through life cycle again
         // create new token for alice
@@ -199,7 +251,7 @@ contract RegressionV1_1_0__to__V1_2_0 is Test, IGaugeVote {
         vm.startPrank(BOB_ADDRESS);
         {
             lock.approve(address(escrow), bobToken);
-            escrow.resetVotesAndBeginWithdrawal(bobToken);
+            escrow.beginWithdrawal(bobToken);
         }
         vm.stopPrank();
 
@@ -233,6 +285,8 @@ contract RegressionV1_1_0__to__V1_2_0 is Test, IGaugeVote {
         // david is locked and can exit
         assertEq(escrow.locked(davidToken).amount, 1_000 ether);
         assertTrue(queue.canExit(davidToken));
+
+        assertEq(voterV1_2_0.seasonTotalVotingPowerCast(0), aliceVPSnapshot);
     }
 
     ////////////////////////////////////////////////
@@ -240,29 +294,36 @@ contract RegressionV1_1_0__to__V1_2_0 is Test, IGaugeVote {
     ////////////////////////////////////////////////
 
     function _safeUpgradeContracts() internal {
-        Options memory options;
-        string[] memory exclude = new string[](1);
-        // disable initializers is invoked but the custom unsafe allow option is not set in the natspec
-        exclude[0] = "lib/osx/packages/contracts/src/core/plugin/PluginUUPSUpgradeable.sol";
-        options.exclude = exclude;
 
-        voterV1_2_0 = new SimpleGaugeVoterV1_2_0();
+        bytes32 rootPermissionID = dao.ROOT_PERMISSION_ID();
 
-        options.referenceContract = "Clock.sol";
-        Upgrades.upgradeProxy(
-            address(clock),
-            "Clock_v1_2_0.sol:ClockV1_2_0",
-            "",
-            options
-        );
+        dao.grant(address(dao), address(upgradeFactory), rootPermissionID);
+        dao.grant(address(clock), address(upgradeFactory), clock.CLOCK_ADMIN_ROLE());
+        dao.grant(address(curve), address(upgradeFactory), curve.CURVE_ADMIN_ROLE());
 
-        options.referenceContract = "QuadraticIncreasingEscrow.sol";
-        Upgrades.upgradeProxy(
-            address(curve),
-            "QuadraticIncreasingEscrow_v1_2_0.sol:QuadraticIncreasingEscrowV1_2_0",
-            "",
-            options
-        );
+        Deployment memory deployment = factory.getDeployment();
+
+        for(uint i = 0; i < deployment.gaugeVoterPluginSets.length; i++) {
+            GaugePluginSet memory pluginSet = deployment.gaugeVoterPluginSets[i];
+            dao.grant(address(pluginSet.clock), address(upgradeFactory), clock.CLOCK_ADMIN_ROLE());
+            dao.grant(address(pluginSet.curve), address(upgradeFactory), curve.CURVE_ADMIN_ROLE());
+        }
+
+        upgradeFactory.upgrade();
+
+        for(uint i = 0; i < deployment.gaugeVoterPluginSets.length; i++) {
+            GaugePluginSet memory pluginSet = deployment.gaugeVoterPluginSets[i];
+            dao.revoke(address(pluginSet.curve), address(upgradeFactory), curve.CURVE_ADMIN_ROLE());
+            dao.revoke(address(pluginSet.clock), address(upgradeFactory), clock.CLOCK_ADMIN_ROLE());
+        }
+
+        dao.revoke(address(curve), address(upgradeFactory), curve.CURVE_ADMIN_ROLE());
+        dao.revoke(address(clock), address(upgradeFactory), clock.CLOCK_ADMIN_ROLE());
+        dao.revoke(address(dao), address(upgradeFactory), rootPermissionID);
+
+        voterV1_2_0 = SimpleGaugeVoterV1_2_0(escrow.voter());
+
+        assertNotEq(address(voterV1_2_0), address(voter));
     }
 
     function _deployViaFactory() internal returns (GaugesDaoFactoryV1_1_0) {
@@ -271,20 +332,38 @@ contract RegressionV1_1_0__to__V1_2_0 is Test, IGaugeVote {
             multisigMembers[i] = address(uint160(i + 5));
         }
 
-        PluginRepoFactory pRefoFactory = new PluginRepoFactory(
-            PluginRepoRegistry(address(new MockPluginRepoRegistry()))
+        MockPluginRepoRegistry registryBase = new MockPluginRepoRegistry();
+        PluginRepoRegistry registry = PluginRepoRegistry(
+            address(
+                MockPluginRepoRegistry(
+                    createERC1967Proxy(
+                        address(registryBase),
+                        abi.encodeWithSelector(MockPluginRepoRegistry.initialize.selector, dao)
+                    )
+                )
+            )
         );
+
+        PluginRepoFactory pRefoFactory = new PluginRepoFactory(registry);
+        PluginSetupProcessor psp = new PluginSetupProcessor(registry);
+        MockDAOFactory daoFactory = new MockDAOFactory(MockPluginSetupProcessor(address(psp)));
 
         // Publish repo
         MultisigPluginSetup multisigPluginSetup = new MultisigPluginSetup();
-        PluginRepo multisigPluginRepo = PluginRepoFactory(pRefoFactory)
-            .createPluginRepoWithFirstVersion(
-                "multisig-subdomain",
-                address(multisigPluginSetup),
-                address(this),
-                " ",
-                " "
-            );
+
+        PluginRepo multisigPluginRepo;
+        vm.startPrank(address(dao));
+        {
+            multisigPluginRepo = pRefoFactory
+                .createPluginRepoWithFirstVersion(
+                    "multisig-subdomain",
+                    address(multisigPluginSetup),
+                    address(this),
+                    " ",
+                    " "
+                );
+        }
+        vm.stopPrank();
 
         SimpleGaugeVoterSetup gaugeVoterPluginSetup = new SimpleGaugeVoterSetup(
             address(new SimpleGaugeVoter()),
@@ -307,18 +386,6 @@ contract RegressionV1_1_0__to__V1_2_0 is Test, IGaugeVote {
             veTokenSymbol: "TK2"
         });
 
-        // PSP with voter plugin setup and multisig
-        MockPluginSetupProcessorMulti psp;
-        {
-            address[] memory pluginSetups = new address[](3);
-            pluginSetups[0] = address(gaugeVoterPluginSetup); // Token 1
-            pluginSetups[1] = address(gaugeVoterPluginSetup); // Token 2
-            pluginSetups[2] = address(multisigPluginSetup);
-
-            psp = new MockPluginSetupProcessorMulti(pluginSetups);
-        }
-        MockDAOFactory daoFactory = new MockDAOFactory(MockPluginSetupProcessor(address(psp)));
-
         DeploymentParameters memory creationParams = DeploymentParameters({
             // Multisig settings
             minApprovals: 2,
@@ -334,13 +401,13 @@ contract RegressionV1_1_0__to__V1_2_0 is Test, IGaugeVote {
             // Standard multisig repo
             multisigPluginRepo: multisigPluginRepo,
             multisigPluginRelease: 1,
-            multisigPluginBuild: 2,
+            multisigPluginBuild: 1,
             // Voter plugin setup and ENS
             voterPluginSetup: gaugeVoterPluginSetup,
             voterEnsSubdomain: "gauge-ens-subdomain",
             // OSx addresses
             osxDaoFactory: address(daoFactory),
-            pluginSetupProcessor: PluginSetupProcessor(address(psp)),
+            pluginSetupProcessor: psp,
             pluginRepoFactory: pRefoFactory
         });
 
