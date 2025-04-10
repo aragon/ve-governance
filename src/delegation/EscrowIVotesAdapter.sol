@@ -47,10 +47,20 @@ contract EscrowIVotesAdapter is
     /// @notice Voter contract
     address public voter;
 
+    struct Delegation {
+        address delegatee;
+        uint256 timestamp;
+    }
+
     mapping(address => mapping(uint256 => int256)) internal slopeChanges;
     mapping(address => mapping(uint256 => GlobalPoint)) internal pointHistory;
-    mapping(address => address) private delegatees_;
     mapping(address => uint256) public latestPointIndex;
+
+    mapping(address => mapping(uint256 => int256)) internal selfSlopeChanges;
+    mapping(address => mapping(uint256 => GlobalPoint)) internal selfPointHistory;
+    mapping(address => uint256) public selfLatestPointIndex;
+
+    mapping(address => Delegation[]) private delegateesHistory;
 
     mapping(uint256 => bool) public tokenIsDelegated;
     mapping(address => uint) public numberOfDelegatedTokens;
@@ -97,7 +107,9 @@ contract EscrowIVotesAdapter is
 
         address oldDelegatee = delegates(sender);
 
-        delegatees_[sender] = _delegatee;
+        delegateesHistory[sender].push(
+            Delegation({delegatee: _delegatee, timestamp: block.timestamp})
+        );
 
         if (autoDelegationEnabled[sender]) {
             uint256[] memory tokenIds = VotingEscrow(escrow).ownedTokens(sender);
@@ -118,6 +130,9 @@ contract EscrowIVotesAdapter is
         int256 totalBias;
         int256 totalSlope;
 
+        int256 selfBias;
+        int256 selfSlope;
+
         for (uint256 i = 0; i < _tokenIds.length; i++) {
             uint256 tokenId = _tokenIds[i];
 
@@ -134,13 +149,20 @@ contract EscrowIVotesAdapter is
             IVotingEscrow.LockedBalance memory locked = IVotingEscrow(escrow).locked(tokenId);
             (int256 bias, int256 slope) = _getBiasAndSlope(delegatee, locked, _positive);
 
+            (int256 selfBias_, int256 selfSlope_) = _getSelfBiasAndSlope(sender, locked, _positive);
+
             totalBias += bias;
             totalSlope += slope;
+
+            selfBias += selfBias_;
+            selfSlope += selfSlope_;
         }
 
         numberOfDelegatedTokens[sender] += _tokenIds.length;
 
         _checkpoint(totalBias, totalSlope, delegatee);
+
+        _selfCheckpoint(selfBias, selfSlope, sender);
 
         ISimpleGaugeVoter(voter).updateVotingPower(sender, delegatee);
 
@@ -158,6 +180,9 @@ contract EscrowIVotesAdapter is
         int256 totalBias;
         int256 totalSlope;
 
+        int256 selfBias;
+        int256 selfSlope;
+
         for (uint256 i = 0; i < _tokenIds.length; i++) {
             uint256 tokenId = _tokenIds[i];
 
@@ -174,13 +199,20 @@ contract EscrowIVotesAdapter is
             IVotingEscrow.LockedBalance memory locked = IVotingEscrow(escrow).locked(tokenId);
             (int256 bias, int256 slope) = _getBiasAndSlope(delegatee, locked, _negative);
 
+            (int256 selfBias_, int256 selfSlope_) = _getSelfBiasAndSlope(sender, locked, _negative);
+
             totalBias += bias;
             totalSlope += slope;
+
+            selfBias += selfBias_;
+            selfSlope += selfSlope_;
         }
 
         numberOfDelegatedTokens[sender] -= _tokenIds.length;
 
         _checkpoint(totalBias, totalSlope, delegatee);
+
+        _selfCheckpoint(selfBias, selfSlope, sender);
 
         ISimpleGaugeVoter(voter).updateVotingPower(sender, delegatee);
 
@@ -214,6 +246,9 @@ contract EscrowIVotesAdapter is
             (int256 bias, int256 slope) = _getBiasAndSlope(toDelegatee, locked, _positive);
             _checkpoint(bias, slope, toDelegatee);
 
+            (bias, slope) = _getSelfBiasAndSlope(_to, locked, _positive);
+            _selfCheckpoint(bias, slope, _to);
+
             tokenIsDelegated[_tokenId] = true;
             numberOfDelegatedTokens[_to]++;
 
@@ -226,6 +261,9 @@ contract EscrowIVotesAdapter is
             (int256 bias, int256 slope) = _getBiasAndSlope(fromDelegatee, locked, _negative);
             _checkpoint(bias, slope, fromDelegatee);
 
+            (bias, slope) = _getSelfBiasAndSlope(_from, locked, _negative);
+            _selfCheckpoint(bias, slope, _from);
+
             numberOfDelegatedTokens[_from]--;
         }
 
@@ -235,6 +273,9 @@ contract EscrowIVotesAdapter is
         } else if (toDelegatee != address(0)) {
             (int256 bias, int256 slope) = _getBiasAndSlope(toDelegatee, locked, _positive);
             _checkpoint(bias, slope, toDelegatee);
+
+            (bias, slope) = _getSelfBiasAndSlope(_to, locked, _positive);
+            _selfCheckpoint(bias, slope, _to);
 
             numberOfDelegatedTokens[_to]++;
             tokenIsDelegated[_tokenId] = true;
@@ -253,6 +294,10 @@ contract EscrowIVotesAdapter is
 
     function _checkpoint(int256 _totalBias, int256 _totalSlope, address _delegatee) internal {
         _checkpoint(_totalBias, _totalSlope, _delegatee, 255);
+    }
+
+    function _selfCheckpoint(int256 _totalBias, int256 _totalSlope, address _account) internal {
+        _selfCheckpoint(_totalBias, _totalSlope, _account, 255);
     }
 
     function _checkpoint(
@@ -327,6 +372,78 @@ contract EscrowIVotesAdapter is
         pointHistory[_delegatee][latestPointIndex_] = lastPoint;
     }
 
+    function _selfCheckpoint(
+        int256 _totalBias,
+        int256 _totalSlope,
+        address _account,
+        uint256 _transitionCount
+    ) internal {
+        GlobalPoint memory lastPoint = GlobalPoint({
+            bias: 0,
+            slope: 0,
+            writtenTs: uint48(block.timestamp)
+        });
+
+        uint256 latestPointIndex_ = selfLatestPointIndex[_account];
+        if (latestPointIndex_ > 0) {
+            lastPoint = selfPointHistory[_account][latestPointIndex_];
+        }
+
+        // Get slope changes for the delegatee
+        mapping(uint256 => int256) storage slopeChanges_ = selfSlopeChanges[_account];
+
+        uint256 expectedWrittenTs;
+
+        {
+            uint256 checkpointInterval = IClock(clock).checkpointInterval();
+            uint256 lastPointCheckpoint = lastPoint.writtenTs;
+            uint256 t_i = (lastPointCheckpoint / checkpointInterval) * checkpointInterval;
+
+            // Since `_checkpoint` can be called manually due to transition,
+            // the global point's writtenTs shouldn't be block.timestamp
+            // by default, but whatever the transition's max week is.
+            expectedWrittenTs = t_i + _transitionCount * checkpointInterval;
+            if (expectedWrittenTs > block.timestamp) {
+                expectedWrittenTs = block.timestamp;
+            }
+
+            for (uint256 i = 0; i < _transitionCount; ++i) {
+                t_i += checkpointInterval;
+                int256 dSlope;
+
+                if (t_i > expectedWrittenTs) {
+                    t_i = expectedWrittenTs;
+                } else {
+                    dSlope = slopeChanges_[t_i];
+                }
+
+                lastPoint.bias += lastPoint.slope * int256(t_i - lastPointCheckpoint);
+                lastPoint.slope -= dSlope;
+
+                if (lastPoint.slope < 0) lastPoint.slope = 0;
+                if (lastPoint.bias < 0) lastPoint.bias = 0;
+
+                lastPointCheckpoint = t_i;
+
+                if (t_i == expectedWrittenTs) {
+                    break;
+                }
+            }
+        }
+
+        // totalBias and totalSlope can be negative, in which case
+        // it will subtract instead of adding.
+        lastPoint.bias += _totalBias;
+        lastPoint.slope += _totalSlope;
+        lastPoint.writtenTs = uint48(expectedWrittenTs);
+
+        if (lastPoint.slope < 0) lastPoint.slope = 0;
+        if (lastPoint.bias < 0) lastPoint.bias = 0;
+
+        selfLatestPointIndex[_account] = ++latestPointIndex_;
+        selfPointHistory[_account][latestPointIndex_] = lastPoint;
+    }
+
     /*//////////////////////////////////////////////////////////////
                       IVotes Function
     //////////////////////////////////////////////////////////////*/
@@ -344,11 +461,32 @@ contract EscrowIVotesAdapter is
     }
 
     function delegates(address _account) public view virtual returns (address) {
-        return delegatees_[_account];
+        return delegateesHistory[_account][delegateesHistory[_account].length - 1].delegatee;
     }
 
     function delegateBySig(address, uint256, uint256, uint8, bytes32, bytes32) public virtual {
         revert DelegateBySigNotSupported();
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        Getter Functions
+    //////////////////////////////////////////////////////////////*/
+
+    function getOwnedVotes(address _account) external view returns (uint256) {
+        return _delegatedBalanceAt(_account, block.timestamp);
+    }
+
+    function delegatesAt(
+        address _account,
+        uint256 timestamp
+    ) public view virtual returns (address) {
+        Delegation[] storage history = delegateesHistory[_account];
+        uint256 length = history.length;
+        if (length == 0) return address(0);
+        if (history[length - 1].timestamp <= timestamp) {
+            return history[length - 1].delegatee;
+        }
+        if (history[0].timestamp > timestamp) return address(0);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -363,6 +501,37 @@ contract EscrowIVotesAdapter is
         if (latestPointIndex_ == 0) return 0;
 
         mapping(uint256 => GlobalPoint) storage pointHistory_ = pointHistory[_delegatee];
+
+        // First check most recent balance
+        if (pointHistory_[latestPointIndex_].writtenTs <= _timestamp) return (latestPointIndex_);
+
+        // Next check implicit zero balance
+        if (pointHistory_[1].writtenTs > _timestamp) return 0;
+
+        uint256 lower = 0;
+        uint256 upper = latestPointIndex_;
+        while (upper > lower) {
+            uint256 center = upper - (upper - lower) / 2; // ceil, avoiding overflow
+            GlobalPoint storage delegatePoint = pointHistory_[center];
+            if (delegatePoint.writtenTs == _timestamp) {
+                return center;
+            } else if (delegatePoint.writtenTs < _timestamp) {
+                lower = center;
+            } else {
+                upper = center - 1;
+            }
+        }
+        return lower;
+    }
+
+    function getSelfPastDelegatePointIndex(
+        address _account,
+        uint256 _timestamp
+    ) internal view returns (uint256) {
+        uint256 latestPointIndex_ = selfLatestPointIndex[_account];
+        if (latestPointIndex_ == 0) return 0;
+
+        mapping(uint256 => GlobalPoint) storage pointHistory_ = selfPointHistory[_account];
 
         // First check most recent balance
         if (pointHistory_[latestPointIndex_].writtenTs <= _timestamp) return (latestPointIndex_);
@@ -430,6 +599,47 @@ contract EscrowIVotesAdapter is
         return uint256(SignedFixedPointMath.fromFP(bias));
     }
 
+    function _delegatedBalanceAt(
+        address _account,
+        uint256 _timestamp
+    ) internal view returns (uint256) {
+        uint256 index = getSelfPastDelegatePointIndex(_account, _timestamp);
+        // epoch 0 is an empty point
+        if (index == 0) return 0;
+        GlobalPoint memory point = selfPointHistory[_account][index];
+
+        int256 bias = point.bias;
+        int256 slope = point.slope;
+        uint256 ts = point.writtenTs;
+
+        mapping(uint256 => int256) storage slopeChanges_ = selfSlopeChanges[_account];
+
+        uint256 checkpointInterval = IClock(clock).checkpointInterval();
+
+        uint256 t_i = (ts / checkpointInterval) * checkpointInterval;
+
+        for (uint256 i = 0; i < 255; ++i) {
+            t_i += checkpointInterval;
+            int256 dSlope = 0;
+            if (t_i > _timestamp) {
+                t_i = _timestamp;
+            } else {
+                dSlope = slopeChanges_[t_i];
+            }
+            bias += slope * int256(t_i - ts);
+
+            if (t_i == _timestamp) {
+                break;
+            }
+            slope -= dSlope;
+            ts = t_i;
+        }
+
+        if (bias < 0) bias = 0;
+
+        return uint256(SignedFixedPointMath.fromFP(bias));
+    }
+
     /*//////////////////////////////////////////////////////////////
                         Private Helper Functions
     //////////////////////////////////////////////////////////////*/
@@ -464,6 +674,43 @@ contract EscrowIVotesAdapter is
         if (elapsed < maxTime) {
             slope = op(slope);
             slopeChanges[_delegatee][_locked.start + maxTime] += op(slope);
+        } else {
+            slope = 0;
+        }
+
+        return (op(bias), slope);
+    }
+
+    /// @dev Note that this function also updates slopeChanges.
+    function _getSelfBiasAndSlope(
+        address _account,
+        IVotingEscrow.LockedBalance memory _locked,
+        function(int256) view returns (int256) op
+    ) private returns (int256, int256) {
+        uint256 elapsed = block.timestamp - _locked.start;
+        elapsed = elapsed > maxTime ? maxTime : elapsed;
+
+        int256 amount = uint256(_locked.amount).toInt256();
+
+        // TODO: Probably better if we could get this constants by calling the contract.
+        // The reasoning is EscrowIVotesAdapter might not be useful for some clients in the beginning,
+        // but might become useful later on. But when the time comes that we decide to deploy this for them,
+        // curveconstant coefficients might have changed and this could result in a problem.
+        // Clearly, this EscrowIVotesAdapter only expects `escrow` address in `initialize`, but those functions
+        // that return constant coefficients live inside curve. Passing `curve` address just for this reason
+        // is ideal ? even if we do so, we also have to make the functions public (see curve).
+
+        int256 slope = amount * CurveConstantLib.SHARED_LINEAR_COEFFICIENT;
+        int256 bias = slope *
+            int256(elapsed) +
+            amount *
+            CurveConstantLib.SHARED_CONSTANT_COEFFICIENT;
+
+        if (bias < 0) bias = 0;
+
+        if (elapsed < maxTime) {
+            slope = op(slope);
+            selfSlopeChanges[_account][_locked.start + maxTime] += op(slope);
         } else {
             slope = 0;
         }
