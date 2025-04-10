@@ -1,6 +1,10 @@
 /// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import {
+    IVotesUpgradeable
+} from "@openzeppelin/contracts-upgradeable/governance/utils/IVotesUpgradeable.sol";
+
 interface IEscrowIVotesAdapterErrorsAndEvents {
     event AutoDelegationSet(address indexed delegate, bool enabled);
     event TokensDelegated(address indexed sender, address indexed delegatee, uint256[] tokenIds);
@@ -42,7 +46,7 @@ interface IEscrowIVotesAdapterStorage {
     }
 }
 
-interface IEscrowIVotesAdapter is IEscrowIVotesAdapterErrorsAndEvents, IEscrowIVotesAdapterStorage, IDelegateMoveVote {
+interface IEscrowIVotesAdapter is IEscrowIVotesAdapterErrorsAndEvents, IEscrowIVotesAdapterStorage, IDelegateMoveVote, IVotesUpgradeable {
     /// @notice Allows to delegate `_tokenIds` to the current delegatee 
     ///         which is set by IVotes's `delegate` function.
     /// @param _tokenIds The list of token ids that are being delegated.
@@ -52,4 +56,7 @@ interface IEscrowIVotesAdapter is IEscrowIVotesAdapterErrorsAndEvents, IEscrowIV
     ///         which was set by delegate.
     /// @param _tokenIds The list of token ids that are being un-delegated.
     function undelegate(uint256[] calldata _tokenIds) external;
+
+    /// @notice Check if the token is currently delegated or not.
+    function tokenIsDelegated(uint256 _tokenId) external view returns(bool);
 }

@@ -280,10 +280,15 @@ contract VotingEscrowV1_2_0 is
         }
     }
 
-    /// @notice Checks if the NFT is currently voting. We require the user to reset their votes if so.
-    function isVoting(uint256 _tokenId) public view returns (bool) {
-        // TODO: for backwards compatibility, shall we remove this function at all or leave it without calling internal `isVoting` ?
-        // return ISimpleGaugeVoter(voter).isVoting(_tokenId);
+     /// @notice Checks if the NFT is currently voting. We require the user to reset their votes if so.
+     function isVoting(uint256 _tokenId) public view returns (bool) {
+        bool isTokenDelegated = IEscrowIVotesAdapter(ivotesAdapter).tokenIsDelegated(_tokenId);
+        if(!isTokenDelegated) return false;
+
+        address owner = IERC721EMB(lockNFT).ownerOf(_tokenId);
+        address delegatee = IEscrowIVotesAdapter(ivotesAdapter).delegates(owner);
+        
+        return ISimpleGaugeVoter(voter).isVoting(delegatee);
     }
 
     /*//////////////////////////////////////////////////////////////

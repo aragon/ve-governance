@@ -30,7 +30,6 @@ contract EscrowIVotesAdapter is
     IClockUser,
     ReentrancyGuard,
     IEscrowIVotesAdapter,
-    IVotesUpgradeable,
     PluginUUPSUpgradeable
 {
     using SafeCastUpgradeable for uint256;
