@@ -1,17 +1,9 @@
 /// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-interface IGauge {
-    /// @param metadataURI URI for the metadata of the gauge
-    struct Gauge {
-        bool active;
-        uint256 created; // timestamp or epoch
-        string metadataURI;
-        // more space for data as this is a struct in a mapping
-    }
-}
+import {IGaugeManager, IGauge, IGaugeVoterErrors} from "./ISimpleGaugeVoter.sol";
 
-interface IGaugeVote {
+interface IAddressGaugeVote {
     /// @param votes gauge => votes cast at that time
     /// @param gaugesVotedFor array of gauges we have active votes for
     /// @param usedVotingPower total voting power used at the time of the vote
@@ -33,39 +25,10 @@ interface IGaugeVote {
 }
 
 /*///////////////////////////////////////////////////////////////
-                            Gauge Manager
-//////////////////////////////////////////////////////////////*/
-
-interface IGaugeManagerEvents {
-    event GaugeCreated(address indexed gauge, address indexed creator, string metadataURI);
-    event GaugeDeactivated(address indexed gauge);
-    event GaugeActivated(address indexed gauge);
-    event GaugeMetadataUpdated(address indexed gauge, string metadataURI);
-}
-
-interface IGaugeManagerErrors {
-    error ZeroGauge();
-    error GaugeActivationUnchanged();
-    error GaugeExists();
-}
-
-interface IGaugeManager is IGaugeManagerEvents, IGaugeManagerErrors {
-    function isActive(address gauge) external view returns (bool);
-
-    function createGauge(address _gauge, string calldata _metadata) external returns (address);
-
-    function deactivateGauge(address _gauge) external;
-
-    function activateGauge(address _gauge) external;
-
-    function updateGaugeMetadata(address _gauge, string calldata _metadata) external;
-}
-
-/*///////////////////////////////////////////////////////////////
                             Gauge Voter
 //////////////////////////////////////////////////////////////*/
 
-interface IGaugeVoterEvents {
+interface IAddressGaugeVoterEvents {
     /// @param votingPowerCastForGauge votes cast by this address for this gauge in this vote
     /// @param totalVotingPowerInGauge total voting power in the gauge at the time of the vote, after applying the vote
     /// @param totalVotingPowerInContract total voting power in the contract at the time of the vote, after applying the vote
@@ -93,21 +56,17 @@ interface IGaugeVoterEvents {
     );
 }
 
-interface IGaugeVoterErrors {
+interface IAddressGaugeVoterErrors is IGaugeVoterErrors {
     error AlreadyVoted(address _address);
-    error VotingInactive();
-    error NotApprovedOrOwner();
-    error GaugeDoesNotExist(address _pool);
-    error GaugeInactive(address _gauge);
-    error DoubleVote();
-    error NoVotes();
-    error NoVotingPower();
-    error NotCurrentlyVoting();
-    error OnlyIVotesAdapter();
-    error UpdateVotingPowerHookNotEnabled();
 }
 
-interface IGaugeVoter is IGaugeVoterEvents, IGaugeVoterErrors, IGaugeVote {
+interface IAddresssGaugeVoter is
+    IAddresssGaugeVoterEvents,
+    IAddresssGaugeVoterErrors,
+    IAddresssGaugeVote,
+    IGaugeManager,
+    IGauge
+{
     /// @notice Called by users to vote for pools. Votes distributed proportionally based on weights.
     /// @param _votes       Array of votes to be cast, contains gauge address and weight.
     function vote(GaugeVote[] memory _votes) external;
@@ -122,12 +81,10 @@ interface IGaugeVoter is IGaugeVoterEvents, IGaugeVoterErrors, IGaugeVote {
 }
 
 /*///////////////////////////////////////////////////////////////
-                        Simple Gauge Voter
+                      Address Gauge Voter
 //////////////////////////////////////////////////////////////*/
 
-interface ISimpleGaugeVoterV1_2_0 is IGaugeVoter, IGaugeManager, IGauge {}
-
-interface ISimpleGaugeVoterStorageEventsErrors is
+interface IAddressGaugeVoterStorageEventsErrors is
     IGaugeManagerEvents,
     IGaugeManagerErrors,
     IGaugeVoterEvents,
