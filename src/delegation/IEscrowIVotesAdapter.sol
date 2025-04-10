@@ -20,7 +20,18 @@ interface IEscrowIVotesAdapterErrorsAndEvents {
 }
 
 interface IDelegateMoveVote {
+    /// @notice After a token transfer, decreases `_from`'s voting power and increases `_to`'s voting power.
+    /// @dev Called upon a token transfer.
+    /// @param _from The current delegatee of `_tokenId`.
+    /// @param _to The new delegatee of `_tokenId`
+    /// @param _tokenId The token id that is being transferred.
     function moveDelegateVotes(address _from, address _to, uint256 _tokenId) external;
+}
+
+interface IDelegateUpdateVotingPower {
+    /// @notice Updates current voting power of `_from` and `_to`.
+    /// @dev Called upon a token transfer and delegate/undelegate.
+    function updateVotingPower(address _from, address _to) external;
 }
 
 interface IEscrowIVotesAdapterStorage {
@@ -32,7 +43,13 @@ interface IEscrowIVotesAdapterStorage {
 }
 
 interface IEscrowIVotesAdapter is IEscrowIVotesAdapterErrorsAndEvents, IEscrowIVotesAdapterStorage, IDelegateMoveVote {
+    /// @notice Allows to delegate `_tokenIds` to the current delegatee 
+    ///         which is set by IVotes's `delegate` function.
+    /// @param _tokenIds The list of token ids that are being delegated.
     function delegate(uint256[] calldata _tokenIds) external;
 
+    /// @notice Allows to un-delegate `_tokenIds` from the current delegatee 
+    ///         which was set by delegate.
+    /// @param _tokenIds The list of token ids that are being un-delegated.
     function undelegate(uint256[] calldata _tokenIds) external;
 }

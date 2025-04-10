@@ -12,7 +12,7 @@ import {IERC721EnumerableMintableBurnable as IERC721EMB} from "@lock/IERC721EMB.
 
 // veGovernance
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
-import {ISimpleGaugeVoter} from "@voting/ISimpleGaugeVoter.sol";
+import {ISimpleGaugeVoterV1_2_0 as ISimpleGaugeVoter} from "@voting/ISimpleGaugeVoter_v1_2_0.sol";
 import {
     IEscrowCurveIncreasingV1_2_0 as IEscrowCurve
 } from "@curve/IEscrowCurveIncreasing_v1_2_0.sol";
@@ -45,8 +45,7 @@ import {
 import {
     DaoAuthorizableUpgradeable as DaoAuthorizable
 } from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
-import {IEscrowIVotesAdapter} from "../delegation/IEscrowIVotesAdapter.sol";
-import {IDelegateMoveVote} from "../delegation/IEscrowIVotesAdapter.sol";
+import {IDelegateMoveVote, IDelegateUpdateVotingPower, IEscrowIVotesAdapter} from "../delegation/IEscrowIVotesAdapter.sol";
 
 contract VotingEscrowV1_2_0 is
     IVotingEscrow,
@@ -574,8 +573,18 @@ contract VotingEscrowV1_2_0 is
         emit SweepNFT(_to, _tokenId);
     }
 
+    /// @inheritdoc IDelegateMoveVote
     function moveDelegateVotes(address _from, address _to, uint256 _tokenId) public {
+        if (msg.sender != lockNFT) revert OnlyLockNFT();
+
         IEscrowIVotesAdapter(ivotesAdapter).moveDelegateVotes(_from, _to, _tokenId);
+    }
+
+    /// @inheritdoc IDelegateUpdateVotingPower
+    function updateVotingPower(address _from, address _to) public {
+        if (msg.sender != ivotesAdapter) revert OnlyIVotesAdapter();
+
+        ISimpleGaugeVoter(voter).updateVotingPower(_from, _to);
     }
 
     /*///////////////////////////////////////////////////////////////

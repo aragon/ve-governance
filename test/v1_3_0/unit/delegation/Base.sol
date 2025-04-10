@@ -69,8 +69,6 @@ contract Base is
         _mockApprovedOwner(true);
         _mockPermissions();
 
-        dg.setVoter(address(voter));
-
         uint256 maxTime = IClock(clock).epochDuration() * CurveConstantLib.MAX_EPOCHS;
 
         super.initialize(maxTime, clock.checkpointInterval());
