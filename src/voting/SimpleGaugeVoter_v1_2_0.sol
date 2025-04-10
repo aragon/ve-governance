@@ -476,6 +476,6 @@ contract SimpleGaugeVoterV1_2_0 is
         return epochGaugeVotes[epoch][_address];
     }
 
-    /// Rest of UUPS logic is handled by OSx plugin
+    /// @dev Reserved storage space to allow for layout changes in the future.
     uint256[42] private __gap;
 }
