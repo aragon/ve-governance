@@ -5,6 +5,8 @@ import "@solmate/utils/SignedWadMath.sol";
 
 error NegativeBase();
 
+int256 constant WAD = 1e18;
+
 // shared interface for fixed point math implementations.
 library SignedFixedPointMath {
     // solmate does this unchecked to save gas, easier to do this here
@@ -12,11 +14,11 @@ library SignedFixedPointMath {
     // unlike PRB Math (unsupported in solidity 0.8.17)
     // solmate will not warn you that you are operating in scaled down mode
     function toFP(int256 x) internal pure returns (int256) {
-        return x * 1e18;
+        return x * WAD;
     }
 
     function fromFP(int256 x) internal pure returns (int256) {
-        return x / 1e18;
+        return x / WAD;
     }
 
     function mul(int256 x, int256 y) internal pure returns (int256) {

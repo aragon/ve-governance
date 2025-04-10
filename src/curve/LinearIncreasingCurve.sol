@@ -126,13 +126,13 @@ contract LinearIncreasingCurve is
 
     /// @return The coefficient for the curve's linear term, for the given amount
     function _getLinearCoeff(uint256 amount) internal pure returns (int256) {
-        return int256(amount) * SHARED_LINEAR_COEFFICIENT;
+        return amount.toInt256() * SHARED_LINEAR_COEFFICIENT;
     }
 
     /// @return The constant coefficient of the increasing curve, for the given amount
     /// @dev In this case, the constant term is 1 so we just case the amount
     function _getConstantCoeff(uint256 amount) public pure returns (int256) {
-        return int256(amount) * SHARED_CONSTANT_COEFFICIENT;
+        return amount.toInt256() * SHARED_CONSTANT_COEFFICIENT;
     }
 
     /// @return The coefficients of the quadratic curve, for the given amount

@@ -57,6 +57,8 @@ import {ProxyLib} from "@libs/ProxyLib.sol";
 import {Upgrades} from "@foundry-upgrades/LegacyUpgrades.sol";
 import {Options} from "@foundry-upgrades/Options.sol";
 
+import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
+
 interface IFactory {
     function getDeployment() external view returns (DeploymentV1_0_0 memory);
     function getDeploymentParameters() external view returns (DeploymentParametersV1_0_0 memory);
@@ -236,11 +238,21 @@ contract UpgradeGaugesFactoryV1_0_0__V1_3_0 {
     ) public {
         if (validate) {
             validateUpgrade();
+
+            for (uint i = 0; i < parameters.tokenParameters.length; i++) {
+                GaugePluginSet memory pluginSet = deployment.gaugeVoterPluginSets[i];
+                // make sure that ivotesAdapter is using the same constants 
+                // as the curve that was already deployed prior.
+                int256[3] memory coefficients = pluginSet.curve.getCoefficients(1);
+                require(CurveConstantLib.SHARED_CONSTANT_COEFFICIENT == coefficients[0], "invalid constant coefficient");
+                require(CurveConstantLib.SHARED_LINEAR_COEFFICIENT == coefficients[1], "invalid linear coefficient");
+            }
         }
 
         _deployEscrowIVotesAdapter(address(ivotesAdapter));
-        _upgradeContracts(clockUpgrade, curveUpgrade, escrowUpgrade, lockUpgrade);
 
+        _upgradeContracts(clockUpgrade, curveUpgrade, escrowUpgrade, lockUpgrade);
+        
         // set the delegation mapper on the escrow
         _setEscrowIVotesAdapter();
     }
