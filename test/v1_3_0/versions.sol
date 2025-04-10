@@ -50,7 +50,8 @@ import {
 import {IGaugeVote, ISimpleGaugeVoterStorageEventsErrors} from "@voting/ISimpleGaugeVoter_v1_2_0.sol";
 import {
     IEscrowIVotesAdapterStorage,
-    IEscrowIVotesAdapterErrorsAndEvents
+    IEscrowIVotesAdapterErrorsAndEvents,
+    IEscrowIVotesAdapter
 } from "@delegation/IEscrowIVotesAdapter.sol";
 
 // other

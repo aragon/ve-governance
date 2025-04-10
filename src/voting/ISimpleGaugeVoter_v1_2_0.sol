@@ -103,7 +103,7 @@ interface IGaugeVoterErrors {
     error NoVotes();
     error NoVotingPower();
     error NotCurrentlyVoting();
-    error OnlyIVotesAdapter();
+    error OnlyEscrow();
     error UpdateVotingPowerHookNotEnabled();
 }
 
