@@ -102,7 +102,7 @@ contract TestMerge_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage
         assertTokenPoint(to, 2, currentTotalBiasFP, 0, weekStartTs, currentTs);
     }
 
-    function test_Merge_WhenMature_DifferentStartDates_fuck() public {
+    function test_Merge_WhenMature_DifferentStartDates() public {
         // 1. on `from` token point, bias and slope must become 0. `start` should stay the same and current timestamp updated.
         // 2. on `to` token point, bias must be the sum of both token's maxed out values. Slope must be 0 as it's already maxed out.
         // `start` should stay the same and current timestamp updated.
