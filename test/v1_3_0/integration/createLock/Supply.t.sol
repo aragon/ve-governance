@@ -10,7 +10,23 @@ import {MockERC20} from "@mocks/MockERC20.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
-import {Clock, IClock, Lock, VotingEscrow, LinearIncreasingEscrow, IVotingEscrowIncreasing, IEscrowCurveIncreasing, IVotingEscrowIncreasing, IVotingEscrowCoreErrors, IMerge, ISplit, ILockedBalanceIncreasing, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage} from "../../versions.sol";
+import {
+    Clock,
+    IClock,
+    Lock,
+    VotingEscrow,
+    LinearIncreasingEscrow,
+    IVotingEscrowIncreasing,
+    IEscrowCurveIncreasing,
+    IVotingEscrowIncreasing,
+    IVotingEscrowCoreErrors,
+    IMerge,
+    ISplit,
+    ILockedBalanceIncreasing,
+    IEscrowCurveGlobalStorage,
+    IEscrowCurveTokenStorage,
+    IEscrowCurveGlobalStorage
+} from "../../versions.sol";
 
 contract TestCreateLock_Supply is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage, EscrowBase {
     function setUp() public override {
@@ -19,7 +35,7 @@ contract TestCreateLock_Supply is IEscrowCurveTokenStorage, IEscrowCurveGlobalSt
         super.mintAndApproveEscrow();
     }
 
-    function test_whenCreatingNewLock_no_existing_lock_ookkk() public {
+    function test_whenCreatingNewLock_no_existing_lock() public {
         // Given: no prior locks existing
         // 1. total bias at block.timestamp must be amount + slope * (block.timestamp - weekStart)
         // 2. total bias at t must be amount + slope * (t - weekStart)

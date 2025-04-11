@@ -2,7 +2,13 @@ pragma solidity ^0.8.17;
 
 import {console2 as console} from "forge-std/console2.sol";
 
-import {Clock, QuadraticIncreasingEscrow, ILockedBalanceIncreasing, IVotingEscrowIncreasing as IVotingEscrow, IEscrowCurveIncreasing as IEscrowCurve} from "../../../versions.sol";
+import {
+    Clock,
+    QuadraticIncreasingEscrow,
+    ILockedBalanceIncreasing,
+    IVotingEscrowIncreasing as IVotingEscrow,
+    IEscrowCurveIncreasing as IEscrowCurve
+} from "../../../versions.sol";
 import {QuadraticCurveBase, MockEscrow} from "./QuadraticCurveBase.t.sol";
 
 contract TestQuadraticIncreasingCurveLogic is QuadraticCurveBase {

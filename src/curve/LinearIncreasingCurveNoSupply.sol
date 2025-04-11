@@ -26,8 +26,6 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {ReentrancyGuardUpgradeable as ReentrancyGuard} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
 
-import {console2 as console} from "forge-std/console2.sol";
-
 /// @title Linear Increasing Escrow
 contract LinearIncreasingEscrowNoSupply is
     IEscrowCurve,
@@ -253,16 +251,16 @@ contract LinearIncreasingEscrowNoSupply is
         // How much time remaining till maxTime
         uint256 maxTime = maxTime();
         uint256 originalOffset = originalPoint.writtenTs - originalPoint.checkpointTs;
-        
+
         // maxTime should always be greater than originalOffset.
         uint256 remainingTillMaxTime = maxTime - originalOffset;
 
         // bound time in case it's less than `remainingTillMaxTime`.
         uint256 elapsed = _t - lastPoint.writtenTs;
-        if(elapsed <= remainingTillMaxTime) {
+        if (elapsed <= remainingTillMaxTime) {
             remainingTillMaxTime = elapsed;
         }
-        
+
         return _getBias(remainingTillMaxTime, bias, slope) / 1e18;
     }
 

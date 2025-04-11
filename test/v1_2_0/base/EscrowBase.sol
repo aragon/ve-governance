@@ -105,7 +105,13 @@ contract EscrowBase is
         super.initialize(curve.maxTime(), clock.checkpointInterval());
 
         // to be added as proxies
-        voter = _deployVoter(address(dao), address(escrow), false, address(clock), address(ivotesAdapter));
+        voter = _deployVoter(
+            address(dao),
+            address(escrow),
+            false,
+            address(clock),
+            address(ivotesAdapter)
+        );
         queue = _deployExitQueue(address(escrow), 3 days, address(dao), 0, address(clock), 1);
 
         // grant this contract admin privileges

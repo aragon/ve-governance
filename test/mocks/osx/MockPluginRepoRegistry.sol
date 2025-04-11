@@ -43,9 +43,8 @@ contract MockPluginRepoRegistry is InterfaceBasedRegistry {
     /// @param pluginRepo The address of the PluginRepo contract.
     function registerPluginRepo(
         string calldata subdomain,
-        address pluginRepo
-    ) external // auth(REGISTER_PLUGIN_REPO_PERMISSION_ID)
-    {
+        address pluginRepo // auth(REGISTER_PLUGIN_REPO_PERMISSION_ID)
+    ) external {
         // if (!(bytes(subdomain).length > 0)) {
         //     revert EmptyPluginRepoSubdomain();
         // }

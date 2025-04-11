@@ -2,8 +2,7 @@
 pragma solidity ^0.8.17;
 
 // TODO: GIORGI come up with better name..
-contract FixedPointBase  {
-    
+contract FixedPointBase {
     uint256 maxTime;
     uint256 checkpointInterval;
 
@@ -11,7 +10,7 @@ contract FixedPointBase  {
         maxTime = _maxTime;
         checkpointInterval = _checkpointInterval;
     }
-    
+
     function slopeFP(uint256 _amount) internal view returns (int256) {
         return int256(_amount * (1e18 / maxTime));
     }

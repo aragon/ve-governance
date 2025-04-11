@@ -41,15 +41,15 @@ contract TestMoveDelegateVotes is Base {
         assertEq(dg.getVotes(bob), 0);
     }
 
-     function test_OnlyUpdatesToDelegateeWhenFromIsNotSet() public {
+    function test_OnlyUpdatesToDelegateeWhenFromIsNotSet() public {
         address tokenReceiver = address(567);
         vm.prank(tokenReceiver);
         dg.delegate(bob);
 
         _mockLocked(1, 10, weekStartTs((block.timestamp)));
-        
+
         assertEq(dg.getVotes(bob), 0);
-        
+
         vm.prank(address(escrow));
         dg.moveDelegateVotes(sender, tokenReceiver, 1);
 
@@ -63,7 +63,7 @@ contract TestMoveDelegateVotes is Base {
         uint256 start = weekStartTs((block.timestamp));
         _mockLocked(1, 10, start);
         _mockLocked(2, 15, start);
-        
+
         {
             // make Alice delegatee with tokenId = 1 and 2
             vm.startPrank(tokenOwner);

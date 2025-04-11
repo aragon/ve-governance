@@ -14,7 +14,11 @@ function bytes32ToAddress(bytes32 _bytes32) pure returns (address) {
 }
 
 /// @dev call the PSP with an action wrapped in grant/revoke root permissions
-function wrapGrantRevokeRoot(DAO _dao, address _psp, IDAO.Action memory _action) view returns (IDAO.Action[] memory) {
+function wrapGrantRevokeRoot(
+    DAO _dao,
+    address _psp,
+    IDAO.Action memory _action
+) view returns (IDAO.Action[] memory) {
     IDAO.Action[] memory actions = new IDAO.Action[](3);
     actions[0] = IDAO.Action({
         to: address(_dao),
@@ -94,7 +98,10 @@ function _mockDAOSettings() pure returns (MockDAOFactory.DAOSettings memory) {
 // all this data is unused in the mock
 function _mockPluginSetupRef() pure returns (PluginSetupRef memory) {
     return
-        PluginSetupRef({pluginSetupRepo: PluginRepo(address(0)), versionTag: PluginRepo.Tag({release: 1, build: 0})});
+        PluginSetupRef({
+            pluginSetupRepo: PluginRepo(address(0)),
+            versionTag: PluginRepo.Tag({release: 1, build: 0})
+        });
 }
 
 function _mockPrepareInstallationParams(
@@ -117,9 +124,14 @@ function _mockApplyInstallationParams(
 }
 
 /// we don't use most of the plugin settings in the mock so just ignore it
-function _mockPluginSettings(bytes memory data) pure returns (MockDAOFactory.PluginSettings[] memory) {
+function _mockPluginSettings(
+    bytes memory data
+) pure returns (MockDAOFactory.PluginSettings[] memory) {
     MockDAOFactory.PluginSettings[] memory settings = new MockDAOFactory.PluginSettings[](1);
-    settings[0] = MockDAOFactory.PluginSettings({pluginSetupRef: _mockPluginSetupRef(), data: data});
+    settings[0] = MockDAOFactory.PluginSettings({
+        pluginSetupRef: _mockPluginSetupRef(),
+        data: data
+    });
     return settings;
 }
 
@@ -133,5 +145,10 @@ function _mockApplyUninstallationParams(
     address plugin,
     PermissionLib.MultiTargetPermission[] memory permissions
 ) pure returns (MockPluginSetupProcessor.ApplyUninstallationParams memory) {
-    return MockPluginSetupProcessor.ApplyUninstallationParams(plugin, _mockPluginSetupRef(), permissions);
+    return
+        MockPluginSetupProcessor.ApplyUninstallationParams(
+            plugin,
+            _mockPluginSetupRef(),
+            permissions
+        );
 }

@@ -14,7 +14,15 @@ import {PluginRepo} from "@aragon/osx/framework/plugin/repo/PluginRepo.sol";
 
 import {IPluginSetup} from "@aragon/osx/framework/plugin/setup/IPluginSetup.sol";
 import {PluginSetup} from "@aragon/osx/framework/plugin/setup/PluginSetup.sol";
-import {PluginSetupRef, hashHelpers, hashPermissions, _getPreparedSetupId, _getAppliedSetupId, _getPluginInstallationId, PreparationType} from "@aragon/osx/framework/plugin/setup/PluginSetupProcessorHelpers.sol";
+import {
+    PluginSetupRef,
+    hashHelpers,
+    hashPermissions,
+    _getPreparedSetupId,
+    _getAppliedSetupId,
+    _getPluginInstallationId,
+    PreparationType
+} from "@aragon/osx/framework/plugin/setup/PluginSetupProcessorHelpers.sol";
 
 /// @title PluginSetupProcessor
 /// @author Aragon Association - 2022-2023

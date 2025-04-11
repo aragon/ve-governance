@@ -10,7 +10,17 @@ import {MockERC20} from "@mocks/MockERC20.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
-import {Lock, Clock, VotingEscrow, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, IEscrowCurveIncreasing, IEscrowCurveTokenStorage} from "../../../versions.sol";
+import {
+    Lock,
+    Clock,
+    VotingEscrow,
+    QuadraticIncreasingEscrow,
+    ExitQueue,
+    SimpleGaugeVoter,
+    SimpleGaugeVoterSetup,
+    IEscrowCurveIncreasing,
+    IEscrowCurveTokenStorage
+} from "../../../versions.sol";
 
 contract TestCreateLock is IEscrowCurveTokenStorage, EscrowBase {
     function setUp() public override {
@@ -18,7 +28,6 @@ contract TestCreateLock is IEscrowCurveTokenStorage, EscrowBase {
 
         // token.mint(address(this), 1_000_000_000 ether);
     }
-
 
     function testCannotCreateLockWithZeroValue() public {
         vm.expectRevert(ZeroAmount.selector);
@@ -58,7 +67,7 @@ contract TestCreateLock is IEscrowCurveTokenStorage, EscrowBase {
     /// so we use the maximum value for a uint128
     /// @param _depositor is not the zero address, we check this in a previous test we need to restrict to non contracts in fuzzing as too many revert cases
     /// @param _time is bound to 32 bits to avoid overflow - seems reasonable as is not a user input
-    function testFuzz_createLock_kkk(uint128 _value, address _depositor, uint32 _time) public {
+    function testFuzz_createLock(uint128 _value, address _depositor, uint32 _time) public {
         vm.assume(_value > 0);
         vm.assume(_depositor != address(0) && address(_depositor).code.length == 0);
         vm.assume(_time > 0);
@@ -100,11 +109,7 @@ contract TestCreateLock is IEscrowCurveTokenStorage, EscrowBase {
             uint256 vp = bias(_value, block.timestamp - startTime);
 
             assertEq(escrow.votingPower(tokenId), vp, "value incorrect for the tokenid");
-            assertEq(
-                escrow.votingPowerForAccount(_depositor),
-                vp,
-                "value incorrect for account"
-            );
+            assertEq(escrow.votingPowerForAccount(_depositor), vp, "value incorrect for account");
         }
 
         // check the user has the nft:
@@ -275,7 +280,7 @@ contract TestCreateLock is IEscrowCurveTokenStorage, EscrowBase {
             expectedNextDeposit,
             "matt's lock should snap to the next deposit date"
         );
-        
+
         // even though phil made a deposit after the week already started,
         // it still should snap to the week's start.
         assertEq(

@@ -9,7 +9,13 @@ import {DAO, createTestDAO} from "@mocks/MockDAO.sol";
 import {DaoUnauthorized} from "@aragon/osx/core/utils/auth.sol";
 import {MockERC20} from "@mocks/MockERC20.sol";
 
-import {Clock, ExitQueue, IExitQueue, ITicket, IExitQueueErrorsAndEvents} from "../../../versions.sol";
+import {
+    Clock,
+    ExitQueue,
+    IExitQueue,
+    ITicket,
+    IExitQueueErrorsAndEvents
+} from "../../../versions.sol";
 
 contract MockEscrow {
     struct LockedBalance {
