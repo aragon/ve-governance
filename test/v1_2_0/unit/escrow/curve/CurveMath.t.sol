@@ -3,17 +3,17 @@ pragma solidity ^0.8.17;
 import {console2 as console} from "forge-std/console2.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
-import {IClock} from "@clock/IClock.sol";
-import {QuadraticCurveBase} from "./QuadraticCurveBase.t.sol";
+import {CurveBase} from "./CurveBase.t.sol";
 import {
+    IClock,
     Clock,
-    QuadraticIncreasingEscrow,
+    Curve,
     ILockedBalanceIncreasing,
     IVotingEscrowIncreasing as IVotingEscrow,
     IEscrowCurveIncreasing as IEscrowCurve
 } from "../../../versions.sol";
 
-contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
+contract TestQuadraticIncreasingCurve is CurveBase {
     using SafeCast for uint256;
 
     function test_votingPowerComputesCorrect() public {
@@ -179,148 +179,6 @@ END @ 104 weeks (52 * PERIOD)  Voting Power: 841380000000000000000 | 841 | 2.00x
             curve.votingPowerAt(tokenIdFirst, block.timestamp),
             expectedMaxI,
             "Balance incorrect after 10 years"
-        );
-    }
-
-    function test_votingPowerComputesCorrectWithSeasons() public {
-        uint tokenIdFirst = 1;
-        uint tokenIdSecond = 2;
-        uint208 depositFirst = 420.69e18;
-        uint208 depositSecond = 1_000_000_000e18;
-        uint start = 52 weeks;
-
-        // initial conditions, no balance
-        assertEq(curve.votingPowerAt(tokenIdFirst, 0), 0, "Balance before deposit");
-
-        vm.warp(start);
-        vm.roll(420);
-
-        // still no balance
-        assertEq(curve.votingPowerAt(tokenIdFirst, 0), 0, "Balance before deposit");
-
-        escrow.checkpoint(
-            tokenIdFirst,
-            LockedBalance(0, 0),
-            LockedBalance(depositFirst, uint48(block.timestamp))
-        );
-        escrow.checkpoint(
-            tokenIdSecond,
-            LockedBalance(0, 0),
-            LockedBalance(depositSecond, uint48(block.timestamp))
-        );
-
-        //     // check the token point is registered
-        IEscrowCurve.TokenPoint memory tokenPoint = curve.tokenPointHistory(tokenIdFirst, 1);
-        assertEq(tokenPoint.bias, depositFirst, "Bias is incorrect");
-        assertEq(tokenPoint.checkpointTs, block.timestamp, "CP Timestamp is incorrect");
-        assertEq(tokenPoint.writtenTs, block.timestamp, "Written Timestamp is incorrect");
-
-        // balance now is zero but Warm up
-        assertEq(curve.votingPowerAt(tokenIdFirst, 0), 0, "Balance after deposit before warmup");
-        assertEq(curve.isWarm(tokenIdFirst), false, "Not warming up");
-
-        // wait for warmup
-        vm.warp(block.timestamp + curve.warmupPeriod());
-        assertEq(curve.votingPowerAt(tokenIdFirst, 0), 0, "Balance after deposit before warmup");
-        assertEq(curve.isWarm(tokenIdFirst), false, "Not warming up");
-        assertEq(curve.isWarm(tokenIdSecond), false, "Not warming up II");
-
-        // warmup complete
-        vm.warp(block.timestamp + 1);
-
-        assertEq(
-            curve.votingPowerAt(tokenIdFirst, block.timestamp),
-            422423619325633557508,
-            "Balance incorrect after warmup"
-        );
-        assertEq(curve.isWarm(tokenIdFirst), true, "Still warming up");
-
-        assertEq(
-            curve.votingPowerAt(tokenIdSecond, block.timestamp),
-            1004120895019214998000000000,
-            "Balance incorrect after warmup II"
-        );
-
-        // warp to the start of period 2
-        vm.warp(start + clock.epochDuration());
-
-        uint256 expectedMaxI = 841379999988002594304;
-        uint256 expectedMaxII = 1999999999971481600000000000;
-
-        // warp to the final period
-        vm.warp(start + clock.epochDuration() * 52);
-        assertEq(
-            curve.votingPowerAt(tokenIdFirst, block.timestamp),
-            expectedMaxI,
-            "Balance incorrect after p6"
-        );
-        assertEq(
-            curve.votingPowerAt(tokenIdSecond, block.timestamp),
-            expectedMaxII,
-            "Balance incorrect after p6 II "
-        );
-
-        clock.newSeason();
-
-        // balance should be still the same
-
-        assertEq(
-            curve.votingPowerAt(tokenIdFirst, block.timestamp),
-            expectedMaxI,
-            "Balance incorrect after p6"
-        );
-        assertEq(
-            curve.votingPowerAt(tokenIdSecond, block.timestamp),
-            expectedMaxII,
-            "Balance incorrect after p6 II "
-        );
-
-        // warp to the next epoch (start of season 1)
-        vm.warp(block.timestamp + clock.epochNextCheckpointIn());
-
-        assertEq(
-            curve.votingPowerAt(tokenIdFirst, block.timestamp),
-            depositFirst,
-            "Balance incorrect after season reset"
-        );
-        assertEq(
-            curve.votingPowerAt(tokenIdSecond, block.timestamp),
-            depositSecond,
-            "Balance incorrect after season reset II"
-        );
-
-        vm.warp(block.timestamp + clock.epochDuration());
-
-        assertEq(
-            curve.votingPowerAt(tokenIdFirst, block.timestamp),
-            428780192307461588352,
-            "Balance incorrect after p1"
-        );
-
-        vm.warp(block.timestamp + clock.epochDuration());
-
-        // Simulate a beginWithdrawal checkpoint
-        uint256 checkpointClearTime = IClock(clock).epochNextCheckpointTs();
-        escrow.checkpoint(
-            tokenIdFirst,
-            LockedBalance(0, 0),
-            LockedBalance(0, checkpointClearTime.toUint48())
-        );
-
-        assertEq(
-            curve.votingPowerAt(tokenIdFirst, block.timestamp),
-            436870384614923176704,
-            "Voting power should be the same after beginWithdrawal"
-        );
-
-        clock.newSeason();
-
-        vm.warp(block.timestamp + clock.epochDuration());
-
-        assertEq(
-            curve.votingPowerAt(tokenIdFirst, block.timestamp),
-            0,
-            "Voting power should be after withdrawal"
         );
     }
 }

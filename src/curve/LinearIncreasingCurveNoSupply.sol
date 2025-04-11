@@ -9,8 +9,8 @@ import {
 } from "@escrow/IVotingEscrowIncreasing_v1_2_0.sol";
 
 import {
-    IEscrowCurveIncreasingV1_2_0_NoSupply as IEscrowCurve, 
-    IEscrowCurveCore, 
+    IEscrowCurveIncreasingV1_2_0_NoSupply as IEscrowCurve,
+    IEscrowCurveCore,
     IEscrowCurveTokenV1_2_0 as IEscrowCurveToken
 } from "@curve/IEscrowCurveIncreasing_v1_2_0.sol";
 import {IClockUser, IClockV1_2_0 as IClock} from "@clock/IClock_v1_2_0.sol";
@@ -23,8 +23,12 @@ import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 
 // contracts
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {ReentrancyGuardUpgradeable as ReentrancyGuard} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
+import {
+    ReentrancyGuardUpgradeable as ReentrancyGuard
+} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import {
+    DaoAuthorizableUpgradeable as DaoAuthorizable
+} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
 
 /// @title Linear Increasing Escrow
 contract LinearIncreasingEscrowNoSupply is
@@ -130,8 +134,8 @@ contract LinearIncreasingEscrowNoSupply is
         int256[3] memory coefficients = _getCoefficients(amount);
 
         return [
-            coefficients[0], // amount
-            coefficients[1], // slope
+            coefficients[0] / 1e18, // amount
+            coefficients[1] / 1e18, // slope
             0
         ];
     }
@@ -223,8 +227,10 @@ contract LinearIncreasingEscrowNoSupply is
     function tokenPointHistory(
         uint256 _tokenId,
         uint256 _index
-    ) external view returns (TokenPoint memory) {
-        return _tokenPointHistory[_tokenId][_index];
+    ) external view returns (TokenPoint memory point) {
+        point = _tokenPointHistory[_tokenId][_index];
+        // bind for backwards compatibility
+        point.bias = uint(point.coefficients[0]) / 1e18;
     }
 
     /// @inheritdoc IEscrowCurveToken
