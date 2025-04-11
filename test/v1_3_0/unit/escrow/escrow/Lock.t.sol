@@ -18,7 +18,7 @@ import {
     ILock
 } from "../../../versions.sol";
 
-contract TestLockMintBurn_1 is IEscrowCurveTokenStorage, IGaugeVote, EscrowBase {
+contract TestLockMintBurn is IEscrowCurveTokenStorage, IGaugeVote, EscrowBase {
     function testDeploy(
         string memory _name,
         string memory _symbol,
@@ -109,7 +109,7 @@ contract NFTReentrant is IDelegateMoveVote {
         return this.onERC721Received.selector;
     }
 
-    // Ensure this function exists on reentrant contract 
+    // Ensure this function exists on reentrant contract
     // so it doesn't fail because of it.
     function moveDelegateVotes(address, address, uint256) public {}
 }

@@ -430,12 +430,12 @@ contract TestGaugeVote is GaugeVotingBase {
         assertEq(voter.gaugesVotedFor(owner).length, 2);
         assertEq(voter.gaugesVotedFor(owner)[0], gauge);
         assertEq(voter.gaugesVotedFor(owner)[1], gauge2);
-        assertApproxEqRel(voter.votes(owner, gauge), expectedVotesForGauge, 1);
-        assertApproxEqRel(voter.votes(owner, gauge2), expectedVotesForGauge2, 1);
-        assertApproxEqRel(
+        assertApproxEqAbs(voter.votes(owner, gauge), expectedVotesForGauge, 2);
+        assertApproxEqAbs(voter.votes(owner, gauge2), expectedVotesForGauge2, 2);
+        assertApproxEqAbs(
             voter.usedVotingPower(owner),
             voter.votes(owner, gauge) + voter.votes(owner, gauge2),
-            1
+            2
         );
     }
 

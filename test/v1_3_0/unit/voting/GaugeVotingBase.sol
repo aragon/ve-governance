@@ -168,7 +168,7 @@ contract GaugeVotingBase is
     }
 
     function _actions() internal view returns (IDAO.Action[] memory) {
-        IDAO.Action[] memory actions = new IDAO.Action[](10);
+        IDAO.Action[] memory actions = new IDAO.Action[](11);
 
         // action 0: apply the ve installation
         actions[0] = IDAO.Action({
@@ -180,36 +180,43 @@ contract GaugeVotingBase is
             )
         });
 
-        // action 2: activate the curve on the ve
+        // action 1: activate the curve on the ve
         actions[1] = IDAO.Action({
             to: address(escrow),
             value: 0,
             data: abi.encodeWithSelector(escrow.setCurve.selector, address(curve))
         });
 
-        // action 3: activate the queue on the ve
+        // action 2: activate the queue on the ve
         actions[2] = IDAO.Action({
             to: address(escrow),
             value: 0,
             data: abi.encodeWithSelector(escrow.setQueue.selector, address(queue))
         });
 
-        // action 4: set the voter
+        // action 3: set the voter
         actions[3] = IDAO.Action({
             to: address(escrow),
             value: 0,
             data: abi.encodeWithSelector(escrow.setVoter.selector, address(voter))
         });
 
-        // action 5: set the nft lock
+        // action 4: set the nft lock
         actions[4] = IDAO.Action({
             to: address(escrow),
             value: 0,
             data: abi.encodeWithSelector(escrow.setLockNFT.selector, address(nftLock))
         });
 
-        // for testing, give this contract the admin roles on all the periphery contracts
+        // action 5: set the nft lock
         actions[5] = IDAO.Action({
+            to: address(escrow),
+            value: 0,
+            data: abi.encodeWithSelector(escrow.setIVotesAdapter.selector, address(ivotesAdapter))
+        });
+
+        // for testing, give this contract the admin roles on all the periphery contracts
+        actions[6] = IDAO.Action({
             to: address(dao),
             value: 0,
             data: abi.encodeCall(
@@ -218,7 +225,7 @@ contract GaugeVotingBase is
             )
         });
 
-        actions[6] = IDAO.Action({
+        actions[7] = IDAO.Action({
             to: address(dao),
             value: 0,
             data: abi.encodeCall(
@@ -227,7 +234,7 @@ contract GaugeVotingBase is
             )
         });
 
-        actions[7] = IDAO.Action({
+        actions[8] = IDAO.Action({
             to: address(dao),
             value: 0,
             data: abi.encodeCall(
@@ -236,7 +243,7 @@ contract GaugeVotingBase is
             )
         });
 
-        actions[8] = IDAO.Action({
+        actions[9] = IDAO.Action({
             to: address(dao),
             value: 0,
             data: abi.encodeCall(
@@ -245,7 +252,7 @@ contract GaugeVotingBase is
             )
         });
 
-        actions[9] = IDAO.Action({
+        actions[10] = IDAO.Action({
             to: address(dao),
             value: 0,
             data: abi.encodeCall(

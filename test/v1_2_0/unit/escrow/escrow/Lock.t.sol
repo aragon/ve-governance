@@ -87,7 +87,7 @@ contract TestLockMintBurn is IEscrowCurveTokenStorage, IGaugeVote, EscrowBase {
     }
 
     // HAL-14 test reentrancy with safe mint
-    function testReentrantCantCallMint_blaxblux() public {
+    function testReentrantCantCallMint() public {
         NFTReentrant reentrant = new NFTReentrant();
 
         Lock newLock = _deployLock(address(reentrant), "name", "symbol", address(dao));
@@ -109,7 +109,7 @@ contract NFTReentrant is IDelegateMoveVote {
         return this.onERC721Received.selector;
     }
 
-    // Ensure this function exists on reentrant contract 
+    // Ensure this function exists on reentrant contract
     // so it doesn't fail because of it.
     function moveDelegateVotes(address, address, uint256) public {}
 }
