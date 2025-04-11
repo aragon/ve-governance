@@ -148,10 +148,7 @@ contract TestWithdraw is IEscrowCurveTokenStorage, IGaugeVote, ITicket, EscrowBa
         assertEq(nftLock.balanceOf(_who), 0);
         assertEq(nftLock.balanceOf(address(escrow)), 1);
 
-        // voting power should still be there as the cp is still active
-        // TODO: GIORGI why should this be greater than 0 ? clearly we did withdrawal, so votingpower must become 0 as
-        // new token point was stored.
-        // assertGt(escrow.votingPower(tokenId), 0);
+        assertEq(escrow.votingPower(tokenId), 0);
 
         // but we should have written a token point in the future
         TokenPoint memory up = curve.tokenPointHistory(tokenId, 2);
