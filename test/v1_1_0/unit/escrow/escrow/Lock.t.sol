@@ -91,7 +91,7 @@ contract TestLockMintBurn is EscrowBase, IEscrowCurveTokenStorage, IGaugeVote {
     }
 
     // HAL-14 test reentrancy with safe mint
-    function testReentrantCantCallMint() public {
+    function testReentrantCantCallMint_fuckoff() public {
         NFTReentrant reentrant = new NFTReentrant();
 
         Lock newLock = _deployLock(address(reentrant), "name", "symbol", address(dao));

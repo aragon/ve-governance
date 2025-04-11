@@ -46,6 +46,10 @@ contract TestGaugeVote is GaugeVotingBase {
         token.mint(owner, lockDeposit);
         vm.startPrank(owner);
         {
+            // delegate to himself...
+            ivotesAdapter.setAutoDelegation(true);
+            ivotesAdapter.delegate(owner);
+
             token.approve(address(escrow), lockDeposit);
             tokenId = escrow.createLock(lockDeposit);
         }
