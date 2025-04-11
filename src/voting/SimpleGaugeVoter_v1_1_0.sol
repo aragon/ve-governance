@@ -6,8 +6,12 @@ import {IVotingEscrowIncreasing as IVotingEscrow} from "@escrow/IVotingEscrowInc
 import {IClockUser, IClock} from "@clock/IClock.sol";
 import {ISimpleGaugeVoter} from "./ISimpleGaugeVoter.sol";
 
-import {ReentrancyGuardUpgradeable as ReentrancyGuard} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import {PausableUpgradeable as Pausable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import {
+    ReentrancyGuardUpgradeable as ReentrancyGuard
+} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import {
+    PausableUpgradeable as Pausable
+} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import {PluginUUPSUpgradeable} from "@aragon/osx/core/plugin/PluginUUPSUpgradeable.sol";
 
 contract SimpleGaugeVoterV1_1_0 is

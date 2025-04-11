@@ -15,10 +15,10 @@ import {
     Lock,
     Curve,
     ExitQueue,
-    SimpleGaugeVoter,
-    SimpleGaugeVoterSetupSeason as SimpleGaugeVoterSetup,
-    ISimpleGaugeVoterSetupParams
-} from "@setup/SimpleGaugeVoterSetupSeason.sol";
+    GaugeVoter,
+    GaugeVoterSetupSeason as GaugeVoterSetup,
+    IGaugeVoterSetupParams
+} from "@setup/GaugeVoterSetupSeason.sol";
 import {
     MultisigSetup as MultisigPluginSetup
 } from "@aragon/osx/plugins/governance/multisig/MultisigSetup.sol";
@@ -32,7 +32,7 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 contract DeployGaugesSeason is Script {
     using SafeCast for uint256;
 
-    SimpleGaugeVoterSetup simpleGaugeVoterSetup;
+    GaugeVoterSetup simpleGaugeVoterSetup;
 
     /// @dev Thrown when attempting to deploy a multisig with no members
     error EmptyMultisig();
@@ -70,7 +70,7 @@ contract DeployGaugesSeason is Script {
         // NOTE: Multisig is already deployed, using the existing Aragon's repo
         // NOTE: Deploying the plugin setup from the current script to avoid code size constraints
 
-        SimpleGaugeVoterSetup gaugeVoterPluginSetup = deploySimpleGaugeVoterPluginSetup();
+        GaugeVoterSetup gaugeVoterPluginSetup = deployGaugeVoterPluginSetup();
 
         parameters = DeploymentParameters({
             // Multisig settings
@@ -112,9 +112,9 @@ contract DeployGaugesSeason is Script {
         if (result.length == 0) revert EmptyMultisig();
     }
 
-    function deploySimpleGaugeVoterPluginSetup() internal returns (SimpleGaugeVoterSetup result) {
-        result = new SimpleGaugeVoterSetup(
-            address(new SimpleGaugeVoter()),
+    function deployGaugeVoterPluginSetup() internal returns (GaugeVoterSetup result) {
+        result = new GaugeVoterSetup(
+            address(new GaugeVoter()),
             address(new Curve()),
             address(new ExitQueue()),
             address(new VotingEscrow()),

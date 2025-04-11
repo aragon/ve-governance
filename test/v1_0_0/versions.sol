@@ -12,9 +12,9 @@ import {
     Lock,
     ExitQueue,
     VotingEscrow,
-    SimpleGaugeVoter,
-    SimpleGaugeVoterSetup
-} from "@setup/SimpleGaugeVoterSetup.sol";
+    GaugeVoter,
+    GaugeVoterSetup
+} from "@setup/GaugeVoterSetup.sol";
 import {
     GaugesDaoFactory,
     Deployment,
@@ -25,9 +25,9 @@ import {
 
 // interfaces
 import {
-    SimpleGaugeVoterSetup,
-    ISimpleGaugeVoterSetupParams
-} from "@setup/SimpleGaugeVoterSetup.sol";
+    GaugeVoterSetup,
+    IGaugeVoterSetupParams
+} from "@setup/GaugeVoterSetup.sol";
 import {IEscrowCurveIncreasing, IEscrowCurveTokenStorage} from "@curve/IEscrowCurveIncreasing.sol";
 import {IExitQueue, ITicket, IExitQueueErrorsAndEvents} from "@queue/IExitQueue.sol";
 import {ILock, IWhitelistErrors, IWhitelistEvents} from "@lock/ILock.sol";
@@ -37,6 +37,6 @@ import {
     ILockedBalanceIncreasing,
     IVotingEscrowEventsStorageErrorsEvents
 } from "@escrow/IVotingEscrowIncreasing.sol";
-import {IGaugeVote, ISimpleGaugeVoterStorageEventsErrors} from "@voting/ISimpleGaugeVoter.sol";
+import {IGaugeVote, IGaugeVoterStorageEventsErrors} from "@voting/IGaugeVoter.sol";
 
 import {DeployGauges} from "script/deploy/DeployGauges.s.sol";
