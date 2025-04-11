@@ -151,7 +151,8 @@ contract TestWithdraw is IEscrowCurveTokenStorage, IGaugeVote, ITicket, EscrowBa
         vm.startPrank(_who);
         {
             nftLock.approve(address(escrow), tokenId);
-            escrow.beginWithdrawal(tokenId);
+            // Check backwards compat
+            escrow.resetVotesAndBeginWithdrawal(tokenId);
         }
         vm.stopPrank();
 
