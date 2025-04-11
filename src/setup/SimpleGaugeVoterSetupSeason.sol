@@ -89,7 +89,6 @@ contract SimpleGaugeVoterSetupSeason is PluginSetup {
         escrowBase = _escrowBase;
         clockBase = _clockBase;
         nftBase = _nftBase;
-        revert("add seasons");
     }
 
     function implementation() external view returns (address) {
