@@ -23,7 +23,7 @@ import {
     GaugeVoterSetup,
     IGaugeVoterSetupParams
 } from "@setup/GaugeVoterSetup.sol";
-import {GaugeVoterV1_1_0} from "@voting/GaugeVoter_v1_1_0.sol";
+import {TokenGaugeVoterV1_1_0 as GaugeVoterV1_1_0} from "@voting/TokenGaugeVoter_v1_1_0.sol";
 
 import {Upgrades} from "@foundry-upgrades/LegacyUpgrades.sol";
 import {Options} from "@foundry-upgrades/Options.sol";

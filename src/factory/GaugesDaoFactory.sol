@@ -5,7 +5,7 @@ import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {DAOFactory} from "@aragon/osx/framework/dao/DAOFactory.sol";
 import {IEscrowCurveTokenStorage} from "@curve/IEscrowCurveIncreasing.sol";
 import {IWithdrawalQueueErrors} from "@escrow/IVotingEscrowIncreasing.sol";
-import {IGaugeVote} from "@voting/IGaugeVoter.sol";
+import {ITokenGaugeVote as IGaugeVote} from "@voting/ITokenGaugeVoter.sol";
 import {
     VotingEscrow,
     Clock,

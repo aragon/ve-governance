@@ -1,14 +1,7 @@
 /// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {
-    IGaugeManager,
-    IGauge,
-    IGaugeVoterEvents,
-    IGaugeVoterErrors,
-    IGaugeManagerEvents,
-    IGaugeManagerErrors
-} from "./ISimpleGaugeVoter.sol";
+import "./IGaugeVoter.sol";
 
 interface IAddressGaugeVote {
     /// @param votes gauge => votes cast at that time

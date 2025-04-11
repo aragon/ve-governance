@@ -6,7 +6,6 @@ pragma solidity ^0.8.17;
 // contracts
 import {
     Curve,
-    Curve as QuadraticIncreasingEscrow,
     Clock,
     Lock,
     ExitQueue,
@@ -33,7 +32,23 @@ import {
     ILockedBalanceIncreasing,
     IVotingEscrowEventsStorageErrorsEvents
 } from "@escrow/IVotingEscrowIncreasing.sol";
-import {IGaugeVote, IGaugeVoterStorageEventsErrors} from "@voting/IGaugeVoter.sol";
+import {
+    ITokenGaugeVote as IGaugeVote,
+    ITokenGaugeVoterStorageEventsErrors as IGaugeVoterStorageEventsErrors
+} from "@voting/ITokenGaugeVoter.sol";
 
 // other
 import {DeployGaugesV1_1_0 as DeployGauges} from "script/deploy/DeployGauges_v1_1_0.s.sol";
+
+// deprecated but to avoid rewriting all tests
+// housekeeping: remove these as we go
+import {
+    Curve as QuadraticIncreasingEscrow,
+    GaugeVoter as SimpleGaugeVoter,
+    GaugeVoterSetupV1_1_0 as SimpleGaugeVoterSetup,
+    IGaugeVoterSetupParams as ISimpleGaugeVoterSetupParams
+} from "@setup/GaugeVoterSetup_v1_1_0.sol";
+
+import {
+    ITokenGaugeVoterStorageEventsErrors as ISimpleGaugeVoterStorageEventsErrors
+} from "@voting/ITokenGaugeVoter.sol";

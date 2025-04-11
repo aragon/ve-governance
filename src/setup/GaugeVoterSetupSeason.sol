@@ -13,7 +13,7 @@ import {ProxyLib} from "@libs/ProxyLib.sol";
 import {PermissionLib} from "@aragon/osx/core/permission/PermissionLib.sol";
 import {PluginSetup} from "@aragon/osx/framework/plugin/setup/PluginSetup.sol";
 
-import {GaugeVoterSeason as GaugeVoter} from "@voting/GaugeVoterSeason.sol";
+import {TokenGaugeVoterSeason as GaugeVoter} from "@voting/TokenGaugeVoterSeason.sol";
 import {VotingEscrow} from "@escrow/VotingEscrowIncreasing.sol";
 import {ExitQueue} from "@queue/ExitQueue.sol";
 import {QuadraticIncreasingCurveSeason as Curve} from "@curve/QuadraticIncreasingCurveSeason.sol";

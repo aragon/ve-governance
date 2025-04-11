@@ -3,9 +3,8 @@ pragma solidity ^0.8.17;
 
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {DAOFactory} from "@aragon/osx/framework/dao/DAOFactory.sol";
-import {IGaugeVote} from "src/voting/IGaugeVoter.sol";
 import {IWithdrawalQueueErrors} from "@escrow/IVotingEscrowIncreasing.sol";
-import {IGaugeVote} from "src/voting/IGaugeVoter.sol";
+import {IAddressGaugeVote as IGaugeVote} from "src/voting/IAddressGaugeVoter.sol";
 import {
     VotingEscrow,
     Clock,
