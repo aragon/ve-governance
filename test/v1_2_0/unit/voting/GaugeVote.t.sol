@@ -422,16 +422,21 @@ contract TestGaugeVote is GaugeVotingBase {
         // we expect the vote for the first token to be 50/150 of the total voting power
         // and the second to be 100/150 of the total voting power
 
-        uint expectedVotesForGauge = (50 * vp0) / (50 + 100);
-        uint expectedVotesForGauge2 = (100 * vp1) / (50 + 100);
+        uint expectedVotesForGauge = (50 * totalVotingPower) / (50 + 100);
+        uint expectedVotesForGauge2 = (100 * totalVotingPower) / (50 + 100);
 
         // check the vote
         assertEq(voter.isVoting(owner), true);
         assertEq(voter.gaugesVotedFor(owner).length, 2);
         assertEq(voter.gaugesVotedFor(owner)[0], gauge);
         assertEq(voter.gaugesVotedFor(owner)[1], gauge2);
-        assertEq(voter.votes(owner, gauge), expectedVotesForGauge);
-        assertEq(voter.votes(owner, gauge2), expectedVotesForGauge2);
+        assertApproxEqRel(voter.votes(owner, gauge), expectedVotesForGauge, 1);
+        assertApproxEqRel(voter.votes(owner, gauge2), expectedVotesForGauge2, 1);
+        assertApproxEqRel(
+            voter.usedVotingPower(owner),
+            voter.votes(owner, gauge) + voter.votes(owner, gauge2),
+            1
+        );
     }
 
     // test the event logs: person A votes, person B votes => B's event correctly distinguishes between the two

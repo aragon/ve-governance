@@ -335,14 +335,14 @@ contract AddressGaugeVoter is
         uint256 _weight,
         uint256 _totalWeight
     ) internal view virtual returns (uint256) {
-        return (_weight * 10e10) / _totalWeight;
+        return (_weight * 10e32) / _totalWeight;
     }
 
     function _votesForGauge(
         uint256 _weight,
         uint256 _votingPower
     ) internal view virtual returns (uint256) {
-        return (_weight * _votingPower) / 10e10;
+        return (_weight * _votingPower) / 10e32;
     }
 
     /// @notice This function is used to get the epoch id in the case of delegation mapper
