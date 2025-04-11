@@ -17,7 +17,18 @@ import {createTestDAO} from "@mocks/MockDAO.sol";
 import "@helpers/OSxHelpers.sol";
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
-import {Lock, Clock, VotingEscrow, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, IVotingEscrowEventsStorageErrorsEvents, IWhitelistErrors, IWhitelistEvents} from "../../../versions.sol";
+import {
+    Lock,
+    Clock,
+    VotingEscrow,
+    QuadraticIncreasingEscrow,
+    ExitQueue,
+    GaugeVoter,
+    GaugeVoterSetup,
+    IVotingEscrowEventsStorageErrorsEvents,
+    IWhitelistErrors,
+    IWhitelistEvents
+} from "../../../versions.sol";
 
 contract EscrowBase is
     Test,
@@ -36,7 +47,7 @@ contract EscrowBase is
     Lock nftLock;
     VotingEscrow escrow;
     QuadraticIncreasingEscrow curve;
-    SimpleGaugeVoter voter;
+    GaugeVoter voter;
     ExitQueue queue;
     Clock clock;
 
@@ -177,14 +188,14 @@ contract EscrowBase is
         address _escrow,
         bool _reset,
         address _clock
-    ) public returns (SimpleGaugeVoter) {
-        SimpleGaugeVoter impl = new SimpleGaugeVoter();
+    ) public returns (GaugeVoter) {
+        GaugeVoter impl = new GaugeVoter();
 
         bytes memory initCalldata = abi.encodeCall(
-            SimpleGaugeVoter.initialize,
+            GaugeVoter.initialize,
             (_dao, _escrow, _reset, _clock)
         );
-        return SimpleGaugeVoter(address(impl).deployUUPSProxy(initCalldata));
+        return GaugeVoter(address(impl).deployUUPSProxy(initCalldata));
     }
 
     function _deployExitQueue(

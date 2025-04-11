@@ -16,10 +16,10 @@ import {
     Lock,
     Curve,
     ExitQueue,
-    SimpleGaugeVoter,
-    SimpleGaugeVoterSetup,
-    ISimpleGaugeVoterSetupParams
-} from "@setup/SimpleGaugeVoterSetup.sol";
+    GaugeVoter,
+    GaugeVoterSetup,
+    IGaugeVoterSetupParams
+} from "@setup/GaugeVoterSetup.sol";
 import {MockERC20} from "@mocks/MockERC20.sol";
 
 contract SeedState is Script {

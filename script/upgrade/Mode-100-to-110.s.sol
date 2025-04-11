@@ -19,11 +19,11 @@ import {
     Lock,
     Curve,
     ExitQueue,
-    SimpleGaugeVoter,
-    SimpleGaugeVoterSetup,
-    ISimpleGaugeVoterSetupParams
-} from "@setup/SimpleGaugeVoterSetup.sol";
-import {SimpleGaugeVoterV1_1_0} from "@voting/SimpleGaugeVoter_v1_1_0.sol";
+    GaugeVoter,
+    GaugeVoterSetup,
+    IGaugeVoterSetupParams
+} from "@setup/GaugeVoterSetup.sol";
+import {TokenGaugeVoterV1_1_0 as GaugeVoterV1_1_0} from "@voting/TokenGaugeVoter_v1_1_0.sol";
 
 import {Upgrades} from "@foundry-upgrades/LegacyUpgrades.sol";
 import {Options} from "@foundry-upgrades/Options.sol";
@@ -89,8 +89,8 @@ contract UpgradeModeTo110 is Script, Test {
 
     Lock lockMode;
     Lock lockBPT;
-    SimpleGaugeVoter voterMode;
-    SimpleGaugeVoter voterBPT;
+    GaugeVoter voterMode;
+    GaugeVoter voterBPT;
 
     address[] aragonSigners;
     address[] modeSigners;
@@ -133,13 +133,13 @@ contract UpgradeModeTo110 is Script, Test {
         exclude[0] = "lib/osx/packages/contracts/src/core/plugin/PluginUUPSUpgradeable.sol";
         options.exclude = exclude;
 
-        options.referenceContract = "SimpleGaugeVoter.sol";
-        Upgrades.validateUpgrade("SimpleGaugeVoter_v1_1_0.sol:SimpleGaugeVoterV1_1_0", options);
+        options.referenceContract = "GaugeVoter.sol";
+        Upgrades.validateUpgrade("GaugeVoter_v1_1_0.sol:GaugeVoterV1_1_0", options);
     }
 
     function buildActions() internal returns (IDAO.Action[] memory, address) {
         // action 1: deploy new impls
-        address voterImplNew = address(new SimpleGaugeVoterV1_1_0());
+        address voterImplNew = address(new GaugeVoterV1_1_0());
 
         // action 2: upgradeTo
         IDAO.Action[] memory actions = new IDAO.Action[](2);

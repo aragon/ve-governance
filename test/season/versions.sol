@@ -6,14 +6,13 @@ pragma solidity ^0.8.17;
 // contracts
 import {
     Curve,
-    Curve as QuadraticIncreasingEscrow,
     Clock,
     Lock,
     ExitQueue,
     VotingEscrow,
-    SimpleGaugeVoter,
-    SimpleGaugeVoterSetupSeason as SimpleGaugeVoterSetup
-} from "@setup/SimpleGaugeVoterSetupSeason.sol";
+    GaugeVoter,
+    GaugeVoterSetupSeason as GaugeVoterSetup
+} from "@setup/GaugeVoterSetupSeason.sol";
 import {
     GaugesDaoFactorySeason as GaugesDaoFactory,
     Deployment,
@@ -25,7 +24,7 @@ import {
 // interfaces
 import {IClock} from "@clock/IClock.sol";
 import {ISeasonErrors} from "@clock/IClockSeason.sol";
-import {ISimpleGaugeVoterSetupParams} from "@setup/SimpleGaugeVoterSetupSeason.sol";
+import {IGaugeVoterSetupParams} from "@setup/GaugeVoterSetupSeason.sol";
 import {IEscrowCurveIncreasing, IEscrowCurveTokenStorage} from "@curve/IEscrowCurveIncreasing.sol";
 import {IExitQueue, ITicket, IExitQueueErrorsAndEvents} from "@queue/IExitQueue.sol";
 import {ILock, IWhitelistErrors, IWhitelistEvents} from "@lock/ILock.sol";
@@ -35,7 +34,23 @@ import {
     ILockedBalanceIncreasing,
     IVotingEscrowEventsStorageErrorsEvents
 } from "@escrow/IVotingEscrowIncreasing.sol";
-import {IGaugeVote, ISimpleGaugeVoterStorageEventsErrors} from "@voting/ISimpleGaugeVoter.sol";
+import {
+    ITokenGaugeVote as IGaugeVote,
+    ITokenGaugeVoterStorageEventsErrors as IGaugeVoterStorageEventsErrors
+} from "@voting/ITokenGaugeVoter.sol";
 
 // other
 import {DeployGaugesSeason as DeployGauges} from "script/deploy/DeployGaugesSeason.s.sol";
+
+// deprecated but to avoid rewriting all tests
+// housekeeping: remove these as we go
+import {
+    Curve as QuadraticIncreasingEscrow,
+    GaugeVoter as SimpleGaugeVoter,
+    GaugeVoterSetupSeason as SimpleGaugeVoterSetup,
+    IGaugeVoterSetupParams as ISimpleGaugeVoterSetupParams
+} from "@setup/GaugeVoterSetupSeason.sol";
+
+import {
+    ITokenGaugeVoterStorageEventsErrors as ISimpleGaugeVoterStorageEventsErrors
+} from "@voting/ITokenGaugeVoter.sol";

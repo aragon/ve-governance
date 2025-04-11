@@ -1,30 +1,22 @@
 /// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-interface IGauge {
-    /// @param metadataURI URI for the metadata of the gauge
-    struct Gauge {
-        bool active;
-        uint256 created; // timestamp or epoch
-        string metadataURI;
-        // more space for data as this is a struct in a mapping
-    }
-}
+import "./IGaugeVoter.sol";
 
-interface IGaugeVote {
+interface IAddressGaugeVote {
     /// @param votes gauge => votes cast at that time
     /// @param gaugesVotedFor array of gauges we have active votes for
     /// @param usedVotingPower total voting power used at the time of the vote
     /// @dev this changes so we need an historic snapshot
     /// @param lastVoted is the last time the user voted
-    struct TokenVoteData {
-        mapping(address => uint256) votes;
+    struct AddressVoteData {
+        mapping(address => uint256) voteWeights;
         address[] gaugesVotedFor;
         uint256 usedVotingPower;
         uint256 lastVoted;
     }
 
-    /// @param weight proportion of voting power the token will allocate to the gauge. Will be normalised.
+    /// @param weight proportion of voting power the address will allocate to the gauge. Will be normalised.
     /// @param gauge address of the gauge to vote for
     struct GaugeVote {
         uint256 weight;
@@ -33,61 +25,30 @@ interface IGaugeVote {
 }
 
 /*///////////////////////////////////////////////////////////////
-                            Gauge Manager
-//////////////////////////////////////////////////////////////*/
-
-interface IGaugeManagerEvents {
-    event GaugeCreated(address indexed gauge, address indexed creator, string metadataURI);
-    event GaugeDeactivated(address indexed gauge);
-    event GaugeActivated(address indexed gauge);
-    event GaugeMetadataUpdated(address indexed gauge, string metadataURI);
-}
-
-interface IGaugeManagerErrors {
-    error ZeroGauge();
-    error GaugeActivationUnchanged();
-    error GaugeExists();
-}
-
-interface IGaugeManager is IGaugeManagerEvents, IGaugeManagerErrors {
-    function isActive(address gauge) external view returns (bool);
-
-    function createGauge(address _gauge, string calldata _metadata) external returns (address);
-
-    function deactivateGauge(address _gauge) external;
-
-    function activateGauge(address _gauge) external;
-
-    function updateGaugeMetadata(address _gauge, string calldata _metadata) external;
-}
-
-/*///////////////////////////////////////////////////////////////
                             Gauge Voter
 //////////////////////////////////////////////////////////////*/
 
-interface IGaugeVoterEvents {
-    /// @param votingPowerCastForGauge votes cast by this token for this gauge in this vote
+interface IAddressGaugeVoterEvents {
+    /// @param votingPowerCastForGauge votes cast by this address for this gauge in this vote
     /// @param totalVotingPowerInGauge total voting power in the gauge at the time of the vote, after applying the vote
     /// @param totalVotingPowerInContract total voting power in the contract at the time of the vote, after applying the vote
     event Voted(
         address indexed voter,
         address indexed gauge,
         uint256 indexed epoch,
-        uint256 tokenId,
         uint256 votingPowerCastForGauge,
         uint256 totalVotingPowerInGauge,
         uint256 totalVotingPowerInContract,
         uint256 timestamp
     );
 
-    /// @param votingPowerRemovedFromGauge votes removed by this token for this gauge, at the time of this rest
+    /// @param votingPowerRemovedFromGauge votes removed by this address for this gauge, at the time of this rest
     /// @param totalVotingPowerInGauge total voting power in the gauge at the time of the reset, after applying the reset
     /// @param totalVotingPowerInContract total voting power in the contract at the time of the reset, after applying the reset
     event Reset(
         address indexed voter,
         address indexed gauge,
         uint256 indexed epoch,
-        uint256 tokenId,
         uint256 votingPowerRemovedFromGauge,
         uint256 totalVotingPowerInGauge,
         uint256 totalVotingPowerInContract,
@@ -95,8 +56,7 @@ interface IGaugeVoterEvents {
     );
 }
 
-interface IGaugeVoterErrors {
-    error AlreadyVoted(uint256 tokenId);
+interface IAddressGaugeVoterErrors {
     error VotingInactive();
     error NotApprovedOrOwner();
     error GaugeDoesNotExist(address _pool);
@@ -105,33 +65,38 @@ interface IGaugeVoterErrors {
     error NoVotes();
     error NoVotingPower();
     error NotCurrentlyVoting();
+    error OnlyIVotesAdapter();
+    error UpdateVotingPowerHookNotEnabled();
+    error AlreadyVoted(address _address);
 }
 
-interface IGaugeVoter is IGaugeVoterEvents, IGaugeVoterErrors, IGaugeVote {
+interface IAddressGaugeVoter is
+    IAddressGaugeVoterEvents,
+    IAddressGaugeVoterErrors,
+    IAddressGaugeVote,
+    IGaugeManager,
+    IGauge
+{
     /// @notice Called by users to vote for pools. Votes distributed proportionally based on weights.
-    /// @param _tokenId     Id of veNFT you are voting with.
     /// @param _votes       Array of votes to be cast, contains gauge address and weight.
-    function vote(uint256 _tokenId, GaugeVote[] memory _votes) external;
+    function vote(GaugeVote[] memory _votes) external;
 
     /// @notice Called by users to reset voting state. Required when withdrawing or transferring veNFT.
-    /// @param _tokenId Id of veNFT you are reseting.
-    function reset(uint256 _tokenId) external;
+    function reset() external;
 
-    /// @notice Can be called to check if a token is currently voting
-    function isVoting(uint256 _tokenId) external view returns (bool);
+    /// @notice Can be called to check if an address is currently voting
+    function isVoting(address _address) external view returns (bool);
+
+    function updateVotingPower(address _from, address _to) external;
 }
 
 /*///////////////////////////////////////////////////////////////
-                        Simple Gauge Voter
+                      Address Gauge Voter
 //////////////////////////////////////////////////////////////*/
 
-interface ISimpleGaugeVoter is IGaugeVoter, IGaugeManager, IGauge {
-
-}
-
-interface ISimpleGaugeVoterStorageEventsErrors is
+interface IAddressGaugeVoterStorageEventsErrors is
     IGaugeManagerEvents,
     IGaugeManagerErrors,
-    IGaugeVoterEvents,
-    IGaugeVoterErrors
+    IAddressGaugeVoterEvents,
+    IAddressGaugeVoterErrors
 {}

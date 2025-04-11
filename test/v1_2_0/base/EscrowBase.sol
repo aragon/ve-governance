@@ -105,7 +105,7 @@ contract EscrowBase is
         super.initialize(curve.maxTime(), clock.checkpointInterval());
 
         // to be added as proxies
-        voter = _deployVoter(address(dao), address(escrow), false, address(clock));
+        voter = _deployVoter(address(dao), address(escrow), false, address(clock), address(ivotesAdapter));
         queue = _deployExitQueue(address(escrow), 3 days, address(dao), 0, address(clock), 1);
 
         // grant this contract admin privileges
@@ -290,13 +290,14 @@ contract EscrowBase is
         address _dao,
         address _escrow,
         bool _reset,
-        address _clock
+        address _clock,
+        address _ivotesAdapter
     ) public returns (SimpleGaugeVoter) {
         SimpleGaugeVoter impl = new SimpleGaugeVoter();
 
         bytes memory initCalldata = abi.encodeCall(
             SimpleGaugeVoter.initialize,
-            (_dao, _escrow, _reset, _clock)
+            (_dao, _escrow, _reset, _clock, _ivotesAdapter, true)
         );
         return SimpleGaugeVoter(address(impl).deployUUPSProxy(initCalldata));
     }
