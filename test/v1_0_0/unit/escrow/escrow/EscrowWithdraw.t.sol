@@ -231,57 +231,6 @@ contract TestWithdraw is EscrowBase, IEscrowCurveTokenStorage, IGaugeVote, ITick
         assertEq(escrow.totalLocked(), 0);
     }
 
-    function test_CanBeginWithdrawalDuringDistributionPeriod() public {
-        address _who = address(1);
-        uint128 _dep = 100e18;
-
-        // voting window is ea. 2 weeks + 1 hour
-        vm.warp(2 weeks + 1 hours + 1);
-
-        token.mint(_who, _dep);
-        uint tokenId;
-        vm.startPrank(_who);
-        {
-            token.approve(address(escrow), _dep);
-            tokenId = escrow.createLock(_dep);
-
-            // voting active after cooldown
-            // +1 week: voting ends
-            // +2 weeks: next voting period opens
-            vm.warp(block.timestamp + 2 weeks);
-
-            // make a vote
-            voter.vote(tokenId, votes);
-
-            // warp so cooldown crosses the week boundary
-            // and distribution period starts
-            vm.warp(block.timestamp + clock.epochNextCheckpointIn() + 1);
-            assertFalse(voter.votingActive());
-
-            nftLock.approve(address(escrow), tokenId);
-            escrow.resetVotesAndBeginWithdrawal(tokenId);
-        }
-        vm.stopPrank();
-
-        // must wait till after end of cooldown
-        vm.warp(block.timestamp + clock.epochNextCheckpointIn() + 1);
-
-        uint fee = queue.calculateFee(tokenId);
-
-        // withdraw
-        vm.prank(_who);
-        vm.expectEmit(true, true, false, true);
-        emit Withdraw(_who, tokenId, _dep - fee, block.timestamp, 0);
-        escrow.withdraw(tokenId);
-
-        // asserts
-        assertEq(token.balanceOf(address(queue)), fee);
-        assertEq(token.balanceOf(_who), _dep - fee);
-        assertEq(nftLock.balanceOf(_who), 0);
-        assertEq(nftLock.balanceOf(address(escrow)), 0);
-        assertEq(escrow.totalLocked(), 0);
-    }
-
     // HAL-13: locks are re-used causing reverts and duplications
     function testCanCreateLockAfterBurning() public {
         address USER1 = address(1);

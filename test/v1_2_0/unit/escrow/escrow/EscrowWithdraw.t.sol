@@ -58,19 +58,20 @@ contract TestWithdraw is IEscrowCurveTokenStorage, IGaugeVote, ITicket, EscrowBa
             // voting active after cooldown
             vm.warp(block.timestamp + 2 weeks + 1 hours);
 
+            // delegate to himself
+            ivotesAdapter.setAutoDelegation(true);
+            ivotesAdapter.delegate(_who);
+
             // make a vote
             voter.vote(votes);
         }
         vm.stopPrank();
 
-        // can't enter a withdrawal while voting
-        vm.expectRevert(CannotExit.selector);
-        escrow.beginWithdrawal(tokenId);
-
         // enter a withdrawal
         vm.startPrank(_who);
         {
             nftLock.approve(address(escrow), tokenId);
+            // check backwards compat
             escrow.resetVotesAndBeginWithdrawal(tokenId);
         }
         vm.stopPrank();
@@ -139,20 +140,20 @@ contract TestWithdraw is IEscrowCurveTokenStorage, IGaugeVote, ITicket, EscrowBa
             // voting active after cooldown
             vm.warp(block.timestamp + 2 weeks + 1 hours);
 
+            // delegate to himself
+            ivotesAdapter.setAutoDelegation(true);
+            ivotesAdapter.delegate(_who);
+
             // make a vote
             voter.vote(votes);
         }
         vm.stopPrank();
 
-        // can't enter a withdrawal while voting
-        vm.expectRevert(CannotExit.selector);
-        escrow.beginWithdrawal(tokenId);
-
         // enter a withdrawal
         vm.startPrank(_who);
         {
             nftLock.approve(address(escrow), tokenId);
-            escrow.resetVotesAndBeginWithdrawal(tokenId);
+            escrow.beginWithdrawal(tokenId);
         }
         vm.stopPrank();
 
@@ -160,10 +161,7 @@ contract TestWithdraw is IEscrowCurveTokenStorage, IGaugeVote, ITicket, EscrowBa
         assertEq(nftLock.balanceOf(_who), 0);
         assertEq(nftLock.balanceOf(address(escrow)), 1);
 
-        // voting power should still be there as the cp is still active
-        // TODO: GIORGI why should this be greater than 0 ? clearly we did withdrawal, so votingpower must become 0 as
-        // new token point was stored.
-        // assertGt(escrow.votingPower(tokenId), 0);
+        assertEq(escrow.votingPower(tokenId), 0);
 
         // but we should have written a token point in the future
         TokenPoint memory up = curve.tokenPointHistory(tokenId, 2);
@@ -202,6 +200,10 @@ contract TestWithdraw is IEscrowCurveTokenStorage, IGaugeVote, ITicket, EscrowBa
             // +1 week: voting ends
             // +2 weeks: next voting period opens
             vm.warp(block.timestamp + 2 weeks);
+
+            // delegate to himself
+            ivotesAdapter.setAutoDelegation(true);
+            ivotesAdapter.delegate(_who);
 
             // make a vote
             voter.vote(votes);

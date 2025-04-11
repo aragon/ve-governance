@@ -509,9 +509,6 @@ contract VotingEscrowV1_2_0 is
     /// @param _tokenId The tokenId to begin withdrawal for. Will be transferred to this contract before burning.
     /// @dev The user must not have active votes in the voter contract.
     function beginWithdrawal(uint256 _tokenId) public nonReentrant whenNotPaused {
-        // can't exit if you have votes pending
-        if (isVoting(_tokenId)) revert CannotExit();
-
         // in the event of an increasing curve, 0 voting power means voting isn't active
         if (votingPower(_tokenId) == 0) revert CannotExit();
 
