@@ -274,16 +274,16 @@ contract LinearIncreasingCurve is
         // How much time remaining till maxTime
         uint256 maxTime = maxTime();
         uint256 originalOffset = originalPoint.writtenTs - originalPoint.checkpointTs;
-        
+
         // maxTime should always be greater than originalOffset.
         uint256 remainingTillMaxTime = maxTime - originalOffset;
 
         // bound time in case it's less than `remainingTillMaxTime`.
         uint256 elapsed = _t - lastPoint.writtenTs;
-        if(elapsed <= remainingTillMaxTime) {
+        if (elapsed <= remainingTillMaxTime) {
             remainingTillMaxTime = elapsed;
         }
-        
+
         return _getBias(remainingTillMaxTime, bias, slope) / 1e18;
     }
 
@@ -384,6 +384,8 @@ contract LinearIncreasingCurve is
         if (block.timestamp < newEnd) {
             lastPoint.slope += newLockSlope;
             newDSlope += newLockSlope;
+        } else {
+            newLockSlope = 0;
         }
 
         lastPoint.bias += newLockBias;
@@ -411,17 +413,19 @@ contract LinearIncreasingCurve is
                     newDSlope -= oldLockSlope;
                 }
             } else {
-                // Merge is occuring, so get the total
-                // bias and slope for `fromLocked` and `newLocked`.
-                newLockSlope += oldLockSlope;
                 newLockBias += oldLockBias;
 
-                // fromLocked's current end is in the future and
-                // since `fromLocked` gets destroyed, its slope must be
-                // recorded on the newLocked's end. If both `ends` are equal,
-                // old slope is already included/recorded when it was first stored.
-                if (_fromLockedEnd > block.timestamp && _fromLockedEnd != newEnd) {
-                    newDSlope += oldLockSlope;
+                if (_fromLockedEnd > block.timestamp) {
+                    // Only add old lock's slope in case it's not mature yet.
+                    newLockSlope += oldLockSlope;
+
+                    // fromLocked's current end is in the future and
+                    // since `fromLocked` gets destroyed, its slope must be
+                    // recorded on the newLocked's end. If both `ends` are equal,
+                    // old slope is already included/recorded when it was first stored.
+                    if (_fromLockedEnd != newEnd) {
+                        newDSlope += oldLockSlope;
+                    }
                 }
             }
 

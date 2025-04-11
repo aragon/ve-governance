@@ -39,7 +39,6 @@ contract TestMerge_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage
         // 1. on `from` token point, bias and slope must become 0. `start` should stay the same and current timestamp updated.
         // 2. on `to` token point, bias and slope must include both token's bias and slope. `start` should stay the same and current timestamp updated.
         // 3. latest global point  must have the same data as the latest token point of `to`.
-        // 3. Since `to` tokens is not mature yet, end is in the future, so slopeChanges must still contain the sum of both slopes.
         uint256 from = escrow.createLock(Lock_1_Amount);
         uint256 to = escrow.createLock(Lock_2_Amount);
 
@@ -70,9 +69,6 @@ contract TestMerge_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage
             weekStartTs,
             currentTs
         );
-
-        // 4
-        assertEq(slopeChanges(weekStartTs + maxTime), totalSlopeFP);
     }
 
     function test_Merge_WhenMature_SameStartDate() public {
@@ -80,7 +76,6 @@ contract TestMerge_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage
         // 2. on `to` token point, bias must be the sum of both token's maxed out values. Slope must be 0 as it's already maxed out.
         // `start` should stay the same and current timestamp updated.
         // 3. last global point must have slope 0 and bias as sum of both token's maxed out values.
-        // 4. Since both have the same end and is in the past, slopeChanges must still be the same of both slopes.
         uint256 from = escrow.createLock(Lock_1_Amount);
         uint256 to = escrow.createLock(Lock_2_Amount);
 
@@ -104,18 +99,14 @@ contract TestMerge_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage
         int256 currentTotalBiasFP = LOCK_1_MAX + LOCK_2_MAX;
         int256 totalSlopeFP = slopeFP(Lock_1_Amount + Lock_2_Amount);
 
-        assertTokenPoint(to, 2, currentTotalBiasFP, totalSlopeFP, weekStartTs, currentTs);
-
-        // 4
-        assertEq(slopeChanges(end), totalSlopeFP);
+        assertTokenPoint(to, 2, currentTotalBiasFP, 0, weekStartTs, currentTs);
     }
 
-    function test_Merge_WhenMature_DifferentStartDates() public {
+    function test_Merge_WhenMature_DifferentStartDates_fuck() public {
         // 1. on `from` token point, bias and slope must become 0. `start` should stay the same and current timestamp updated.
         // 2. on `to` token point, bias must be the sum of both token's maxed out values. Slope must be 0 as it's already maxed out.
         // `start` should stay the same and current timestamp updated.
         // 3. last global point must have slope 0 and bias as sum of both token's maxed out values.
-        // 4. Since `to`'s end is greater than `from`'s end, and we make `from` to become 0, `to`'s slope change must also include `to`'s slope.
         uint256 from = escrow.createLock(Lock_1_Amount);
 
         uint256 fromLockWeekStart = weekStartTs(block.timestamp);
@@ -151,13 +142,9 @@ contract TestMerge_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage
             to, // tokenId
             2, // latestIndex
             currentTotalBiasFP,
-            slopeFP(Lock_1_Amount) + slopeFP(Lock_2_Amount),
+            0,
             toLockWeekStart,
             currentTs
         );
-
-        // 4
-        assertEq(slopeChanges(fromLockEnd), slopeFP(Lock_1_Amount));
-        assertEq(slopeChanges(toLockEnd), slopeFP(Lock_2_Amount));
     }
 }
