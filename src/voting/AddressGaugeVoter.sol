@@ -104,8 +104,8 @@ contract AddressGaugeVoter is
         _;
     }
 
-    modifier onlyIVotesAdapter() {
-        if (msg.sender != ivotesAdapter) revert OnlyIVotesAdapter();
+    modifier onlyEscrow() {
+        if (msg.sender != escrow) revert OnlyEscrow();
         _;
     }
 
@@ -309,7 +309,7 @@ contract AddressGaugeVoter is
         voteData.lastVoted = block.timestamp;
     }
 
-    function updateVotingPower(address _from, address _to) external onlyIVotesAdapter {
+    function updateVotingPower(address _from, address _to) external onlyEscrow {
         // update the voting power of the sender
         _updateVotingPower(_from);
 

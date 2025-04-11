@@ -51,7 +51,8 @@ import {
 } from "@voting/IAddressGaugeVoter.sol";
 import {
     IEscrowIVotesAdapterStorage,
-    IEscrowIVotesAdapterErrorsAndEvents
+    IEscrowIVotesAdapterErrorsAndEvents,
+    IEscrowIVotesAdapter
 } from "@delegation/IEscrowIVotesAdapter.sol";
 
 // other
