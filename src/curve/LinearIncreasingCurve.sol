@@ -148,8 +148,8 @@ contract LinearIncreasingCurve is
         int256[3] memory coefficients = _getCoefficients(amount);
 
         return [
-            coefficients[0], // amount
-            coefficients[1], // slope
+            coefficients[0] / 1e18, // amount
+            coefficients[1] / 1e18, // slope
             0
         ];
     }
@@ -241,8 +241,10 @@ contract LinearIncreasingCurve is
     function tokenPointHistory(
         uint256 _tokenId,
         uint256 _index
-    ) external view returns (TokenPoint memory) {
-        return _tokenPointHistory[_tokenId][_index];
+    ) external view returns (TokenPoint memory point) {
+        point = _tokenPointHistory[_tokenId][_index];
+        /// bind for backwards compatibility
+        point.bias = uint(point.coefficients[0]) / 1e18;
     }
 
     /// @inheritdoc IEscrowCurveGlobal

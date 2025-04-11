@@ -8,7 +8,7 @@ import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {DAO, createTestDAO} from "@mocks/MockDAO.sol";
 import {
     Clock,
-    QuadraticIncreasingEscrow,
+    Curve,
     ILockedBalanceIncreasing,
     IVotingEscrowIncreasing as IVotingEscrow,
     IEscrowCurveIncreasing as IEscrowCurve
@@ -19,10 +19,15 @@ import {FixedPointBase} from "../../../base/FixedPointBase.sol";
 
 contract MockEscrow {
     address public token;
-    QuadraticIncreasingEscrow public curve;
+    Curve public curve;
+    mapping(uint => IVotingEscrow.LockedBalance) _locked;
 
-    function setCurve(QuadraticIncreasingEscrow _curve) external {
+    function setCurve(Curve _curve) external {
         curve = _curve;
+    }
+
+    function setLocked(uint256 _tokenId, IVotingEscrow.LockedBalance memory _locked) external {
+        _locked = _locked;
     }
 
     function checkpoint(
@@ -30,13 +35,18 @@ contract MockEscrow {
         IVotingEscrow.LockedBalance memory _oldLocked,
         IVotingEscrow.LockedBalance memory _newLocked
     ) external {
+        _locked[_tokenId] = _newLocked;
         return curve.checkpoint(_tokenId, _oldLocked, _newLocked);
+    }
+
+    function locked(uint256 _tokenId) external view returns (IVotingEscrow.LockedBalance memory) {
+        return _locked[_tokenId];
     }
 }
 
-contract QuadraticCurveBase is TestHelpers, FixedPointBase, ILockedBalanceIncreasing {
+contract CurveBase is TestHelpers, FixedPointBase, ILockedBalanceIncreasing {
     using ProxyLib for address;
-    QuadraticIncreasingEscrow internal curve;
+    Curve internal curve;
     MockEscrow internal escrow;
     Clock internal clock;
 
@@ -48,14 +58,14 @@ contract QuadraticCurveBase is TestHelpers, FixedPointBase, ILockedBalanceIncrea
         bytes memory initClockCalldata = abi.encodeWithSelector(Clock.initialize.selector, dao);
         clock = Clock(clockImpl.deployUUPSProxy(initClockCalldata));
 
-        address impl = address(new QuadraticIncreasingEscrow());
+        address impl = address(new Curve());
 
         bytes memory initCalldata = abi.encodeCall(
-            QuadraticIncreasingEscrow.initialize,
+            Curve.initialize,
             (address(escrow), address(dao), 3 days, address(clock))
         );
 
-        curve = QuadraticIncreasingEscrow(impl.deployUUPSProxy(initCalldata));
+        curve = Curve(impl.deployUUPSProxy(initCalldata));
 
         // grant this address admin privileges
         DAO(payable(address(dao))).grant({
