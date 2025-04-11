@@ -13,9 +13,9 @@ import {
     ExitQueue,
     VotingEscrow,
     EscrowIVotesAdapter,
-    SimpleGaugeVoter,
-    SimpleGaugeVoterSetupV1_3_0 as SimpleGaugeVoterSetup
-} from "@setup/SimpleGaugeVoterSetup_v1_3_0.sol";
+    GaugeVoter,
+    GaugeVoterSetupV1_3_0 as GaugeVoterSetup
+} from "@setup/GaugeVoterSetup_v1_3_0.sol";
 import {
     GaugesDaoFactoryV1_3_0 as GaugesDaoFactory,
     Deployment,
@@ -27,7 +27,7 @@ import {
 // interfaces
 import {IClockV1_2_0 as IClock} from "@clock/IClock_v1_2_0.sol";
 import {ISeasonErrors} from "@clock/IClockSeason.sol";
-import {ISimpleGaugeVoterSetupParams} from "@setup/SimpleGaugeVoterSetup_v1_3_0.sol";
+import {IGaugeVoterSetupParams} from "@setup/GaugeVoterSetup_v1_3_0.sol";
 import {
     IEscrowCurveGlobalStorage,
     IEscrowCurveIncreasingV1_2_0 as IEscrowCurveIncreasing,
@@ -49,7 +49,7 @@ import {
 } from "@escrow/IVotingEscrowIncreasing_v1_2_0.sol";
 import {
     IAddressGaugeVote as IGaugeVote,
-    IAddressGaugeVoterStorageEventsErrors as ISimpleGaugeVoterStorageEventsErrors
+    IAddressGaugeVoterStorageEventsErrors as IGaugeVoterStorageEventsErrors
 } from "@voting/IAddressGaugeVoter.sol";
 import {
     IEscrowIVotesAdapterStorage,

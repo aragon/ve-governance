@@ -5,17 +5,17 @@ import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {DAOFactory} from "@aragon/osx/framework/dao/DAOFactory.sol";
 import {IEscrowCurveTokenStorage} from "@curve/IEscrowCurveIncreasing.sol";
 import {IWithdrawalQueueErrors} from "@escrow/IVotingEscrowIncreasing.sol";
-import {IGaugeVote} from "src/voting/ISimpleGaugeVoter.sol";
+import {IGaugeVote} from "src/voting/IGaugeVoter.sol";
 import {
     VotingEscrow,
     Clock,
     Lock,
     Curve,
     ExitQueue,
-    SimpleGaugeVoter,
-    SimpleGaugeVoterSetupV1_1_0 as SimpleGaugeVoterSetup,
-    ISimpleGaugeVoterSetupParams
-} from "@setup/SimpleGaugeVoterSetup_v1_1_0.sol";
+    GaugeVoter,
+    GaugeVoterSetupV1_1_0 as GaugeVoterSetup,
+    IGaugeVoterSetupParams
+} from "@setup/GaugeVoterSetup_v1_1_0.sol";
 import {PluginSetupProcessor} from "@aragon/osx/framework/plugin/setup/PluginSetupProcessor.sol";
 import {
     hashHelpers,
@@ -64,7 +64,7 @@ struct DeploymentParameters {
     PluginRepo multisigPluginRepo;
     uint8 multisigPluginRelease;
     uint16 multisigPluginBuild;
-    SimpleGaugeVoterSetup voterPluginSetup;
+    GaugeVoterSetup voterPluginSetup;
     string voterEnsSubdomain;
     // OSx addresses
     address osxDaoFactory;
@@ -80,7 +80,7 @@ struct TokenParameters {
 
 /// @notice Struct containing the plugin and all of its helpers
 struct GaugePluginSet {
-    SimpleGaugeVoter plugin;
+    GaugeVoter plugin;
     Curve curve;
     ExitQueue exitQueue;
     VotingEscrow votingEscrow;
@@ -175,14 +175,14 @@ contract GaugesDaoFactoryV1_1_0 {
             PluginRepo.Tag memory repoTag = PluginRepo.Tag(1, 1);
             GaugePluginSet memory pluginSet;
 
-            PluginRepo pluginRepo = prepareSimpleGaugeVoterPluginRepo(dao);
+            PluginRepo pluginRepo = prepareGaugeVoterPluginRepo(dao);
 
             for (uint i = 0; i < parameters.tokenParameters.length; ) {
                 (
                     pluginSet,
                     deployment.gaugeVoterPluginRepo,
                     preparedVoterSetupData
-                ) = prepareSimpleGaugeVoterPlugin(
+                ) = prepareGaugeVoterPlugin(
                     dao,
                     parameters.tokenParameters[i],
                     pluginRepo,
@@ -199,7 +199,7 @@ contract GaugesDaoFactoryV1_1_0 {
                     preparedVoterSetupData
                 );
 
-                activateSimpleGaugeVoterInstallation(dao, pluginSet);
+                activateGaugeVoterInstallation(dao, pluginSet);
 
                 unchecked {
                     i++;
@@ -281,7 +281,7 @@ contract GaugesDaoFactoryV1_1_0 {
         return (Multisig(plugin), preparedSetupData);
     }
 
-    function prepareSimpleGaugeVoterPluginRepo(DAO dao) internal returns (PluginRepo pluginRepo) {
+    function prepareGaugeVoterPluginRepo(DAO dao) internal returns (PluginRepo pluginRepo) {
         // Publish repo
         pluginRepo = PluginRepoFactory(parameters.pluginRepoFactory)
             .createPluginRepoWithFirstVersion(
@@ -293,7 +293,7 @@ contract GaugesDaoFactoryV1_1_0 {
             );
     }
 
-    function prepareSimpleGaugeVoterPlugin(
+    function prepareGaugeVoterPlugin(
         DAO dao,
         TokenParameters memory tokenParameters,
         PluginRepo pluginRepo,
@@ -301,7 +301,7 @@ contract GaugesDaoFactoryV1_1_0 {
     ) internal returns (GaugePluginSet memory, PluginRepo, IPluginSetup.PreparedSetupData memory) {
         // Plugin settings
         bytes memory settingsData = parameters.voterPluginSetup.encodeSetupData(
-            ISimpleGaugeVoterSetupParams({
+            IGaugeVoterSetupParams({
                 isPaused: parameters.votingPaused,
                 token: tokenParameters.token,
                 veTokenName: tokenParameters.veTokenName,
@@ -326,7 +326,7 @@ contract GaugesDaoFactoryV1_1_0 {
 
         address[] memory helpers = preparedSetupData.helpers;
         GaugePluginSet memory pluginSet = GaugePluginSet({
-            plugin: SimpleGaugeVoter(plugin),
+            plugin: GaugeVoter(plugin),
             curve: Curve(helpers[0]),
             exitQueue: ExitQueue(helpers[1]),
             votingEscrow: VotingEscrow(helpers[2]),
@@ -355,10 +355,7 @@ contract GaugesDaoFactoryV1_1_0 {
         );
     }
 
-    function activateSimpleGaugeVoterInstallation(
-        DAO dao,
-        GaugePluginSet memory pluginSet
-    ) internal {
+    function activateGaugeVoterInstallation(DAO dao, GaugePluginSet memory pluginSet) internal {
         dao.grant(
             address(pluginSet.votingEscrow),
             address(this),
