@@ -17,9 +17,9 @@ import {
     Lock,
     LinearIncreasingEscrow,
     ExitQueue,
-    SimpleGaugeVoter,
-    SimpleGaugeVoterSetup,
-    ISimpleGaugeVoterSetupParams,
+    GaugeVoter,
+    GaugeVoterSetup,
+    IGaugeVoterSetupParams,
     IWithdrawalQueueErrors,
     IGaugeVote,
     IEscrowCurveTokenStorage,
@@ -83,7 +83,7 @@ contract TestE2EV1_4_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
     // although these exist on the factory a bit easier to access here
     // these only reference the FIRST set of contracts, if deploying multiple
     // fetch from the factory
-    SimpleGaugeVoter voter;
+    GaugeVoter voter;
     LinearIncreasingEscrow curve;
     ExitQueue queue;
     VotingEscrow escrow;
@@ -160,7 +160,7 @@ contract TestE2EV1_4_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
         // if deploying multiple tokens, you can adjust the index here
         GaugePluginSet memory pluginSet = deployment.gaugeVoterPluginSets[0];
 
-        voter = SimpleGaugeVoter(pluginSet.plugin);
+        voter = GaugeVoter(pluginSet.plugin);
         curve = LinearIncreasingEscrow(pluginSet.curve);
         queue = ExitQueue(pluginSet.exitQueue);
         escrow = VotingEscrow(pluginSet.votingEscrow);
@@ -716,7 +716,7 @@ contract TestE2EV1_4_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
                 vm.startPrank(staker);
                 {
                     vm.expectRevert("Pausable: paused");
-                    voter.vote(1, votes);
+                    voter.vote(votes);
                 }
                 vm.stopPrank();
             }
@@ -735,7 +735,7 @@ contract TestE2EV1_4_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
                 vm.startPrank(staker);
                 {
                     vm.expectRevert(VotingInactive.selector);
-                    voter.vote(1, votes);
+                    voter.vote(votes);
                 }
                 vm.stopPrank();
             }
@@ -767,7 +767,7 @@ contract TestE2EV1_4_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
             vm.startPrank(alice);
             {
                 vm.expectRevert(abi.encodeWithSelector(GaugeDoesNotExist.selector, address(123)));
-                voter.vote(1, incorrectVotes);
+                voter.vote(incorrectVotes);
             }
             vm.stopPrank();
 
@@ -806,24 +806,6 @@ contract TestE2EV1_4_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
                 );
             }
 
-            // david tries voting for someone else and fails
-            {
-                GaugeVote[] memory votes = new GaugeVote[](2);
-                votes[0] = GaugeVote({gauge: gauge0, weight: 1});
-                votes[1] = GaugeVote({gauge: gauge1, weight: 1});
-
-                vm.startPrank(david);
-                {
-                    vm.expectRevert(NotApprovedOrOwner.selector);
-                    voter.vote(1, votes);
-
-                    // what about a non-existent id
-                    vm.expectRevert("ERC721: invalid token ID");
-                    voter.vote(123, votes);
-                }
-                vm.stopPrank();
-            }
-
             // the boys vote: alice votes with multiple and carol with a single
             {
                 GaugeVote[] memory votes = new GaugeVote[](2);
@@ -837,7 +819,7 @@ contract TestE2EV1_4_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
 
                 vm.startPrank(alice);
                 {
-                    voter.voteMultiple(ids, votes);
+                    voter.vote(votes);
                 }
                 vm.stopPrank();
 
@@ -847,7 +829,7 @@ contract TestE2EV1_4_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
 
                 vm.startPrank(bob);
                 {
-                    voter.vote(2, votes);
+                    voter.vote(votes);
                 }
                 vm.stopPrank();
 
@@ -856,29 +838,14 @@ contract TestE2EV1_4_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
                 // in total the second gauge should have 50% of the votes of alice' votes
                 // and the first 100% of bob's votes + 50% of alice' votes
                 assertEq(
-                    voter.votes(1, gauge0),
+                    voter.votes(alice, gauge0),
                     escrow.votingPower(1) / 2,
                     "Alice 1 g 0 should have the correct votes"
                 );
                 assertEq(
-                    voter.votes(1, gauge1),
-                    escrow.votingPower(1) / 2,
-                    "Alice 1 g 1 should have the correct votes"
-                );
-                assertEq(
-                    voter.votes(2, gauge0),
+                    voter.votes(bob, gauge0),
                     escrow.votingPower(2),
                     "Bob should have the correct votes"
-                );
-                assertEq(
-                    voter.votes(3, gauge0),
-                    escrow.votingPower(3) / 2,
-                    "Alice 3 g 0 should have the correct votes"
-                );
-                assertEq(
-                    voter.votes(3, gauge1),
-                    escrow.votingPower(3) / 2,
-                    "Alice 3 g 1 should have the correct votes"
                 );
 
                 // check the gauge votes
@@ -918,7 +885,7 @@ contract TestE2EV1_4_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
                 votes[1] = GaugeVote({gauge: gauge1, weight: 1});
 
                 vm.expectRevert(NoVotingPower.selector);
-                voter.vote(4, votes);
+                voter.vote(votes);
             }
             vm.stopPrank();
         }
@@ -930,7 +897,7 @@ contract TestE2EV1_4_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
 
             vm.startPrank(bob);
             {
-                voter.vote(2, votes);
+                voter.vote(votes);
             }
             vm.stopPrank();
 
@@ -939,36 +906,12 @@ contract TestE2EV1_4_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
             // in total the second gauge should have 100% of Bob's votes + 50% of the votes of alice' votes
             // and the first 50% of alice' votes
             assertEq(
-                voter.votes(1, gauge0),
+                voter.votes(alice, gauge0),
                 escrow.votingPower(1) / 2,
                 "Alice 1 g 0 should have the correct votes"
             );
 
-            assertEq(
-                voter.votes(1, gauge1),
-                escrow.votingPower(1) / 2,
-                "Alice 1 g 1 should have the correct votes"
-            );
-
-            assertEq(voter.votes(2, gauge0), 0, "Bob should have the correct votes");
-
-            assertEq(
-                voter.votes(2, gauge1),
-                escrow.votingPower(2),
-                "Bob should have the correct votes"
-            );
-
-            assertEq(
-                voter.votes(3, gauge0),
-                escrow.votingPower(3) / 2,
-                "Alice 3 g 0 should have the correct votes"
-            );
-
-            assertEq(
-                voter.votes(3, gauge1),
-                escrow.votingPower(3) / 2,
-                "Alice 3 g 1 should have the correct votes"
-            );
+            assertEq(voter.votes(bob, gauge0), 0, "Bob should have the correct votes");
 
             // check the gauge votes
             assertEq(
@@ -1125,7 +1068,7 @@ contract TestE2EV1_4_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
 
             vm.startPrank(bob);
             {
-                voter.reset(2);
+                voter.reset();
                 lock.approve(address(escrow), 2);
                 escrow.beginWithdrawal(2);
             }

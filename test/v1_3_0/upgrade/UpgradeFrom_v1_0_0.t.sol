@@ -20,6 +20,7 @@ import {
     MultisigSetup as MultisigPluginSetup
 } from "@aragon/osx/plugins/governance/multisig/MultisigSetup.sol";
 import {PermissionLib} from "@aragon/osx/core/permission/PermissionLib.sol";
+import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 
 import {
     SimpleGaugeVoterSetup,
@@ -53,7 +54,11 @@ import {
 import {Upgrades} from "@foundry-upgrades/LegacyUpgrades.sol";
 import {Options} from "@foundry-upgrades/Options.sol";
 
-import {CachedView, CachedViewArguments, fetchState} from "./CurveHelper.sol";
+import {
+    CachedViewCurve as CachedView,
+    CachedViewArgumentsCurve as CachedViewArguments,
+    fetchStateCurve as fetchState
+} from "./CurveHelper.sol";
 
 contract RegressionV1_0_0__to__V1_3_0 is Test, IGaugeVote {
     GaugesDaoFactoryV1_0_0 factory;
@@ -161,7 +166,9 @@ contract RegressionV1_0_0__to__V1_3_0 is Test, IGaugeVote {
             tokenId: aliceToken,
             timestamp: block.timestamp,
             amount: 1_000 ether,
-            tokenInterval: 1
+            tokenInterval: 1,
+            maturity: block.timestamp + maxTime(),
+            sampleTime: block.timestamp + 5 weeks
         });
 
         vCache = fetchState(curve, args);
@@ -316,6 +323,10 @@ contract RegressionV1_0_0__to__V1_3_0 is Test, IGaugeVote {
         assertEq(vCache.tokenPointHistory.bias, vLatest.tokenPointHistory.bias);
         assertEq(vCache.tokenPointHistory.checkpointTs, vLatest.tokenPointHistory.checkpointTs);
         assertEq(vCache.tokenPointHistory.writtenTs, vLatest.tokenPointHistory.writtenTs);
+
+        // We also want to test that the voting power in the cache is unchanged over the sample
+        assertEq(vCache.votingPowerSample, curve.votingPowerAt(args.tokenId, args.sampleTime));
+        assertEq(vCache.votingPowerMaturity, curve.votingPowerAt(args.tokenId, args.maturity));
     }
 
     ////////////////////////////////////////////////
@@ -407,5 +418,9 @@ contract RegressionV1_0_0__to__V1_3_0 is Test, IGaugeVote {
 
         vm.roll(block.number + 1); // mint one block
         return _factory;
+    }
+
+    function maxTime() internal view returns (uint256) {
+        return CurveConstantLib.MAX_EPOCHS * clock.epochDuration();
     }
 }

@@ -2,23 +2,28 @@
 pragma solidity ^0.8.17;
 
 import {Test} from "forge-std/Test.sol";
+import {console2 as console} from "forge-std/console2.sol";
 
 // aragon contracts
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
-import {EscrowIVotesAdapter} from "@delegation/EscrowIVotesAdapter.sol";
 
 import {createTestDAO} from "@mocks/MockDAO.sol";
-import {Clock, IClock, VotingEscrow} from "../../versions.sol";
+import {
+    ILockedBalanceIncreasing,
+    Clock,
+    IClock,
+    VotingEscrow,
+    EscrowIVotesAdapter,
+    IEscrowIVotesAdapterStorage,
+    IEscrowIVotesAdapterErrorsAndEvents,
+    SimpleGaugeVoter
+} from "../../versions.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
-import {ILockedBalanceIncreasing} from "@escrow/IVotingEscrowIncreasing.sol";
-import {
-    IEscrowIVotesAdapterStorage,
-    IEscrowIVotesAdapterErrorsAndEvents
-} from "@delegation/IEscrowIVotesAdapter.sol";
 import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
-import {FixedPointBase} from "../../base/FixedPointBase.sol";
 import {IDelegateUpdateVotingPower} from "@delegation/IEscrowIVotesAdapter.sol";
+
+import {FixedPointBase} from "../../base/FixedPointBase.sol";
 
 contract EscrowVotingPowerMock is IDelegateUpdateVotingPower {
     function updateVotingPower(address a, address b) external {
@@ -48,6 +53,7 @@ contract Base is
     using ProxyLib for address;
 
     EscrowVotingPowerMock public escrow;
+    SimpleGaugeVoter public voter;
     EscrowIVotesAdapterA public dg;
     DAO dao;
     Clock clock;
@@ -63,11 +69,12 @@ contract Base is
     function setUp() public virtual {
         _deployDAO();
         clock = _deployClock(address(dao));
-
         escrow = new EscrowVotingPowerMock();
         dg = _deployEscrowIVotesAdapter(address(dao), address(clock), address(escrow));
+        voter = _deployVoter(address(dao), address(clock), address(escrow), address(dg));
 
         _mockApprovedOwner(true);
+        _mockPermissions();
 
         uint256 maxTime = IClock(clock).epochDuration() * CurveConstantLib.MAX_EPOCHS;
 
@@ -82,6 +89,25 @@ contract Base is
         address impl = address(new Clock());
         bytes memory initCalldata = abi.encodeWithSelector(Clock.initialize.selector, _dao);
         return Clock(impl.deployUUPSProxy(initCalldata));
+    }
+
+    function _deployVoter(
+        address _dao,
+        address _clock,
+        address _escrow,
+        address _ivotesAdapter
+    ) internal returns (SimpleGaugeVoter) {
+        address impl = address(new SimpleGaugeVoter());
+        bytes memory initCalldata = abi.encodeWithSelector(
+            SimpleGaugeVoter.initialize.selector,
+            _dao,
+            _escrow,
+            false,
+            _clock,
+            _ivotesAdapter,
+            true
+        );
+        return SimpleGaugeVoter(impl.deployUUPSProxy(initCalldata));
     }
 
     function _deployEscrowIVotesAdapter(
@@ -136,6 +162,15 @@ contract Base is
             address(escrow),
             abi.encodeWithSelector(VotingEscrow.isApprovedOrOwner.selector),
             abi.encode(_approved)
+        );
+    }
+
+    // DAO::hasPermission(ERC1967Proxy: [0x03A6a84cD762D9707A21605b548aaaB891562aAb], TestVotingWithDelegation: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], 0xfda1ae526c1fb38407f23e8b7712f7cfacc146f3e340a04221488331e0d42014, 0x071d21710000000000000000000000000000000000000000000000000000000000000777000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000086d65746164617461000000000000000000000000000000000000000000000000)
+    function _mockPermissions() internal {
+        vm.mockCall(
+            address(dao),
+            abi.encodeWithSelector(DAO.hasPermission.selector),
+            abi.encode(true)
         );
     }
 

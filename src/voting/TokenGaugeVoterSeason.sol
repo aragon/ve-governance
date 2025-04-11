@@ -4,7 +4,7 @@ pragma solidity ^0.8.17;
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {IVotingEscrowIncreasing as IVotingEscrow} from "@escrow/IVotingEscrowIncreasing.sol";
 import {IClockUser, IClock, IClockSeason} from "@clock/ClockSeason.sol";
-import {ISimpleGaugeVoter} from "./ISimpleGaugeVoter.sol";
+import {ITokenGaugeVoter} from "./ITokenGaugeVoter.sol";
 
 import {
     ReentrancyGuardUpgradeable as ReentrancyGuard
@@ -14,8 +14,8 @@ import {
 } from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import {PluginUUPSUpgradeable} from "@aragon/osx/core/plugin/PluginUUPSUpgradeable.sol";
 
-contract SimpleGaugeVoterSeason is
-    ISimpleGaugeVoter,
+contract TokenGaugeVoterSeason is
+    ITokenGaugeVoter,
     IClockUser,
     ReentrancyGuard,
     Pausable,

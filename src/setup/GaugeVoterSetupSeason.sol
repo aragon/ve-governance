@@ -13,7 +13,7 @@ import {ProxyLib} from "@libs/ProxyLib.sol";
 import {PermissionLib} from "@aragon/osx/core/permission/PermissionLib.sol";
 import {PluginSetup} from "@aragon/osx/framework/plugin/setup/PluginSetup.sol";
 
-import {SimpleGaugeVoterSeason as SimpleGaugeVoter} from "@voting/SimpleGaugeVoterSeason.sol";
+import {TokenGaugeVoterSeason as GaugeVoter} from "@voting/TokenGaugeVoterSeason.sol";
 import {VotingEscrow} from "@escrow/VotingEscrowIncreasing.sol";
 import {ExitQueue} from "@queue/ExitQueue.sol";
 import {QuadraticIncreasingCurveSeason as Curve} from "@curve/QuadraticIncreasingCurveSeason.sol";
@@ -26,7 +26,7 @@ import {Lock} from "@lock/Lock.sol";
 /// @param token The underlying token for the escrow
 /// @param cooldown The cooldown period for the exit queue
 /// @param warmup The warmup period for the escrow curve
-struct ISimpleGaugeVoterSetupParams {
+struct IGaugeVoterSetupParams {
     // voter
     bool isPaused;
     // escrow - NFT
@@ -43,7 +43,7 @@ struct ISimpleGaugeVoterSetupParams {
     uint48 warmup;
 }
 
-contract SimpleGaugeVoterSetupSeason is PluginSetup {
+contract GaugeVoterSetupSeason is PluginSetup {
     using Address for address;
     using Clones for address;
     using ERC165Checker for address;
@@ -89,7 +89,6 @@ contract SimpleGaugeVoterSetupSeason is PluginSetup {
         escrowBase = _escrowBase;
         clockBase = _clockBase;
         nftBase = _nftBase;
-        revert("add seasons");
     }
 
     function implementation() external view returns (address) {
@@ -102,10 +101,7 @@ contract SimpleGaugeVoterSetupSeason is PluginSetup {
         address _dao,
         bytes calldata _data
     ) external returns (address plugin, PreparedSetupData memory preparedSetupData) {
-        ISimpleGaugeVoterSetupParams memory params = abi.decode(
-            _data,
-            (ISimpleGaugeVoterSetupParams)
-        );
+        IGaugeVoterSetupParams memory params = abi.decode(_data, (IGaugeVoterSetupParams));
 
         // deploy the clock
         address clock = address(
@@ -125,10 +121,10 @@ contract SimpleGaugeVoterSetupSeason is PluginSetup {
         );
 
         // deploy the voting contract (plugin)
-        SimpleGaugeVoter voter = SimpleGaugeVoter(
+        GaugeVoter voter = GaugeVoter(
             voterBase.deployUUPSProxy(
                 abi.encodeCall(
-                    SimpleGaugeVoter.initialize,
+                    GaugeVoter.initialize,
                     (_dao, address(escrow), params.isPaused, clock)
                 )
             )
@@ -226,7 +222,7 @@ contract SimpleGaugeVoterSetupSeason is PluginSetup {
             memory permissions = new PermissionLib.MultiTargetPermission[](10);
 
         permissions[0] = PermissionLib.MultiTargetPermission({
-            permissionId: SimpleGaugeVoter(_plugin).GAUGE_ADMIN_ROLE(),
+            permissionId: GaugeVoter(_plugin).GAUGE_ADMIN_ROLE(),
             where: _plugin,
             who: _dao,
             operation: _grantOrRevoke,
@@ -258,7 +254,7 @@ contract SimpleGaugeVoterSetupSeason is PluginSetup {
         });
 
         permissions[4] = PermissionLib.MultiTargetPermission({
-            permissionId: SimpleGaugeVoter(_plugin).UPGRADE_PLUGIN_PERMISSION_ID(),
+            permissionId: GaugeVoter(_plugin).UPGRADE_PLUGIN_PERMISSION_ID(),
             where: _plugin,
             who: _dao,
             operation: _grantOrRevoke,
@@ -308,12 +304,12 @@ contract SimpleGaugeVoterSetupSeason is PluginSetup {
     }
 
     function encodeSetupData(
-        ISimpleGaugeVoterSetupParams calldata _params
+        IGaugeVoterSetupParams calldata _params
     ) external pure returns (bytes memory) {
         return abi.encode(_params);
     }
 
-    /// @notice Simple utility for external applications create the encoded setup data.
+    /// @notice  utility for external applications create the encoded setup data.
     function encodeSetupData(
         bool isPaused,
         string calldata veTokenName,
@@ -327,7 +323,7 @@ contract SimpleGaugeVoterSetupSeason is PluginSetup {
     ) external pure returns (bytes memory) {
         return
             abi.encode(
-                ISimpleGaugeVoterSetupParams({
+                IGaugeVoterSetupParams({
                     isPaused: isPaused,
                     token: token,
                     veTokenName: veTokenName,

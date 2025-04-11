@@ -8,8 +8,27 @@ import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
-import {UUPSUpgradeable as UUPS} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {VotingEscrow, Clock, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveTokenStorage, GaugesDaoFactory, GaugePluginSet, Deployment, DeployGauges, DeploymentParameters} from "../versions.sol";
+import {
+    UUPSUpgradeable as UUPS
+} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {
+    VotingEscrow,
+    Clock,
+    Lock,
+    QuadraticIncreasingEscrow,
+    ExitQueue,
+    GaugeVoter,
+    GaugeVoterSetup,
+    IGaugeVoterSetupParams,
+    IWithdrawalQueueErrors,
+    IGaugeVote,
+    IEscrowCurveTokenStorage,
+    GaugesDaoFactory,
+    GaugePluginSet,
+    Deployment,
+    DeployGauges,
+    DeploymentParameters
+} from "../versions.sol";
 
 interface IERC20Mint is IERC20 {
     function mint(address _to, uint256 _amount) external;
@@ -63,7 +82,7 @@ contract TestE2E is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurve
     // although these exist on the factory a bit easier to access here
     // these only reference the FIRST set of contracts, if deploying multiple
     // fetch from the factory
-    SimpleGaugeVoter voter;
+    GaugeVoter voter;
     QuadraticIncreasingEscrow curve;
     ExitQueue queue;
     VotingEscrow escrow;
@@ -140,7 +159,7 @@ contract TestE2E is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurve
         // if deploying multiple tokens, you can adjust the index here
         GaugePluginSet memory pluginSet = deployment.gaugeVoterPluginSets[0];
 
-        voter = SimpleGaugeVoter(pluginSet.plugin);
+        voter = GaugeVoter(pluginSet.plugin);
         curve = QuadraticIncreasingEscrow(pluginSet.curve);
         queue = ExitQueue(pluginSet.exitQueue);
         escrow = VotingEscrow(pluginSet.votingEscrow);

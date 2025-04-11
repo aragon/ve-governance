@@ -4,14 +4,18 @@ pragma solidity ^0.8.17;
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {IVotingEscrowIncreasing as IVotingEscrow} from "@escrow/IVotingEscrowIncreasing.sol";
 import {IClockUser, IClock} from "@clock/IClock.sol";
-import {ISimpleGaugeVoter} from "./ISimpleGaugeVoter.sol";
+import {ITokenGaugeVoter} from "./ITokenGaugeVoter.sol";
 
-import {ReentrancyGuardUpgradeable as ReentrancyGuard} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import {PausableUpgradeable as Pausable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import {
+    ReentrancyGuardUpgradeable as ReentrancyGuard
+} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import {
+    PausableUpgradeable as Pausable
+} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import {PluginUUPSUpgradeable} from "@aragon/osx/core/plugin/PluginUUPSUpgradeable.sol";
 
-contract SimpleGaugeVoterV1_1_0 is
-    ISimpleGaugeVoter,
+contract TokenGaugeVoter is
+    ITokenGaugeVoter,
     IClockUser,
     ReentrancyGuard,
     Pausable,
@@ -45,7 +49,6 @@ contract SimpleGaugeVoterV1_1_0 is
                             Initialization
     //////////////////////////////////////////////////////////////*/
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }
@@ -56,9 +59,9 @@ contract SimpleGaugeVoterV1_1_0 is
         bool _startPaused,
         address _clock
     ) external initializer {
+        __PluginUUPSUpgradeable_init(IDAO(_dao));
         __ReentrancyGuard_init();
         __Pausable_init();
-        __PluginUUPSUpgradeable_init(IDAO(_dao));
         escrow = _escrow;
         clock = _clock;
         if (_startPaused) _pause();
@@ -82,7 +85,7 @@ contract SimpleGaugeVoterV1_1_0 is
     }
 
     /*///////////////////////////////////////////////////////////////
-                               Voting
+                               Voting 
     //////////////////////////////////////////////////////////////*/
 
     /// @notice extrememly simple for loop. We don't need reentrancy checks in this implementation
@@ -182,7 +185,7 @@ contract SimpleGaugeVoterV1_1_0 is
         voteData.lastVoted = block.timestamp;
     }
 
-    function reset(uint256 _tokenId) external nonReentrant whenNotPaused {
+    function reset(uint256 _tokenId) external nonReentrant whenNotPaused whenVotingActive {
         if (!IVotingEscrow(escrow).isApprovedOrOwner(msg.sender, _tokenId))
             revert NotApprovedOrOwner();
         if (!isVoting(_tokenId)) revert NotCurrentlyVoting();

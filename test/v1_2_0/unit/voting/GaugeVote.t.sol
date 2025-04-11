@@ -70,11 +70,7 @@ contract TestGaugeVote is GaugeVotingBase {
 
         // try to vote
         vm.expectRevert(VotingInactive.selector);
-        voter.vote(0, votes);
-
-        // vote multiple
-        vm.expectRevert(VotingInactive.selector);
-        voter.voteMultiple(ids, votes);
+        voter.vote(votes);
     }
 
     function testFuzz_cannotResetInDistributionPeriod() public {
@@ -84,12 +80,12 @@ contract TestGaugeVote is GaugeVotingBase {
         // vote
         vm.startPrank(owner);
         {
-            voter.vote(tokenId, votes);
+            voter.vote(votes);
         }
         vm.stopPrank();
 
         // check the vote
-        assertEq(voter.isVoting(tokenId), true);
+        assertEq(voter.isVoting(owner), true);
 
         // warp to the next distribution period
         _increaseTime(1 weeks);
@@ -99,26 +95,27 @@ contract TestGaugeVote is GaugeVotingBase {
         vm.startPrank(owner);
         {
             vm.expectRevert(VotingInactive.selector);
-            voter.reset(tokenId);
+            voter.reset();
         }
         vm.stopPrank();
     }
+
     // can't vote if you don't own the token
     function testCannotVoteIfYouDontOwnTheToken() public {
         // try to vote as this address (not the holder)
         vm.expectRevert(NotApprovedOrOwner.selector);
-        voter.vote(tokenId, votes);
+        voter.vote(votes);
     }
 
     function testCannotResetIFYouDontOwnTheToken() public {
         // make the vote
         votes.push(GaugeVote(lockDeposit, gauge));
         vm.prank(owner);
-        voter.vote(tokenId, votes);
+        voter.vote(votes);
 
         // try to reset as this address (not the holder)
         vm.expectRevert(NotApprovedOrOwner.selector);
-        voter.reset(tokenId);
+        voter.reset();
     }
 
     // can't vote if you have zero voting power
@@ -133,7 +130,7 @@ contract TestGaugeVote is GaugeVotingBase {
             uint256 newTokenId = escrow.createLock(lockDeposit);
             assertEq(escrow.votingPower(newTokenId), 0);
             vm.expectRevert(NoVotingPower.selector);
-            voter.vote(newTokenId, votes);
+            voter.vote(votes);
         }
         vm.stopPrank();
     }
@@ -142,7 +139,7 @@ contract TestGaugeVote is GaugeVotingBase {
         // try to vote with no votes
         vm.expectRevert(NoVotes.selector);
         vm.prank(owner);
-        voter.vote(tokenId, votes);
+        voter.vote(votes);
     }
 
     function testCannotVoteForInactiveGauge() public {
@@ -155,7 +152,7 @@ contract TestGaugeVote is GaugeVotingBase {
         // try to vote
         vm.prank(owner);
         vm.expectRevert(abi.encodeWithSelector(GaugeInactive.selector, gauge));
-        voter.vote(tokenId, votes);
+        voter.vote(votes);
     }
 
     function testCannotVoteForNonExistentGauge() public {
@@ -166,7 +163,7 @@ contract TestGaugeVote is GaugeVotingBase {
         // try to vote
         vm.prank(owner);
         vm.expectRevert(abi.encodeWithSelector(GaugeDoesNotExist.selector, notAGauge));
-        voter.vote(tokenId, votes);
+        voter.vote(votes);
     }
 
     function testCannotVoteWithZeroVotes() public {
@@ -176,7 +173,7 @@ contract TestGaugeVote is GaugeVotingBase {
         // try to vote
         vm.prank(owner);
         vm.expectRevert(NoVotes.selector);
-        voter.vote(tokenId, votes);
+        voter.vote(votes);
     }
 
     function testCannotVoteWithVotesSoSmallTheyRoundToZero() public {
@@ -203,7 +200,7 @@ contract TestGaugeVote is GaugeVotingBase {
 
             // try to vote
             vm.expectRevert(NoVotes.selector);
-            voter.vote(newTokenId, votes);
+            voter.vote(votes);
         }
         vm.stopPrank();
     }
@@ -214,7 +211,7 @@ contract TestGaugeVote is GaugeVotingBase {
         votes.push(GaugeVote(lockDeposit, gauge));
 
         vm.expectRevert(DoubleVote.selector);
-        voter.vote(tokenId, votes);
+        voter.vote(votes);
     }
 
     function testSingleVote(uint128 _weight) public {
@@ -233,22 +230,21 @@ contract TestGaugeVote is GaugeVotingBase {
                 voter: owner,
                 gauge: gauge,
                 epoch: voter.epochId(),
-                tokenId: tokenId,
                 votingPowerCastForGauge: votingPower,
                 totalVotingPowerInGauge: votingPower,
                 totalVotingPowerInContract: votingPower,
                 timestamp: block.timestamp
             });
-            voter.vote(tokenId, votes);
+            voter.vote(votes);
         }
         vm.stopPrank();
 
         // check the vote
-        assertEq(voter.isVoting(tokenId), true);
-        assertEq(voter.gaugesVotedFor(tokenId).length, 1);
-        assertEq(voter.gaugesVotedFor(tokenId)[0], gauge);
-        assertEq(voter.votes(tokenId, gauge), votingPower);
-        assertEq(voter.usedVotingPower(tokenId), votingPower);
+        assertEq(voter.isVoting(owner), true);
+        assertEq(voter.gaugesVotedFor(owner).length, 1);
+        assertEq(voter.gaugesVotedFor(owner)[0], gauge);
+        assertEq(voter.votes(owner, gauge), votingPower);
+        assertEq(voter.usedVotingPower(owner), votingPower);
 
         // global state
         assertEq(voter.totalVotingPowerCast(), votingPower);
@@ -273,7 +269,7 @@ contract TestGaugeVote is GaugeVotingBase {
 
         vm.startPrank(owner);
         {
-            voter.vote(tokenId, votes);
+            voter.vote(votes);
         }
         vm.stopPrank();
 
@@ -284,16 +280,16 @@ contract TestGaugeVote is GaugeVotingBase {
         uint expectedVotesForNewGauge = (weight1256 * votingPower) / (weight0256 + weight1256);
 
         uint expectedTotalVotes = expectedVotesForGauge + expectedVotesForNewGauge;
-        assertApproxEqAbs(voter.usedVotingPower(tokenId), expectedTotalVotes, 1);
+        assertApproxEqAbs(voter.usedVotingPower(owner), expectedTotalVotes, 1);
 
         // check the vote
-        assertEq(voter.isVoting(tokenId), true);
-        assertEq(voter.gaugesVotedFor(tokenId).length, 2);
-        assertEq(voter.gaugesVotedFor(tokenId)[0], gauge);
-        assertEq(voter.gaugesVotedFor(tokenId)[1], newGauge);
-        assertEq(voter.votes(tokenId, gauge), expectedVotesForGauge);
-        assertEq(voter.votes(tokenId, newGauge), expectedVotesForNewGauge);
-        assertEq(voter.usedVotingPower(tokenId), expectedTotalVotes);
+        assertEq(voter.isVoting(owner), true);
+        assertEq(voter.gaugesVotedFor(owner).length, 2);
+        assertEq(voter.gaugesVotedFor(owner)[0], gauge);
+        assertEq(voter.gaugesVotedFor(owner)[1], newGauge);
+        assertEq(voter.votes(owner, gauge), expectedVotesForGauge);
+        assertEq(voter.votes(owner, newGauge), expectedVotesForNewGauge);
+        assertEq(voter.usedVotingPower(owner), expectedTotalVotes);
 
         // global state
         assertEq(voter.totalVotingPowerCast(), expectedTotalVotes);
@@ -310,7 +306,7 @@ contract TestGaugeVote is GaugeVotingBase {
         // vote then reset
         vm.startPrank(owner);
         {
-            voter.vote(tokenId, votes);
+            voter.vote(votes);
 
             // reset
             vm.expectEmit(true, true, true, true);
@@ -318,21 +314,20 @@ contract TestGaugeVote is GaugeVotingBase {
                 voter: owner,
                 gauge: gauge,
                 epoch: voter.epochId(),
-                tokenId: tokenId,
                 votingPowerRemovedFromGauge: votingPower,
                 totalVotingPowerInGauge: 0,
                 totalVotingPowerInContract: 0,
                 timestamp: block.timestamp
             });
-            voter.reset(tokenId);
+            voter.reset();
         }
         vm.stopPrank();
 
         // check the vote
-        assertEq(voter.isVoting(tokenId), false);
-        assertEq(voter.gaugesVotedFor(tokenId).length, 0);
-        assertEq(voter.votes(tokenId, gauge), 0);
-        assertEq(voter.usedVotingPower(tokenId), 0);
+        assertEq(voter.isVoting(owner), false);
+        assertEq(voter.gaugesVotedFor(owner).length, 0);
+        assertEq(voter.votes(owner, gauge), 0);
+        assertEq(voter.usedVotingPower(owner), 0);
 
         // global state
         assertEq(voter.totalVotingPowerCast(), 0);
@@ -350,7 +345,7 @@ contract TestGaugeVote is GaugeVotingBase {
         // vote then revote
         vm.startPrank(owner);
         {
-            voter.vote(tokenId, votes);
+            voter.vote(votes);
 
             // change vote
             GaugeVote[] memory newVotes = new GaugeVote[](1);
@@ -360,18 +355,18 @@ contract TestGaugeVote is GaugeVotingBase {
             vm.warp(block.timestamp + 1 days);
 
             // vote again clears the votes
-            voter.vote(tokenId, newVotes);
+            voter.vote(newVotes);
         }
         vm.stopPrank();
 
         uint newVotingPower = escrow.votingPower(tokenId);
 
         // check the vote
-        assertEq(voter.isVoting(tokenId), true);
-        assertEq(voter.gaugesVotedFor(tokenId).length, 1);
-        assertEq(voter.gaugesVotedFor(tokenId)[0], gauge);
-        assertEq(voter.votes(tokenId, gauge), newVotingPower);
-        assertEq(voter.usedVotingPower(tokenId), newVotingPower);
+        assertEq(voter.isVoting(owner), true);
+        assertEq(voter.gaugesVotedFor(owner).length, 1);
+        assertEq(voter.gaugesVotedFor(owner)[0], gauge);
+        assertEq(voter.votes(owner, gauge), newVotingPower);
+        assertEq(voter.usedVotingPower(owner), newVotingPower);
 
         // global state
         assertEq(voter.totalVotingPowerCast(), newVotingPower);
@@ -418,7 +413,7 @@ contract TestGaugeVote is GaugeVotingBase {
         votes.push(GaugeVote(100, gauge2));
 
         vm.prank(owner);
-        voter.voteMultiple(tokens, votes);
+        voter.vote(votes);
 
         // we expect the vote for the first token to be 50/150 of the total voting power
         // and the second to be 100/150 of the total voting power
@@ -427,12 +422,12 @@ contract TestGaugeVote is GaugeVotingBase {
         uint expectedVotesForGauge2 = (100 * vp1) / (50 + 100);
 
         // check the vote
-        assertEq(voter.isVoting(tokenId), true);
-        assertEq(voter.gaugesVotedFor(tokenId).length, 2);
-        assertEq(voter.gaugesVotedFor(tokenId)[0], gauge);
-        assertEq(voter.gaugesVotedFor(tokenId)[1], gauge2);
-        assertEq(voter.votes(tokenId, gauge), expectedVotesForGauge);
-        assertEq(voter.votes(tokenIdNew, gauge2), expectedVotesForGauge2);
+        assertEq(voter.isVoting(owner), true);
+        assertEq(voter.gaugesVotedFor(owner).length, 2);
+        assertEq(voter.gaugesVotedFor(owner)[0], gauge);
+        assertEq(voter.gaugesVotedFor(owner)[1], gauge2);
+        assertEq(voter.votes(owner, gauge), expectedVotesForGauge);
+        assertEq(voter.votes(owner, gauge2), expectedVotesForGauge2);
     }
 
     // test the event logs: person A votes, person B votes => B's event correctly distinguishes between the two
@@ -475,7 +470,7 @@ contract TestGaugeVote is GaugeVotingBase {
 
         // vote for A then vote for B
         vm.prank(personA);
-        voter.vote(tokenIdA, votes);
+        voter.vote(votes);
 
         uint256 expectedBVotingPowerGauge0 = (75 * escrow.votingPower(tokenIdB)) / 100;
         uint256 expectedAVotingPowerGauge0 = (25 * escrow.votingPower(tokenIdA)) / 100;
@@ -498,7 +493,6 @@ contract TestGaugeVote is GaugeVotingBase {
                 voter: personB,
                 gauge: gauge,
                 epoch: epoch,
-                tokenId: tokenIdB,
                 votingPowerCastForGauge: expectedBVotingPowerGauge0,
                 totalVotingPowerInGauge: expectedBVotingPowerGauge0 + expectedAVotingPowerGauge0,
                 totalVotingPowerInContract: expectedBVotingPowerGauge0 + aVotingPower,
@@ -509,14 +503,13 @@ contract TestGaugeVote is GaugeVotingBase {
                 voter: personB,
                 gauge: gauge2,
                 epoch: epoch,
-                tokenId: tokenIdB,
                 votingPowerCastForGauge: expectedBVotingPowerGauge1,
                 totalVotingPowerInGauge: expectedBVotingPowerGauge1 + expectedAVotingPowerGauge1,
                 totalVotingPowerInContract: bVotingPower + aVotingPower,
                 timestamp: block.timestamp
             });
 
-            voter.vote(tokenIdB, votes);
+            voter.vote(votes);
         }
         vm.stopPrank();
 
@@ -528,7 +521,6 @@ contract TestGaugeVote is GaugeVotingBase {
                 voter: personA,
                 gauge: gauge,
                 epoch: epoch,
-                tokenId: tokenIdA,
                 votingPowerRemovedFromGauge: expectedAVotingPowerGauge0,
                 totalVotingPowerInGauge: expectedBVotingPowerGauge0,
                 totalVotingPowerInContract: bVotingPower + expectedAVotingPowerGauge1,
@@ -540,14 +532,13 @@ contract TestGaugeVote is GaugeVotingBase {
                 voter: personA,
                 gauge: gauge2,
                 epoch: epoch,
-                tokenId: tokenIdA,
                 votingPowerRemovedFromGauge: expectedAVotingPowerGauge1,
                 totalVotingPowerInGauge: expectedBVotingPowerGauge1,
                 totalVotingPowerInContract: bVotingPower,
                 timestamp: block.timestamp
             });
 
-            voter.reset(tokenIdA);
+            voter.reset();
         }
         vm.stopPrank();
     }

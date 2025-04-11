@@ -15,10 +15,31 @@ import {PluginRepo} from "@aragon/osx/framework/plugin/repo/PluginRepo.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {Addresslist} from "@aragon/osx/plugins/utils/Addresslist.sol";
-import {Multisig, MultisigSetup as MultisigPluginSetup} from "@aragon/osx/plugins/governance/multisig/MultisigSetup.sol";
+import {
+    Multisig,
+    MultisigSetup as MultisigPluginSetup
+} from "@aragon/osx/plugins/governance/multisig/MultisigSetup.sol";
 
-import {SimpleGaugeVoterSetup, IGaugeVote, VotingEscrow, Clock, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, GaugesDaoFactory as GaugesDaoFactoryV1_1_0, Deployment, DeploymentParameters, TokenParameters, GaugePluginSet} from "test/v1_1_0/versions.sol";
-import {SimpleGaugeVoter as SimpleGaugeVoterV1_2_0, Clock as ClockV1_2_0, QuadraticIncreasingEscrow as QuadraticIncreasingEscrowV1_2_0} from "test/v1_2_0/versions.sol";
+import {
+    SimpleGaugeVoterSetup,
+    IGaugeVote,
+    VotingEscrow,
+    Clock,
+    Lock,
+    QuadraticIncreasingEscrow,
+    ExitQueue,
+    SimpleGaugeVoter,
+    GaugesDaoFactory as GaugesDaoFactoryV1_1_0,
+    Deployment,
+    DeploymentParameters,
+    TokenParameters,
+    GaugePluginSet
+} from "test/v1_1_0/versions.sol";
+import {
+    SimpleGaugeVoter as SimpleGaugeVoterV1_2_0,
+    Clock as ClockV1_2_0,
+    QuadraticIncreasingEscrow as QuadraticIncreasingEscrowV1_2_0
+} from "../versions.sol";
 
 import {Upgrades} from "@foundry-upgrades/LegacyUpgrades.sol";
 import {Options} from "@foundry-upgrades/Options.sol";
