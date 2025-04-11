@@ -35,7 +35,7 @@ contract TestCreateLock_Supply is IEscrowCurveTokenStorage, IEscrowCurveGlobalSt
         super.mintAndApproveEscrow();
     }
 
-    function test_whenCreatingNewLock_no_existing_lock_ookkk() public {
+    function test_whenCreatingNewLock_no_existing_lock() public {
         // Given: no prior locks existing
         // 1. total bias at block.timestamp must be amount + slope * (block.timestamp - weekStart)
         // 2. total bias at t must be amount + slope * (t - weekStart)

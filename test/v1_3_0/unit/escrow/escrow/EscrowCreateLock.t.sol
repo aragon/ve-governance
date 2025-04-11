@@ -67,7 +67,7 @@ contract TestCreateLock is IEscrowCurveTokenStorage, EscrowBase {
     /// so we use the maximum value for a uint128
     /// @param _depositor is not the zero address, we check this in a previous test we need to restrict to non contracts in fuzzing as too many revert cases
     /// @param _time is bound to 32 bits to avoid overflow - seems reasonable as is not a user input
-    function testFuzz_createLock_kkk(uint128 _value, address _depositor, uint32 _time) public {
+    function testFuzz_createLock(uint128 _value, address _depositor, uint32 _time) public {
         vm.assume(_value > 0);
         vm.assume(_depositor != address(0) && address(_depositor).code.length == 0);
         vm.assume(_time > 0);
