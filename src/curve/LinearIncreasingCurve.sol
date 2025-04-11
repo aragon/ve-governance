@@ -384,6 +384,8 @@ contract LinearIncreasingCurve is
         if (block.timestamp < newEnd) {
             lastPoint.slope += newLockSlope;
             newDSlope += newLockSlope;
+        } else {
+            newLockSlope = 0;
         }
 
         lastPoint.bias += newLockBias;
@@ -411,17 +413,19 @@ contract LinearIncreasingCurve is
                     newDSlope -= oldLockSlope;
                 }
             } else {
-                // Merge is occuring, so get the total
-                // bias and slope for `fromLocked` and `newLocked`.
-                newLockSlope += oldLockSlope;
                 newLockBias += oldLockBias;
 
-                // fromLocked's current end is in the future and
-                // since `fromLocked` gets destroyed, its slope must be
-                // recorded on the newLocked's end. If both `ends` are equal,
-                // old slope is already included/recorded when it was first stored.
-                if (_fromLockedEnd > block.timestamp && _fromLockedEnd != newEnd) {
-                    newDSlope += oldLockSlope;
+                if (_fromLockedEnd > block.timestamp) {
+                    // Only add old lock's slope in case it's not mature yet.
+                    newLockSlope += oldLockSlope;
+
+                    // fromLocked's current end is in the future and
+                    // since `fromLocked` gets destroyed, its slope must be
+                    // recorded on the newLocked's end. If both `ends` are equal,
+                    // old slope is already included/recorded when it was first stored.
+                    if (_fromLockedEnd != newEnd) {
+                        newDSlope += oldLockSlope;
+                    }
                 }
             }
 

@@ -21,8 +21,6 @@ import {IClockUser, IClockV1_2_0 as IClock} from "@clock/IClock_v1_2_0.sol";
 
 import {PluginUUPSUpgradeable} from "@aragon/osx/core/plugin/PluginUUPSUpgradeable.sol";
 import {IEscrowIVotesAdapter} from "./IEscrowIVotesAdapter.sol";
-import {AddressGaugeVoter} from "@voting/AddressGaugeVoter.sol";
-import {console2 as console} from "forge-std/console2.sol";
 import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 import {SignedFixedPointMath} from "@libs/SignedFixedPointMathLib.sol";
 

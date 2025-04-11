@@ -110,7 +110,7 @@ contract TestSplit_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage
             2,
             1,
             biasFP(Lock_1_Amount - value, elapsed),
-            slopeFP(Lock_1_Amount - value),
+            0,
             weekStartTs,
             block.timestamp
         );
@@ -119,7 +119,7 @@ contract TestSplit_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage
             3,
             1,
             biasFP(value, elapsed),
-            slopeFP(value),
+            0,
             weekStartTs,
             block.timestamp
         );

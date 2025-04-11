@@ -73,3 +73,11 @@ interface IEscrowCurveIncreasingV1_2_0 is
     IWarmup,
     IEscrowCurveGlobal
 {}
+
+interface IEscrowCurveIncreasingV1_2_0_NoSupply is
+    IEscrowCurveCore,
+    IEscrowCurveMath,
+    IEscrowCurveTokenV1_2_0,
+    IEscrowCurveMaxTime,
+    IWarmup
+{}
