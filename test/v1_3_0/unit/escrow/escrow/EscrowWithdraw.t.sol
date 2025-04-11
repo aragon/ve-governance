@@ -47,20 +47,20 @@ contract TestWithdraw is IEscrowCurveTokenStorage, IGaugeVote, ITicket, EscrowBa
             // voting active after cooldown
             vm.warp(block.timestamp + 2 weeks + 1 hours);
 
+            // delegate to himself
+            ivotesAdapter.setAutoDelegation(true);
+            ivotesAdapter.delegate(_who);
+
             // make a vote
             voter.vote(votes);
         }
         vm.stopPrank();
 
-        // can't enter a withdrawal while voting
-        vm.expectRevert(CannotExit.selector);
-        escrow.beginWithdrawal(tokenId);
-
         // enter a withdrawal
         vm.startPrank(_who);
         {
             nftLock.approve(address(escrow), tokenId);
-            escrow.resetVotesAndBeginWithdrawal(tokenId);
+            escrow.beginWithdrawal(tokenId);
         }
         vm.stopPrank();
 
@@ -128,20 +128,19 @@ contract TestWithdraw is IEscrowCurveTokenStorage, IGaugeVote, ITicket, EscrowBa
             // voting active after cooldown
             vm.warp(block.timestamp + 2 weeks + 1 hours);
 
+            ivotesAdapter.setAutoDelegation(true);
+            ivotesAdapter.delegate(_who);
+
             // make a vote
             voter.vote(votes);
         }
         vm.stopPrank();
 
-        // can't enter a withdrawal while voting
-        vm.expectRevert(CannotExit.selector);
-        escrow.beginWithdrawal(tokenId);
-
         // enter a withdrawal
         vm.startPrank(_who);
         {
             nftLock.approve(address(escrow), tokenId);
-            escrow.resetVotesAndBeginWithdrawal(tokenId);
+            escrow.beginWithdrawal(tokenId);
         }
         vm.stopPrank();
 
@@ -187,6 +186,9 @@ contract TestWithdraw is IEscrowCurveTokenStorage, IGaugeVote, ITicket, EscrowBa
             token.approve(address(escrow), _dep);
             tokenId = escrow.createLock(_dep);
 
+            ivotesAdapter.setAutoDelegation(true);
+            ivotesAdapter.delegate(_who);
+
             // voting active after cooldown
             // +1 week: voting ends
             // +2 weeks: next voting period opens
@@ -199,7 +201,7 @@ contract TestWithdraw is IEscrowCurveTokenStorage, IGaugeVote, ITicket, EscrowBa
             vm.warp(block.timestamp + clock.checkpointInterval() - queue.cooldown() + 1);
 
             nftLock.approve(address(escrow), tokenId);
-            escrow.resetVotesAndBeginWithdrawal(tokenId);
+            escrow.beginWithdrawal(tokenId);
         }
         vm.stopPrank();
 
