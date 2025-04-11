@@ -80,7 +80,7 @@ contract LinearIncreasingCurve is
     uint256 private constant MAX_EPOCHS = CurveConstantLib.MAX_EPOCHS;
 
     /*//////////////////////////////////////////////////////////////
-                            ADDED: TOTAL SUPPLY
+                            ADDED: TOTAL SUPPLY(1.2.0)
     //////////////////////////////////////////////////////////////*/
 
     /// @dev The latest global point index.
@@ -126,13 +126,13 @@ contract LinearIncreasingCurve is
 
     /// @return The coefficient for the curve's linear term, for the given amount
     function _getLinearCoeff(uint256 amount) internal pure returns (int256) {
-        return int256(amount) * SHARED_LINEAR_COEFFICIENT;
+        return amount.toInt256() * SHARED_LINEAR_COEFFICIENT;
     }
 
     /// @return The constant coefficient of the increasing curve, for the given amount
     /// @dev In this case, the constant term is 1 so we just case the amount
     function _getConstantCoeff(uint256 amount) public pure returns (int256) {
-        return int256(amount) * SHARED_CONSTANT_COEFFICIENT;
+        return amount.toInt256() * SHARED_CONSTANT_COEFFICIENT;
     }
 
     /// @return The coefficients of the quadratic curve, for the given amount
@@ -270,9 +270,21 @@ contract LinearIncreasingCurve is
         int256 slope = lastPoint.coefficients[1];
 
         TokenPoint memory originalPoint = _tokenPointHistory[_tokenId][0];
-        uint256 elapsed = boundElapsedMaxTime(_t - originalPoint.checkpointTs);
 
-        return _getBias(elapsed - lastPoint.writtenTs, bias, slope) / 1e18;
+        // How much time remaining till maxTime
+        uint256 maxTime = maxTime();
+        uint256 originalOffset = originalPoint.writtenTs - originalPoint.checkpointTs;
+        
+        // maxTime should always be greater than originalOffset.
+        uint256 remainingTillMaxTime = maxTime - originalOffset;
+
+        // bound time in case it's less than `remainingTillMaxTime`.
+        uint256 elapsed = _t - lastPoint.writtenTs;
+        if(elapsed <= remainingTillMaxTime) {
+            remainingTillMaxTime = elapsed;
+        }
+        
+        return _getBias(remainingTillMaxTime, bias, slope) / 1e18;
     }
 
     /// @inheritdoc IEscrowCurveCore
@@ -581,7 +593,7 @@ contract LinearIncreasingCurve is
 
         if (bias < 0) bias = 0;
 
-        return uint256(bias / 1e18); // TODO: USE safe cast
+        return uint256(bias / 1e18);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -597,6 +609,6 @@ contract LinearIncreasingCurve is
     /// @notice Internal method authorizing the upgrade of the contract via the [upgradeability mechanism for UUPS proxies](https://docs.openzeppelin.com/contracts/4.x/api/proxy#UUPSUpgradeable) (see [ERC-1822](https://eips.ethereum.org/EIPS/eip-1822)).
     function _authorizeUpgrade(address) internal virtual override auth(CURVE_ADMIN_ROLE) {}
 
-    /// @dev gap for upgradeable contract
+    /// @dev Reserved storage space to allow for layout changes in the future.
     uint256[42] private __gap;
 }

@@ -3,7 +3,7 @@ pragma solidity ^0.8.17;
 
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {IClockUser, IClockV1_2_0 as IClock} from "@clock/IClock_v1_2_0.sol";
-import {ISimpleGaugeVoterV1_2_0 as ISimpleGaugeVoter} from "./ISimpleGaugeVoter_v1_2_0.sol";
+import {IAddressGaugeVoter} from "./IAddressGaugeVoter.sol";
 
 import {
     ReentrancyGuardUpgradeable as ReentrancyGuard
@@ -16,8 +16,8 @@ import {
 } from "@openzeppelin/contracts-upgradeable/governance/utils/IVotesUpgradeable.sol";
 import {PluginUUPSUpgradeable} from "@aragon/osx/core/plugin/PluginUUPSUpgradeable.sol";
 
-contract SimpleGaugeVoterV1_2_0 is
-    ISimpleGaugeVoter,
+contract AddressGaugeVoter is
+    IAddressGaugeVoter,
     IClockUser,
     ReentrancyGuard,
     Pausable,
@@ -482,6 +482,6 @@ contract SimpleGaugeVoterV1_2_0 is
         return epochGaugeVotes[epoch][_address];
     }
 
-    /// Rest of UUPS logic is handled by OSx plugin
+    /// @dev Reserved storage space to allow for layout changes in the future.
     uint256[42] private __gap;
 }

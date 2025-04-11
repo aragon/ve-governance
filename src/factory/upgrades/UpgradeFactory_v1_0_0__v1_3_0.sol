@@ -22,15 +22,15 @@ import {
 } from "@aragon/osx/framework/plugin/setup/PluginSetupProcessorHelpers.sol";
 
 import {
-    SimpleGaugeVoterSetup,
+    GaugeVoterSetup,
     VotingEscrow,
     Clock,
     Lock,
     Curve,
     ExitQueue,
-    SimpleGaugeVoter,
-    ISimpleGaugeVoterSetupParams
-} from "@setup/SimpleGaugeVoterSetup.sol";
+    GaugeVoter,
+    IGaugeVoterSetupParams
+} from "@setup/GaugeVoterSetup.sol";
 import {
     GaugesDaoFactory,
     Deployment as DeploymentV1_0_0,
@@ -41,13 +41,13 @@ import {
 import {
     Clock as ClockV1_2_0,
     Curve as LinearIncreasingCurve,
-    SimpleGaugeVoter as SimpleGaugeVoterV1_1_0,
+    GaugeVoter as GaugeVoterV1_1_0,
     VotingEscrow as VotingEscrowV1_2_0,
-    SimpleGaugeVoterSetupV1_3_0,
-    ISimpleGaugeVoterSetupParams as ISimpleGaugeVoterSetupParamsV1_3_0,
+    GaugeVoterSetupV1_3_0,
+    IGaugeVoterSetupParams as IGaugeVoterSetupParamsV1_3_0,
     EscrowIVotesAdapter,
     Lock as LockV1_2_0
-} from "@setup/SimpleGaugeVoterSetup_v1_3_0.sol";
+} from "@setup/GaugeVoterSetup_v1_3_0.sol";
 
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
@@ -56,6 +56,8 @@ import {ProxyLib} from "@libs/ProxyLib.sol";
 
 import {Upgrades} from "@foundry-upgrades/LegacyUpgrades.sol";
 import {Options} from "@foundry-upgrades/Options.sol";
+
+import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 
 interface IFactory {
     function getDeployment() external view returns (DeploymentV1_0_0 memory);
@@ -95,7 +97,7 @@ struct DeploymentParameters {
     PluginRepo multisigPluginRepo;
     uint8 multisigPluginRelease;
     uint16 multisigPluginBuild;
-    SimpleGaugeVoterSetup voterPluginSetup;
+    GaugeVoterSetup voterPluginSetup;
     string voterEnsSubdomain;
     // OSx addresses
     address osxDaoFactory;
@@ -111,7 +113,7 @@ struct TokenParameters {
 
 /// @notice Struct containing the plugin and all of its helpers
 struct GaugePluginSet {
-    SimpleGaugeVoterV1_1_0 plugin;
+    GaugeVoterV1_1_0 plugin;
     LinearIncreasingCurve curve;
     ExitQueue exitQueue;
     VotingEscrowV1_2_0 votingEscrow;
@@ -154,7 +156,7 @@ contract UpgradeGaugesFactoryV1_0_0__V1_3_0 {
 
             // copy the contracts over - for now casting them
             // todo good idea?
-            newPluginSet.plugin = SimpleGaugeVoterV1_1_0(address(oldPluginSet.plugin));
+            newPluginSet.plugin = GaugeVoterV1_1_0(address(oldPluginSet.plugin));
             newPluginSet.curve = LinearIncreasingCurve(address(oldPluginSet.curve));
             newPluginSet.votingEscrow = VotingEscrowV1_2_0(address(oldPluginSet.votingEscrow));
             newPluginSet.clock = ClockV1_2_0(address(oldPluginSet.clock));
@@ -236,9 +238,25 @@ contract UpgradeGaugesFactoryV1_0_0__V1_3_0 {
     ) public {
         if (validate) {
             validateUpgrade();
+
+            for (uint i = 0; i < parameters.tokenParameters.length; i++) {
+                GaugePluginSet memory pluginSet = deployment.gaugeVoterPluginSets[i];
+                // make sure that ivotesAdapter is using the same constants
+                // as the curve that was already deployed prior.
+                int256[3] memory coefficients = pluginSet.curve.getCoefficients(1);
+                require(
+                    CurveConstantLib.SHARED_CONSTANT_COEFFICIENT == coefficients[0],
+                    "invalid constant coefficient"
+                );
+                require(
+                    CurveConstantLib.SHARED_LINEAR_COEFFICIENT == coefficients[1],
+                    "invalid linear coefficient"
+                );
+            }
         }
 
         _deployEscrowIVotesAdapter(address(ivotesAdapter));
+
         _upgradeContracts(clockUpgrade, curveUpgrade, escrowUpgrade, lockUpgrade);
 
         // set the delegation mapper on the escrow

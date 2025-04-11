@@ -12,7 +12,7 @@ import {IERC721EnumerableMintableBurnable as IERC721EMB} from "@lock/IERC721EMB.
 
 // veGovernance
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
-import {ISimpleGaugeVoter} from "@voting/ISimpleGaugeVoter.sol";
+import {ITokenGaugeVoter} from "@voting/ITokenGaugeVoter.sol";
 import {IClock} from "@clock/IClock.sol";
 import {IEscrowCurveIncreasing as IEscrowCurve} from "@curve/IEscrowCurveIncreasing.sol";
 import {IExitQueue} from "@queue/IExitQueue.sol";
@@ -240,7 +240,7 @@ contract VotingEscrow is
 
     /// @notice Checks if the NFT is currently voting. We require the user to reset their votes if so.
     function isVoting(uint256 _tokenId) public view returns (bool) {
-        return ISimpleGaugeVoter(voter).isVoting(_tokenId);
+        return ITokenGaugeVoter(voter).isVoting(_tokenId);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -323,7 +323,7 @@ contract VotingEscrow is
     /// @notice Resets the votes and begins the withdrawal process for a given tokenId
     /// @dev Convenience function, the user must have authorized this contract to act on their behalf.
     function resetVotesAndBeginWithdrawal(uint256 _tokenId) external whenNotPaused {
-        ISimpleGaugeVoter(voter).reset(_tokenId);
+        ITokenGaugeVoter(voter).reset(_tokenId);
         beginWithdrawal(_tokenId);
     }
 
@@ -422,5 +422,10 @@ contract VotingEscrow is
     function _authorizeUpgrade(address) internal virtual override auth(ESCROW_ADMIN_ROLE) {}
 
     /// @dev Reserved storage space to allow for layout changes in the future.
+    ///      Please note that the reserved slot number 39 was set incorrectly as 39 instead of 40.
+    ///      Changing it to 40 now would overwrite existing slot values, resulting in the loss of state.
+    ///      Therefore, we will continue using 39 in this version. For future versions, any new variables
+    ///      should be added by subtracting from 39 rather than 40. Essentially, it's as though we
+    ///      originally reserved 49 slots for this contract, instead of 50.
     uint256[39] private __gap;
 }

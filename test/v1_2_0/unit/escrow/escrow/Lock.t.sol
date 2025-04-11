@@ -11,7 +11,7 @@ import {ProxyLib} from "@libs/ProxyLib.sol";
 
 import {Lock, Clock, VotingEscrow, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, IEscrowCurveTokenStorage, IGaugeVote, ILock} from "../../../versions.sol";
 
-contract TestLockMintBurn is IEscrowCurveTokenStorage, IGaugeVote, EscrowBase {
+contract TestLockMintBurn_1 is IEscrowCurveTokenStorage, IGaugeVote, EscrowBase {
     function testDeploy(
         string memory _name,
         string memory _symbol,

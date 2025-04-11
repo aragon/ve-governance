@@ -13,13 +13,13 @@ import {ProxyLib} from "@libs/ProxyLib.sol";
 import {PermissionLib} from "@aragon/osx/core/permission/PermissionLib.sol";
 import {PluginSetup} from "@aragon/osx/framework/plugin/setup/PluginSetup.sol";
 
-// these should be interfaces
-import {SimpleGaugeVoter} from "@voting/SimpleGaugeVoter.sol";
-import {VotingEscrow} from "@escrow/VotingEscrowIncreasing.sol";
+import {AddressGaugeVoter as GaugeVoter} from "@voting/AddressGaugeVoter.sol";
+import {VotingEscrowV1_2_0 as VotingEscrow} from "@escrow/VotingEscrowIncreasing_v1_2_0.sol";
 import {ExitQueue} from "@queue/ExitQueue.sol";
-import {QuadraticIncreasingEscrow as Curve} from "@curve/QuadraticIncreasingCurve.sol";
-import {Clock} from "@clock/Clock.sol";
-import {Lock} from "@lock/Lock.sol";
+import {LinearIncreasingCurve as Curve} from "@curve/LinearIncreasingCurve.sol";
+import {ClockV1_2_0 as Clock} from "@clock/Clock_v1_2_0.sol";
+import {LockV1_2_0 as Lock} from "@lock/Lock_v1_2_0.sol";
+import {EscrowIVotesAdapter} from "@delegation/EscrowIVotesAdapter.sol";
 
 /// @param isPaused Whether the voter contract is deployed in a paused state
 /// @param veTokenName The name of the voting escrow token
@@ -27,7 +27,7 @@ import {Lock} from "@lock/Lock.sol";
 /// @param token The underlying token for the escrow
 /// @param cooldown The cooldown period for the exit queue
 /// @param warmup The warmup period for the escrow curve
-struct ISimpleGaugeVoterSetupParams {
+struct IGaugeVoterSetupParams {
     // voter
     bool isPaused;
     // escrow - NFT
@@ -44,7 +44,7 @@ struct ISimpleGaugeVoterSetupParams {
     uint48 warmup;
 }
 
-contract SimpleGaugeVoterSetup is PluginSetup {
+contract GaugeVoterSetupV1_3_0 is PluginSetup {
     using Address for address;
     using Clones for address;
     using ERC165Checker for address;
@@ -75,6 +75,19 @@ contract SimpleGaugeVoterSetup is PluginSetup {
     /// @dev implementation of the escrow NFT
     address nftBase;
 
+    /// @dev implementation of the delegation adapter
+    address ivotesAdapterBase;
+
+    struct Deployment {
+        address curve;
+        address exitQueue;
+        address escrow;
+        address clock;
+        address nftLock;
+        address ivotesAdapter;
+        address plugin;
+    }
+
     /// @notice Deploys the setup by binding the implementation contracts required during installation.
     constructor(
         address _voterBase,
@@ -82,7 +95,8 @@ contract SimpleGaugeVoterSetup is PluginSetup {
         address _queueBase,
         address _escrowBase,
         address _clockBase,
-        address _nftBase
+        address _nftBase,
+        address _ivotesAdapterBase
     ) PluginSetup() {
         voterBase = _voterBase;
         curveBase = _curveBase;
@@ -90,6 +104,7 @@ contract SimpleGaugeVoterSetup is PluginSetup {
         escrowBase = _escrowBase;
         clockBase = _clockBase;
         nftBase = _nftBase;
+        ivotesAdapterBase = _ivotesAdapterBase;
     }
 
     function implementation() external view returns (address) {
@@ -102,82 +117,81 @@ contract SimpleGaugeVoterSetup is PluginSetup {
         address _dao,
         bytes calldata _data
     ) external returns (address plugin, PreparedSetupData memory preparedSetupData) {
-        ISimpleGaugeVoterSetupParams memory params = abi.decode(
-            _data,
-            (ISimpleGaugeVoterSetupParams)
-        );
+        IGaugeVoterSetupParams memory params = abi.decode(_data, (IGaugeVoterSetupParams));
+
+        Deployment memory deps;
 
         // deploy the clock
-        address clock = address(
-            Clock(
-                clockBase.deployUUPSProxy(abi.encodeWithSelector(Clock.initialize.selector, _dao))
-            )
+        deps.clock = address(
+            clockBase.deployUUPSProxy(abi.encodeWithSelector(Clock.initialize.selector, _dao))
         );
 
         // deploy the escrow locker
-        VotingEscrow escrow = VotingEscrow(
-            escrowBase.deployUUPSProxy(
-                abi.encodeCall(
-                    VotingEscrow.initialize,
-                    (params.token, _dao, clock, params.minDeposit)
-                )
+        deps.escrow = escrowBase.deployUUPSProxy(
+            abi.encodeCall(
+                VotingEscrow.initialize,
+                (params.token, _dao, deps.clock, params.minDeposit)
             )
+        );
+
+        deps.ivotesAdapter = ivotesAdapterBase.deployUUPSProxy(
+            abi.encodeCall(EscrowIVotesAdapter.initialize, (_dao, deps.escrow, deps.clock))
         );
 
         // deploy the voting contract (plugin)
-        SimpleGaugeVoter voter = SimpleGaugeVoter(
-            voterBase.deployUUPSProxy(
-                abi.encodeCall(
-                    SimpleGaugeVoter.initialize,
-                    (_dao, address(escrow), params.isPaused, clock)
-                )
+        deps.plugin = voterBase.deployUUPSProxy(
+            abi.encodeCall(
+                GaugeVoter.initialize,
+                (_dao, deps.escrow, params.isPaused, deps.clock, deps.ivotesAdapter, true)
             )
         );
-        plugin = address(voter);
 
         // deploy the curve
-        address curve = curveBase.deployUUPSProxy(
-            abi.encodeCall(Curve.initialize, (address(escrow), _dao, params.warmup, clock))
+        deps.curve = curveBase.deployUUPSProxy(
+            abi.encodeCall(Curve.initialize, (deps.escrow, _dao, params.warmup, deps.clock))
         );
 
         // deploy the exit queue
-        address exitQueue = queueBase.deployUUPSProxy(
+        deps.exitQueue = queueBase.deployUUPSProxy(
             abi.encodeCall(
                 ExitQueue.initialize,
-                (address(escrow), params.cooldown, _dao, params.feePercent, clock, params.minLock)
+                (deps.escrow, params.cooldown, _dao, params.feePercent, deps.clock, params.minLock)
             )
         );
 
         // deploy the escrow NFT
-        address nftLock = nftBase.deployUUPSProxy(
+        deps.nftLock = nftBase.deployUUPSProxy(
             abi.encodeCall(
                 Lock.initialize,
-                (address(escrow), params.veTokenName, params.veTokenSymbol, _dao)
+                (deps.escrow, params.veTokenName, params.veTokenSymbol, _dao)
             )
         );
 
         // encode our setup data with permissions and helpers
         PermissionLib.MultiTargetPermission[] memory permissions = getPermissions(
             _dao,
-            plugin,
-            curve,
-            exitQueue,
-            address(escrow),
-            clock,
-            nftLock,
+            deps.plugin,
+            deps.curve,
+            deps.exitQueue,
+            deps.escrow,
+            deps.clock,
+            deps.nftLock,
             PermissionLib.Operation.Grant
         );
 
-        address[] memory helpers = new address[](5);
+        address[] memory helpers = new address[](6);
 
-        helpers[0] = curve;
-        helpers[1] = exitQueue;
-        helpers[2] = address(escrow);
-        helpers[3] = clock;
-        helpers[4] = address(nftLock);
+        helpers[0] = deps.curve;
+        helpers[1] = deps.exitQueue;
+        helpers[2] = deps.escrow;
+        helpers[3] = deps.clock;
+        helpers[4] = deps.nftLock;
+        helpers[5] = deps.ivotesAdapter;
 
+        // return arguments
         preparedSetupData.helpers = helpers;
         preparedSetupData.permissions = permissions;
+        plugin = deps.plugin;
     }
 
     /// @inheritdoc IPluginSetup
@@ -186,7 +200,7 @@ contract SimpleGaugeVoterSetup is PluginSetup {
         SetupPayload calldata _payload
     ) external view returns (PermissionLib.MultiTargetPermission[] memory permissions) {
         // check the helpers length
-        if (_payload.currentHelpers.length != 5) {
+        if (_payload.currentHelpers.length != 6) {
             revert WrongHelpersArrayLength(_payload.currentHelpers.length);
         }
 
@@ -226,7 +240,7 @@ contract SimpleGaugeVoterSetup is PluginSetup {
             memory permissions = new PermissionLib.MultiTargetPermission[](10);
 
         permissions[0] = PermissionLib.MultiTargetPermission({
-            permissionId: SimpleGaugeVoter(_plugin).GAUGE_ADMIN_ROLE(),
+            permissionId: GaugeVoter(_plugin).GAUGE_ADMIN_ROLE(),
             where: _plugin,
             who: _dao,
             operation: _grantOrRevoke,
@@ -258,7 +272,7 @@ contract SimpleGaugeVoterSetup is PluginSetup {
         });
 
         permissions[4] = PermissionLib.MultiTargetPermission({
-            permissionId: SimpleGaugeVoter(_plugin).UPGRADE_PLUGIN_PERMISSION_ID(),
+            permissionId: GaugeVoter(_plugin).UPGRADE_PLUGIN_PERMISSION_ID(),
             where: _plugin,
             who: _dao,
             operation: _grantOrRevoke,
@@ -304,16 +318,17 @@ contract SimpleGaugeVoterSetup is PluginSetup {
             operation: _grantOrRevoke,
             condition: PermissionLib.NO_CONDITION
         });
+
         return permissions;
     }
 
     function encodeSetupData(
-        ISimpleGaugeVoterSetupParams calldata _params
+        IGaugeVoterSetupParams calldata _params
     ) external pure returns (bytes memory) {
         return abi.encode(_params);
     }
 
-    /// @notice Simple utility for external applications create the encoded setup data.
+    /// @notice  utility for external applications create the encoded setup data.
     function encodeSetupData(
         bool isPaused,
         string calldata veTokenName,
@@ -327,7 +342,7 @@ contract SimpleGaugeVoterSetup is PluginSetup {
     ) external pure returns (bytes memory) {
         return
             abi.encode(
-                ISimpleGaugeVoterSetupParams({
+                IGaugeVoterSetupParams({
                     isPaused: isPaused,
                     token: token,
                     veTokenName: veTokenName,

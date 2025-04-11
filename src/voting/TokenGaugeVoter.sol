@@ -4,14 +4,18 @@ pragma solidity ^0.8.17;
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {IVotingEscrowIncreasing as IVotingEscrow} from "@escrow/IVotingEscrowIncreasing.sol";
 import {IClockUser, IClock} from "@clock/IClock.sol";
-import {ISimpleGaugeVoter} from "./ISimpleGaugeVoter.sol";
+import {ITokenGaugeVoter} from "./ITokenGaugeVoter.sol";
 
-import {ReentrancyGuardUpgradeable as ReentrancyGuard} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import {PausableUpgradeable as Pausable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import {
+    ReentrancyGuardUpgradeable as ReentrancyGuard
+} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import {
+    PausableUpgradeable as Pausable
+} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import {PluginUUPSUpgradeable} from "@aragon/osx/core/plugin/PluginUUPSUpgradeable.sol";
 
-contract SimpleGaugeVoter is
-    ISimpleGaugeVoter,
+contract TokenGaugeVoter is
+    ITokenGaugeVoter,
     IClockUser,
     ReentrancyGuard,
     Pausable,
@@ -334,6 +338,6 @@ contract SimpleGaugeVoter is
         return tokenVoteData[_tokenId].usedVotingPower;
     }
 
-    /// Rest of UUPS logic is handled by OSx plugin
+    /// @dev Reserved storage space to allow for layout changes in the future.
     uint256[43] private __gap;
 }

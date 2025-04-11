@@ -20,6 +20,7 @@ import {IClockUser, IClockV1_2_0 as IClock} from "@clock/IClock_v1_2_0.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {SignedFixedPointMath} from "@libs/SignedFixedPointMathLib.sol";
+
 import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 
 // contracts
@@ -270,9 +271,21 @@ contract LinearIncreasingEscrowNoSupply is
         int256 slope = lastPoint.coefficients[1];
 
         TokenPoint memory originalPoint = _tokenPointHistory[_tokenId][0];
-        uint256 elapsed = boundElapsedMaxTime(_t - originalPoint.checkpointTs);
+        
+        // How much time remaining till maxTime
+        uint256 maxTime = maxTime();
+        uint256 originalOffset = originalPoint.writtenTs - originalPoint.checkpointTs;
+        
+        // maxTime should always be greater than originalOffset.
+        uint256 remainingTillMaxTime = maxTime - originalOffset;
 
-        return _getBias(elapsed - lastPoint.writtenTs, bias, slope) / 1e18;
+        // bound time in case it's less than `remainingTillMaxTime`.
+        uint256 elapsed = _t - lastPoint.writtenTs;
+        if(elapsed <= remainingTillMaxTime) {
+            remainingTillMaxTime = elapsed;
+        }
+        
+        return _getBias(remainingTillMaxTime, bias, slope) / 1e18;
     }
 
     /// @inheritdoc IEscrowCurveCore
@@ -581,7 +594,7 @@ contract LinearIncreasingEscrowNoSupply is
 
         if (bias < 0) bias = 0;
 
-        return uint256(bias / 1e18); // TODO: USE safe cast
+        return uint256(bias / 1e18);
     }
 
     /*///////////////////////////////////////////////////////////////

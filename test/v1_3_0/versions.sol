@@ -8,14 +8,12 @@ import {
     Clock,
     Lock,
     Curve,
-    Curve as LinearIncreasingEscrow,
-    Curve as QuadraticIncreasingEscrow,
     ExitQueue,
     VotingEscrow,
     EscrowIVotesAdapter,
-    SimpleGaugeVoter,
-    SimpleGaugeVoterSetupV1_3_0 as SimpleGaugeVoterSetup
-} from "@setup/SimpleGaugeVoterSetup_v1_3_0.sol";
+    GaugeVoter,
+    GaugeVoterSetupV1_3_0 as GaugeVoterSetup
+} from "@setup/GaugeVoterSetup_v1_3_0.sol";
 import {
     GaugesDaoFactoryV1_3_0 as GaugesDaoFactory,
     Deployment,
@@ -27,7 +25,7 @@ import {
 // interfaces
 import {IClockV1_2_0 as IClock} from "@clock/IClock_v1_2_0.sol";
 import {ISeasonErrors} from "@clock/IClockSeason.sol";
-import {ISimpleGaugeVoterSetupParams} from "@setup/SimpleGaugeVoterSetup_v1_3_0.sol";
+import {IGaugeVoterSetupParams} from "@setup/GaugeVoterSetup_v1_3_0.sol";
 import {
     IEscrowCurveGlobalStorage,
     IEscrowCurveIncreasingV1_2_0 as IEscrowCurveIncreasing,
@@ -47,7 +45,10 @@ import {
     IMergeEventsAndErrors,
     ISplitEventsAndErrors
 } from "@escrow/IVotingEscrowIncreasing_v1_2_0.sol";
-import {IGaugeVote, ISimpleGaugeVoterStorageEventsErrors} from "@voting/ISimpleGaugeVoter_v1_2_0.sol";
+import {
+    IAddressGaugeVote as IGaugeVote,
+    IAddressGaugeVoterStorageEventsErrors as IGaugeVoterStorageEventsErrors
+} from "@voting/IAddressGaugeVoter.sol";
 import {
     IEscrowIVotesAdapterStorage,
     IEscrowIVotesAdapterErrorsAndEvents
@@ -55,3 +56,17 @@ import {
 
 // other
 import {DeployGaugesV1_3_0 as DeployGauges} from "script/deploy/DeployGauges_v1_3_0.s.sol";
+
+// deprecated but to avoid rewriting all tests
+// housekeeping: remove these as we go
+import {
+    Curve as QuadraticIncreasingEscrow,
+    Curve as LinearIncreasingEscrow,
+    GaugeVoter as SimpleGaugeVoter,
+    GaugeVoterSetupV1_3_0 as SimpleGaugeVoterSetup,
+    IGaugeVoterSetupParams as ISimpleGaugeVoterSetupParams
+} from "@setup/GaugeVoterSetup_v1_3_0.sol";
+
+import {
+    IAddressGaugeVoterStorageEventsErrors as ISimpleGaugeVoterStorageEventsErrors
+} from "@voting/IAddressGaugeVoter.sol";
