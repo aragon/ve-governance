@@ -26,8 +26,6 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {ReentrancyGuardUpgradeable as ReentrancyGuard} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
 
-import {console2 as console} from "forge-std/console2.sol";
-
 /// @title Linear Increasing Escrow
 contract LinearIncreasingEscrowNoSupply is
     IEscrowCurve,
