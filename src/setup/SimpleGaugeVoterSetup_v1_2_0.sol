@@ -129,12 +129,16 @@ contract SimpleGaugeVoterSetupV1_2_0 is PluginSetup {
             )
         );
 
+        address ivotesAdapter = ivotesMapperBase.deployUUPSProxy(
+            abi.encodeCall(EscrowIVotesAdapter.initialize, (_dao, address(escrow), clock))
+        );
+
         // deploy the voting contract (plugin)
         SimpleGaugeVoter voter = SimpleGaugeVoter(
             voterBase.deployUUPSProxy(
                 abi.encodeCall(
                     SimpleGaugeVoter.initialize,
-                    (_dao, address(escrow), params.isPaused, clock)
+                    (_dao, address(escrow), params.isPaused, clock, ivotesAdapter, true) // TODO: Giorgi should it be true by default ?
                 )
             )
         );
@@ -159,10 +163,6 @@ contract SimpleGaugeVoterSetupV1_2_0 is PluginSetup {
                 Lock.initialize,
                 (address(escrow), params.veTokenName, params.veTokenSymbol, _dao)
             )
-        );
-
-        address ivotesAdapter = ivotesMapperBase.deployUUPSProxy(
-            abi.encodeCall(EscrowIVotesAdapter.initialize, (_dao, address(escrow), clock))
         );
 
         // encode our setup data with permissions and helpers
