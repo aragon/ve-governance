@@ -10,7 +10,23 @@ import {MockERC20} from "@mocks/MockERC20.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
-import {Clock, IClock, Lock, VotingEscrow, LinearIncreasingEscrow, IVotingEscrowIncreasing, IEscrowCurveIncreasing, IVotingEscrowIncreasing, IVotingEscrowCoreErrors, IMerge, IMergeEventsAndErrors, ISplit, ILockedBalanceIncreasing, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage} from "../../../versions.sol";
+import {
+    Clock,
+    IClock,
+    Lock,
+    VotingEscrow,
+    LinearIncreasingEscrow,
+    IVotingEscrowIncreasing,
+    IEscrowCurveIncreasing,
+    IVotingEscrowIncreasing,
+    IVotingEscrowCoreErrors,
+    IMerge,
+    IMergeEventsAndErrors,
+    ISplit,
+    ILockedBalanceIncreasing,
+    IEscrowCurveGlobalStorage,
+    IEscrowCurveTokenStorage
+} from "../../../versions.sol";
 
 contract TestEscrowMerge is IEscrowCurveTokenStorage, EscrowBase, IMergeEventsAndErrors {
     function setUp() public override {

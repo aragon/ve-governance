@@ -31,7 +31,10 @@ contract TestIsVoting is IEscrowCurveTokenStorage, EscrowBase {
     function test_shouldReturnFalseIfNotDelegated() public {
         uint256 tokenId = 1;
 
-        vm.expectCall(address(ivotesAdapter), abi.encodeWithSelector(ivotesAdapter.tokenIsDelegated.selector, (tokenId)));
+        vm.expectCall(
+            address(ivotesAdapter),
+            abi.encodeWithSelector(ivotesAdapter.tokenIsDelegated.selector, (tokenId))
+        );
         assertFalse(escrow.isVoting(tokenId));
     }
 

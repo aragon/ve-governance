@@ -17,7 +17,18 @@ import {createTestDAO} from "@mocks/MockDAO.sol";
 import "@helpers/OSxHelpers.sol";
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
-import {Lock, Clock, VotingEscrow, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, IVotingEscrowEventsStorageErrorsEvents, IWhitelistErrors, IWhitelistEvents} from "../../../versions.sol";
+import {
+    Lock,
+    Clock,
+    VotingEscrow,
+    QuadraticIncreasingEscrow,
+    ExitQueue,
+    SimpleGaugeVoter,
+    SimpleGaugeVoterSetup,
+    IVotingEscrowEventsStorageErrorsEvents,
+    IWhitelistErrors,
+    IWhitelistEvents
+} from "../../../versions.sol";
 
 contract EscrowBase is
     Test,

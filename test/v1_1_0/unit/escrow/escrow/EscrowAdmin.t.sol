@@ -8,7 +8,15 @@ import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
-import {Lock, Clock, VotingEscrow, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup} from "../../../versions.sol";
+import {
+    Lock,
+    Clock,
+    VotingEscrow,
+    QuadraticIncreasingEscrow,
+    ExitQueue,
+    SimpleGaugeVoter,
+    SimpleGaugeVoterSetup
+} from "../../../versions.sol";
 
 contract TestEscrowAdmin is EscrowBase {
     address attacker = address(1);

@@ -6,7 +6,13 @@ import {DaoUnauthorized} from "@aragon/osx/core/utils/auth.sol";
 
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {DAO, createTestDAO} from "@mocks/MockDAO.sol";
-import {Clock, QuadraticIncreasingEscrow, ILockedBalanceIncreasing, IVotingEscrowIncreasing as IVotingEscrow, IEscrowCurveIncreasing as IEscrowCurve} from "../../../versions.sol";
+import {
+    Clock,
+    QuadraticIncreasingEscrow,
+    ILockedBalanceIncreasing,
+    IVotingEscrowIncreasing as IVotingEscrow,
+    IEscrowCurveIncreasing as IEscrowCurve
+} from "../../../versions.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
 import {FixedPointBase} from "../../../base/FixedPointBase.sol";

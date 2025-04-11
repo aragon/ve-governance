@@ -14,7 +14,15 @@ import {MockERC20} from "@mocks/MockERC20.sol";
 
 import "@helpers/OSxHelpers.sol";
 
-import {GaugeVotingBase, VotingEscrow, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams} from "./GaugeVotingBase.sol";
+import {
+    GaugeVotingBase,
+    VotingEscrow,
+    QuadraticIncreasingEscrow,
+    ExitQueue,
+    SimpleGaugeVoter,
+    SimpleGaugeVoterSetup,
+    ISimpleGaugeVoterSetupParams
+} from "./GaugeVotingBase.sol";
 
 contract TestGaugeTime is GaugeVotingBase {
     function setUp() public override {
@@ -145,7 +153,7 @@ contract TestGaugeTime is GaugeVotingBase {
 
         vm.warp(block.timestamp + 1 weeks);
 
-        clock.newSeason();        
+        clock.newSeason();
 
         assertEq(clock.currentSeasonIndex(), 0);
         (seasonStart, seasonEnd) = clock.seasonTs(0);

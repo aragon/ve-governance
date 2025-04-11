@@ -26,9 +26,7 @@ import {IDelegateUpdateVotingPower} from "@delegation/IEscrowIVotesAdapter.sol";
 import {FixedPointBase} from "../../base/FixedPointBase.sol";
 
 contract EscrowVotingPowerMock is IDelegateUpdateVotingPower {
-    function updateVotingPower(address a, address b) external {
-
-    }
+    function updateVotingPower(address a, address b) external {}
 }
 
 contract EscrowIVotesAdapterA is EscrowIVotesAdapter {

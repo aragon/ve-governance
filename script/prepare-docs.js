@@ -130,4 +130,3 @@ main()
     console.error("Error generating docs", error);
     process.exit(1);
   });
-
