@@ -99,4 +99,6 @@ interface IAddressGaugeVoterStorageEventsErrors is
     IGaugeManagerErrors,
     IAddressGaugeVoterEvents,
     IAddressGaugeVoterErrors
-{}
+{
+
+}
