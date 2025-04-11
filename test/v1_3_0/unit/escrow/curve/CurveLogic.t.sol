@@ -4,19 +4,19 @@ import {console2 as console} from "forge-std/console2.sol";
 
 import {
     Clock,
-    QuadraticIncreasingEscrow,
+    Curve,
     ILockedBalanceIncreasing,
     IVotingEscrowIncreasing as IVotingEscrow,
     IEscrowCurveIncreasing as IEscrowCurve
 } from "../../../versions.sol";
-import {QuadraticCurveBase, MockEscrow} from "./QuadraticCurveBase.t.sol";
+import {CurveBase, MockEscrow} from "./CurveBase.t.sol";
 
-contract TestQuadraticIncreasingCurveLogic is QuadraticCurveBase {
+contract TestIncreasingCurveLogic is CurveBase {
     address attacker = address(0x1);
     error InvalidCheckpoint();
 
     function testUUPSUpgrade() public {
-        address newImpl = address(new QuadraticIncreasingEscrow());
+        address newImpl = address(new Curve());
         curve.upgradeTo(newImpl);
         assertEq(curve.implementation(), newImpl);
 
