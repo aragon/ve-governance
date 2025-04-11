@@ -68,5 +68,5 @@ import {
 } from "@setup/GaugeVoterSetup_v1_3_0.sol";
 
 import {
-    ITokenGaugeVoterStorageEventsErrors as ISimpleGaugeVoterStorageEventsErrors
-} from "@voting/ITokenGaugeVoter.sol";
+    IAddressGaugeVoterStorageEventsErrors as ISimpleGaugeVoterStorageEventsErrors
+} from "@voting/IAddressGaugeVoter.sol";
