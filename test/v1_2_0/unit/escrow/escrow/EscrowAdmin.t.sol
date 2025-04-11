@@ -8,7 +8,15 @@ import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
-import {Lock, Clock, VotingEscrow, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup} from "../../../versions.sol";
+import {
+    Lock,
+    Clock,
+    VotingEscrow,
+    QuadraticIncreasingEscrow,
+    ExitQueue,
+    SimpleGaugeVoter,
+    SimpleGaugeVoterSetup
+} from "../../../versions.sol";
 
 contract TestEscrowAdmin is EscrowBase {
     address attacker = address(1);
@@ -123,7 +131,9 @@ contract TestEscrowAdmin is EscrowBase {
 
         escrow.enableSplit();
         assertTrue(
-            escrow.splitWhitelisted(address(uint160(uint256(keccak256("SPLIT_WHITELIST_ANY_ADDRESS")))))
+            escrow.splitWhitelisted(
+                address(uint160(uint256(keccak256("SPLIT_WHITELIST_ANY_ADDRESS"))))
+            )
         );
 
         bytes memory err = _authErr(attacker, address(escrow), escrow.ESCROW_ADMIN_ROLE());

@@ -100,11 +100,7 @@ contract EscrowBase is
         escrow = _deployEscrow(address(token), address(dao), address(clock), 1);
         curve = _deployCurve(address(escrow), address(dao), warmupPeriod, address(clock));
         nftLock = _deployLock(address(escrow), name, symbol, address(dao));
-        ivotesAdapter = _deployEscrowIVotesAdapter(
-            address(dao),
-            address(escrow),
-            address(clock)
-        );
+        ivotesAdapter = _deployEscrowIVotesAdapter(address(dao), address(escrow), address(clock));
 
         super.initialize(curve.maxTime(), clock.checkpointInterval());
 
@@ -313,8 +309,6 @@ contract EscrowBase is
         );
         return LinearIncreasingEscrow(address(impl).deployUUPSProxy(initCalldata));
     }
-
-    
 
     function _deployVoter(
         address _dao,

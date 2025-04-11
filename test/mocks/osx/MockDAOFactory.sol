@@ -14,7 +14,10 @@ import {ProxyLib} from "@libs/ProxyLib.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 // import {PluginRepo} from "../plugin/repo/PluginRepo.sol";
 // import {PluginSetupProcessor} from "@aragon/osx/framework/plugin/setup/PluginSetupProcessor.sol";
-import {hashHelpers, PluginSetupRef} from "@aragon/osx/framework/plugin/setup/PluginSetupProcessorHelpers.sol";
+import {
+    hashHelpers,
+    PluginSetupRef
+} from "@aragon/osx/framework/plugin/setup/PluginSetupProcessorHelpers.sol";
 
 import {MockPluginSetupProcessor as PluginSetupProcessor} from "./MockPSP.sol";
 
@@ -102,20 +105,27 @@ contract MockDAOFactory {
 
         // Get Permission IDs
         bytes32 rootPermissionID = createdDao.ROOT_PERMISSION_ID();
-        bytes32 applyInstallationPermissionID = pluginSetupProcessor.APPLY_INSTALLATION_PERMISSION_ID();
+        bytes32 applyInstallationPermissionID = pluginSetupProcessor
+            .APPLY_INSTALLATION_PERMISSION_ID();
 
         // Grant the temporary permissions.
         // Grant Temporarly `ROOT_PERMISSION` to `pluginSetupProcessor`.
         createdDao.grant(address(createdDao), address(pluginSetupProcessor), rootPermissionID);
 
         // Grant Temporarly `APPLY_INSTALLATION_PERMISSION` on `pluginSetupProcessor` to this `DAOFactory`.
-        createdDao.grant(address(pluginSetupProcessor), address(this), applyInstallationPermissionID);
+        createdDao.grant(
+            address(pluginSetupProcessor),
+            address(this),
+            applyInstallationPermissionID
+        );
 
         // Install plugins on the newly created DAO.
         for (uint256 i; i < _pluginSettings.length; ++i) {
             // Prepare plugin.
-            (address plugin, IPluginSetup.PreparedSetupData memory preparedSetupData) = pluginSetupProcessor
-                .prepareInstallation(
+            (
+                address plugin,
+                IPluginSetup.PreparedSetupData memory preparedSetupData
+            ) = pluginSetupProcessor.prepareInstallation(
                     address(createdDao),
                     PluginSetupProcessor.PrepareInstallationParams(
                         _pluginSettings[i].pluginSetupRef,
@@ -143,7 +153,11 @@ contract MockDAOFactory {
         createdDao.revoke(address(createdDao), address(pluginSetupProcessor), rootPermissionID);
 
         // Revoke `APPLY_INSTALLATION_PERMISSION` on `pluginSetupProcessor` from this `DAOFactory` .
-        createdDao.revoke(address(pluginSetupProcessor), address(this), applyInstallationPermissionID);
+        createdDao.revoke(
+            address(pluginSetupProcessor),
+            address(this),
+            applyInstallationPermissionID
+        );
 
         // Revoke Temporarly `ROOT_PERMISSION_ID` from `pluginSetupProcessor` that implicitly granted to this `DaoFactory`
         // at the create dao step `address(this)` being the initial owner of the new created DAO.
@@ -160,7 +174,12 @@ contract MockDAOFactory {
                 daoBase.deployUUPSProxy(
                     abi.encodeCall(
                         DAO.initialize,
-                        (_daoSettings.metadata, address(this), _daoSettings.trustedForwarder, _daoSettings.daoURI)
+                        (
+                            _daoSettings.metadata,
+                            address(this),
+                            _daoSettings.trustedForwarder,
+                            _daoSettings.daoURI
+                        )
                     )
                 )
             )
@@ -171,7 +190,8 @@ contract MockDAOFactory {
     /// @param _dao The DAO instance just created.
     function _setDAOPermissions(DAO _dao) internal {
         // set permissionIds on the dao itself.
-        PermissionLib.SingleTargetPermission[] memory items = new PermissionLib.SingleTargetPermission[](5);
+        PermissionLib.SingleTargetPermission[]
+            memory items = new PermissionLib.SingleTargetPermission[](5);
 
         // Grant DAO all the permissions required
         items[0] = PermissionLib.SingleTargetPermission(

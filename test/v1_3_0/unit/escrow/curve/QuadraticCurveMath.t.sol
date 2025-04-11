@@ -4,7 +4,14 @@ import {console2 as console} from "forge-std/console2.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 import {QuadraticCurveBase} from "./QuadraticCurveBase.t.sol";
-import {IClock, Clock, QuadraticIncreasingEscrow, ILockedBalanceIncreasing, IVotingEscrowIncreasing as IVotingEscrow, IEscrowCurveIncreasing as IEscrowCurve} from "../../../versions.sol";
+import {
+    IClock,
+    Clock,
+    QuadraticIncreasingEscrow,
+    ILockedBalanceIncreasing,
+    IVotingEscrowIncreasing as IVotingEscrow,
+    IEscrowCurveIncreasing as IEscrowCurve
+} from "../../../versions.sol";
 
 contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
     using SafeCast for uint256;

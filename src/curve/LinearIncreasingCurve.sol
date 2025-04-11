@@ -274,16 +274,16 @@ contract LinearIncreasingCurve is
         // How much time remaining till maxTime
         uint256 maxTime = maxTime();
         uint256 originalOffset = originalPoint.writtenTs - originalPoint.checkpointTs;
-        
+
         // maxTime should always be greater than originalOffset.
         uint256 remainingTillMaxTime = maxTime - originalOffset;
 
         // bound time in case it's less than `remainingTillMaxTime`.
         uint256 elapsed = _t - lastPoint.writtenTs;
-        if(elapsed <= remainingTillMaxTime) {
+        if (elapsed <= remainingTillMaxTime) {
             remainingTillMaxTime = elapsed;
         }
-        
+
         return _getBias(remainingTillMaxTime, bias, slope) / 1e18;
     }
 

@@ -10,7 +10,23 @@ import {MockERC20} from "@mocks/MockERC20.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
-import {Clock, IClock, Lock, VotingEscrow, LinearIncreasingEscrow, IVotingEscrowIncreasing, IEscrowCurveIncreasing, IVotingEscrowIncreasing, IVotingEscrowCoreErrors, IMerge, ISplit, ILockedBalanceIncreasing, IEscrowCurveGlobalStorage, IEscrowCurveTokenStorage, ISplitEventsAndErrors} from "../../../versions.sol";
+import {
+    Clock,
+    IClock,
+    Lock,
+    VotingEscrow,
+    LinearIncreasingEscrow,
+    IVotingEscrowIncreasing,
+    IEscrowCurveIncreasing,
+    IVotingEscrowIncreasing,
+    IVotingEscrowCoreErrors,
+    IMerge,
+    ISplit,
+    ILockedBalanceIncreasing,
+    IEscrowCurveGlobalStorage,
+    IEscrowCurveTokenStorage,
+    ISplitEventsAndErrors
+} from "../../../versions.sol";
 
 contract TestEscrowSplit is EscrowBase {
     function setUp() public override {
@@ -66,7 +82,7 @@ contract TestEscrowSplit is EscrowBase {
         escrow.setEnableSplit(address(this), false);
 
         escrow.enableSplit();
-        
+
         uint256 from = escrow.createLock(Lock_1_Amount);
         escrow.split(from, Lock_1_Amount - 10);
     }

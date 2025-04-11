@@ -35,9 +35,7 @@ contract TestUndelegate is Base {
         uint256 tokenId = 5;
         _mockLocked(tokenId, 10, weekStartTs(block.timestamp));
 
-        vm.expectRevert(
-            abi.encodeWithSelector(TokenNotDelegated.selector, tokenId)
-        );
+        vm.expectRevert(abi.encodeWithSelector(TokenNotDelegated.selector, tokenId));
         dg.undelegate(getIds(tokenId));
     }
 

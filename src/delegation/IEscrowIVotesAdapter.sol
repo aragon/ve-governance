@@ -46,17 +46,22 @@ interface IEscrowIVotesAdapterStorage {
     }
 }
 
-interface IEscrowIVotesAdapter is IEscrowIVotesAdapterErrorsAndEvents, IEscrowIVotesAdapterStorage, IDelegateMoveVote, IVotesUpgradeable {
-    /// @notice Allows to delegate `_tokenIds` to the current delegatee 
+interface IEscrowIVotesAdapter is
+    IEscrowIVotesAdapterErrorsAndEvents,
+    IEscrowIVotesAdapterStorage,
+    IDelegateMoveVote,
+    IVotesUpgradeable
+{
+    /// @notice Allows to delegate `_tokenIds` to the current delegatee
     ///         which is set by IVotes's `delegate` function.
     /// @param _tokenIds The list of token ids that are being delegated.
     function delegate(uint256[] calldata _tokenIds) external;
 
-    /// @notice Allows to un-delegate `_tokenIds` from the current delegatee 
+    /// @notice Allows to un-delegate `_tokenIds` from the current delegatee
     ///         which was set by delegate.
     /// @param _tokenIds The list of token ids that are being un-delegated.
     function undelegate(uint256[] calldata _tokenIds) external;
 
     /// @notice Check if the token is currently delegated or not.
-    function tokenIsDelegated(uint256 _tokenId) external view returns(bool);
+    function tokenIsDelegated(uint256 _tokenId) external view returns (bool);
 }
