@@ -198,6 +198,7 @@ contract AddressGaugeVoter is
         AddressVoteData storage _voteData
     ) internal returns (uint256) {
         uint256 _votes = _votesForGauge(_voteWeight, _votingPower);
+
         // record the vote for the token
         _voteData.gaugesVotedFor.push(_currentVote.gauge);
         _voteData.voteWeights[_currentVote.gauge] += _voteWeight;
@@ -210,7 +211,7 @@ contract AddressGaugeVoter is
         emit Voted({
             voter: _account,
             gauge: _currentVote.gauge,
-            epoch: _epoch,
+            epoch: epochId(),
             votingPowerCastForGauge: _votes,
             totalVotingPowerInGauge: epochGaugeVotes[_epoch][_currentVote.gauge],
             totalVotingPowerInContract: epochTotalVotingPowerCast[_epoch],
