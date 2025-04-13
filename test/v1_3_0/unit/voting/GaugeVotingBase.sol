@@ -208,7 +208,7 @@ contract GaugeVotingBase is
             data: abi.encodeWithSelector(escrow.setLockNFT.selector, address(nftLock))
         });
 
-        // action 5: set the nft lock
+        // action 5: set the ivotesAdapter
         actions[5] = IDAO.Action({
             to: address(escrow),
             value: 0,

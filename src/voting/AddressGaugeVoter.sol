@@ -116,8 +116,8 @@ contract AddressGaugeVoter is
     /// @notice extrememly simple for loop. We don't need reentrancy checks in this implementation
     /// because the plugin doesn't do anything other than signal.
     function voteMultiple(
-        address[] calldata _address,
-        GaugeVote[] calldata _votes
+        address[] calldata,
+        GaugeVote[] calldata
     ) external nonReentrant whenNotPaused whenVotingActive {
         // unimplemented
         revert("Not implemented");
