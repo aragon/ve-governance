@@ -252,6 +252,7 @@ contract LinearIncreasingEscrowNoSupply is
         int256 bias = lastPoint.coefficients[0];
         int256 slope = lastPoint.coefficients[1];
 
+        // Note that very first point is saved at index 1.
         TokenPoint memory originalPoint = _tokenPointHistory[_tokenId][1];
 
         uint256 maxTime_ = maxTime();
