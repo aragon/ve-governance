@@ -38,7 +38,7 @@ contract TestCreateLock_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalSt
     function test_whenCreatingNewLock_no_existing_lock() public {
         // Given: no prior locks existing
         // 1. should be a single entry point in token point and global point history
-        // 2. timestamp, start, slope and bias must be correctly set on the token and global point.
+        // 2. timestamp, start, slope and bias must be correctly set on the token.
         uint256 currentTs = block.timestamp;
         uint256 weekStartTs = weekStartTs(currentTs);
 
@@ -58,14 +58,13 @@ contract TestCreateLock_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalSt
     function test_whenCreatingNewLock_existingLock_at_same_timestamp() public givenExistingLock {
         // Given: prior locks exists at the same timestamp
         // 1. should be 2 entry point in global history and one entry point in each lock's token point
-        // 2. timestamp on the token and global point should be block.timestamp and start must be current week
-        // 3. bias and slope on the last global point must include both lock's bias till this point summed up.
+        // 2. timestamp on the token should be block.timestamp and start must be current week
         escrow.createLock(Lock_2_Amount);
 
         uint256 currentTs = block.timestamp;
         uint256 weekStartTs = weekStartTs(currentTs);
 
-        // 1, 2, 3
+        // 1, 2
         int256 token1BiasFP = biasFP(Lock_1_Amount, currentTs - weekStartTs);
         int256 token2BiasFP = biasFP(Lock_2_Amount, currentTs - weekStartTs);
 
@@ -96,8 +95,7 @@ contract TestCreateLock_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalSt
     function test_whenCreatingNewLock_existingLock_ended() public givenExistingLock {
         // Given: prior locks exists and current timestamp is after its end date.
         // 1. should be `X`(X = howmanyweeksbetween + 2) entry point in global history and one entry point in each lock's token point.
-        // 2. timestamp on the token and global point should be block.timestamp and start must be current week
-        // 3. slope on the last global point must only include 2nd lock's slope and bias must include first lock's max + second lock's bias till this point.
+        // 2. timestamp on the token should be block.timestamp and start must be current week
         uint256 currentTime = block.timestamp + maxTime + 2 hours;
         vm.warp(currentTime);
 
@@ -105,9 +103,6 @@ contract TestCreateLock_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalSt
 
         uint256 currentTs = block.timestamp;
         uint256 weekStartTs = weekStartTs(currentTs);
-
-        uint256 Lock_1_end = Lock_1_start + maxTime;
-        uint256 Lock_2_end = weekStartTs + maxTime;
 
         // 1, 2, 3
         int256 token1BiasFP = biasFP(Lock_1_Amount, Lock_1_ts - Lock_1_start);

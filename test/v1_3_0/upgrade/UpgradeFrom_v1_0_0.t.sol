@@ -188,7 +188,7 @@ contract RegressionV1_0_0__to__V1_3_0 is Test, IGaugeVote, FixedPointBase {
         upgradeFactory = new UpgradeFactory(address(factory));
     }
 
-    function testValidateUpgradeGaugeVoter_v1_0_0__v1_4_0() public {
+    function testValidateUpgradeGaugeVoter_v1_0_0__v1_3_0() public {
         upgradeFactory.validateUpgrade();
     }
 
