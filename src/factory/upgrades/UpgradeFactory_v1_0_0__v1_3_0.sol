@@ -311,6 +311,9 @@ contract UpgradeGaugesFactoryV1_0_0__V1_3_0 {
     }
 
     function _deployAddressGaugeVoter(address _base) internal {
+        bool startPaused = true;
+        bool enableUpdateVotingPowerHook = true;
+
         for (uint i = 0; i < deployment.gaugeVoterPluginSets.length; i++) {
             address plugin = _base.deployUUPSProxy(
                 abi.encodeCall(
@@ -318,10 +321,10 @@ contract UpgradeGaugesFactoryV1_0_0__V1_3_0 {
                     (
                         address(deployment.dao),
                         address(deployment.gaugeVoterPluginSets[i].votingEscrow),
-                        true,
+                        startPaused,
                         address(deployment.gaugeVoterPluginSets[i].clock),
                         address(deployment.gaugeVoterPluginSets[i].delegation),
-                        true
+                        enableUpdateVotingPowerHook
                     )
                 )
             );
@@ -337,8 +340,6 @@ contract UpgradeGaugesFactoryV1_0_0__V1_3_0 {
 
             votingEscrow.setIVotesAdapter(address(ivotesAdapter));
         }
-
-        
     }
 
     function _setAddressGaugeVoter() internal {
