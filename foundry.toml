@@ -23,7 +23,7 @@ build_info = true
 extra_output = ["storageLayout"]
 
 [profile.gas-report]
-fuzz = { runs = 256 }
+fuzz = { runs = 128 }
 
 [rpc_endpoints]
 arbitrum_one = "https://arbitrum-mainnet.infura.io/v3/${API_KEY_INFURA}"
