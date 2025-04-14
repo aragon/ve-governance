@@ -174,7 +174,7 @@ contract LinearIncreasingCurve is
 
     /// @notice Returns the bias for the given time elapsed and amount, up to the maximum time
     /// @dev Returned values from these functions are in fixed point representation
-    ///     coefficients multiplication, which is not the case in `getBias`.
+    ///    which is not the case in `getBias`.
     function _getBias(
         uint256 _timeElapsed,
         int256 _constantCoeff,
