@@ -161,7 +161,7 @@ contract LinearIncreasingEscrowNoSupply is
         uint256 _timeElapsed,
         int256 _constantCoeff,
         int256 _linearCoeff
-    ) internal view returns (uint256) {
+    ) internal pure returns (uint256) {
         int256 bias = _linearCoeff * int256(_timeElapsed) + _constantCoeff;
         if (bias < 0) bias = 0;
 
@@ -252,26 +252,28 @@ contract LinearIncreasingEscrowNoSupply is
         int256 bias = lastPoint.coefficients[0];
         int256 slope = lastPoint.coefficients[1];
 
-        TokenPoint memory originalPoint = _tokenPointHistory[_tokenId][0];
+        // Note that very first point is saved at index 1.
+        TokenPoint memory originalPoint = _tokenPointHistory[_tokenId][1];
 
-        // How much time remaining till maxTime
-        uint256 maxTime = maxTime();
-        uint256 originalOffset = originalPoint.writtenTs - originalPoint.checkpointTs;
+        uint256 maxTime_ = maxTime();
+        uint256 end =  originalPoint.checkpointTs + maxTime_;
 
-        // maxTime should always be greater than originalOffset.
-        uint256 remainingTillMaxTime = maxTime - originalOffset;
-
-        // bound time in case it's less than `remainingTillMaxTime`.
         uint256 elapsed = _t - lastPoint.writtenTs;
-        if (elapsed <= remainingTillMaxTime) {
-            remainingTillMaxTime = elapsed;
+        
+        uint256 timeTillMaxTime = 0;
+        if(end > lastPoint.writtenTs) {
+            timeTillMaxTime = end - lastPoint.writtenTs;
         }
 
-        return _getBias(remainingTillMaxTime, bias, slope) / 1e18;
+        if(elapsed >= timeTillMaxTime) {
+            elapsed = timeTillMaxTime;
+        }
+
+        return _getBias(elapsed, bias, slope) / 1e18;
     }
 
     /// @inheritdoc IEscrowCurveCore
-    function supplyAt(uint256 _timestamp) external view returns (uint256) {
+    function supplyAt(uint256) external pure returns (uint256) {
         revert("Supply Not Implemented");
     }
 

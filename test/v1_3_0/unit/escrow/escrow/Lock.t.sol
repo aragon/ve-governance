@@ -2,12 +2,8 @@ pragma solidity ^0.8.17;
 
 import {EscrowBase} from "../../../base/EscrowBase.sol";
 
-import {console2 as console} from "forge-std/console2.sol";
-import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
-import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
-
-import {ProxyLib} from "@libs/ProxyLib.sol";
+import {IDelegateMoveVote} from "@delegation/IEscrowIVotesAdapter.sol";
 
 import {
     Lock,
@@ -22,7 +18,7 @@ import {
     ILock
 } from "../../../versions.sol";
 
-contract TestLockMintBurn_1 is IEscrowCurveTokenStorage, IGaugeVote, EscrowBase {
+contract TestLockMintBurn is IEscrowCurveTokenStorage, IGaugeVote, EscrowBase {
     function testDeploy(
         string memory _name,
         string memory _symbol,
@@ -102,7 +98,7 @@ contract TestLockMintBurn_1 is IEscrowCurveTokenStorage, IGaugeVote, EscrowBase 
     }
 }
 
-contract NFTReentrant {
+contract NFTReentrant is IDelegateMoveVote {
     function onERC721Received(address, address, uint256, bytes memory) public returns (bytes4) {
         (bool success, ) = msg.sender.call(
             abi.encodeWithSignature("mint(address,uint256)", address(this), 1)
@@ -112,4 +108,8 @@ contract NFTReentrant {
         }
         return this.onERC721Received.selector;
     }
+
+    // Ensure this function exists on reentrant contract
+    // so it doesn't fail because of it.
+    function moveDelegateVotes(address, address, uint256) public {}
 }

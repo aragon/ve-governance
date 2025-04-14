@@ -116,8 +116,8 @@ contract AddressGaugeVoter is
     /// @notice extrememly simple for loop. We don't need reentrancy checks in this implementation
     /// because the plugin doesn't do anything other than signal.
     function voteMultiple(
-        address[] calldata _address,
-        GaugeVote[] calldata _votes
+        address[] calldata,
+        GaugeVote[] calldata
     ) external nonReentrant whenNotPaused whenVotingActive {
         // unimplemented
         revert("Not implemented");
@@ -198,6 +198,7 @@ contract AddressGaugeVoter is
         AddressVoteData storage _voteData
     ) internal returns (uint256) {
         uint256 _votes = _votesForGauge(_voteWeight, _votingPower);
+
         // record the vote for the token
         _voteData.gaugesVotedFor.push(_currentVote.gauge);
         _voteData.voteWeights[_currentVote.gauge] += _voteWeight;
@@ -210,7 +211,7 @@ contract AddressGaugeVoter is
         emit Voted({
             voter: _account,
             gauge: _currentVote.gauge,
-            epoch: _epoch,
+            epoch: epochId(),
             votingPowerCastForGauge: _votes,
             totalVotingPowerInGauge: epochGaugeVotes[_epoch][_currentVote.gauge],
             totalVotingPowerInContract: epochTotalVotingPowerCast[_epoch],
@@ -335,14 +336,14 @@ contract AddressGaugeVoter is
         uint256 _weight,
         uint256 _totalWeight
     ) internal view virtual returns (uint256) {
-        return (_weight * 10e10) / _totalWeight;
+        return (_weight * 10e32) / _totalWeight;
     }
 
     function _votesForGauge(
         uint256 _weight,
         uint256 _votingPower
     ) internal view virtual returns (uint256) {
-        return (_weight * _votingPower) / 10e10;
+        return (_weight * _votingPower) / 10e32;
     }
 
     /// @notice This function is used to get the epoch id in the case of delegation mapper

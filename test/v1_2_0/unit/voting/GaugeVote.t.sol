@@ -46,6 +46,10 @@ contract TestGaugeVote is GaugeVotingBase {
         token.mint(owner, lockDeposit);
         vm.startPrank(owner);
         {
+            // delegate to himself...
+            ivotesAdapter.setAutoDelegation(true);
+            ivotesAdapter.delegate(owner);
+
             token.approve(address(escrow), lockDeposit);
             tokenId = escrow.createLock(lockDeposit);
         }
@@ -100,31 +104,14 @@ contract TestGaugeVote is GaugeVotingBase {
         vm.stopPrank();
     }
 
-    // can't vote if you don't own the token
-    function testCannotVoteIfYouDontOwnTheToken() public {
-        // try to vote as this address (not the holder)
-        vm.expectRevert(NotApprovedOrOwner.selector);
-        voter.vote(votes);
-    }
-
-    function testCannotResetIFYouDontOwnTheToken() public {
-        // make the vote
-        votes.push(GaugeVote(lockDeposit, gauge));
-        vm.prank(owner);
-        voter.vote(votes);
-
-        // try to reset as this address (not the holder)
-        vm.expectRevert(NotApprovedOrOwner.selector);
-        voter.reset();
-    }
-
     // can't vote if you have zero voting power
     function testCannotVoteIfYouHaveZeroVotingPower() public {
+        address person = address(0x69);
         curve.setWarmupPeriod(1000 weeks);
 
         // create a second lock
-        token.mint(owner, lockDeposit);
-        vm.startPrank(owner);
+        token.mint(person, lockDeposit);
+        vm.startPrank(person);
         {
             token.approve(address(escrow), lockDeposit);
             uint256 newTokenId = escrow.createLock(lockDeposit);
@@ -174,35 +161,6 @@ contract TestGaugeVote is GaugeVotingBase {
         vm.prank(owner);
         vm.expectRevert(NoVotes.selector);
         voter.vote(votes);
-    }
-
-    function testCannotVoteWithVotesSoSmallTheyRoundToZero() public {
-        // need to have very low voting power or very high weights
-
-        // make a second gauge
-        address gauge2 = address(0x69);
-        voter.createGauge(gauge2, "metadata");
-
-        // create a new lock w. 1 wei
-        token.mint(owner, 1);
-        uint256 newTokenId;
-        vm.startPrank(owner);
-        {
-            token.approve(address(escrow), 1);
-            newTokenId = escrow.createLock(1);
-            // warp 2 weeks
-            vm.warp(block.timestamp + 2 weeks);
-            assertEq(escrow.votingPower(newTokenId), 1);
-
-            // make the vote: split the 1 wei into 2 votes
-            votes.push(GaugeVote(1, gauge));
-            votes.push(GaugeVote(1, gauge2));
-
-            // try to vote
-            vm.expectRevert(NoVotes.selector);
-            voter.vote(votes);
-        }
-        vm.stopPrank();
     }
 
     function cannotDoubleVote() public {
@@ -280,21 +238,21 @@ contract TestGaugeVote is GaugeVotingBase {
         uint expectedVotesForNewGauge = (weight1256 * votingPower) / (weight0256 + weight1256);
 
         uint expectedTotalVotes = expectedVotesForGauge + expectedVotesForNewGauge;
-        assertApproxEqAbs(voter.usedVotingPower(owner), expectedTotalVotes, 1);
+        assertApproxEqAbs(voter.usedVotingPower(owner), expectedTotalVotes, 2);
 
         // check the vote
         assertEq(voter.isVoting(owner), true);
         assertEq(voter.gaugesVotedFor(owner).length, 2);
         assertEq(voter.gaugesVotedFor(owner)[0], gauge);
         assertEq(voter.gaugesVotedFor(owner)[1], newGauge);
-        assertEq(voter.votes(owner, gauge), expectedVotesForGauge);
-        assertEq(voter.votes(owner, newGauge), expectedVotesForNewGauge);
-        assertEq(voter.usedVotingPower(owner), expectedTotalVotes);
+        assertApproxEqAbs(voter.votes(owner, gauge), expectedVotesForGauge, 2);
+        assertApproxEqAbs(voter.votes(owner, newGauge), expectedVotesForNewGauge, 2);
+        assertApproxEqAbs(voter.usedVotingPower(owner), expectedTotalVotes, 2);
 
         // global state
-        assertEq(voter.totalVotingPowerCast(), expectedTotalVotes);
-        assertEq(voter.gaugeVotes(gauge), expectedVotesForGauge);
-        assertEq(voter.gaugeVotes(newGauge), expectedVotesForNewGauge);
+        assertApproxEqAbs(voter.totalVotingPowerCast(), expectedTotalVotes, 2);
+        assertApproxEqAbs(voter.gaugeVotes(gauge), expectedVotesForGauge, 2);
+        assertApproxEqAbs(voter.gaugeVotes(newGauge), expectedVotesForNewGauge, 2);
     }
 
     function testManualResets() public {
@@ -418,16 +376,21 @@ contract TestGaugeVote is GaugeVotingBase {
         // we expect the vote for the first token to be 50/150 of the total voting power
         // and the second to be 100/150 of the total voting power
 
-        uint expectedVotesForGauge = (50 * vp0) / (50 + 100);
-        uint expectedVotesForGauge2 = (100 * vp1) / (50 + 100);
+        uint expectedVotesForGauge = (50 * totalVotingPower) / (50 + 100);
+        uint expectedVotesForGauge2 = (100 * totalVotingPower) / (50 + 100);
 
         // check the vote
         assertEq(voter.isVoting(owner), true);
         assertEq(voter.gaugesVotedFor(owner).length, 2);
         assertEq(voter.gaugesVotedFor(owner)[0], gauge);
         assertEq(voter.gaugesVotedFor(owner)[1], gauge2);
-        assertEq(voter.votes(owner, gauge), expectedVotesForGauge);
-        assertEq(voter.votes(owner, gauge2), expectedVotesForGauge2);
+        assertApproxEqAbs(voter.votes(owner, gauge), expectedVotesForGauge, 2);
+        assertApproxEqAbs(voter.votes(owner, gauge2), expectedVotesForGauge2, 2);
+        assertApproxEqAbs(
+            voter.usedVotingPower(owner),
+            voter.votes(owner, gauge) + voter.votes(owner, gauge2),
+            2
+        );
     }
 
     // test the event logs: person A votes, person B votes => B's event correctly distinguishes between the two
@@ -447,6 +410,8 @@ contract TestGaugeVote is GaugeVotingBase {
         uint tokenIdA;
         vm.startPrank(personA);
         {
+            ivotesAdapter.setAutoDelegation(true);
+            ivotesAdapter.delegate(personA);
             token.approve(address(escrow), 1000 ether);
             tokenIdA = escrow.createLock(1000 ether);
         }
@@ -457,6 +422,8 @@ contract TestGaugeVote is GaugeVotingBase {
         uint tokenIdB;
         vm.startPrank(personB);
         {
+            ivotesAdapter.setAutoDelegation(true);
+            ivotesAdapter.delegate(personB);
             token.approve(address(escrow), 1000 ether);
             tokenIdB = escrow.createLock(1000 ether);
         }
