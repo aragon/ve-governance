@@ -212,7 +212,7 @@ contract RegressionV1_0_0__to__V1_3_0 is Test, IGaugeVote, FixedPointBase {
         assertEq(queue.ticketHolder(davidToken), DAVID_ADDRESS);
     }
 
-    function testUpgrade() public {
+    function test_upgrade() public {
         uint256 vp0Before = escrow.votingPower(aliceToken);
         uint256 vp1Before = escrow.votingPower(bobToken);
 
@@ -421,6 +421,9 @@ contract RegressionV1_0_0__to__V1_3_0 is Test, IGaugeVote, FixedPointBase {
                 address(dao),
                 addressGaugeVoter.GAUGE_ADMIN_ROLE()
             );
+
+            // AddressGaugeVoter is deployed with paused by default, so unpause.
+            addressGaugeVoter.unpause();
 
             // create gauge on the address gauge voter.
             addressGaugeVoter.createGauge(gauge, "metadata");

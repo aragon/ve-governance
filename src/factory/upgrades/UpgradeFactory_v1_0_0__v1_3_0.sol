@@ -318,7 +318,7 @@ contract UpgradeGaugesFactoryV1_0_0__V1_3_0 {
                     (
                         address(deployment.dao),
                         address(deployment.gaugeVoterPluginSets[i].votingEscrow),
-                        false, // TODO: GIORGI
+                        true,
                         address(deployment.gaugeVoterPluginSets[i].clock),
                         address(deployment.gaugeVoterPluginSets[i].delegation),
                         true
