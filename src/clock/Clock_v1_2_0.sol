@@ -4,7 +4,6 @@ pragma solidity ^0.8.17;
 // interfaces
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {IClock} from "./IClock.sol";
-import {IClockSeason} from "./IClockSeason.sol";
 import {IClockV1_2_0} from "./IClock_v1_2_0.sol";
 
 // contracts
@@ -28,9 +27,6 @@ contract ClockV1_2_0 is IClockV1_2_0, DaoAuthorizable, UUPSUpgradeable {
 
     /// @dev Opens and closes the voting window slightly early to avoid timing attacks
     uint256 internal constant VOTE_WINDOW_BUFFER = 1 hours;
-
-    /// @dev Seasons array
-    uint48[] private seasonTimestamps;
 
     /*///////////////////////////////////////////////////////////////
                             Initialization
@@ -232,79 +228,6 @@ contract ClockV1_2_0 is IClockV1_2_0, DaoAuthorizable, UUPSUpgradeable {
     }
 
     /*///////////////////////////////////////////////////////////////
-                            Seasons
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Returns the current season
-    /// @dev The startTimestamp of the first season is always 0
-    ///      The endTimestamp of the current season is always 0
-    function currentSeasonTs() public view returns (uint48 startTimestamp, uint48 endTimestamp) {
-        return seasonTsAt(uint48(block.timestamp));
-    }
-
-    /// @notice Returns the current season index
-    /// @dev The season index starts at 0
-    function currentSeasonIndex() public view returns (uint16 seasonIndex) {
-        return seasonIndexAt(uint48(block.timestamp));
-    }
-
-    /// @notice Returns a season's start and end timestamps by index
-    /// @dev The startTimestamp of the first season is always 0
-    ///      The endTimestamp of the current season is always 0
-    function seasonTs(
-        uint16 seasonIndex
-    ) public view returns (uint48 startTimestamp, uint48 endTimestamp) {
-        if (seasonIndex > seasonTimestamps.length) {
-            revert SeasonNotFound();
-        }
-        startTimestamp = seasonIndex == 0 ? 0 : seasonTimestamps[seasonIndex - 1];
-        endTimestamp = seasonIndex < seasonTimestamps.length ? seasonTimestamps[seasonIndex] : 0;
-    }
-
-    /// @notice Returns the season at a given timestamp
-    /// @dev The startTimestamp of the first season is always 0
-    ///      The endTimestamp of the current season is always 0
-    function seasonTsAt(
-        uint48 _timestamp
-    ) public view returns (uint48 startTimestamp, uint48 endTimestamp) {
-        uint16 seasonIndex = seasonIndexAt(_timestamp);
-        return seasonTs(seasonIndex);
-    }
-
-    /// @notice Returns the season index at a given timestamp
-    /// @dev The season index starts at 0 but the season index as 1 is indexed as 0 in the array
-    ///      If the timestamp is after the last season, returns the length of the seasons array
-    function seasonIndexAt(uint48 _timestamp) public view returns (uint16 seasonIndex) {
-        for (uint16 i = uint16(seasonTimestamps.length); i > 0; i--) {
-            if (_timestamp >= seasonTimestamps[i - 1]) {
-                return i;
-            }
-        }
-        return 0;
-    }
-
-    /// @notice Creates a new season
-    /// @dev The season duration must be greater than EPOCH_DURATION
-    function newSeason()
-        public
-        auth(CLOCK_ADMIN_ROLE)
-        returns (uint48 startTimestamp, uint16 seasonIndex)
-    {
-        uint256 startTime = IClock(this).epochNextCheckpointTs();
-
-        if (seasonTimestamps.length > 0) {
-            uint48 lastSeason = seasonTimestamps[seasonTimestamps.length - 1];
-            if (startTime < lastSeason + EPOCH_DURATION) {
-                revert SeasonTooShort();
-            }
-        }
-        seasonTimestamps.push(uint48(startTime));
-
-        emit SeasonStarted(uint16(seasonTimestamps.length), uint48(startTime));
-        return (uint48(startTime), uint16(seasonTimestamps.length));
-    }
-
-    /*///////////////////////////////////////////////////////////////
                             UUPS Getters
     //////////////////////////////////////////////////////////////*/
 
@@ -314,5 +237,5 @@ contract ClockV1_2_0 is IClockV1_2_0, DaoAuthorizable, UUPSUpgradeable {
         return _getImplementation();
     }
 
-    uint256[49] private __gap;
+    uint256[50] private __gap;
 }

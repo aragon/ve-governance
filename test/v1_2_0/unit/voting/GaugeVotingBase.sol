@@ -18,7 +18,6 @@ import "@helpers/OSxHelpers.sol";
 
 import {
     IEscrowCurveTokenStorage,
-    ISeasonErrors,
     Clock,
     VotingEscrow,
     Lock,
@@ -37,8 +36,7 @@ contract GaugeVotingBase is
     Test,
     IGaugeVote,
     IEscrowCurveTokenStorage,
-    ISimpleGaugeVoterStorageEventsErrors,
-    ISeasonErrors
+    ISimpleGaugeVoterStorageEventsErrors
 {
     using ProxyLib for address;
 
