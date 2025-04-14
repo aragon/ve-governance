@@ -62,11 +62,13 @@ import {
     fetchStateCurve as fetchState
 } from "./CurveHelper.sol";
 
-contract RegressionV1_0_0__to__V1_3_0 is Test, IGaugeVote {
+import {FixedPointBase} from "../base/FixedPointBase.sol";
+
+contract RegressionV1_0_0__to__V1_3_0 is Test, IGaugeVote, FixedPointBase {
     GaugesDaoFactoryV1_0_0 factory;
 
     VotingEscrow escrow;
-    
+
     TokenGaugeVoter tokenGaugeVoter;
     AddressGaugeVoter addressGaugeVoter;
 
@@ -121,6 +123,11 @@ contract RegressionV1_0_0__to__V1_3_0 is Test, IGaugeVote {
         multisig = Multisig(deployment.multisigPlugin);
         token = MockERC20(escrow.token());
 
+        super.initialize(
+            clock.epochDuration() * CurveConstantLib.MAX_EPOCHS,
+            clock.checkpointInterval()
+        );
+
         // setup gauge and unpause the voter
         vm.startPrank(address(dao));
         {
@@ -172,7 +179,7 @@ contract RegressionV1_0_0__to__V1_3_0 is Test, IGaugeVote {
             timestamp: block.timestamp,
             amount: 1_000 ether,
             tokenInterval: 1,
-            maturity: block.timestamp + maxTime(),
+            maturity: block.timestamp + maxTime,
             sampleTime: block.timestamp + 5 weeks
         });
 
@@ -206,56 +213,19 @@ contract RegressionV1_0_0__to__V1_3_0 is Test, IGaugeVote {
     }
 
     function testUpgrade() public {
-        // simple upgrade for testing
-        // deploy the new implementations
-        PermissionLib.MultiTargetPermission[] memory grant0 = upgradeFactory.getPermissions(
-            PermissionLib.Operation.Grant,
-            0
-        );
-        PermissionLib.MultiTargetPermission[] memory grant1 = upgradeFactory.getPermissions(
-            PermissionLib.Operation.Grant,
-            1
-        );
-        PermissionLib.MultiTargetPermission[] memory revoke0 = upgradeFactory.getPermissions(
-            PermissionLib.Operation.Revoke,
-            0
-        );
+        uint256 vp0Before = escrow.votingPower(aliceToken);
+        uint256 vp1Before = escrow.votingPower(bobToken);
 
-        PermissionLib.MultiTargetPermission[] memory revoke1 = upgradeFactory.getPermissions(
-            PermissionLib.Operation.Revoke,
-            1
-        );
+        // upgrade contracts
+        _upgrade();
 
-        // upgrade the contracts
-        vm.startPrank(address(dao));
-        {
-            dao.applyMultiTargetPermissions(grant0);
-            dao.applyMultiTargetPermissions(grant1);
+        uint256 vp0After = escrow.votingPower(aliceToken);
+        uint256 vp1After = escrow.votingPower(bobToken);
 
-            upgradeFactory.upgrade(
-                false,
-                new ClockV1_2_0(),
-                new LinearEscrowCurve(),
-                new VotingEscrowV1_2_0(),
-                new LockV1_2_0(),
-                new EscrowIVotesAdapter(),
-                new AddressGaugeVoter()
-            );
-
-            DeploymentUpgrade memory deps = upgradeFactory.getDeployment();
-            ivotesAdapter = deps.gaugeVoterPluginSets[0].delegation;
-            addressGaugeVoter = deps.gaugeVoterPluginSets[0].plugin;
-
-            dao.applyMultiTargetPermissions(revoke0);
-            dao.applyMultiTargetPermissions(revoke1);
-
-            // TODO: GIORGI this must be put in the factory but where ?
-            dao.grant(address(addressGaugeVoter), address(dao), addressGaugeVoter.GAUGE_ADMIN_ROLE());
-
-            // create gauge on the address gauge voter.
-            addressGaugeVoter.createGauge(gauge, "metadata");
-        }
-        vm.stopPrank();
+        // Test that voting powers are the same
+        // before and after upgrade.
+        assertEq(vp0Before, vp0After);
+        assertEq(vp1Before, vp1After);
 
         // retest the initial state
         testInitialState();
@@ -263,7 +233,7 @@ contract RegressionV1_0_0__to__V1_3_0 is Test, IGaugeVote {
         // attempt to move through life cycle again
         // create new token for alice
         aliceSecondToken = escrow.createLockFor(1_000 ether, ALICE_ADDRESS);
-        
+
         // move alice to voting
         vm.warp(6 weeks + 3601);
         vm.startPrank(ALICE_ADDRESS);
@@ -320,6 +290,59 @@ contract RegressionV1_0_0__to__V1_3_0 is Test, IGaugeVote {
         _compareCurveState();
     }
 
+    function test_upgradeAndMerge() public {
+        _upgrade();
+
+        _mockApprovedOwner(address(this), aliceToken);
+        _mockApprovedOwner(address(this), bobToken);
+
+        escrowUpgrade = VotingEscrowV1_2_0(address(escrow));
+
+        // merge tokens/locks that were created before the upgrade.
+        escrowUpgrade.merge(aliceToken, bobToken);
+
+        assertEq(escrowUpgrade.votingPower(aliceToken), 0);
+
+        uint256 bobTokenVPAfterMerge = escrowUpgrade.votingPower(bobToken);
+
+        uint256 start = escrowUpgrade.locked(bobToken).start;
+        uint256 expectedVPAfterMerge = bias(1_000 ether, block.timestamp - start) +
+            bias(1_000 ether, block.timestamp - start);
+
+        assertEq(bobTokenVPAfterMerge, expectedVPAfterMerge);
+
+        vm.startPrank(BOB_ADDRESS);
+        ivotesAdapter.setAutoDelegation(true);
+        ivotesAdapter.delegate(BOB_ADDRESS);
+        vm.stopPrank();
+
+        assertEq(ivotesAdapter.getVotes(BOB_ADDRESS), expectedVPAfterMerge);
+    }
+
+    function test_upgradeSplit() public {
+        uint256 vpBeforeUpgrade = escrow.votingPower(aliceToken);
+
+        _upgrade();
+
+        _mockApprovedOwner(address(this), aliceToken);
+
+        escrowUpgrade = VotingEscrowV1_2_0(address(escrow));
+
+        vm.startPrank(address(dao));
+        dao.grant(address(escrowUpgrade), address(this), escrowUpgrade.ESCROW_ADMIN_ROLE());
+        vm.stopPrank();
+        escrowUpgrade.enableSplit();
+
+        // split the lock that were created before the upgrade.
+        vm.prank(ALICE_ADDRESS);
+        (uint256 id1, uint256 id2) = escrowUpgrade.split(aliceToken, 50 ether);
+
+        uint256 vpAfterUpgradeAndSplit = escrowUpgrade.votingPower(id1) +
+            escrowUpgrade.votingPower(id2);
+
+        assertEq(vpBeforeUpgrade, vpAfterUpgradeAndSplit);
+    }
+
     function _compareCurveState() internal view {
         CachedView memory vLatest = fetchState(curve, args);
 
@@ -347,6 +370,63 @@ contract RegressionV1_0_0__to__V1_3_0 is Test, IGaugeVote {
         assertEq(vCache.votingPowerMaturity, curve.votingPowerAt(args.tokenId, args.maturity));
     }
 
+    function _upgrade() private {
+        vm.startPrank(address(dao));
+        // simple upgrade for testing
+        // deploy the new implementations
+        PermissionLib.MultiTargetPermission[] memory grant0 = upgradeFactory.getPermissions(
+            PermissionLib.Operation.Grant,
+            0
+        );
+        PermissionLib.MultiTargetPermission[] memory grant1 = upgradeFactory.getPermissions(
+            PermissionLib.Operation.Grant,
+            1
+        );
+        PermissionLib.MultiTargetPermission[] memory revoke0 = upgradeFactory.getPermissions(
+            PermissionLib.Operation.Revoke,
+            0
+        );
+
+        PermissionLib.MultiTargetPermission[] memory revoke1 = upgradeFactory.getPermissions(
+            PermissionLib.Operation.Revoke,
+            1
+        );
+
+        // upgrade the contracts
+        vm.startPrank(address(dao));
+        {
+            dao.applyMultiTargetPermissions(grant0);
+            dao.applyMultiTargetPermissions(grant1);
+
+            upgradeFactory.upgrade(
+                false,
+                new ClockV1_2_0(),
+                new LinearEscrowCurve(),
+                new VotingEscrowV1_2_0(),
+                new LockV1_2_0(),
+                new EscrowIVotesAdapter(),
+                new AddressGaugeVoter()
+            );
+
+            DeploymentUpgrade memory deps = upgradeFactory.getDeployment();
+            ivotesAdapter = deps.gaugeVoterPluginSets[0].delegation;
+            addressGaugeVoter = deps.gaugeVoterPluginSets[0].plugin;
+
+            dao.applyMultiTargetPermissions(revoke0);
+            dao.applyMultiTargetPermissions(revoke1);
+
+            // TODO: GIORGI this must be put in the factory but where ?
+            dao.grant(
+                address(addressGaugeVoter),
+                address(dao),
+                addressGaugeVoter.GAUGE_ADMIN_ROLE()
+            );
+
+            // create gauge on the address gauge voter.
+            addressGaugeVoter.createGauge(gauge, "metadata");
+        }
+        vm.stopPrank();
+    }
     ////////////////////////////////////////////////
     ///-------------- Internal ------------------///
     ////////////////////////////////////////////////
@@ -438,7 +518,11 @@ contract RegressionV1_0_0__to__V1_3_0 is Test, IGaugeVote {
         return _factory;
     }
 
-    function maxTime() internal view returns (uint256) {
-        return CurveConstantLib.MAX_EPOCHS * clock.epochDuration();
+    function _mockApprovedOwner(address _who, uint256 _tokenId) private {
+        vm.mockCall(
+            address(lock),
+            abi.encodeWithSelector(lock.isApprovedOrOwner.selector, _who, _tokenId),
+            abi.encode(true)
+        );
     }
 }
