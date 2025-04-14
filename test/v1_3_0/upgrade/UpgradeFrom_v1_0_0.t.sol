@@ -23,14 +23,14 @@ import {PermissionLib} from "@aragon/osx/core/permission/PermissionLib.sol";
 import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 
 import {
-    SimpleGaugeVoterSetup,
+    GaugeVoterSetup,
     IGaugeVote,
     VotingEscrow,
     Clock,
     Lock,
     QuadraticIncreasingEscrow,
     ExitQueue,
-    SimpleGaugeVoter,
+    GaugeVoter as TokenGaugeVoter,
     GaugesDaoFactory as GaugesDaoFactoryV1_0_0,
     Deployment,
     DeploymentParameters,
@@ -42,7 +42,9 @@ import {
     QuadraticIncreasingEscrow as LinearEscrowCurve,
     VotingEscrow as VotingEscrowV1_2_0,
     EscrowIVotesAdapter,
-    Lock as LockV1_2_0
+    Lock as LockV1_2_0,
+    GaugeVoter as AddressGaugeVoter,
+    IGaugeVote as IAddressGaugeVote
 } from "test/v1_3_0/versions.sol";
 import {
     UpgradeGaugesFactoryV1_0_0__V1_3_0 as UpgradeFactory,
@@ -64,7 +66,10 @@ contract RegressionV1_0_0__to__V1_3_0 is Test, IGaugeVote {
     GaugesDaoFactoryV1_0_0 factory;
 
     VotingEscrow escrow;
-    SimpleGaugeVoter voter;
+    
+    TokenGaugeVoter tokenGaugeVoter;
+    AddressGaugeVoter addressGaugeVoter;
+
     Clock clock;
     Lock lock;
     ExitQueue queue;
@@ -79,7 +84,7 @@ contract RegressionV1_0_0__to__V1_3_0 is Test, IGaugeVote {
     VotingEscrowV1_2_0 escrowUpgrade;
     LinearEscrowCurve curveUpgrade;
     LockV1_2_0 lockUpgrade;
-    EscrowIVotesAdapter delegation;
+    EscrowIVotesAdapter ivotesAdapter;
     UpgradeFactory upgradeFactory;
 
     uint aliceToken;
@@ -107,7 +112,7 @@ contract RegressionV1_0_0__to__V1_3_0 is Test, IGaugeVote {
 
         // deconstruct the plugin set
         escrow = VotingEscrow(pluginSet.votingEscrow);
-        voter = SimpleGaugeVoter(pluginSet.plugin);
+        tokenGaugeVoter = TokenGaugeVoter(pluginSet.plugin);
         clock = Clock(pluginSet.clock);
         lock = Lock(pluginSet.nftLock);
         queue = ExitQueue(pluginSet.exitQueue);
@@ -119,7 +124,7 @@ contract RegressionV1_0_0__to__V1_3_0 is Test, IGaugeVote {
         // setup gauge and unpause the voter
         vm.startPrank(address(dao));
         {
-            voter.createGauge(gauge, "metadata");
+            tokenGaugeVoter.createGauge(gauge, "metadata");
         }
         vm.stopPrank();
 
@@ -140,7 +145,7 @@ contract RegressionV1_0_0__to__V1_3_0 is Test, IGaugeVote {
             GaugeVote[] memory vote = new GaugeVote[](1);
             vote[0] = GaugeVote(1, gauge);
             bobVPSnapshot = escrow.votingPower(bobToken);
-            voter.vote(bobToken, vote);
+            tokenGaugeVoter.vote(bobToken, vote);
         }
         vm.stopPrank();
 
@@ -180,15 +185,15 @@ contract RegressionV1_0_0__to__V1_3_0 is Test, IGaugeVote {
         upgradeFactory.validateUpgrade();
     }
 
-    function testInitialState() public {
+    function testInitialState() public view {
         // alice is locked and has voting power
         assertEq(escrow.locked(aliceToken).amount, 1_000 ether);
         assertGt(escrow.votingPower(aliceToken), 1_000 ether);
 
         // bob is locked and is currently voting
         assertEq(escrow.locked(bobToken).amount, 1_000 ether);
-        assertTrue(voter.isVoting(bobToken));
-        assertEq(voter.votes(bobToken, gauge), bobVPSnapshot);
+        assertTrue(tokenGaugeVoter.isVoting(bobToken));
+        assertEq(tokenGaugeVoter.votes(bobToken, gauge), bobVPSnapshot);
 
         // carol is locked and can exit
         assertEq(escrow.locked(carolToken).amount, 1_000 ether);
@@ -233,11 +238,22 @@ contract RegressionV1_0_0__to__V1_3_0 is Test, IGaugeVote {
                 new LinearEscrowCurve(),
                 new VotingEscrowV1_2_0(),
                 new LockV1_2_0(),
-                new EscrowIVotesAdapter()
+                new EscrowIVotesAdapter(),
+                new AddressGaugeVoter()
             );
+
+            DeploymentUpgrade memory deps = upgradeFactory.getDeployment();
+            ivotesAdapter = deps.gaugeVoterPluginSets[0].delegation;
+            addressGaugeVoter = deps.gaugeVoterPluginSets[0].plugin;
 
             dao.applyMultiTargetPermissions(revoke0);
             dao.applyMultiTargetPermissions(revoke1);
+
+            // TODO: GIORGI this must be put in the factory but where ?
+            dao.grant(address(addressGaugeVoter), address(dao), addressGaugeVoter.GAUGE_ADMIN_ROLE());
+
+            // create gauge on the address gauge voter.
+            addressGaugeVoter.createGauge(gauge, "metadata");
         }
         vm.stopPrank();
 
@@ -247,15 +263,18 @@ contract RegressionV1_0_0__to__V1_3_0 is Test, IGaugeVote {
         // attempt to move through life cycle again
         // create new token for alice
         aliceSecondToken = escrow.createLockFor(1_000 ether, ALICE_ADDRESS);
-
+        
         // move alice to voting
         vm.warp(6 weeks + 3601);
         vm.startPrank(ALICE_ADDRESS);
         {
-            GaugeVote[] memory vote = new GaugeVote[](1);
-            vote[0] = GaugeVote(1, gauge);
-            voter.vote(aliceToken, vote);
-            aliceVPSnapshot = escrow.votingPower(aliceToken);
+            ivotesAdapter.setAutoDelegation(true);
+            ivotesAdapter.delegate(ALICE_ADDRESS);
+
+            IAddressGaugeVote.GaugeVote[] memory vote = new IAddressGaugeVote.GaugeVote[](1);
+            vote[0] = IAddressGaugeVote.GaugeVote(1, gauge);
+            addressGaugeVoter.vote(vote);
+            aliceVPSnapshot = escrow.votingPower(aliceToken) + escrow.votingPower(aliceSecondToken);
         }
         vm.stopPrank();
 
@@ -281,13 +300,13 @@ contract RegressionV1_0_0__to__V1_3_0 is Test, IGaugeVote {
 
         // alice1 is locked and is currently voting
         assertEq(escrow.locked(aliceToken).amount, 1_000 ether);
-        assertTrue(voter.isVoting(aliceToken));
-        assertEq(voter.votes(aliceToken, gauge), aliceVPSnapshot);
+        assertTrue(addressGaugeVoter.isVoting(ALICE_ADDRESS));
+        assertEq(addressGaugeVoter.votes(ALICE_ADDRESS, gauge), aliceVPSnapshot);
 
         // bob is locked and is currently exiting
         assertEq(escrow.locked(bobToken).amount, 1_000 ether);
         assertFalse(queue.canExit(bobToken));
-        assertFalse(voter.isVoting(bobToken));
+        assertFalse(addressGaugeVoter.isVoting(BOB_ADDRESS));
         assertEq(queue.ticketHolder(bobToken), BOB_ADDRESS);
 
         // carol is not locked and has her tokens back
@@ -301,7 +320,7 @@ contract RegressionV1_0_0__to__V1_3_0 is Test, IGaugeVote {
         _compareCurveState();
     }
 
-    function _compareCurveState() internal {
+    function _compareCurveState() internal view {
         CachedView memory vLatest = fetchState(curve, args);
 
         // 4. Assert all fields are unchanged
@@ -310,7 +329,6 @@ contract RegressionV1_0_0__to__V1_3_0 is Test, IGaugeVote {
         assertEq(vCache.warmupPeriod, vLatest.warmupPeriod);
 
         assertEq(vCache.tokenPointInterval, vLatest.tokenPointInterval);
-        console.log("is this a bug?");
         assertEq(vCache.maxBias, vLatest.maxBias);
         assertEq(vCache.isWarm, vLatest.isWarm);
         assertEq(vCache.bias, vLatest.bias);
@@ -354,8 +372,8 @@ contract RegressionV1_0_0__to__V1_3_0 is Test, IGaugeVote {
                 " "
             );
 
-        SimpleGaugeVoterSetup gaugeVoterPluginSetup = new SimpleGaugeVoterSetup(
-            address(new SimpleGaugeVoter()),
+        GaugeVoterSetup gaugeVoterPluginSetup = new GaugeVoterSetup(
+            address(new TokenGaugeVoter()),
             address(new QuadraticIncreasingEscrow()),
             address(new ExitQueue()),
             address(new VotingEscrow()),
