@@ -37,6 +37,15 @@ contract TestEscrowSplit is EscrowBase {
         escrow.setEnableSplit(address(this), true);
     }
 
+    function test_shouldRevertIfEscrowPaused() public {
+        uint256 from = escrow.createLock(Lock_1_Amount);
+        
+        escrow.pause();
+        
+        vm.expectRevert("Pausable: paused");
+        escrow.split(from, 10);
+    }
+
     function test_shouldRevert_ifNotWhitelisted() public {
         uint256 from = escrow.createLock(Lock_1_Amount);
 

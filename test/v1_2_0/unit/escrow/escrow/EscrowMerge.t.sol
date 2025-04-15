@@ -43,6 +43,16 @@ contract TestEscrowMerge is IEscrowCurveTokenStorage, EscrowBase, IMergeEventsAn
             );
     }
 
+    function test_shouldRevertIfEscrowPaused() public {
+        uint256 from = escrow.createLock(Lock_1_Amount);
+        uint256 to = escrow.createLock(Lock_2_Amount);
+
+        escrow.pause();
+        
+        vm.expectRevert("Pausable: paused");
+        escrow.merge(from, to);
+    }
+
     function test_shouldRevert_IfNotMatureAndDifferentStart() public {
         uint256 from = escrow.createLock(Lock_1_Amount);
 

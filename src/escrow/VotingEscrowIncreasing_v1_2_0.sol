@@ -352,7 +352,7 @@ contract VotingEscrowV1_2_0 is
     }
 
     /// @inheritdoc IMerge
-    function merge(uint256 _from, uint256 _to) public {
+    function merge(uint256 _from, uint256 _to) public whenNotPaused {
         address sender = _msgSender();
 
         if (!isApprovedOrOwner(sender, _from)) revert NotApprovedOrOwner();
@@ -419,7 +419,7 @@ contract VotingEscrowV1_2_0 is
     function split(
         uint256 _from,
         uint256 _value
-    ) public returns (uint256 _tokenId1, uint256 _tokenId2) {
+    ) public whenNotPaused returns (uint256 _tokenId1, uint256 _tokenId2) {
         address sender = _msgSender();
 
         // Only allow split to whitelisted accounts.

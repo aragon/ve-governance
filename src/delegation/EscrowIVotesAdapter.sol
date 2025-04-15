@@ -10,6 +10,9 @@ import {
 import {
     ReentrancyGuardUpgradeable as ReentrancyGuard
 } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import {
+    PausableUpgradeable as Pausable
+} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {
@@ -28,6 +31,7 @@ contract EscrowIVotesAdapter is
     IClockUser,
     ReentrancyGuard,
     IEscrowIVotesAdapter,
+    Pausable,
     PluginUUPSUpgradeable
 {
     using SafeCastUpgradeable for uint256;
@@ -67,6 +71,14 @@ contract EscrowIVotesAdapter is
         clock = _clock;
 
         maxTime = IClock(clock).epochDuration() * CurveConstantLib.MAX_EPOCHS;
+    }
+
+    function pause() external auth(DELEGATION_ADMIN_ROLE) {
+        _pause();
+    }
+
+    function unpause() external auth(DELEGATION_ADMIN_ROLE) {
+        _unpause();
     }
 
     function setAutoDelegation(bool _enabled) external {
@@ -431,7 +443,7 @@ contract EscrowIVotesAdapter is
         elapsed = elapsed > maxTime ? maxTime : elapsed;
 
         int256 amount = uint256(_locked.amount).toInt256();
-       
+
         int256 slope = amount * CurveConstantLib.SHARED_LINEAR_COEFFICIENT;
         int256 bias = slope *
             int256(elapsed) +
