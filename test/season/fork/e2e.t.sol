@@ -30,6 +30,9 @@ import {
     DeployGauges
 } from "../versions.sol";
 
+import {FixedPointBase} from "../base/FixedPointBase.sol";
+import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
+
 interface IERC20Mint is IERC20 {
     function mint(address _to, uint256 _amount) external;
 }
@@ -62,7 +65,13 @@ contract MultisigReceiver is GhettoMultisig {
  * 4. A more robust suite for admininstration of the contracts
  * 5. Ability to connect to an existing deployment and test on the real network
  */
-contract TestE2EWithSeason is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveTokenStorage {
+contract TestE2EWithSeason is
+    AragonTest,
+    IWithdrawalQueueErrors,
+    IGaugeVote,
+    IEscrowCurveTokenStorage,
+    FixedPointBase
+{
     error VotingInactive();
     error OnlyEscrow();
     error GaugeDoesNotExist(address _pool);
@@ -169,6 +178,11 @@ contract TestE2EWithSeason is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IE
         multisig = Multisig(deployment.multisigPlugin);
         dao = DAO(deployment.dao);
         token = IERC20Mint(escrow.token());
+
+        FixedPointBase.initialize(
+            clock.epochDuration() * CurveConstantLib.MAX_EPOCHS,
+            clock.checkpointInterval()
+        );
 
         require(_resolveMintTokens(), "Failed to mint tokens");
 
@@ -1423,14 +1437,14 @@ contract TestE2EWithSeason is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IE
 
             assertEq(
                 escrow.votingPower(1),
-                266946049122870400000,
+                bias(depositAlice0, block.timestamp - (epochStartTime + 1 weeks)),
                 "Alice vp should have more voting power"
             );
 
             assertTrue(curve.isWarm(2), "Carol should be warm");
             assertEq(
                 escrow.votingPower(2),
-                266946049122870400000,
+                bias(depositAliceBob, block.timestamp - tp2_1.checkpointTs),
                 "Carol vp should have more voting power"
             );
 
@@ -1460,7 +1474,7 @@ contract TestE2EWithSeason is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IE
 
             assertEq(
                 escrow.votingPower(2),
-                347120709266838400000,
+                bias(depositAliceBob, block.timestamp - tp2_1.checkpointTs),
                 "Carol vp should still be not zero"
             );
 
