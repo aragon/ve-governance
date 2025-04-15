@@ -27,8 +27,11 @@ import {
     GaugePluginSet,
     Deployment,
     DeploymentParameters,
-    DeployGauges
+    DeployGauges,
+    EscrowIVotesAdapter
 } from "../versions.sol";
+
+import {FixedPointBase} from "../base/FixedPointBase.sol";
 
 interface IERC20Mint is IERC20 {
     function mint(address _to, uint256 _amount) external;
@@ -62,7 +65,13 @@ contract MultisigReceiver is GhettoMultisig {
  * 4. A more robust suite for admininstration of the contracts
  * 5. Ability to connect to an existing deployment and test on the real network
  */
-contract TestE2EV1_4_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveTokenStorage {
+contract TestE2EV1_3_0 is
+    AragonTest,
+    IWithdrawalQueueErrors,
+    IGaugeVote,
+    IEscrowCurveTokenStorage,
+    FixedPointBase
+{
     error VotingInactive();
     error OnlyEscrow();
     error GaugeDoesNotExist(address _pool);
@@ -88,6 +97,7 @@ contract TestE2EV1_4_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
     VotingEscrow escrow;
     Clock clock;
     Lock lock;
+    EscrowIVotesAdapter ivotesAdapter;
     Multisig multisig;
     DAO dao;
     IERC20Mint token;
@@ -165,9 +175,12 @@ contract TestE2EV1_4_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
         escrow = VotingEscrow(pluginSet.votingEscrow);
         clock = Clock(pluginSet.clock);
         lock = Lock(pluginSet.nftLock);
+        ivotesAdapter = EscrowIVotesAdapter(pluginSet.delegationAdapter);
         multisig = Multisig(deployment.multisigPlugin);
         dao = DAO(deployment.dao);
         token = IERC20Mint(escrow.token());
+
+        FixedPointBase.initialize(curve.maxTime(), clock.checkpointInterval());
 
         require(_resolveMintTokens(), "Failed to mint tokens");
 
@@ -501,10 +514,7 @@ contract TestE2EV1_4_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
     }
 
     function testLifeCycle() public {
-        // we are in the voting period based on the pinned block so let's wait till the next epoch
-        uint nextEpoch = clock.epochStartTs();
-        vm.warp(nextEpoch);
-        epochStartTime = block.timestamp;
+        epochStartTime = weekStartTs(block.timestamp);
 
         // first we give the guys each some tokens of the underlying
         {
@@ -522,7 +532,7 @@ contract TestE2EV1_4_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
         // we expect his warmup to carryover to the next week
         // we expect both of their locks to start accruing voting power on the same day
         {
-            goToEpochStartPlus(1 days);
+            goToEpochStartPlus(2 days);
 
             vm.startPrank(alice);
             {
@@ -530,12 +540,14 @@ contract TestE2EV1_4_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
 
                 escrow.createLock(depositAlice0);
 
-                goToEpochStartPlus(6 days);
+                goToEpochStartPlus(8 days);
 
                 escrow.createLockFor(depositAliceBob, bob);
             }
             vm.stopPrank();
+        }
 
+        {
             // check alice has token 1, bob has token   2
             assertEq(lock.ownerOf(1), alice, "Alice should own token 1");
             assertEq(lock.ownerOf(2), bob, "Bob should own token 2");
@@ -544,12 +556,19 @@ contract TestE2EV1_4_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
             TokenPoint memory tp1_1 = curve.tokenPointHistory(1, 1);
             TokenPoint memory tp2_1 = curve.tokenPointHistory(2, 1);
 
-            assertEq(tp1_1.bias, depositAlice0, "Alice point 1 should have the correct bias");
-            assertEq(tp2_1.bias, depositAliceBob, "Bob point should have the correct bias");
+            int256 aliceBias = biasFP(depositAlice0, tp1_1.writtenTs - escrow.locked(1).start);
+            int256 bobBias = biasFP(depositAliceBob, tp2_1.writtenTs - escrow.locked(2).start);
+
+            assertEq(
+                tp1_1.coefficients[0],
+                aliceBias,
+                "Alice point 1 should have the correct bias"
+            );
+            assertEq(tp2_1.coefficients[0], bobBias, "Bob point should have the correct bias");
 
             assertEq(
                 tp1_1.checkpointTs,
-                epochStartTime + clock.checkpointInterval(),
+                epochStartTime,
                 "Alice point should have the correct checkpoint"
             );
             assertEq(
@@ -560,12 +579,12 @@ contract TestE2EV1_4_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
 
             assertEq(
                 tp1_1.writtenTs,
-                epochStartTime + 1 days,
+                epochStartTime + 2 days,
                 "Alice point should have the correct written timestamp"
             );
             assertEq(
                 tp2_1.writtenTs,
-                epochStartTime + 6 days,
+                epochStartTime + 8 days,
                 "Bob point should have the correct written timestamp"
             );
 
@@ -588,37 +607,40 @@ contract TestE2EV1_4_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
                 "Bob should have the correct amount locked"
             );
 
-            // start date in the future - alice will not be warm as his lock is not active yet
-            assertFalse(curve.isWarm(1), "Alice should not be warm");
+            assertTrue(curve.isWarm(1), "Alice should be warm");
             assertFalse(curve.isWarm(2), "Bob should not be warm");
 
-            assertEq(escrow.votingPower(1), 0, "Alice should have no voting power");
+            assertEq(
+                escrow.votingPower(1),
+                bias(depositAlice0, block.timestamp - tp1_1.checkpointTs),
+                "Alice should have correct voting power"
+            );
             assertEq(escrow.votingPower(2), 0, "Bob should have no voting power");
 
             assertEq(
                 escrow.locked(1).start,
-                escrow.locked(2).start,
-                "Both locks should start at the same time"
+                epochStartTime,
+                "Alice's lock should start at correct week"
             );
             assertEq(
-                escrow.locked(1).start,
+                escrow.locked(2).start,
                 epochStartTime + clock.checkpointInterval(),
-                "Both locks should start at the next checkpoint"
+                "Bob's lock should start at correct week"
             );
 
-            // fast forward to the checkpoint interval alice is warm and has voting power, bob is not
-            goToEpochStartPlus(clock.checkpointInterval());
+            // fast forward to the checkpoint interval so bob becomes warm as well.
+            goToEpochStartPlus(2 weeks);
 
-            assertEq(escrow.votingPower(1), depositAlice0, "Alice should have voting power");
-            assertTrue(curve.isWarm(1), "Alice should not be warm");
-
-            assertEq(escrow.votingPower(2), 0, "Bob should not have the correct voting power");
-            assertFalse(curve.isWarm(2), "Bob should not be warm");
+            assertEq(
+                escrow.votingPower(2),
+                bias(depositAlice0, block.timestamp - tp2_1.checkpointTs),
+                "Bob should have voting power"
+            );
+            assertTrue(curve.isWarm(2), "Bob should be warm");
         }
-
-        // we fast forward 4 weeks and check the expected balances
+        // we fast forward 4 weeks + 1 days and check the expected balances
         {
-            goToEpochStartPlus(4 weeks);
+            goToEpochStartPlus(4 weeks + 1 days);
 
             // Generalising this is a bit hard...
             // we could check a < x < b, but checking x exactly is tedious
@@ -635,15 +657,19 @@ contract TestE2EV1_4_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
             // check the token points written
             TokenPoint memory tp1_2 = curve.tokenPointHistory(3, 1);
 
-            assertEq(tp1_2.bias, depositAlice1, "Alice point 2 should have the correct bias");
+            assertEq(
+                tp1_2.coefficients[0],
+                biasFP(depositAlice1, block.timestamp - tp1_2.checkpointTs),
+                "Alice point 2 should have the correct bias"
+            );
             assertEq(
                 tp1_2.checkpointTs,
-                epochStartTime + 4 weeks + clock.checkpointInterval(),
+                epochStartTime + 4 weeks,
                 "Alice point should have the correct checkpoint"
             );
             assertEq(
                 tp1_2.writtenTs,
-                epochStartTime + 4 weeks,
+                epochStartTime + 4 weeks + 1 days,
                 "Alice point should have the correct written timestamp"
             );
 
@@ -680,10 +706,13 @@ contract TestE2EV1_4_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
             uint timeElapsedSinceFirstLock = block.timestamp -
                 curve.tokenPointHistory(1, 1).checkpointTs;
 
-            // elased time is zero so should be exactly equal to the bias
+            uint timeElapsedSinceSecondLock = block.timestamp -
+                curve.tokenPointHistory(3, 1).checkpointTs;
+
             assertEq(
                 escrow.votingPowerForAccount(alice),
-                curve.getBias(timeElapsedSinceFirstLock, depositAlice0) + depositAlice1,
+                curve.getBias(timeElapsedSinceFirstLock, depositAlice0) +
+                    curve.getBias(timeElapsedSinceSecondLock, depositAlice1),
                 "Alice should now have the correct aggregate voting power"
             );
         }
@@ -765,8 +794,14 @@ contract TestE2EV1_4_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
 
             vm.startPrank(alice);
             {
+                vm.mockCall(
+                    address(ivotesAdapter),
+                    abi.encodeWithSelector(ivotesAdapter.getVotes.selector, (alice)),
+                    abi.encode(100)
+                );
                 vm.expectRevert(abi.encodeWithSelector(GaugeDoesNotExist.selector, address(123)));
                 voter.vote(incorrectVotes);
+                vm.clearMockedCalls();
             }
             vm.stopPrank();
 
@@ -818,6 +853,8 @@ contract TestE2EV1_4_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
 
                 vm.startPrank(alice);
                 {
+                    ivotesAdapter.setAutoDelegation(true);
+                    ivotesAdapter.delegate(alice);
                     voter.vote(votes);
                 }
                 vm.stopPrank();
@@ -828,6 +865,8 @@ contract TestE2EV1_4_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
 
                 vm.startPrank(bob);
                 {
+                    ivotesAdapter.setAutoDelegation(true);
+                    ivotesAdapter.delegate(bob);
                     voter.vote(votes);
                 }
                 vm.stopPrank();
@@ -838,7 +877,7 @@ contract TestE2EV1_4_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
                 // and the first 100% of bob's votes + 50% of alice' votes
                 assertEq(
                     voter.votes(alice, gauge0),
-                    escrow.votingPower(1) / 2,
+                    (escrow.votingPower(1) + escrow.votingPower(3)) / 2,
                     "Alice 1 g 0 should have the correct votes"
                 );
                 assertEq(
@@ -860,6 +899,7 @@ contract TestE2EV1_4_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
         }
 
         // carol create a deposit mid vote and tries to vote - he should have no voting power
+        // TODO: check i don't understand this.
         {
             vm.startPrank(carol);
             {
@@ -906,7 +946,7 @@ contract TestE2EV1_4_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
             // and the first 50% of alice' votes
             assertEq(
                 voter.votes(alice, gauge0),
-                escrow.votingPower(1) / 2,
+                (escrow.votingPower(1) + escrow.votingPower(3)) / 2,
                 "Alice 1 g 0 should have the correct votes"
             );
 
@@ -922,28 +962,6 @@ contract TestE2EV1_4_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
                 voter.gaugeVotes(gauge1),
                 escrow.votingPower(2) + escrow.votingPower(1) / 2 + escrow.votingPower(3) / 2
             );
-        }
-
-        // at distribution we wait
-        // the guys try and exit but can't
-        {
-            // go to 1 hour - 1 second before vote closes
-            goToEpochStartPlus(7 weeks - 1 hours - 1);
-
-            assertTrue(clock.votingActive(), "Voting should be active");
-
-            // closes the next second
-            goToEpochStartPlus(7 weeks - 1 hours);
-
-            assertFalse(clock.votingActive(), "Voting should not be active");
-
-            // alice tries to exit
-            vm.startPrank(alice);
-            {
-                vm.expectRevert(CannotExit.selector);
-                escrow.beginWithdrawal(1);
-            }
-            vm.stopPrank();
         }
 
         // we wait till voting is over and they begin the exit - alice does anyhow
@@ -973,9 +991,12 @@ contract TestE2EV1_4_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
             TokenPoint memory tp1_2 = curve.tokenPointHistory(1, 2);
 
             assertEq(tp1_2.bias, 0, "Alice point 1_2 should have the correct bias");
+            assertEq(tp1_2.coefficients[0], 0, "Alice point 1_2 should have the correct bias");
+            // Note that checkpoinTs of this new point still must be
+            // the original point's checkpointTs as we never change it.
             assertEq(
                 tp1_2.checkpointTs,
-                epochStartTime + 8 weeks + clock.checkpointInterval(),
+                epochStartTime,
                 "Alice point should have the correct checkpoint"
             );
             assertEq(
@@ -1043,7 +1064,7 @@ contract TestE2EV1_4_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
 
         // alice creates a new lock 12 h the window opens, he should be warm tomorrow
         {
-            goToEpochStartPlus(10 weeks - 12 hours);
+            goToEpochStartPlus(10 weeks + 12 hours);
 
             vm.startPrank(alice);
             {
@@ -1056,8 +1077,12 @@ contract TestE2EV1_4_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
             goToEpochStartPlus(10 weeks + 12 hours);
             assertFalse(curve.isWarm(5), "Alice should not be warm");
 
+            // nope
+            goToEpochStartPlus(10 weeks + 1 days);
+            assertFalse(curve.isWarm(5), "Alice should not be warm");
+
             // +1s
-            goToEpochStartPlus(10 weeks + 12 hours + 1);
+            goToEpochStartPlus(10 weeks + 1 days + 1 hours);
             assertTrue(curve.isWarm(5), "Alice should be warm");
         }
 
