@@ -247,10 +247,11 @@ contract EscrowBase is
         address _clock
     ) public returns (EscrowIVotesAdapter) {
         EscrowIVotesAdapter impl = new EscrowIVotesAdapter();
+        bool startPaused = false;
 
         bytes memory initCalldata = abi.encodeCall(
             EscrowIVotesAdapter.initialize,
-            (_dao, _escrow, _clock)
+            (_dao, _escrow, _clock, startPaused)
         );
         return EscrowIVotesAdapter(address(impl).deployUUPSProxy(initCalldata));
     }

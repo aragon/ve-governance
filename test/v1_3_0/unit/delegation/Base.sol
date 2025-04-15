@@ -76,7 +76,14 @@ contract Base is
 
         uint256 maxTime = IClock(clock).epochDuration() * CurveConstantLib.MAX_EPOCHS;
 
-        super.initialize(maxTime, clock.checkpointInterval());
+        FixedPointBase.initialize(maxTime, clock.checkpointInterval());
+
+        // grant this contract admin role
+        dao.grant({
+            _who: address(this),
+            _where: address(dg),
+            _permissionId: dg.DELEGATION_ADMIN_ROLE()
+        });
     }
 
     function _deployDAO() internal {
@@ -114,10 +121,11 @@ contract Base is
         address _escrow
     ) public returns (EscrowIVotesAdapterA) {
         EscrowIVotesAdapterA impl = new EscrowIVotesAdapterA();
-
+        bool startPaused = false;
+        
         bytes memory initCalldata = abi.encodeCall(
             EscrowIVotesAdapter.initialize,
-            (_dao, _escrow, _clock)
+            (_dao, _escrow, _clock, startPaused)
         );
         return EscrowIVotesAdapterA(address(impl).deployUUPSProxy(initCalldata));
     }

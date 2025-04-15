@@ -18,6 +18,15 @@ contract TestUndelegate is Base {
         _;
     }
 
+    function test_shouldRevertIfPaused() public {
+        dg.delegate(alice);
+
+        dg.pause();
+        
+        vm.expectRevert("Pausable: paused");
+        dg.undelegate(getIds(1));
+    }
+
     function testRevert_IfNotApprovedOrOwner() public givenDelegatedTokens {
         _mockApprovedOwner(false);
 

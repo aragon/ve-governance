@@ -219,9 +219,6 @@ contract RegressionV1_0_0__to__V1_2_0 is Test, IGaugeVote, FixedPointBase {
         // upgrade contracts
         _upgrade();
 
-        assertTrue(escrow.paused());
-        unpause();
-
         uint256 vp0After = escrow.votingPower(aliceToken);
         uint256 vp1After = escrow.votingPower(bobToken);
 
@@ -296,9 +293,6 @@ contract RegressionV1_0_0__to__V1_2_0 is Test, IGaugeVote, FixedPointBase {
     function test_upgradeAndMerge() public {
         _upgrade();
 
-        assertTrue(escrow.paused());
-        unpause();
-
         _mockApprovedOwner(address(this), aliceToken);
         _mockApprovedOwner(address(this), bobToken);
 
@@ -329,9 +323,6 @@ contract RegressionV1_0_0__to__V1_2_0 is Test, IGaugeVote, FixedPointBase {
         uint256 vpBeforeUpgrade = escrow.votingPower(aliceToken);
 
         _upgrade();
-
-        assertTrue(escrow.paused());
-        unpause();
 
         _mockApprovedOwner(address(this), aliceToken);
 
@@ -424,14 +415,24 @@ contract RegressionV1_0_0__to__V1_2_0 is Test, IGaugeVote, FixedPointBase {
             dao.applyMultiTargetPermissions(revoke0);
             dao.applyMultiTargetPermissions(revoke1);
 
-            // TODO: GIORGI this must be put in the factory but where ?
             dao.grant(
                 address(addressGaugeVoter),
                 address(dao),
                 addressGaugeVoter.GAUGE_ADMIN_ROLE()
             );
 
-            // AddressGaugeVoter is deployed with paused by default, so unpause.
+            dao.grant(address(escrow), address(dao), escrow.PAUSER_ROLE());
+            dao.grant(address(ivotesAdapter), address(dao), ivotesAdapter.DELEGATION_ADMIN_ROLE());
+
+            // After the upgrade, these contracts are paused.
+            // so we assert and then unpause, so tests can work.
+            assertTrue(escrow.paused());
+            assertTrue(ivotesAdapter.paused());
+            assertTrue(addressGaugeVoter.paused());
+
+            // unpause contracts.
+            escrow.unpause();
+            ivotesAdapter.unpause();
             addressGaugeVoter.unpause();
 
             // create gauge on the address gauge voter.

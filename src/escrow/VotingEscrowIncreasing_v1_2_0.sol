@@ -585,14 +585,14 @@ contract VotingEscrowV1_2_0 is
     }
 
     /// @inheritdoc IDelegateMoveVote
-    function moveDelegateVotes(address _from, address _to, uint256 _tokenId) public {
+    function moveDelegateVotes(address _from, address _to, uint256 _tokenId) public whenNotPaused {
         if (msg.sender != lockNFT) revert OnlyLockNFT();
 
         IEscrowIVotesAdapter(ivotesAdapter).moveDelegateVotes(_from, _to, _tokenId);
     }
 
     /// @inheritdoc IDelegateUpdateVotingPower
-    function updateVotingPower(address _from, address _to) public {
+    function updateVotingPower(address _from, address _to) public whenNotPaused {
         if (msg.sender != ivotesAdapter) revert OnlyIVotesAdapter();
 
         IAddressGaugeVoter(voter).updateVotingPower(_from, _to);

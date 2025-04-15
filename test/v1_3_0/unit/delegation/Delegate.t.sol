@@ -63,6 +63,15 @@ contract TestDelegate is Base {
     /*//////////////////////////////////////////////////////////////
                     Delegate(uint256[] tokenIds)
     //////////////////////////////////////////////////////////////*/
+    function test_shouldRevertIfPaused() public {
+        dg.delegate(alice);
+
+        dg.pause();
+        
+        vm.expectRevert("Pausable: paused");
+        dg.delegate(getIds(1));
+    }
+
     function testRevert_IfNoDelegateeIsSet() public {
         vm.expectRevert(DelegateeNotSet.selector);
 

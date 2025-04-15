@@ -135,7 +135,7 @@ contract GaugeVoterSetupV1_2_0 is PluginSetup {
         );
 
         deps.ivotesAdapter = ivotesAdapterBase.deployUUPSProxy(
-            abi.encodeCall(EscrowIVotesAdapter.initialize, (_dao, deps.escrow, deps.clock))
+            abi.encodeCall(EscrowIVotesAdapter.initialize, (_dao, deps.escrow, deps.clock, false))
         );
 
         // deploy the voting contract (plugin)

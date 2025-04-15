@@ -144,7 +144,6 @@ contract UpgradeGaugesFactoryV1_0_0__V1_2_0 {
 
         DeploymentV1_0_0 memory oldDeployment = IFactory(factory).getDeployment();
 
-
         // init with the old contracts, as needed we will overwrite
         for (uint i = 0; i < oldDeployment.gaugeVoterPluginSets.length; i++) {
             GaugePluginSetV1_0_0 memory oldPluginSet = oldDeployment.gaugeVoterPluginSets[i];
@@ -219,7 +218,10 @@ contract UpgradeGaugesFactoryV1_0_0__V1_2_0 {
         Upgrades.validateUpgrade("Lock_v1_2_0.sol:LockV1_2_0", options);
 
         options.referenceContract = "QuadraticIncreasingCurve.sol:QuadraticIncreasingEscrow";
-        Upgrades.validateUpgrade("LinearIncreasingCurveNoSupply.sol:LinearIncreasingCurveNoSupply", options);
+        Upgrades.validateUpgrade(
+            "LinearIncreasingCurveNoSupply.sol:LinearIncreasingCurveNoSupply",
+            options
+        );
     }
 
     function upgrade(
@@ -254,12 +256,12 @@ contract UpgradeGaugesFactoryV1_0_0__V1_2_0 {
         _deployAddressGaugeVoter(address(addressGaugeVoter));
 
         _upgradeContracts(clockUpgrade, curveUpgrade, escrowUpgrade, lockUpgrade);
-        
+
         // deploy an address gauge voter that must be used on the upgraded escrow contract.
 
         // set the ivotes adapter on the escrow
         _setEscrowIVotesAdapter();
-        
+
         // set the address gauge voter on the escrow(before upgrade, it was token gauge voter)
         _setAddressGaugeVoter();
     }
@@ -283,13 +285,16 @@ contract UpgradeGaugesFactoryV1_0_0__V1_2_0 {
             pluginSet.nftLock.upgradeTo(address(lockUpgrade));
 
             // We only need to pause escrow as other contracts' state changing 
-            // functions can only be called by escrow. Note that `ivotesAdapter` 
-            // is by default paused at the time of deployment.
+            // functions can only be called by escrow and ivotesAdapter. 
+            // Note that `AddressGaugeVoter` and `iVotesAdapter` are by default paused 
+            // at the time of deployment.
             pluginSet.votingEscrow.pause();
         }
     }
 
     function _deployEscrowIVotesAdapter(address base) internal {
+        bool startPaused = true;
+
         // set the delegation mapper in the plugin set
         for (uint i = 0; i < deployment.gaugeVoterPluginSets.length; i++) {
             address delegation = base.deployUUPSProxy(
@@ -298,7 +303,8 @@ contract UpgradeGaugesFactoryV1_0_0__V1_2_0 {
                     (
                         address(deployment.dao),
                         address(deployment.gaugeVoterPluginSets[i].votingEscrow),
-                        address(deployment.gaugeVoterPluginSets[i].clock)
+                        address(deployment.gaugeVoterPluginSets[i].clock),
+                        startPaused
                     )
                 )
             );

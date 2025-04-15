@@ -64,11 +64,13 @@ contract EscrowIVotesAdapter is
         _disableInitializers();
     }
 
-    function initialize(address _dao, address _escrow, address _clock) external initializer {
+    function initialize(address _dao, address _escrow, address _clock, bool _startPaused) external initializer {
         __PluginUUPSUpgradeable_init(IDAO(_dao));
         __ReentrancyGuard_init();
         escrow = _escrow;
         clock = _clock;
+
+        if(_startPaused) _pause();
 
         maxTime = IClock(clock).epochDuration() * CurveConstantLib.MAX_EPOCHS;
     }
@@ -88,7 +90,7 @@ contract EscrowIVotesAdapter is
         emit AutoDelegationSet(sender, _enabled);
     }
 
-    function delegate(address _delegatee) public {
+    function delegate(address _delegatee) public whenNotPaused {
         address sender = _msgSender();
 
         if (numberOfDelegatedTokens[sender] != 0) {
@@ -107,7 +109,7 @@ contract EscrowIVotesAdapter is
         emit DelegateChanged(sender, oldDelegatee, _delegatee);
     }
 
-    function delegate(uint256[] memory _tokenIds) public {
+    function delegate(uint256[] memory _tokenIds) public whenNotPaused {
         address sender = _msgSender();
         address delegatee = delegates(sender);
 
@@ -146,7 +148,7 @@ contract EscrowIVotesAdapter is
         emit TokensDelegated(sender, delegatee, _tokenIds);
     }
 
-    function undelegate(uint256[] memory _tokenIds) public {
+    function undelegate(uint256[] memory _tokenIds) public whenNotPaused {
         address sender = _msgSender();
         address delegatee = delegates(sender);
 
@@ -186,7 +188,7 @@ contract EscrowIVotesAdapter is
         emit TokensUndelegated(sender, delegatee, _tokenIds);
     }
 
-    function moveDelegateVotes(address _from, address _to, uint256 _tokenId) external {
+    function moveDelegateVotes(address _from, address _to, uint256 _tokenId) external whenNotPaused {
         if (_msgSender() != escrow) {
             revert OnlyEscrow();
         }
@@ -246,7 +248,7 @@ contract EscrowIVotesAdapter is
                         Checkpoint Functions
     //////////////////////////////////////////////////////////////*/
 
-    function checkpointTransition(address _delegatee, uint256 _transitionCount) external {
+    function checkpointTransition(address _delegatee, uint256 _transitionCount) external whenNotPaused {
         _checkpoint(0, 0, _delegatee, _transitionCount);
     }
 
