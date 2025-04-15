@@ -24,7 +24,6 @@ import {
 
 // interfaces
 import {IClockV1_2_0 as IClock} from "@clock/IClock_v1_2_0.sol";
-import {ISeasonErrors} from "@clock/IClockSeason.sol";
 import {IGaugeVoterSetupParams} from "@setup/GaugeVoterSetup_v1_3_0.sol";
 import {
     IEscrowCurveGlobalStorage,
