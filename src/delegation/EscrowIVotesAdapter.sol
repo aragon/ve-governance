@@ -121,7 +121,6 @@ contract EscrowIVotesAdapter is
 
             IVotingEscrow.LockedBalance memory locked = IVotingEscrow(escrow).locked(tokenId);
             (int256 bias, int256 slope) = _getBiasAndSlope(delegatee, locked, _positive);
-
             totalBias += bias;
             totalSlope += slope;
         }

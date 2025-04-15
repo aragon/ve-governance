@@ -28,7 +28,7 @@ import {
     Lock,
     Curve,
     ExitQueue,
-    GaugeVoter,
+    GaugeVoter as TokenGaugeVoter,
     IGaugeVoterSetupParams
 } from "@setup/GaugeVoterSetup.sol";
 import {
@@ -41,7 +41,7 @@ import {
 import {
     Clock as ClockV1_2_0,
     Curve as LinearIncreasingCurve,
-    GaugeVoter as GaugeVoterV1_1_0,
+    GaugeVoter as AddressGaugeVoter,
     VotingEscrow as VotingEscrowV1_2_0,
     GaugeVoterSetupV1_3_0,
     IGaugeVoterSetupParams as IGaugeVoterSetupParamsV1_3_0,
@@ -113,7 +113,7 @@ struct TokenParameters {
 
 /// @notice Struct containing the plugin and all of its helpers
 struct GaugePluginSet {
-    GaugeVoterV1_1_0 plugin;
+    AddressGaugeVoter plugin;
     LinearIncreasingCurve curve;
     ExitQueue exitQueue;
     VotingEscrowV1_2_0 votingEscrow;
@@ -148,6 +148,7 @@ contract UpgradeGaugesFactoryV1_0_0__V1_3_0 {
 
         DeploymentV1_0_0 memory oldDeployment = IFactory(factory).getDeployment();
 
+
         // init with the old contracts, as needed we will overwrite
         for (uint i = 0; i < oldDeployment.gaugeVoterPluginSets.length; i++) {
             GaugePluginSetV1_0_0 memory oldPluginSet = oldDeployment.gaugeVoterPluginSets[i];
@@ -156,7 +157,7 @@ contract UpgradeGaugesFactoryV1_0_0__V1_3_0 {
 
             // copy the contracts over - for now casting them
             // todo good idea?
-            newPluginSet.plugin = GaugeVoterV1_1_0(address(oldPluginSet.plugin));
+            newPluginSet.plugin = AddressGaugeVoter(address(oldPluginSet.plugin));
             newPluginSet.curve = LinearIncreasingCurve(address(oldPluginSet.curve));
             newPluginSet.votingEscrow = VotingEscrowV1_2_0(address(oldPluginSet.votingEscrow));
             newPluginSet.clock = ClockV1_2_0(address(oldPluginSet.clock));
@@ -234,7 +235,8 @@ contract UpgradeGaugesFactoryV1_0_0__V1_3_0 {
         LinearIncreasingCurve curveUpgrade,
         VotingEscrowV1_2_0 escrowUpgrade,
         LockV1_2_0 lockUpgrade,
-        EscrowIVotesAdapter ivotesAdapter
+        EscrowIVotesAdapter ivotesAdapter,
+        AddressGaugeVoter addressGaugeVoter
     ) public {
         if (validate) {
             validateUpgrade();
@@ -256,11 +258,17 @@ contract UpgradeGaugesFactoryV1_0_0__V1_3_0 {
         }
 
         _deployEscrowIVotesAdapter(address(ivotesAdapter));
+        _deployAddressGaugeVoter(address(addressGaugeVoter));
 
         _upgradeContracts(clockUpgrade, curveUpgrade, escrowUpgrade, lockUpgrade);
+        
+        // deploy an address gauge voter that must be used on the upgraded escrow contract.
 
-        // set the delegation mapper on the escrow
+        // set the ivotes adapter on the escrow
         _setEscrowIVotesAdapter();
+        
+        // set the address gauge voter on the escrow(before upgrade, it was token gauge voter)
+        _setAddressGaugeVoter();
     }
 
     ////////////////////////////////////////////////
@@ -302,6 +310,28 @@ contract UpgradeGaugesFactoryV1_0_0__V1_3_0 {
         }
     }
 
+    function _deployAddressGaugeVoter(address _base) internal {
+        bool startPaused = true;
+        bool enableUpdateVotingPowerHook = true;
+
+        for (uint i = 0; i < deployment.gaugeVoterPluginSets.length; i++) {
+            address plugin = _base.deployUUPSProxy(
+                abi.encodeCall(
+                    AddressGaugeVoter.initialize,
+                    (
+                        address(deployment.dao),
+                        address(deployment.gaugeVoterPluginSets[i].votingEscrow),
+                        startPaused,
+                        address(deployment.gaugeVoterPluginSets[i].clock),
+                        address(deployment.gaugeVoterPluginSets[i].delegation),
+                        enableUpdateVotingPowerHook
+                    )
+                )
+            );
+            deployment.gaugeVoterPluginSets[i].plugin = AddressGaugeVoter(plugin);
+        }
+    }
+
     function _setEscrowIVotesAdapter() internal {
         // set the delegation mapper in the plugin set
         for (uint i = 0; i < deployment.gaugeVoterPluginSets.length; i++) {
@@ -309,6 +339,16 @@ contract UpgradeGaugesFactoryV1_0_0__V1_3_0 {
             VotingEscrowV1_2_0 votingEscrow = deployment.gaugeVoterPluginSets[i].votingEscrow;
 
             votingEscrow.setIVotesAdapter(address(ivotesAdapter));
+        }
+    }
+
+    function _setAddressGaugeVoter() internal {
+        // set the address gauge voter on the escrow
+        for (uint i = 0; i < deployment.gaugeVoterPluginSets.length; i++) {
+            AddressGaugeVoter addrGaugeVoter = deployment.gaugeVoterPluginSets[i].plugin;
+            VotingEscrowV1_2_0 votingEscrow = deployment.gaugeVoterPluginSets[i].votingEscrow;
+
+            votingEscrow.setVoter(address(addrGaugeVoter));
         }
     }
 

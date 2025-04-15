@@ -40,11 +40,9 @@ contract TestSplit_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage
     function test_Split_TokenNotMature() public {
         // 1. the tokenId's point must become 0
         // 2. we should have 2 new tokenIds with `value` and `Lock_1_Amount - value` with their according bias and slope.
-        // 3. bias and slope on the latest global point must include the same slope and bias as it was originally before splitting.
         uint256 value = 20e18;
         uint256 tokenId = escrow.createLock(Lock_1_Amount);
         uint256 weekStartTs = weekStartTs(block.timestamp);
-        uint256 endTs = weekStartTs + maxTime;
 
         // Still warp just to ensure that we changed the current timestamp
         // but not wrap after the end.
@@ -76,8 +74,6 @@ contract TestSplit_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage
     function test_Split_TokenAlreadyMature() public {
         // 1. the tokenId's point must become 0
         // 2. we should have 2 new tokenIds with `value` and `Lock_1_Amount - value` with their according bias and slope.
-        // 3. slope on the last global point must be 0 as it was stored after both tokens were mature. bias must be maxed out.
-        // 4. slope changes must still include the original token's slope at the same original end.
         uint256 value = 20e18;
         uint256 tokenId = escrow.createLock(Lock_1_Amount);
         uint256 weekStartTs = weekStartTs(block.timestamp);

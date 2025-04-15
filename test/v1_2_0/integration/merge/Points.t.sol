@@ -75,7 +75,6 @@ contract TestMerge_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage
         // 1. on `from` token point, bias and slope must become 0. `start` should stay the same and current timestamp updated.
         // 2. on `to` token point, bias must be the sum of both token's maxed out values. Slope must be 0 as it's already maxed out.
         // `start` should stay the same and current timestamp updated.
-        // 3. last global point must have slope 0 and bias as sum of both token's maxed out values.
         uint256 from = escrow.createLock(Lock_1_Amount);
         uint256 to = escrow.createLock(Lock_2_Amount);
 
@@ -94,10 +93,7 @@ contract TestMerge_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage
         assertTokenPoint(from, 2, 0, 0, weekStartTs, currentTs);
 
         // 2
-        // since merge occured in the different block than `createLock`,
-        // it should  cause extra epoch for user.
         int256 currentTotalBiasFP = LOCK_1_MAX + LOCK_2_MAX;
-        int256 totalSlopeFP = slopeFP(Lock_1_Amount + Lock_2_Amount);
 
         assertTokenPoint(to, 2, currentTotalBiasFP, 0, weekStartTs, currentTs);
     }
@@ -106,7 +102,6 @@ contract TestMerge_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage
         // 1. on `from` token point, bias and slope must become 0. `start` should stay the same and current timestamp updated.
         // 2. on `to` token point, bias must be the sum of both token's maxed out values. Slope must be 0 as it's already maxed out.
         // `start` should stay the same and current timestamp updated.
-        // 3. last global point must have slope 0 and bias as sum of both token's maxed out values.
         uint256 from = escrow.createLock(Lock_1_Amount);
 
         uint256 fromLockWeekStart = weekStartTs(block.timestamp);

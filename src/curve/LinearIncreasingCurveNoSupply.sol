@@ -112,13 +112,13 @@ contract LinearIncreasingEscrowNoSupply is
 
     /// @return The coefficient for the curve's linear term, for the given amount
     function _getLinearCoeff(uint256 amount) internal pure returns (int256) {
-        return int256(amount) * SHARED_LINEAR_COEFFICIENT;
+        return amount.toInt256() * SHARED_LINEAR_COEFFICIENT;
     }
 
     /// @return The constant coefficient of the increasing curve, for the given amount
     /// @dev In this case, the constant term is 1 so we just case the amount
     function _getConstantCoeff(uint256 amount) public pure returns (int256) {
-        return int256(amount) * SHARED_CONSTANT_COEFFICIENT;
+        return amount.toInt256() * SHARED_CONSTANT_COEFFICIENT;
     }
 
     /// @return The coefficients of the quadratic curve, for the given amount
@@ -151,9 +151,13 @@ contract LinearIncreasingEscrowNoSupply is
     }
 
     /// @notice Returns the bias for the given time elapsed and amount, up to the maximum time
+    /// @dev Note that the returned value includes the linear and constant 
+    ///     coefficients multiplication, which is not the case in `getBias`.
     function getBias(uint256 timeElapsed, uint256 amount) public view returns (uint256) {
         int256[3] memory coefficients = _getCoefficients(amount);
-        return _getBias(boundElapsedMaxTime(timeElapsed), coefficients[0], coefficients[1]);
+        uint256 bias = _getBias(boundElapsedMaxTime(timeElapsed), coefficients[0], coefficients[1]);
+
+        return bias / 1e18;
     }
 
     /// @notice Returns the bias for the given time elapsed and amount, up to the maximum time
@@ -256,16 +260,29 @@ contract LinearIncreasingEscrowNoSupply is
         TokenPoint memory originalPoint = _tokenPointHistory[_tokenId][1];
 
         uint256 maxTime_ = maxTime();
-        uint256 end =  originalPoint.checkpointTs + maxTime_;
+        uint256 end = originalPoint.checkpointTs + maxTime_;
+
+        // If the point was created before the upgrade:
+        //    it will have `checkpointTs` greater than `writtenTs`.
+        //    bias would have been stored as just the amount(without bonus).
+        // In such case, we make writtenTs equal to avoid checkpointTs greater.
+        // This ensures that behaviour after and before upgrade are same.
+        if (originalPoint.checkpointTs > originalPoint.writtenTs) {
+            originalPoint.writtenTs = originalPoint.checkpointTs;
+        }
+
+        if (lastPoint.checkpointTs > lastPoint.writtenTs) {
+            lastPoint.writtenTs = lastPoint.checkpointTs;
+        }
 
         uint256 elapsed = _t - lastPoint.writtenTs;
-        
+
         uint256 timeTillMaxTime = 0;
-        if(end > lastPoint.writtenTs) {
+        if (end > lastPoint.writtenTs) {
             timeTillMaxTime = end - lastPoint.writtenTs;
         }
 
-        if(elapsed >= timeTillMaxTime) {
+        if (elapsed >= timeTillMaxTime) {
             elapsed = timeTillMaxTime;
         }
 
