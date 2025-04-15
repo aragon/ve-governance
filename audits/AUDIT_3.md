@@ -85,4 +85,4 @@ The following files are not in scope:
 
 ## Understanding the contract flow
 
-EXCALIDRAW GOES HERE
+Please see the README.md folder for specifics

@@ -225,6 +225,10 @@ The main workflow in the Aragon VE Governance build is as follows:
 
 ## Merging and Splitting
 
+- veNFTs can be consolidated into a single veNFT via _merging_ or multiple sub-veNFTs can be created via _splitting_.
+- Splitting can be done at any time, provided it has been enabled by the DAO
+- Merging can only be done provided the veNFTs have the same start date or have reached maturity.
+
 ## Delegation
 
 - Delegation is an option that can be enabled.
