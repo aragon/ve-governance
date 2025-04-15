@@ -62,7 +62,7 @@ contract MultisigReceiver is GhettoMultisig {
  * 4. A more robust suite for admininstration of the contracts
  * 5. Ability to connect to an existing deployment and test on the real network
  */
-contract TestE2EV1_2_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveTokenStorage {
+contract TestE2EWithSeason is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveTokenStorage {
     error VotingInactive();
     error OnlyEscrow();
     error GaugeDoesNotExist(address _pool);
