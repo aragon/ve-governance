@@ -23,7 +23,7 @@ import {
     Lock,
     Clock,
     VotingEscrow,
-    LinearIncreasingEscrow,
+    Curve as LinearIncreasingEscrow,
     ExitQueue,
     SimpleGaugeVoter,
     SimpleGaugeVoterSetup,

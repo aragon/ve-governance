@@ -145,9 +145,9 @@ contract VotingEscrowV1_2_0 is
         address _clock,
         uint256 _initialMinDeposit
     ) external initializer {
-        __DaoAuthorizableUpgradeable_init(IDAO(_dao));
         __ReentrancyGuard_init();
         __Pausable_init();
+        __DaoAuthorizableUpgradeable_init(IDAO(_dao));
 
         if (IERC20Metadata(_token).decimals() != 18) revert MustBe18Decimals();
         token = _token;

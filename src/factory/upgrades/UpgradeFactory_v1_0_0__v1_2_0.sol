@@ -5,12 +5,8 @@ import "forge-std/Test.sol";
 import "test/constants.sol";
 import {PluginSetupProcessor} from "@aragon/osx/framework/plugin/setup/PluginSetupProcessor.sol";
 import {PluginRepoFactory} from "@aragon/osx/framework/plugin/repo/PluginRepoFactory.sol";
-import {PluginRepoRegistry} from "@aragon/osx/framework/plugin/repo/PluginRepoRegistry.sol";
 import {PluginRepo} from "@aragon/osx/framework/plugin/repo/PluginRepo.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
-import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
-import {Addresslist} from "@aragon/osx/plugins/utils/Addresslist.sol";
-import {IPluginSetup} from "@aragon/osx/framework/plugin/setup/IPluginSetup.sol";
 import {PermissionLib} from "@aragon/osx/core/permission/PermissionLib.sol";
 import {
     Multisig,
@@ -43,11 +39,11 @@ import {
     Curve as LinearIncreasingCurve,
     GaugeVoter as AddressGaugeVoter,
     VotingEscrow as VotingEscrowV1_2_0,
-    GaugeVoterSetupV1_3_0,
-    IGaugeVoterSetupParams as IGaugeVoterSetupParamsV1_3_0,
+    GaugeVoterSetupV1_2_0,
+    IGaugeVoterSetupParams as IGaugeVoterSetupParamsV1_2_0,
     EscrowIVotesAdapter,
     Lock as LockV1_2_0
-} from "@setup/GaugeVoterSetup_v1_3_0.sol";
+} from "@setup/GaugeVoterSetup_v1_2_0.sol";
 
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
@@ -132,7 +128,7 @@ struct Deployment {
     PluginRepo gaugeVoterPluginRepo;
 }
 
-contract UpgradeGaugesFactoryV1_0_0__V1_3_0 {
+contract UpgradeGaugesFactoryV1_0_0__V1_2_0 {
     using Address for address;
     using Clones for address;
     using ERC165Checker for address;
@@ -223,7 +219,7 @@ contract UpgradeGaugesFactoryV1_0_0__V1_3_0 {
         Upgrades.validateUpgrade("Lock_v1_2_0.sol:LockV1_2_0", options);
 
         options.referenceContract = "QuadraticIncreasingCurve.sol:QuadraticIncreasingEscrow";
-        Upgrades.validateUpgrade("LinearIncreasingCurve.sol:LinearIncreasingCurve", options);
+        Upgrades.validateUpgrade("LinearIncreasingCurveNoSupply.sol:LinearIncreasingCurveNoSupply", options);
     }
 
     function upgrade(

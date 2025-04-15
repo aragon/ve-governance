@@ -15,7 +15,7 @@ import {
     VotingEscrow,
     Clock,
     Lock,
-    LinearIncreasingEscrow,
+    Curve as LinearIncreasingEscrow,
     ExitQueue,
     GaugeVoter,
     GaugeVoterSetup,

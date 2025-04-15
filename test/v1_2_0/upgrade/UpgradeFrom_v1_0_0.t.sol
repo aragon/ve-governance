@@ -45,13 +45,13 @@ import {
     Lock as LockV1_2_0,
     GaugeVoter as AddressGaugeVoter,
     IGaugeVote as IAddressGaugeVote
-} from "test/v1_3_0/versions.sol";
+} from "test/v1_2_0/versions.sol";
 import {
-    UpgradeGaugesFactoryV1_0_0__V1_3_0 as UpgradeFactory,
+    UpgradeGaugesFactoryV1_0_0__V1_2_0 as UpgradeFactory,
     Deployment as DeploymentUpgrade,
     DeploymentParameters as DeploymentParametersUpgrade,
     GaugePluginSet as GaugePluginSetUpgrade
-} from "@factory/upgrades/UpgradeFactory_v1_0_0__v1_3_0.sol";
+} from "@factory/upgrades/UpgradeFactory_v1_0_0__v1_2_0.sol";
 
 import {Upgrades} from "@foundry-upgrades/LegacyUpgrades.sol";
 import {Options} from "@foundry-upgrades/Options.sol";
@@ -64,7 +64,7 @@ import {
 
 import {FixedPointBase} from "../base/FixedPointBase.sol";
 
-contract RegressionV1_0_0__to__V1_3_0 is Test, IGaugeVote, FixedPointBase {
+contract RegressionV1_0_0__to__V1_2_0 is Test, IGaugeVote, FixedPointBase {
     GaugesDaoFactoryV1_0_0 factory;
 
     VotingEscrow escrow;
@@ -188,7 +188,7 @@ contract RegressionV1_0_0__to__V1_3_0 is Test, IGaugeVote, FixedPointBase {
         upgradeFactory = new UpgradeFactory(address(factory));
     }
 
-    function testValidateUpgradeGaugeVoter_v1_0_0__v1_3_0() public {
+    function testValidateUpgradeGaugeVoter_v1_0_0__v1_2_0() public {
         upgradeFactory.validateUpgrade();
     }
 
