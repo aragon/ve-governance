@@ -215,26 +215,46 @@ The main workflow in the Aragon VE Governance build is as follows:
 - veNFT transfers are disabled by default, but can be enabled by governance.
 - The user's voting power increases over time, starting from a baseline of the locked amount, up to a maximum voting power
 - The user is unable to vote during an initial "warmup period".
+
+## Withdrawing
+
 - The user can exit their position at any time. In this case, they are entered into an "Exit Queue", whereupon their NFT is held in the queue for a "cooldown" period of X Days. After the period ends, they can burn the NFT to receieve their underlying balance back.
-- It's possible to add a `minLock` period whereby a user is prevented from entering the exit queue before a certain time. This means they have their NFT available to vote but can't enter the exit process.
+  - It's possible to add a `minLock` period whereby a user is prevented from entering the exit queue before a certain time. This means they have their NFT available to vote but can't enter the exit process.
   - Voting power is removed from the NFT at this time
-- The exit queue can optionally set an exit fee that will be charged on exit.
+  - The exit queue can optionally set an exit fee that will be charged on exit.
+
+## Merging and Splitting
 
 ## Delegation
 
 - Delegation is an option that can be enabled.
 - Users can self delegate, or delegate to another address. Users can only delegate tokenIds to one address but not all tokenIDs need to be delegated.
 - Delegation is exposed behind the `EscrowIVotesAdapter` which exposes an IVotes-compatible interface, this allows the escrow to be used in standard governance
-- Delegation dynamically adjusts with voting power.
+- Delegation dynamically adjusts with voting power, once a user delegates, the delegates total voting power will keep increasing until the user's veNFT reaches maturity.
+- Delegation is updated on transfer, mint and burn.
 
 ## Voting
 
-- Administrators setup voting options on the `SimpleGaugeVoter.sol`, we call these `gauges`.
-- Administrators can activate voting at which point a timestamp is recorded. `EpochDurationbLib` tracks 2 week epochs in single week blocks:
+- Administrators setup voting options on the GaugeVoter, we call these `gauges`.
+- Administrators can activate voting at which point a timestamp is recorded. By default there are 2 phases to a voting epoch:
   - A Voting phase (default is 1 week), where votes are accepted.
   - A distribution phase of (default is 1 week), where votes are not accepted (this is done in order to allow governance to compute and allocate rewards).
-- Users can vote as much as they want during the voting period.
+- Users can vote as often as they want during the voting period, voting multiple times will calculate the latest voting power so it may be preferential to wait later in the period to maximise voting power.
+
+- Voting can be done using TokenIDs - see the `TokenGaugeVoter.sol` - or using Addresses - see the `AddressGaugeVoter.sol`
+
+### Token Gauge Voter
+
+- Users vote by tokenID, votes by tokenId are tracked independently.
 - Users' NFTs are locked unless they `reset` their votes and remove their voting power.
+
+### Address Gauge Voter
+
+- The address gauge voter requires an IVotes compatible voting token
+- Users must self delegate to vote on the voter
+- Delegates can vote on the user's behalf without recieving approval to transfer the token
+- The address voter exposes a hook that can be called to update voting power when delegate balances change.
+  - In our VE implementation, this automatically adjusts gauge votes when delegation changes
 
 ## Parameterization
 
@@ -250,6 +270,7 @@ The main workflow in the Aragon VE Governance build is as follows:
 ## Rewards
 
 - The current versions of the contracts assume an offchain rewards distribution mechanism.
+- Rewards are typically allocated in proportion to the voting power cast in the gauge.
 
 ## Caveats
 
