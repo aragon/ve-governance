@@ -85,4 +85,7 @@ The following files are not in scope:
 
 ## Understanding the contract flow
 
-Please see the README.md folder for specifics
+Please see the [README.md](https://github.com/aragon/ve-governance/blob/audit-3/scope/README.md#contracts-overview) for specifics
+
+![image](https://github.com/user-attachments/assets/476f4c08-4673-4ff4-b98e-f3ecaf404c06)
+
