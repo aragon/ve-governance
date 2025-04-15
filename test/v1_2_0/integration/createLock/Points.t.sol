@@ -15,7 +15,6 @@ import {
     IClock,
     Lock,
     VotingEscrow,
-    Curve as LinearIncreasingEscrow,
     IVotingEscrowIncreasing,
     IEscrowCurveIncreasing,
     IVotingEscrowIncreasing,

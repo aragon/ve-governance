@@ -23,7 +23,7 @@ import {
     Lock,
     Clock,
     VotingEscrow,
-    Curve as LinearIncreasingEscrow,
+    Curve as LinearIncreasingCurve,
     ExitQueue,
     SimpleGaugeVoter,
     SimpleGaugeVoterSetup,
@@ -59,7 +59,7 @@ contract EscrowBase is
 
     Lock nftLock;
     VotingEscrow escrow;
-    LinearIncreasingEscrow curve;
+    LinearIncreasingCurve curve;
     SimpleGaugeVoter voter;
     ExitQueue queue;
     Clock clock;
@@ -279,14 +279,14 @@ contract EscrowBase is
         address _dao,
         uint48 _warmup,
         address _clock
-    ) public returns (LinearIncreasingEscrow) {
-        LinearIncreasingEscrow impl = new LinearIncreasingEscrow();
+    ) public returns (LinearIncreasingCurve) {
+        LinearIncreasingCurve impl = new LinearIncreasingCurve();
 
         bytes memory initCalldata = abi.encodeCall(
-            LinearIncreasingEscrow.initialize,
+            LinearIncreasingCurve.initialize,
             (_escrow, _dao, _warmup, _clock)
         );
-        return LinearIncreasingEscrow(address(impl).deployUUPSProxy(initCalldata));
+        return LinearIncreasingCurve(address(impl).deployUUPSProxy(initCalldata));
     }
 
     function _deployVoter(
