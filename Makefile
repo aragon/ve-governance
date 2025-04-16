@@ -82,3 +82,17 @@ deploy-preview-mode :; forge script script/Deploy.s.sol:Deploy \
      --verifier-url https://explorer.mode.network/api\? \
      -vvv
 
+deploy-preview-ethereum-sepolia :; forge script script/Deploy.s.sol:Deploy \
+  --rpc-url $(RPC_URL) \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	-vvvvv	
+
+deploy-ethereum-sepolia :; forge script script/Deploy.s.sol:Deploy \
+	--rpc-url $(RPC_URL) \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	--broadcast \
+	--slow \
+	--verify \
+	--verifier etherscan \
+	-vvvvv
+
