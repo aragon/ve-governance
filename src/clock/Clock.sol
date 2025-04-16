@@ -14,7 +14,7 @@ contract Clock is IClock, DaoAuthorizable, UUPSUpgradeable {
     bytes32 public constant CLOCK_ADMIN_ROLE = keccak256("CLOCK_ADMIN_ROLE");
 
     /// @dev Epoch encompasses a voting and non-voting period
-    uint256 internal constant EPOCH_DURATION = 2 weeks;
+    uint256 internal constant EPOCH_DURATION = 1 weeks;
 
     /// @dev Checkpoint interval is the time between each voting checkpoint
     uint256 internal constant CHECKPOINT_INTERVAL = 1 weeks;
@@ -115,9 +115,7 @@ contract Clock is IClock, DaoAuthorizable, UUPSUpgradeable {
     }
 
     function resolveVotingActive(uint256 timestamp) public pure returns (bool) {
-        bool afterVoteStart = timestamp >= resolveEpochVoteStartTs(timestamp);
-        bool beforeVoteEnd = timestamp < resolveEpochVoteEndTs(timestamp);
-        return afterVoteStart && beforeVoteEnd;
+        return true;
     }
 
     function epochVoteStartsIn() external view returns (uint256) {
