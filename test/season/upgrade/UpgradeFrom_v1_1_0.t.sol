@@ -21,14 +21,14 @@ import {
 } from "@aragon/osx/plugins/governance/multisig/MultisigSetup.sol";
 
 import {
-    SimpleGaugeVoterSetup,
+    SimpleGaugeVoterSetup as TokenGaugeVoterSetup,
     IGaugeVote,
     VotingEscrow,
     Clock,
     Lock,
     QuadraticIncreasingEscrow,
     ExitQueue,
-    SimpleGaugeVoter,
+    SimpleGaugeVoter as TokenGaugeVoter,
     GaugesDaoFactory as GaugesDaoFactoryV1_1_0,
     Deployment,
     DeploymentParameters,
@@ -36,7 +36,7 @@ import {
     GaugePluginSet
 } from "test/v1_1_0/versions.sol";
 import {
-    SimpleGaugeVoter as SimpleGaugeVoterV1_2_0,
+    SimpleGaugeVoter as TokenGaugeVoterSeason,
     Clock as ClockV1_2_0,
     QuadraticIncreasingEscrow as QuadraticIncreasingEscrowV1_2_0
 } from "../versions.sol";
@@ -47,10 +47,11 @@ import {Options} from "@foundry-upgrades/Options.sol";
 contract RegressionV1_1_0__to__V1_2_0 is Test, IGaugeVote {
     GaugesDaoFactoryV1_1_0 factory;
 
-    SimpleGaugeVoterV1_2_0 voterV1_2_0;
+    TokenGaugeVoter voter;
+    TokenGaugeVoterSeason voterV1_2_0;
 
     VotingEscrow escrow;
-    SimpleGaugeVoter voter;
+    
     Clock clock;
     Lock lock;
     ExitQueue queue;
@@ -80,7 +81,7 @@ contract RegressionV1_1_0__to__V1_2_0 is Test, IGaugeVote {
 
         // deconstruct the plugin set
         escrow = VotingEscrow(pluginSet.votingEscrow);
-        voter = SimpleGaugeVoter(pluginSet.plugin);
+        voter = TokenGaugeVoter(pluginSet.plugin);
         clock = Clock(pluginSet.clock);
         lock = Lock(pluginSet.nftLock);
         queue = ExitQueue(pluginSet.exitQueue);
@@ -149,11 +150,11 @@ contract RegressionV1_1_0__to__V1_2_0 is Test, IGaugeVote {
         //Upgrades.validateUpgrade("SimpleGaugeVoter_v1_2_0.sol:SimpleGaugeVoterV1_2_0", options);
 
         options.referenceContract = "Clock.sol";
-        Upgrades.validateUpgrade("Clock_v1_2_0.sol:ClockV1_2_0", options);
+        Upgrades.validateUpgrade("ClockSeason.sol:ClockSeason", options);
 
-        options.referenceContract = "QuadraticIncreasingEscrow.sol";
+        options.referenceContract = "QuadraticIncreasingCurve.sol:QuadraticIncreasingEscrow";
         Upgrades.validateUpgrade(
-            "QuadraticIncreasingEscrow_v1_2_0.sol:QuadraticIncreasingEscrowV1_2_0",
+            "QuadraticIncreasingCurveSeason.sol:QuadraticIncreasingCurveSeason",
             options
         );
     }
@@ -266,15 +267,15 @@ contract RegressionV1_1_0__to__V1_2_0 is Test, IGaugeVote {
         exclude[0] = "lib/osx/packages/contracts/src/core/plugin/PluginUUPSUpgradeable.sol";
         options.exclude = exclude;
 
-        voterV1_2_0 = new SimpleGaugeVoterV1_2_0();
+        voterV1_2_0 = new TokenGaugeVoterSeason();
 
         options.referenceContract = "Clock.sol";
-        Upgrades.upgradeProxy(address(clock), "Clock_v1_2_0.sol:ClockV1_2_0", "", options);
+        Upgrades.upgradeProxy(address(clock), "ClockSeason.sol:ClockSeason", "", options);
 
-        options.referenceContract = "QuadraticIncreasingEscrow.sol";
+        options.referenceContract = "QuadraticIncreasingCurve.sol:QuadraticIncreasingEscrow";
         Upgrades.upgradeProxy(
             address(curve),
-            "QuadraticIncreasingEscrow_v1_2_0.sol:QuadraticIncreasingEscrowV1_2_0",
+            "QuadraticIncreasingCurveSeason.sol:QuadraticIncreasingCurveSeason",
             "",
             options
         );
@@ -301,8 +302,8 @@ contract RegressionV1_1_0__to__V1_2_0 is Test, IGaugeVote {
                 " "
             );
 
-        SimpleGaugeVoterSetup gaugeVoterPluginSetup = new SimpleGaugeVoterSetup(
-            address(new SimpleGaugeVoter()),
+        TokenGaugeVoterSetup gaugeVoterPluginSetup = new TokenGaugeVoterSetup(
+            address(new TokenGaugeVoter()),
             address(new QuadraticIncreasingEscrow()),
             address(new ExitQueue()),
             address(new VotingEscrow()),
