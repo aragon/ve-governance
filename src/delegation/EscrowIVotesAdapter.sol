@@ -200,12 +200,12 @@ contract EscrowIVotesAdapter is
             return;
         }
 
-        // burn is occuring, but we don't need to do anything
-        // as prior to this, `beginWithdrawal` would have been
-        // called, transfering token to escrow contract.
-        if (_to == address(0)) {
-            return;
-        }
+        // // burn is occuring, but we don't need to do anything
+        // // as prior to this, `beginWithdrawal` would have been
+        // // called, transfering token to escrow contract.
+        // if (_to == address(0)) {
+        //     return;
+        // }
 
         IVotingEscrow.LockedBalance memory locked = IVotingEscrow(escrow).locked(_tokenId);
 

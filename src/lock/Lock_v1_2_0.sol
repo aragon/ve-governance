@@ -114,11 +114,13 @@ contract LockV1_2_0 is ILock, ERC721Enumerable, UUPSUpgradeable, DaoAuthorizable
         super._beforeTokenTransfer(_from, _to, _tokenId, _data);
 
         // `burn` can only be called by escrow which only calls
-        // it upon `beginWithdrawal`. This means that before actual
-        // `burn`, it would first transfer the token to escrow contract,
-        // which wouldn't update the checkpoint for escrow delegatee.
-        // See `moveDelegateVotes` in EscrowIVotesAdapter. For gas efficiency,
-        // we skip calling `moveDelegateVotes` in such case.
+        // it upon `beginWithdrawal/merge/split`. 
+        // in `merge/split`, we manually call `moveDelegateVotes`.
+        // in `beginWithdrawal`, `transfer` occurs which already calls this hook.
+        // This means that at the time that `burn` is called, `moveDelegateVotes`
+        // would have already been called, hence there's no need to call it again,
+        // hence we skip if that's the case.
+        
         if (_to == address(0)) {
             return;
         }

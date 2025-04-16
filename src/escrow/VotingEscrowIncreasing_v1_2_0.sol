@@ -370,7 +370,7 @@ contract VotingEscrowV1_2_0 is
         // Note that this function must be called before we
         // empty `lockedFrom`'s amount to 0. `moveDelegateVotes`
         // relies that lock still contains the amount.
-        IEscrowIVotesAdapter(ivotesAdapter).moveDelegateVotes(
+        _moveDelegateVotes(
             IERC721EMB(lockNFT).ownerOf(_from),
             IERC721EMB(lockNFT).ownerOf(_to),
             _from
@@ -441,6 +441,15 @@ contract VotingEscrowV1_2_0 is
         if (amount1 < minDeposit || amount2 < minDeposit) {
             revert AmountTooSmall();
         }
+
+        // Note that this function must be called before we
+        // empty `locked_`'s amount to 0. `moveDelegateVotes`
+        // relies that lock still contains the amount.
+        _moveDelegateVotes(
+            IERC721EMB(lockNFT).ownerOf(_from),
+            address(0),
+            _from
+        );
 
         IERC721EMB(lockNFT).burn(_from);
         _locked[_from] = LockedBalance(0, 0);
@@ -584,10 +593,18 @@ contract VotingEscrowV1_2_0 is
         emit SweepNFT(_to, _tokenId);
     }
 
+    /*//////////////////////////////////////////////////////////////
+                        Moving Delegation Votes Logic
+    //////////////////////////////////////////////////////////////*/
+
     /// @inheritdoc IDelegateMoveVote
     function moveDelegateVotes(address _from, address _to, uint256 _tokenId) public whenNotPaused {
         if (msg.sender != lockNFT) revert OnlyLockNFT();
 
+        _moveDelegateVotes(_from, _to, _tokenId);
+    }
+
+    function _moveDelegateVotes(address _from, address _to, uint256 _tokenId) private {
         IEscrowIVotesAdapter(ivotesAdapter).moveDelegateVotes(_from, _to, _tokenId);
     }
 
