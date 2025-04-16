@@ -145,9 +145,9 @@ contract VotingEscrowV1_2_0 is
         address _clock,
         uint256 _initialMinDeposit
     ) external initializer {
-        __DaoAuthorizableUpgradeable_init(IDAO(_dao));
         __ReentrancyGuard_init();
         __Pausable_init();
+        __DaoAuthorizableUpgradeable_init(IDAO(_dao));
 
         if (IERC20Metadata(_token).decimals() != 18) revert MustBe18Decimals();
         token = _token;
@@ -352,7 +352,7 @@ contract VotingEscrowV1_2_0 is
     }
 
     /// @inheritdoc IMerge
-    function merge(uint256 _from, uint256 _to) public {
+    function merge(uint256 _from, uint256 _to) public whenNotPaused {
         address sender = _msgSender();
 
         if (!isApprovedOrOwner(sender, _from)) revert NotApprovedOrOwner();
@@ -370,7 +370,7 @@ contract VotingEscrowV1_2_0 is
         // Note that this function must be called before we
         // empty `lockedFrom`'s amount to 0. `moveDelegateVotes`
         // relies that lock still contains the amount.
-        IEscrowIVotesAdapter(ivotesAdapter).moveDelegateVotes(
+        _moveDelegateVotes(
             IERC721EMB(lockNFT).ownerOf(_from),
             IERC721EMB(lockNFT).ownerOf(_to),
             _from
@@ -419,7 +419,7 @@ contract VotingEscrowV1_2_0 is
     function split(
         uint256 _from,
         uint256 _value
-    ) public returns (uint256 _tokenId1, uint256 _tokenId2) {
+    ) public whenNotPaused returns (uint256 _tokenId1, uint256 _tokenId2) {
         address sender = _msgSender();
 
         // Only allow split to whitelisted accounts.
@@ -441,6 +441,15 @@ contract VotingEscrowV1_2_0 is
         if (amount1 < minDeposit || amount2 < minDeposit) {
             revert AmountTooSmall();
         }
+
+        // Note that this function must be called before we
+        // empty `locked_`'s amount to 0. `moveDelegateVotes`
+        // relies that lock still contains the amount.
+        _moveDelegateVotes(
+            IERC721EMB(lockNFT).ownerOf(_from),
+            address(0),
+            _from
+        );
 
         IERC721EMB(lockNFT).burn(_from);
         _locked[_from] = LockedBalance(0, 0);
@@ -584,15 +593,23 @@ contract VotingEscrowV1_2_0 is
         emit SweepNFT(_to, _tokenId);
     }
 
+    /*//////////////////////////////////////////////////////////////
+                        Moving Delegation Votes Logic
+    //////////////////////////////////////////////////////////////*/
+
     /// @inheritdoc IDelegateMoveVote
-    function moveDelegateVotes(address _from, address _to, uint256 _tokenId) public {
+    function moveDelegateVotes(address _from, address _to, uint256 _tokenId) public whenNotPaused {
         if (msg.sender != lockNFT) revert OnlyLockNFT();
 
+        _moveDelegateVotes(_from, _to, _tokenId);
+    }
+
+    function _moveDelegateVotes(address _from, address _to, uint256 _tokenId) private {
         IEscrowIVotesAdapter(ivotesAdapter).moveDelegateVotes(_from, _to, _tokenId);
     }
 
     /// @inheritdoc IDelegateUpdateVotingPower
-    function updateVotingPower(address _from, address _to) public {
+    function updateVotingPower(address _from, address _to) public whenNotPaused {
         if (msg.sender != ivotesAdapter) revert OnlyIVotesAdapter();
 
         IAddressGaugeVoter(voter).updateVotingPower(_from, _to);

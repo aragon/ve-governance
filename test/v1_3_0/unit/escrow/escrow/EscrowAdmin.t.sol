@@ -12,7 +12,6 @@ import {
     Lock,
     Clock,
     VotingEscrow,
-    QuadraticIncreasingEscrow,
     ExitQueue,
     SimpleGaugeVoter,
     SimpleGaugeVoterSetup

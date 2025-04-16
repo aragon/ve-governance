@@ -21,7 +21,7 @@ import {
     Clock,
     VotingEscrow,
     Lock,
-    QuadraticIncreasingEscrow,
+    Curve as LinearIncreasingCurve,
     ExitQueue,
     SimpleGaugeVoter,
     SimpleGaugeVoterSetup,
@@ -52,7 +52,7 @@ contract GaugeVotingBase is
 
     Lock nftLock;
     VotingEscrow escrow;
-    QuadraticIncreasingEscrow curve;
+    LinearIncreasingCurve curve;
     SimpleGaugeVoter voter;
     ExitQueue queue;
     EscrowIVotesAdapter ivotesAdapter;
@@ -121,7 +121,7 @@ contract GaugeVotingBase is
         // deploy setup
         voterSetup = new SimpleGaugeVoterSetup(
             voterBase,
-            address(new QuadraticIncreasingEscrow()),
+            address(new LinearIncreasingCurve()),
             address(new ExitQueue()),
             address(new VotingEscrow()),
             address(new Clock()),
@@ -152,7 +152,7 @@ contract GaugeVotingBase is
         // fetch the contracts
         voter = SimpleGaugeVoter(pluginAddress);
         address[] memory helpers = preparedSetupData.helpers;
-        curve = QuadraticIncreasingEscrow(helpers[0]);
+        curve = LinearIncreasingCurve(helpers[0]);
         queue = ExitQueue(helpers[1]);
         escrow = VotingEscrow(helpers[2]);
         clock = Clock(helpers[3]);

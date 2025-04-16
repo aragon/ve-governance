@@ -10,6 +10,9 @@ import {
 import {
     ReentrancyGuardUpgradeable as ReentrancyGuard
 } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import {
+    PausableUpgradeable as Pausable
+} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {
@@ -28,6 +31,7 @@ contract EscrowIVotesAdapter is
     IClockUser,
     ReentrancyGuard,
     IEscrowIVotesAdapter,
+    Pausable,
     PluginUUPSUpgradeable
 {
     using SafeCastUpgradeable for uint256;
@@ -60,13 +64,23 @@ contract EscrowIVotesAdapter is
         _disableInitializers();
     }
 
-    function initialize(address _dao, address _escrow, address _clock) external initializer {
+    function initialize(address _dao, address _escrow, address _clock, bool _startPaused) external initializer {
         __PluginUUPSUpgradeable_init(IDAO(_dao));
         __ReentrancyGuard_init();
         escrow = _escrow;
         clock = _clock;
 
+        if(_startPaused) _pause();
+
         maxTime = IClock(clock).epochDuration() * CurveConstantLib.MAX_EPOCHS;
+    }
+
+    function pause() external auth(DELEGATION_ADMIN_ROLE) {
+        _pause();
+    }
+
+    function unpause() external auth(DELEGATION_ADMIN_ROLE) {
+        _unpause();
     }
 
     function setAutoDelegation(bool _enabled) external {
@@ -76,7 +90,7 @@ contract EscrowIVotesAdapter is
         emit AutoDelegationSet(sender, _enabled);
     }
 
-    function delegate(address _delegatee) public {
+    function delegate(address _delegatee) public whenNotPaused {
         address sender = _msgSender();
 
         if (numberOfDelegatedTokens[sender] != 0) {
@@ -95,7 +109,7 @@ contract EscrowIVotesAdapter is
         emit DelegateChanged(sender, oldDelegatee, _delegatee);
     }
 
-    function delegate(uint256[] memory _tokenIds) public {
+    function delegate(uint256[] memory _tokenIds) public whenNotPaused {
         address sender = _msgSender();
         address delegatee = delegates(sender);
 
@@ -134,7 +148,7 @@ contract EscrowIVotesAdapter is
         emit TokensDelegated(sender, delegatee, _tokenIds);
     }
 
-    function undelegate(uint256[] memory _tokenIds) public {
+    function undelegate(uint256[] memory _tokenIds) public whenNotPaused {
         address sender = _msgSender();
         address delegatee = delegates(sender);
 
@@ -174,7 +188,7 @@ contract EscrowIVotesAdapter is
         emit TokensUndelegated(sender, delegatee, _tokenIds);
     }
 
-    function moveDelegateVotes(address _from, address _to, uint256 _tokenId) external {
+    function moveDelegateVotes(address _from, address _to, uint256 _tokenId) external whenNotPaused {
         if (_msgSender() != escrow) {
             revert OnlyEscrow();
         }
@@ -185,14 +199,7 @@ contract EscrowIVotesAdapter is
         if (_from == _to || fromDelegatee == toDelegatee) {
             return;
         }
-
-        // burn is occuring, but we don't need to do anything
-        // as prior to this, `beginWithdrawal` would have been
-        // called, transfering token to escrow contract.
-        if (_to == address(0)) {
-            return;
-        }
-
+        
         IVotingEscrow.LockedBalance memory locked = IVotingEscrow(escrow).locked(_tokenId);
 
         // mint is occuring and the receiver already has a delegatee.
@@ -234,7 +241,7 @@ contract EscrowIVotesAdapter is
                         Checkpoint Functions
     //////////////////////////////////////////////////////////////*/
 
-    function checkpointTransition(address _delegatee, uint256 _transitionCount) external {
+    function checkpointTransition(address _delegatee, uint256 _transitionCount) external whenNotPaused {
         _checkpoint(0, 0, _delegatee, _transitionCount);
     }
 
@@ -431,7 +438,7 @@ contract EscrowIVotesAdapter is
         elapsed = elapsed > maxTime ? maxTime : elapsed;
 
         int256 amount = uint256(_locked.amount).toInt256();
-       
+
         int256 slope = amount * CurveConstantLib.SHARED_LINEAR_COEFFICIENT;
         int256 bias = slope *
             int256(elapsed) +

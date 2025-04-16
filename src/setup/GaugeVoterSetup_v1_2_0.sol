@@ -16,7 +16,7 @@ import {PluginSetup} from "@aragon/osx/framework/plugin/setup/PluginSetup.sol";
 import {AddressGaugeVoter as GaugeVoter} from "@voting/AddressGaugeVoter.sol";
 import {VotingEscrowV1_2_0 as VotingEscrow} from "@escrow/VotingEscrowIncreasing_v1_2_0.sol";
 import {ExitQueue} from "@queue/ExitQueue.sol";
-import {LinearIncreasingEscrowNoSupply as Curve} from "@curve/LinearIncreasingCurveNoSupply.sol";
+import {LinearIncreasingCurveNoSupply as Curve} from "@curve/LinearIncreasingCurveNoSupply.sol";
 import {ClockV1_2_0 as Clock} from "@clock/Clock_v1_2_0.sol";
 import {LockV1_2_0 as Lock} from "@lock/Lock_v1_2_0.sol";
 import {EscrowIVotesAdapter} from "@delegation/EscrowIVotesAdapter.sol";
@@ -135,7 +135,7 @@ contract GaugeVoterSetupV1_2_0 is PluginSetup {
         );
 
         deps.ivotesAdapter = ivotesAdapterBase.deployUUPSProxy(
-            abi.encodeCall(EscrowIVotesAdapter.initialize, (_dao, deps.escrow, deps.clock))
+            abi.encodeCall(EscrowIVotesAdapter.initialize, (_dao, deps.escrow, deps.clock, false))
         );
 
         // deploy the voting contract (plugin)
