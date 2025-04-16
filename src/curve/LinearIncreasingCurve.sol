@@ -54,6 +54,7 @@ contract LinearIncreasingCurve is
     address public clock;
 
     /// @notice tokenId => latest index: incremented on a per-tokenId basis
+    /// @custom:oz-renamed-from tokenPointIntervals
     mapping(uint256 => uint256) public tokenPointLatestIndex;
 
     /// @notice The warmup period for the curve

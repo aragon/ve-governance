@@ -17,7 +17,6 @@ import "@helpers/OSxHelpers.sol";
 import {
     GaugeVotingBase,
     VotingEscrow,
-    QuadraticIncreasingEscrow,
     ExitQueue,
     SimpleGaugeVoter,
     SimpleGaugeVoterSetup,

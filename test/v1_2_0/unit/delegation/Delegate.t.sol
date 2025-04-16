@@ -18,7 +18,7 @@ contract TestDelegate is Base {
     /*//////////////////////////////////////////////////////////////
                       IVotes Delegate
     //////////////////////////////////////////////////////////////*/
-
+    
     function test_Sets_Delegatee_Without_Delegating_Tokens() public {
         vm.expectEmit();
         emit DelegateChanged(sender, address(0), alice);
@@ -63,6 +63,15 @@ contract TestDelegate is Base {
     /*//////////////////////////////////////////////////////////////
                     Delegate(uint256[] tokenIds)
     //////////////////////////////////////////////////////////////*/
+    function test_shouldRevertIfPaused() public {
+        dg.delegate(alice);
+
+        dg.pause();
+        
+        vm.expectRevert("Pausable: paused");
+        dg.delegate(getIds(1));
+    }
+    
     function testRevert_IfNoDelegateeIsSet() public {
         vm.expectRevert(DelegateeNotSet.selector);
 

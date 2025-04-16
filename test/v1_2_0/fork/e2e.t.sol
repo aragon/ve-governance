@@ -15,7 +15,7 @@ import {
     VotingEscrow,
     Clock,
     Lock,
-    LinearIncreasingEscrow,
+    Curve as LinearIncreasingCurve,
     ExitQueue,
     GaugeVoter,
     GaugeVoterSetup,
@@ -86,7 +86,7 @@ contract TestE2EV1_2_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
     // these only reference the FIRST set of contracts, if deploying multiple
     // fetch from the factory
     GaugeVoter voter;
-    LinearIncreasingEscrow curve;
+    LinearIncreasingCurve curve;
     ExitQueue queue;
     VotingEscrow escrow;
     Clock clock;
@@ -164,7 +164,7 @@ contract TestE2EV1_2_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
         GaugePluginSet memory pluginSet = deployment.gaugeVoterPluginSets[0];
 
         voter = GaugeVoter(pluginSet.plugin);
-        curve = LinearIncreasingEscrow(pluginSet.curve);
+        curve = LinearIncreasingCurve(pluginSet.curve);
         queue = ExitQueue(pluginSet.exitQueue);
         escrow = VotingEscrow(pluginSet.votingEscrow);
         clock = Clock(pluginSet.clock);

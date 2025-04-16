@@ -60,8 +60,6 @@ import {DeployGaugesV1_3_0 as DeployGauges} from "script/deploy/DeployGauges_v1_
 // deprecated but to avoid rewriting all tests
 // housekeeping: remove these as we go
 import {
-    Curve as QuadraticIncreasingEscrow,
-    Curve as LinearIncreasingEscrow,
     GaugeVoter as SimpleGaugeVoter,
     GaugeVoterSetupV1_3_0 as SimpleGaugeVoterSetup,
     IGaugeVoterSetupParams as ISimpleGaugeVoterSetupParams
