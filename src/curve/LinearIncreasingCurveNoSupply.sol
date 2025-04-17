@@ -31,7 +31,7 @@ import {
 } from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
 
 /// @title Linear Increasing Escrow
-contract LinearIncreasingEscrowNoSupply is
+contract LinearIncreasingCurveNoSupply is
     IEscrowCurve,
     IClockUser,
     ReentrancyGuard,
@@ -53,6 +53,7 @@ contract LinearIncreasingEscrowNoSupply is
     address public clock;
 
     /// @notice tokenId => latest index: incremented on a per-tokenId basis
+    /// @custom:oz-renamed-from tokenPointIntervals
     mapping(uint256 => uint256) public tokenPointLatestIndex;
 
     /// @notice The warmup period for the curve

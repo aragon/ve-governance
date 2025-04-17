@@ -8,6 +8,13 @@ contract TestMoveDelegateVotes is Base {
         super.setUp();
     }
 
+    function test_shouldRevertIfPaused() public {
+        dg.pause();
+        
+        vm.expectRevert("Pausable: paused");
+        dg.moveDelegateVotes(alice, bob, 1);
+    }
+
     function testRevert_IfNotCalledByEscrow() public {
         vm.expectRevert(OnlyEscrow.selector);
         dg.moveDelegateVotes(alice, bob, 1);
