@@ -83,9 +83,19 @@ The following files are not in scope:
 | `voting`       | IGaugeVoter.sol                    | ❌       | Interface                  |
 | `voting`       | ITokenGaugeVoter.sol               | ❌       | Interface                  |
 
+## Understanding Versioned changes
+
+Aragon uses a version system within the above repo that allows us to manage client deployments with different builds. Below are the changes version to version in each contract. When determining an audit quote we kindly request that the LoC figure takes into account the diffs between contracts, and are happy to provide said diffs if neccessary. Where logical, we provide named versions of the contracts, but a version number is used to denote compatible versions of the same contract.
+
+For the Setup contracts, Gauge DAO Factories and the Deploy/Upgrade scripts, incremental versions simply denote bundles of contracts that are deployed together, specifically:
+
+- Base: TokenGaugeVoter, Escrow Contract w. QuadraticIncreasingCurve (no onchain supply tracking), no merge, split nor delegation.
+- 1.1.0: Only change is the 1.1.0 of the voting contract which allows exits during voting windows
+- 1.2.0: Deploys Linear Escrow Curve with Merge and Split but without on chain checkpointing/total supply tracking, AddressGaugeVoter and delegation support, locks now start at current week instead of upcoming week
+- 1.3.0: Above but with onchain total supply in the Curve.
+
 ## Understanding the contract flow
 
 Please see the [README.md](https://github.com/aragon/ve-governance/blob/audit-3/scope/README.md#contracts-overview) for specifics
 
 ![image](https://github.com/user-attachments/assets/476f4c08-4673-4ff4-b98e-f3ecaf404c06)
-
