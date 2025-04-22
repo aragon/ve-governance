@@ -144,6 +144,23 @@ deploy-mode-sepolia :; forge script DeployGauges \
 	--verifier-url https://sepolia.explorer.mode.network/api\? \
 	-vvvvv
 
+
+
+deploy-preview-1-3-sepolia :; forge script script/deploy/DeployGauges_v1_3_0.s.sol:DeployGaugesV1_3_0 \
+	--rpc-url $(RPC_URL) \
+	-vvvvv
+
+deploy-1-3-sepolia :; forge script script/deploy/DeployGauges_v1_3_0.s.sol:DeployGaugesV1_3_0 \
+	--rpc-url $(RPC_URL) \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	--broadcast \
+	--verify \
+	--slow \
+	--etherscan-api-key $(ETHERSCAN_API_KEY) \
+	-vvvvv
+
+
+
 ### Other scripts ###
 seed-preview-mode-sepolia :; forge script SeedState \
 	--rpc-url https://sepolia.mode.network \
@@ -170,4 +187,8 @@ deploy-ethereum-sepolia :; forge script DeployGauges \
 	--verify \
 	--verifier blockscout \
 	--etherscan-api-key $(ETHERSCAN_API_KEY) \
+	-vvvvv
+
+get-deployment-values-sepolia :; forge script script/utils/GetDeploymentValues_v1_2_0.sol:GetFactoryValuesV1_2_0 \
+	--rpc-url $(RPC_URL) \
 	-vvvvv
