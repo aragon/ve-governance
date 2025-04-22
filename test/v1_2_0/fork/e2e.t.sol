@@ -847,7 +847,6 @@ contract TestE2EV1_2_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
 
                 vm.startPrank(alice);
                 {
-                    ivotesAdapter.setAutoDelegation(true);
                     ivotesAdapter.delegate(alice);
                     voter.vote(votes);
                 }
@@ -859,7 +858,6 @@ contract TestE2EV1_2_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
 
                 vm.startPrank(bob);
                 {
-                    ivotesAdapter.setAutoDelegation(true);
                     ivotesAdapter.delegate(bob);
                     voter.vote(votes);
                 }

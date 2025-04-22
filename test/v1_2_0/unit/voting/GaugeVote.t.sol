@@ -47,7 +47,6 @@ contract TestGaugeVote is GaugeVotingBase {
         vm.startPrank(owner);
         {
             // delegate to himself...
-            ivotesAdapter.setAutoDelegation(true);
             ivotesAdapter.delegate(owner);
 
             token.approve(address(escrow), lockDeposit);
@@ -410,7 +409,6 @@ contract TestGaugeVote is GaugeVotingBase {
         uint tokenIdA;
         vm.startPrank(personA);
         {
-            ivotesAdapter.setAutoDelegation(true);
             ivotesAdapter.delegate(personA);
             token.approve(address(escrow), 1000 ether);
             tokenIdA = escrow.createLock(1000 ether);
@@ -422,7 +420,6 @@ contract TestGaugeVote is GaugeVotingBase {
         uint tokenIdB;
         vm.startPrank(personB);
         {
-            ivotesAdapter.setAutoDelegation(true);
             ivotesAdapter.delegate(personB);
             token.approve(address(escrow), 1000 ether);
             tokenIdB = escrow.createLock(1000 ether);

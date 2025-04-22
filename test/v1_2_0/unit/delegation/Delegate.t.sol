@@ -11,14 +11,14 @@ contract TestDelegate is Base {
     event DelegateChanged(address indexed from, address indexed to, address indexed delegate);
 
     modifier AutoDelegationEnabled() {
-        dg.setAutoDelegation(true);
+        dg.setAutoDelegationDisabled(false);
         _;
     }
 
     /*//////////////////////////////////////////////////////////////
                       IVotes Delegate
     //////////////////////////////////////////////////////////////*/
-    
+
     function test_Sets_Delegatee_Without_Delegating_Tokens() public {
         vm.expectEmit();
         emit DelegateChanged(sender, address(0), alice);
@@ -71,7 +71,7 @@ contract TestDelegate is Base {
         vm.expectRevert("Pausable: paused");
         dg.delegate(getIds(1));
     }
-    
+
     function testRevert_IfNoDelegateeIsSet() public {
         vm.expectRevert(DelegateeNotSet.selector);
 

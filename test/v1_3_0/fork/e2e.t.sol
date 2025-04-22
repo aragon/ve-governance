@@ -853,7 +853,6 @@ contract TestE2EV1_3_0 is
 
                 vm.startPrank(alice);
                 {
-                    ivotesAdapter.setAutoDelegation(true);
                     ivotesAdapter.delegate(alice);
                     voter.vote(votes);
                 }
@@ -865,7 +864,6 @@ contract TestE2EV1_3_0 is
 
                 vm.startPrank(bob);
                 {
-                    ivotesAdapter.setAutoDelegation(true);
                     ivotesAdapter.delegate(bob);
                     voter.vote(votes);
                 }
