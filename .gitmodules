@@ -28,3 +28,6 @@ branch = v4.9.2
 [submodule "lib/multisig-plugin"]
 	path = lib/multisig-plugin
 	url = https://github.com/aragon/multisig-plugin
+[submodule "lib/osx-commons"]
+	path = lib/osx-commons
+	url = https://github.com/aragon/osx-commons
