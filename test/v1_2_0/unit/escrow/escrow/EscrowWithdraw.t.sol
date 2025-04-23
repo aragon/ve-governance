@@ -58,7 +58,6 @@ contract TestWithdraw is IEscrowCurveTokenStorage, IGaugeVote, ITicket, EscrowBa
             vm.warp(block.timestamp + 2 weeks + 1 hours);
 
             // delegate to himself
-            ivotesAdapter.setAutoDelegation(true);
             ivotesAdapter.delegate(_who);
 
             // make a vote
@@ -140,7 +139,6 @@ contract TestWithdraw is IEscrowCurveTokenStorage, IGaugeVote, ITicket, EscrowBa
             vm.warp(block.timestamp + 2 weeks + 1 hours);
 
             // delegate to himself
-            ivotesAdapter.setAutoDelegation(true);
             ivotesAdapter.delegate(_who);
 
             // make a vote
@@ -201,7 +199,6 @@ contract TestWithdraw is IEscrowCurveTokenStorage, IGaugeVote, ITicket, EscrowBa
             vm.warp(block.timestamp + 2 weeks);
 
             // delegate to himself
-            ivotesAdapter.setAutoDelegation(true);
             ivotesAdapter.delegate(_who);
 
             // make a vote

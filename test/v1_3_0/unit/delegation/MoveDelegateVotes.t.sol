@@ -27,10 +27,11 @@ contract TestMoveDelegateVotes is Base {
         {
             // make Alice delegate with tokenId = 1 and 2
             vm.startPrank(tokenOwner);
+            uint256[] memory ids = getIds(1, 2);
+            _mockOwnedTokens(tokenOwner, ids);
+            _mockLocked(ids[0], 10, start);
+            _mockLocked(ids[1], 15, start);
             dg.delegate(alice);
-            _mockLocked(1, 10, start);
-            _mockLocked(2, 15, start);
-            dg.delegate(getIds(1, 2));
             vm.stopPrank();
         }
 
@@ -50,8 +51,11 @@ contract TestMoveDelegateVotes is Base {
 
     function test_OnlyUpdatesToDelegateeWhenFromIsNotSet() public {
         address tokenReceiver = address(567);
-        vm.prank(tokenReceiver);
+
+        vm.startPrank(tokenReceiver);
+        dg.setAutoDelegationDisabled(true);
         dg.delegate(bob);
+        vm.stopPrank();
 
         _mockLocked(1, 10, weekStartTs((block.timestamp)));
 
@@ -74,15 +78,20 @@ contract TestMoveDelegateVotes is Base {
         {
             // make Alice delegatee with tokenId = 1 and 2
             vm.startPrank(tokenOwner);
+            uint256[] memory ids = getIds(1, 2);
+            _mockOwnedTokens(tokenOwner, ids);
+            _mockLocked(ids[0], 10, start);
+            _mockLocked(ids[1], 15, start);
             dg.delegate(alice);
-            dg.delegate(getIds(1, 2));
             vm.stopPrank();
         }
 
         {
             // make Bob delegatee
-            vm.prank(tokenReceiver);
+            vm.startPrank(tokenReceiver);
+            dg.setAutoDelegationDisabled(true);
             dg.delegate(bob);
+            vm.stopPrank();
         }
 
         uint256 token1Bias = bias(10, block.timestamp - start);

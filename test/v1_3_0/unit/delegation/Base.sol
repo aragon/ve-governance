@@ -84,6 +84,11 @@ contract Base is
             _where: address(dg),
             _permissionId: dg.DELEGATION_ADMIN_ROLE()
         });
+
+        // almost all tests need delegation to be disabled by default 
+        // to test thoroughly the behaviour of the functions.
+        // So we set it to true.
+        dg.setAutoDelegationDisabled(true);
     }
 
     function _deployDAO() internal {
@@ -130,13 +135,13 @@ contract Base is
         return EscrowIVotesAdapterA(address(impl).deployUUPSProxy(initCalldata));
     }
 
-    function getIds(uint256 _tokenId) internal view returns (uint256[] memory) {
+    function getIds(uint256 _tokenId) internal pure returns (uint256[] memory) {
         uint256[] memory ids = new uint256[](1);
         ids[0] = _tokenId;
         return ids;
     }
 
-    function getIds(uint256 _tokenId1, uint256 _tokenId2) internal view returns (uint256[] memory) {
+    function getIds(uint256 _tokenId1, uint256 _tokenId2) internal pure returns (uint256[] memory) {
         uint256[] memory ids = new uint256[](2);
         ids[0] = _tokenId1;
         ids[1] = _tokenId2;

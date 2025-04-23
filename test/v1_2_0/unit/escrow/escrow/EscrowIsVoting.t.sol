@@ -44,6 +44,7 @@ contract TestIsVoting is IEscrowCurveTokenStorage, EscrowBase {
         nftLock.mint(address(this), tokenId);
 
         // address(this) is an owner. bob becomes a delegatee.
+        ivotesAdapter.setAutoDelegationDisabled(true);
         ivotesAdapter.delegate(bob);
         uint256[] memory ids = new uint256[](1);
         ids[0] = tokenId;

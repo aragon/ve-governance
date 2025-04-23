@@ -52,7 +52,7 @@ contract EscrowIVotesAdapter is
 
     mapping(uint256 => bool) public tokenIsDelegated;
     mapping(address => uint) public numberOfDelegatedTokens;
-    mapping(address => bool) public autoDelegationEnabled;
+    mapping(address => bool) public autoDelegationDisabled;
 
     uint256 private maxTime;
 
@@ -88,17 +88,21 @@ contract EscrowIVotesAdapter is
         _unpause();
     }
 
-    function setAutoDelegation(bool _enabled) external {
+    /// @dev Note that by default, auto delegation of tokenIds is turned on.
+    function setAutoDelegationDisabled(bool _disabled) external {
         address sender = _msgSender();
 
-        autoDelegationEnabled[sender] = _enabled;
-        emit AutoDelegationSet(sender, _enabled);
+        autoDelegationDisabled[sender] = _disabled;
+        emit AutoDelegationSet(sender, _disabled);
     }
 
     /*//////////////////////////////////////////////////////////////
                         Delegate Functions
     //////////////////////////////////////////////////////////////*/
 
+    /// @param _delegatee The new delegatee address.
+    /// @dev If auto delegation is not disabled, it will delegate all token ids that sender has.
+    ///      Note that sender must first undelegate all token ids before calling this function.
     function delegate(address _delegatee) public whenNotPaused {
         address sender = _msgSender();
 
@@ -110,7 +114,7 @@ contract EscrowIVotesAdapter is
 
         delegatees_[sender] = _delegatee;
 
-        if (autoDelegationEnabled[sender]) {
+        if (!autoDelegationDisabled[sender]) {
             uint256[] memory tokenIds = VotingEscrow(escrow).ownedTokens(sender);
             _delegate(sender, _delegatee, tokenIds);
         }

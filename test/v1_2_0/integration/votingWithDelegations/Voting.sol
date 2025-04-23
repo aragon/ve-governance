@@ -37,7 +37,6 @@ contract TestVotingWithDelegation is EscrowBase {
         uint256 start = weekStartTs((block.timestamp));
 
         // make tokenOwner self delegatee
-        ivotesAdapter.setAutoDelegation(true);
         ivotesAdapter.delegate(tokenOwner);
 
         assertEq(ivotesAdapter.numberOfDelegatedTokens(tokenOwner), 2);
@@ -68,7 +67,6 @@ contract TestVotingWithDelegation is EscrowBase {
         uint256 start = weekStartTs((block.timestamp));
 
         // make tokenOwner self delegatee
-        ivotesAdapter.setAutoDelegation(true);
         ivotesAdapter.delegate(alice);
 
         assertEq(ivotesAdapter.numberOfDelegatedTokens(tokenOwner), 2);
@@ -103,14 +101,17 @@ contract TestVotingWithDelegation is EscrowBase {
 
         {
             // make Alice delegatee with tokenId = 1 and 2
+            ivotesAdapter.setAutoDelegationDisabled(true);
             ivotesAdapter.delegate(alice);
             ivotesAdapter.delegate(tokenIds);
         }
 
         {
             // make Bob delegatee
-            vm.prank(tokenReceiver);
+            vm.startPrank(tokenReceiver);
+            ivotesAdapter.setAutoDelegationDisabled(true);
             ivotesAdapter.delegate(bob);
+            vm.stopPrank();
         }
 
         assertEq(ivotesAdapter.numberOfDelegatedTokens(tokenOwner), 2);
