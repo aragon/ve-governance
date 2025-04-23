@@ -1,6 +1,6 @@
 pragma solidity ^0.8.17;
 
-import {Base} from "./Base.sol";
+import {Base, EscrowVotingPowerMock, EscrowIVotesAdapterA} from "./Base.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 
 contract TestDelegate is Base {
@@ -13,6 +13,23 @@ contract TestDelegate is Base {
     modifier AutoDelegationEnabled() {
         dg.setAutoDelegationDisabled(false);
         _;
+    }
+
+    function test_shouldRevertIfAlreadyInitialized() public {
+        vm.expectRevert("Initializable: contract is already initialized");
+        dg.initialize(address(0), address(0), address(0), false);
+    }
+
+    function test_shouldMakeContractPausedAfterInitialization() public {
+        escrow = new EscrowVotingPowerMock();
+        EscrowIVotesAdapterA dgAdapter = _deployEscrowIVotesAdapter(
+            address(dao),
+            address(clock),
+            address(escrow),
+            true
+        );
+
+        assertTrue(dgAdapter.paused());
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -63,12 +80,17 @@ contract TestDelegate is Base {
     /*//////////////////////////////////////////////////////////////
                     Delegate(uint256[] tokenIds)
     //////////////////////////////////////////////////////////////*/
-    function test_shouldRevertIfPaused() public {
+    function test_shouldRevertIfPausedAndSucceedIfUnpaused() public {
         dg.delegate(alice);
 
         dg.pause();
         
         vm.expectRevert("Pausable: paused");
+        dg.delegate(getIds(1));
+
+        // Once unpaused, it should work again.
+        dg.unpause();
+        _mockLocked(singleId[0], 10, weekStartTs(block.timestamp));
         dg.delegate(getIds(1));
     }
 

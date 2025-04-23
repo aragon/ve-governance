@@ -164,12 +164,15 @@ contract TestVPAndCheckpoints is Base {
                      Transition Checkpoints
     //////////////////////////////////////////////////////////////*/
     
-    function test_shouldRevertIfPaused() public {
+    function test_shouldRevertIfPausedAndSucceedIfUnpaused() public {
         dg.pause();
         
         vm.expectRevert("Pausable: paused");
-        
+
         // transition checkpoints
+        dg.checkpointTransition(alice, 3);
+
+        dg.unpause();
         dg.checkpointTransition(alice, 3);
     }
 

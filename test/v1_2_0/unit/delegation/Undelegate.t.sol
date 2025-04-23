@@ -18,12 +18,18 @@ contract TestUndelegate is Base {
         _;
     }
 
-    function test_shouldRevertIfPaused() public {
+    function test_shouldRevertIfPausedAndSucceedIfUnpaused() public {
         dg.delegate(alice);
 
         dg.pause();
-        
         vm.expectRevert("Pausable: paused");
+        dg.undelegate(getIds(1));
+
+        _mockLocked(1, 10, weekStartTs(block.timestamp));
+        dg.unpause();
+        dg.delegate(getIds(1));
+
+        // Once unpaused, it should work again.
         dg.undelegate(getIds(1));
     }
 

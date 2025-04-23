@@ -8,10 +8,15 @@ contract TestMoveDelegateVotes is Base {
         super.setUp();
     }
 
-    function test_shouldRevertIfPaused() public {
+    function test_shouldRevertIfPausedAndSucceedIfUnpaused() public {
         dg.pause();
         
         vm.expectRevert("Pausable: paused");
+        dg.moveDelegateVotes(alice, bob, 1);
+
+        // Once unpaused, it should work again.
+        dg.unpause();
+        vm.prank(address(escrow));
         dg.moveDelegateVotes(alice, bob, 1);
     }
 

@@ -68,7 +68,7 @@ contract Base is
         _deployDAO();
         clock = _deployClock(address(dao));
         escrow = new EscrowVotingPowerMock();
-        dg = _deployEscrowIVotesAdapter(address(dao), address(clock), address(escrow));
+        dg = _deployEscrowIVotesAdapter(address(dao), address(clock), address(escrow), false);
         voter = _deployVoter(address(dao), address(clock), address(escrow), address(dg));
 
         _mockApprovedOwner(true);
@@ -85,7 +85,7 @@ contract Base is
             _permissionId: dg.DELEGATION_ADMIN_ROLE()
         });
 
-        // almost all tests need delegation to be disabled by default 
+        // almost all tests need delegation to be disabled by default
         // to test thoroughly the behaviour of the functions.
         // So we set it to true.
         dg.setAutoDelegationDisabled(true);
@@ -123,14 +123,14 @@ contract Base is
     function _deployEscrowIVotesAdapter(
         address _dao,
         address _clock,
-        address _escrow
+        address _escrow,
+        bool _startPaused
     ) public returns (EscrowIVotesAdapterA) {
         EscrowIVotesAdapterA impl = new EscrowIVotesAdapterA();
-        bool startPaused = false;
-        
+
         bytes memory initCalldata = abi.encodeCall(
             EscrowIVotesAdapter.initialize,
-            (_dao, _escrow, _clock, startPaused)
+            (_dao, _escrow, _clock, _startPaused)
         );
         return EscrowIVotesAdapterA(address(impl).deployUUPSProxy(initCalldata));
     }
