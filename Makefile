@@ -189,6 +189,6 @@ deploy-ethereum-sepolia :; forge script DeployGauges \
 	--etherscan-api-key $(ETHERSCAN_API_KEY) \
 	-vvvvv
 
-get-deployment-values-sepolia :; forge script script/utils/GetDeploymentValues_v1_2_0.sol:GetFactoryValuesV1_2_0 \
+get-deployment-values-sepolia-1-2 :; forge script script/utils/GetDeploymentValues_v1_2_0.sol:GetFactoryValuesV1_2_0 \
 	--rpc-url $(RPC_URL) \
 	-vvvvv
