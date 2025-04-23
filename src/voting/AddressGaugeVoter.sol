@@ -251,25 +251,27 @@ contract AddressGaugeVoter is
         voteData.gaugesVotedFor = new address[](0);
     }
 
+    // Giorgi delegated to himself tokenId = 5, 7 and then voted (vp = 500)
+    // Giorgi undelegated to himself tokenId = 5, 7.
+
     function _updateVotingPower(address _account) internal {
-        if (!enableUpdateVotingPowerHook) revert UpdateVotingPowerHookNotEnabled();
-        // Skip as `_account` hasn't voted so no need to update it.
+        // Skip as `_account` hasn't voted yet so nothing to update.
         if (!isVoting(_account)) return;
 
         uint256 epoch = getWriteEpochId();
         AddressVoteData storage voteData = epochTokenVoteData[epoch][_account];
 
-        // In case no pastVotes exist for an account,
-        // skip as there's nothing to update.
-        address[] storage pastVotes = voteData.gaugesVotedFor;
-        if (pastVotes.length == 0) return;
-
         uint256 votingPower = IVotes(ivotesAdapter).getVotes(_account);
 
-        // If the new voting power is less than the used voting power
-        // then we can re-cast the votes otherwise we skip.
-        if (voteData.usedVotingPower < votingPower) return;
+        // If the new voting power is bigger than already voted one, 
+        // skip to avoid gas costs + don't allow to re-cast the votes
+        // automatically as user might want to vote with new voting 
+        // power for different gauge and weights this time.
+        if(votingPower > voteData.usedVotingPower) return;
 
+        // `_account` has already voted in which case 
+        // `pastVotes` will be non-zero.
+        address[] storage pastVotes = voteData.gaugesVotedFor;
         GaugeVote[] memory newVoteData = new GaugeVote[](pastVotes.length);
 
         // cast new votes again.
@@ -279,11 +281,14 @@ contract AddressGaugeVoter is
             newVoteData[i] = GaugeVote(_votes, gauge);
         }
 
-        // Note that even if votingPower is 0, this still records.
-        uint256 totalWeight = _getTotalWeight(newVoteData);
-
         // Reset all votes of `_account` to zero.
         _reset(_account);
+
+        // Since we don't allow to re-cast the votes automatically 
+        // when new voting power is bigger, it's safe to assume that 
+        // `_reset`, which removes all user's weights and gauges 
+        // that he voted before, is enough, so we skip here.
+        if(votingPower == 0) return;
 
         // Re-cast the votes with the new voting power.
         for (uint256 i = 0; i < newVoteData.length; i++) {
@@ -292,7 +297,7 @@ contract AddressGaugeVoter is
                 epoch,
                 _account,
                 votingPower,
-                _normalizedWeight(newVoteData[i].weight, totalWeight),
+                _normalizedWeight(newVoteData[i].weight, _getTotalWeight(newVoteData)),
                 voteData
             );
         }
@@ -301,6 +306,8 @@ contract AddressGaugeVoter is
     }
 
     function updateVotingPower(address _from, address _to) external onlyEscrow {
+        if (!enableUpdateVotingPowerHook) revert UpdateVotingPowerHookNotEnabled();
+
         // update the voting power of the sender
         _updateVotingPower(_from);
 

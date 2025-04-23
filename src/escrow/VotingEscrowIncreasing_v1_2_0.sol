@@ -357,7 +357,6 @@ contract VotingEscrowV1_2_0 is
 
         if (!isApprovedOrOwner(sender, _from)) revert NotApprovedOrOwner();
         if (!isApprovedOrOwner(sender, _to)) revert NotApprovedOrOwner();
-
         if (_from == _to) revert SameNFT();
 
         LockedBalance memory oldLockedFrom = _locked[_from];
@@ -379,16 +378,16 @@ contract VotingEscrowV1_2_0 is
         // Update for `_from`.
         IERC721EMB(lockNFT).burn(_from);
         _locked[_from] = LockedBalance(0, 0);
-        LockedBalance memory newLockedFrom = LockedBalance(0, oldLockedFrom.start);
-
-        _checkpoint(_from, oldLockedFrom, newLockedFrom);
+        _checkpoint(
+            _from, 
+            oldLockedFrom, 
+            LockedBalance(0, oldLockedFrom.start)
+        );
 
         // Update for `_to`.
         oldLockedFrom.start = oldLockedTo.start;
         _checkpoint(_to, oldLockedTo, oldLockedFrom);
-
         uint208 newLockedAmount = oldLockedFrom.amount + oldLockedTo.amount;
-
         _locked[_to] = LockedBalance(newLockedAmount, oldLockedTo.start);
 
         emit Merged(sender, _from, _to, oldLockedFrom.amount, oldLockedTo.amount, newLockedAmount);
@@ -430,7 +429,6 @@ contract VotingEscrowV1_2_0 is
         LockedBalance memory locked_ = _locked[_from];
 
         if (!isApprovedOrOwner(sender, _from)) revert NotApprovedOrOwner();
-
         if (_value == 0) revert ZeroAmount();
         if (locked_.amount <= _value) revert SplitAmountTooBig();
 

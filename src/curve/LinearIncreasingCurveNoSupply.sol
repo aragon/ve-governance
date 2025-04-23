@@ -260,8 +260,7 @@ contract LinearIncreasingCurveNoSupply is
         // Note that very first point is saved at index 1.
         TokenPoint memory originalPoint = _tokenPointHistory[_tokenId][1];
 
-        uint256 maxTime_ = maxTime();
-        uint256 end = originalPoint.checkpointTs + maxTime_;
+        uint256 end = originalPoint.checkpointTs + maxTime();
 
         // If the point was created before the upgrade:
         //    it will have `checkpointTs` greater than `writtenTs`.

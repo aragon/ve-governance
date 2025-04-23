@@ -64,13 +64,18 @@ contract EscrowIVotesAdapter is
         _disableInitializers();
     }
 
-    function initialize(address _dao, address _escrow, address _clock, bool _startPaused) external initializer {
+    function initialize(
+        address _dao,
+        address _escrow,
+        address _clock,
+        bool _startPaused
+    ) external initializer {
         __PluginUUPSUpgradeable_init(IDAO(_dao));
         __ReentrancyGuard_init();
         escrow = _escrow;
         clock = _clock;
 
-        if(_startPaused) _pause();
+        if (_startPaused) _pause();
 
         maxTime = IClock(clock).epochDuration() * CurveConstantLib.MAX_EPOCHS;
     }
@@ -90,6 +95,10 @@ contract EscrowIVotesAdapter is
         emit AutoDelegationSet(sender, _enabled);
     }
 
+    /*//////////////////////////////////////////////////////////////
+                        Delegate Functions
+    //////////////////////////////////////////////////////////////*/
+
     function delegate(address _delegatee) public whenNotPaused {
         address sender = _msgSender();
 
@@ -103,49 +112,15 @@ contract EscrowIVotesAdapter is
 
         if (autoDelegationEnabled[sender]) {
             uint256[] memory tokenIds = VotingEscrow(escrow).ownedTokens(sender);
-            delegate(tokenIds);
+            _delegate(sender, _delegatee, tokenIds);
         }
 
         emit DelegateChanged(sender, oldDelegatee, _delegatee);
     }
 
     function delegate(uint256[] memory _tokenIds) public whenNotPaused {
-        address sender = _msgSender();
-        address delegatee = delegates(sender);
-
-        if (delegatee == address(0)) {
-            revert DelegateeNotSet();
-        }
-
-        int256 totalBias;
-        int256 totalSlope;
-
-        for (uint256 i = 0; i < _tokenIds.length; i++) {
-            uint256 tokenId = _tokenIds[i];
-
-            if (!IVotingEscrow(escrow).isApprovedOrOwner(sender, tokenId)) {
-                revert NotApprovedOrOwner();
-            }
-
-            if (tokenIsDelegated[tokenId]) {
-                revert TokenAlreadyDelegated(tokenId);
-            }
-
-            tokenIsDelegated[tokenId] = true;
-
-            IVotingEscrow.LockedBalance memory locked = IVotingEscrow(escrow).locked(tokenId);
-            (int256 bias, int256 slope) = _getBiasAndSlope(delegatee, locked, _positive);
-            totalBias += bias;
-            totalSlope += slope;
-        }
-
-        numberOfDelegatedTokens[sender] += _tokenIds.length;
-
-        _checkpoint(totalBias, totalSlope, delegatee);
-
-        IVotingEscrow(escrow).updateVotingPower(sender, delegatee);
-
-        emit TokensDelegated(sender, delegatee, _tokenIds);
+        address account = _msgSender();
+        _delegate(account, delegates(account), _tokenIds);
     }
 
     function undelegate(uint256[] memory _tokenIds) public whenNotPaused {
@@ -158,8 +133,9 @@ contract EscrowIVotesAdapter is
 
         int256 totalBias;
         int256 totalSlope;
+        uint256 length = _tokenIds.length;
 
-        for (uint256 i = 0; i < _tokenIds.length; i++) {
+        for (uint256 i = 0; i < length; i++) {
             uint256 tokenId = _tokenIds[i];
 
             if (!IVotingEscrow(escrow).isApprovedOrOwner(sender, tokenId)) {
@@ -179,16 +155,60 @@ contract EscrowIVotesAdapter is
             totalSlope += slope;
         }
 
-        numberOfDelegatedTokens[sender] -= _tokenIds.length;
-
+        numberOfDelegatedTokens[sender] -= length;
         _checkpoint(totalBias, totalSlope, delegatee);
-
         IVotingEscrow(escrow).updateVotingPower(sender, delegatee);
 
         emit TokensUndelegated(sender, delegatee, _tokenIds);
     }
 
-    function moveDelegateVotes(address _from, address _to, uint256 _tokenId) external whenNotPaused {
+    function _delegate(
+        address _account,
+        address _delegatee,
+        uint256[] memory _tokenIds
+    ) internal virtual {
+        if (_delegatee == address(0)) {
+            revert DelegateeNotSet();
+        }
+
+        int256 totalBias;
+        int256 totalSlope;
+        uint256 length = _tokenIds.length;
+
+        for (uint256 i = 0; i < length; i++) {
+            uint256 tokenId = _tokenIds[i];
+
+            if (!IVotingEscrow(escrow).isApprovedOrOwner(_account, tokenId)) {
+                revert NotApprovedOrOwner();
+            }
+
+            if (tokenIsDelegated[tokenId]) {
+                revert TokenAlreadyDelegated(tokenId);
+            }
+
+            tokenIsDelegated[tokenId] = true;
+
+            IVotingEscrow.LockedBalance memory locked = IVotingEscrow(escrow).locked(tokenId);
+            (int256 bias, int256 slope) = _getBiasAndSlope(_delegatee, locked, _positive);
+            totalBias += bias;
+            totalSlope += slope;
+        }
+
+        numberOfDelegatedTokens[_account] += length;
+        _checkpoint(totalBias, totalSlope, _delegatee);
+        IVotingEscrow(escrow).updateVotingPower(_account, _delegatee);
+
+        emit TokensDelegated(_account, _delegatee, _tokenIds);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        Hook Functions
+    //////////////////////////////////////////////////////////////*/
+    function moveDelegateVotes(
+        address _from,
+        address _to,
+        uint256 _tokenId
+    ) external whenNotPaused {
         if (_msgSender() != escrow) {
             revert OnlyEscrow();
         }
@@ -199,7 +219,7 @@ contract EscrowIVotesAdapter is
         if (_from == _to || fromDelegatee == toDelegatee) {
             return;
         }
-        
+
         IVotingEscrow.LockedBalance memory locked = IVotingEscrow(escrow).locked(_tokenId);
 
         // mint is occuring and the receiver already has a delegatee.
@@ -223,10 +243,13 @@ contract EscrowIVotesAdapter is
             numberOfDelegatedTokens[_from]--;
         }
 
-        if (_to == address(escrow)) {
-            // transfering to address(escrow) is the same as `beginWithdrawal`, i.e burn.
+        // This can occur if the receiver of the token:
+        //  1. has no delegatee.
+        //  2. is an escrow contract(in case of `beginWithdrawal`)
+        //  3. transfer occurs to special addresses - i.e address(0), address(1), e.t.c)
+        if (toDelegatee == address(0)) {
             tokenIsDelegated[_tokenId] = false;
-        } else if (toDelegatee != address(0)) {
+        } else {
             (int256 bias, int256 slope) = _getBiasAndSlope(toDelegatee, locked, _positive);
             _checkpoint(bias, slope, toDelegatee);
 
@@ -241,7 +264,10 @@ contract EscrowIVotesAdapter is
                         Checkpoint Functions
     //////////////////////////////////////////////////////////////*/
 
-    function checkpointTransition(address _delegatee, uint256 _transitionCount) external whenNotPaused {
+    function checkpointTransition(
+        address _delegatee,
+        uint256 _transitionCount
+    ) external whenNotPaused {
         _checkpoint(0, 0, _delegatee, _transitionCount);
     }
 
