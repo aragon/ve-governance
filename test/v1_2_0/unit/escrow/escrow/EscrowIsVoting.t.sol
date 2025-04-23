@@ -2,14 +2,6 @@ pragma solidity ^0.8.17;
 
 import {EscrowBase} from "../../../base/EscrowBase.sol";
 
-import {console2 as console} from "forge-std/console2.sol";
-import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
-import {DAO} from "@aragon/osx/core/dao/DAO.sol";
-import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
-import {MockERC20} from "@mocks/MockERC20.sol";
-
-import {ProxyLib} from "@libs/ProxyLib.sol";
-
 import {
     Lock,
     Clock,
@@ -26,14 +18,16 @@ contract TestIsVoting is IEscrowCurveTokenStorage, EscrowBase {
         super.setUp();
     }
 
-    function test_shouldReturnFalseIfNotDelegated() public {
-        uint256 tokenId = 1;
+    function test_shouldRevertIfNonExistentToken() public {
+        vm.expectRevert("ERC721: invalid token ID");
+        escrow.isVoting(10000);
+    }
 
-        vm.expectCall(
-            address(ivotesAdapter),
-            abi.encodeWithSelector(ivotesAdapter.tokenIsDelegated.selector, (tokenId))
-        );
-        assertFalse(escrow.isVoting(tokenId));
+    function test_shouldReturnFalseIfNotDelegated() public {
+        vm.prank(address(escrow));
+        nftLock.mint(address(this), 1);
+
+        assertFalse(escrow.isVoting(1));
     }
 
     function test_shouldCallGaugeVoterWithCorrectDelegateeAddress() public {

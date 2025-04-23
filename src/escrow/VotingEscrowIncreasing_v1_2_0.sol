@@ -289,10 +289,14 @@ contract VotingEscrowV1_2_0 is
 
     /// @notice Checks if the NFT is currently voting. We require the user to reset their votes if so.
     function isVoting(uint256 _tokenId) public view returns (bool) {
+        // If token doesn't exist, it reverts.
+        address owner = IERC721EMB(lockNFT).ownerOf(_tokenId);
+
+        // If token is not delegated, delegatee wouldn't exist, so we return false.
         bool isTokenDelegated = IEscrowIVotesAdapter(ivotesAdapter).tokenIsDelegated(_tokenId);
         if (!isTokenDelegated) return false;
 
-        address owner = IERC721EMB(lockNFT).ownerOf(_tokenId);
+        // If token is delegated, it will always have a delegatee.
         address delegatee = IEscrowIVotesAdapter(ivotesAdapter).delegates(owner);
 
         return IAddressGaugeVoter(voter).isVoting(delegatee);
