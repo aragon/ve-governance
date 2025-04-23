@@ -84,6 +84,11 @@ contract Base is
             _where: address(dg),
             _permissionId: dg.DELEGATION_ADMIN_ROLE()
         });
+
+        // almost all tests need delegation to be disabled by default 
+        // to test thoroughly the behaviour of the functions.
+        // So we set it to true.
+        dg.setAutoDelegationDisabled(true);
     }
 
     function _deployDAO() internal {

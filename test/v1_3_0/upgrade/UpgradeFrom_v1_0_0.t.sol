@@ -238,7 +238,6 @@ contract RegressionV1_0_0__to__V1_3_0 is Test, IGaugeVote, FixedPointBase {
         vm.warp(6 weeks + 3601);
         vm.startPrank(ALICE_ADDRESS);
         {
-            ivotesAdapter.setAutoDelegation(true);
             ivotesAdapter.delegate(ALICE_ADDRESS);
 
             IAddressGaugeVote.GaugeVote[] memory vote = new IAddressGaugeVote.GaugeVote[](1);
@@ -312,7 +311,6 @@ contract RegressionV1_0_0__to__V1_3_0 is Test, IGaugeVote, FixedPointBase {
         assertEq(bobTokenVPAfterMerge, expectedVPAfterMerge);
 
         vm.startPrank(BOB_ADDRESS);
-        ivotesAdapter.setAutoDelegation(true);
         ivotesAdapter.delegate(BOB_ADDRESS);
         vm.stopPrank();
 

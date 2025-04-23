@@ -508,6 +508,7 @@ contract TestE2EV1_2_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
     }
 
     function testLifeCycle() public {
+        vm.warp(1);
         epochStartTime = weekStartTs(block.timestamp);
 
         // first we give the guys each some tokens of the underlying
@@ -847,7 +848,6 @@ contract TestE2EV1_2_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
 
                 vm.startPrank(alice);
                 {
-                    ivotesAdapter.setAutoDelegation(true);
                     ivotesAdapter.delegate(alice);
                     voter.vote(votes);
                 }
@@ -859,7 +859,6 @@ contract TestE2EV1_2_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
 
                 vm.startPrank(bob);
                 {
-                    ivotesAdapter.setAutoDelegation(true);
                     ivotesAdapter.delegate(bob);
                     voter.vote(votes);
                 }

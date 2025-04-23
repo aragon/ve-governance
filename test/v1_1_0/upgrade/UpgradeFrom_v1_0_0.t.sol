@@ -138,8 +138,8 @@ contract RegressionV1_0_0__to__V1_1_0 is Test, IGaugeVote {
         exclude[0] = "lib/osx/packages/contracts/src/core/plugin/PluginUUPSUpgradeable.sol";
         options.exclude = exclude;
 
-        options.referenceContract = "SimpleGaugeVoter.sol";
-        Upgrades.validateUpgrade("SimpleGaugeVoter_v1_1_0.sol:SimpleGaugeVoterV1_1_0", options);
+        options.referenceContract = "TokenGaugeVoter.sol";
+        Upgrades.validateUpgrade("TokenGaugeVoter_v1_1_0.sol:TokenGaugeVoterV1_1_0", options);
     }
 
     function testInitialState() public view {
@@ -245,7 +245,7 @@ contract RegressionV1_0_0__to__V1_1_0 is Test, IGaugeVote {
 
     function _safeUpgradeVoter(address _voter) internal {
         Options memory options;
-        options.referenceContract = "SimpleGaugeVoter.sol";
+        options.referenceContract = "TokenGaugeVoter.sol";
         string[] memory exclude = new string[](1);
         // disable initializers is invoked but the custom unsafe allow option is not set in the natspec
         exclude[0] = "lib/osx/packages/contracts/src/core/plugin/PluginUUPSUpgradeable.sol";
@@ -253,7 +253,7 @@ contract RegressionV1_0_0__to__V1_1_0 is Test, IGaugeVote {
 
         Upgrades.upgradeProxy(
             _voter,
-            "SimpleGaugeVoter_v1_1_0.sol:SimpleGaugeVoterV1_1_0",
+            "TokenGaugeVoter_v1_1_0.sol:TokenGaugeVoterV1_1_0",
             "",
             options
         );

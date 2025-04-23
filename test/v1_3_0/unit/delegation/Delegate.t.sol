@@ -11,7 +11,7 @@ contract TestDelegate is Base {
     event DelegateChanged(address indexed from, address indexed to, address indexed delegate);
 
     modifier AutoDelegationEnabled() {
-        dg.setAutoDelegation(true);
+        dg.setAutoDelegationDisabled(false);
         _;
     }
 
