@@ -12,9 +12,9 @@ import {PluginRepoFactory} from "@aragon/osx/framework/plugin/repo/PluginRepoFac
 import {PluginRepoRegistry} from "@aragon/osx/framework/plugin/repo/PluginRepoRegistry.sol";
 import {PluginRepo} from "@aragon/osx/framework/plugin/repo/PluginRepo.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
-import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
-import {Addresslist} from "@aragon/osx/plugins/utils/Addresslist.sol";
-import {MultisigSetup as MultisigPluginSetup} from "@aragon/osx/plugins/governance/multisig/MultisigSetup.sol";
+import {IDAO} from "@aragon/osx-commons/dao/IDAO.sol";
+import {Addresslist} from "@aragon/osx-commons/plugin/extensions/governance/Addresslist.sol";
+import {MultisigSetup as MultisigPluginSetup} from "@aragon/multisig/MultisigSetup.sol";
 import {SimpleGaugeVoterSetup, VotingEscrow, Clock, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter} from "../../src/voting/SimpleGaugeVoterSetup.sol";
 
 contract GaugesDaoFactoryTest is Test {
@@ -441,11 +441,6 @@ contract GaugesDaoFactoryTest is Test {
         assertNotEq(address(deployment.dao), address(0), "Empty DAO field");
         assertEq(deployment.dao.daoURI(), "", "DAO URI should be empty");
         assertEq(
-            address(deployment.dao.signatureValidator()),
-            address(0),
-            "signatureValidator should be empty"
-        );
-        assertEq(
             address(deployment.dao.getTrustedForwarder()),
             address(0),
             "trustedForwarder should be empty"
@@ -640,7 +635,7 @@ contract GaugesDaoFactoryTest is Test {
         );
         assertEq(
             deployment.gaugeVoterPluginSets[1].exitQueue.feePercent(),
-            500, 
+            500,
             "Incorrect feePercent"
         );
         assertEq(
@@ -831,11 +826,6 @@ contract GaugesDaoFactoryTest is Test {
 
         assertNotEq(address(deployment.dao), address(0), "Empty DAO field");
         assertEq(deployment.dao.daoURI(), "", "DAO URI should be empty");
-        assertEq(
-            address(deployment.dao.signatureValidator()),
-            address(0),
-            "signatureValidator should be empty"
-        );
         assertEq(
             address(deployment.dao.getTrustedForwarder()),
             address(0),

@@ -3,7 +3,7 @@ pragma solidity ^0.8.17;
 import {EscrowBase} from "./EscrowBase.sol";
 
 import {console2 as console} from "forge-std/console2.sol";
-import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
+import {IDAO} from "@aragon/osx-commons/dao/IDAO.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
 
@@ -224,6 +224,7 @@ contract TestWithdraw is EscrowBase, IEscrowCurveTokenStorage, IGaugeVote, ITick
         assertEq(nftLock.balanceOf(address(escrow)), 0);
         assertEq(escrow.totalLocked(), 0);
     }
+
     // HAL-13: locks are re-used causing reverts and duplications
     function testCanCreateLockAfterBurning() public {
         address USER1 = address(1);

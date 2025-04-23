@@ -2,7 +2,7 @@ pragma solidity ^0.8.17;
 
 import {EscrowBase} from "./EscrowBase.sol";
 
-import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
+import {IDAO} from "@aragon/osx-commons/dao/IDAO.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
 

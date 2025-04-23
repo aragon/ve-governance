@@ -3,7 +3,7 @@ pragma solidity ^0.8.17;
 import {Test} from "forge-std/Test.sol";
 import {console2 as console} from "forge-std/console2.sol";
 
-import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
+import {Action} from "@aragon/osx-commons/executors/IExecutor.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
@@ -195,8 +195,8 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
 
         for (uint256 i = 0; i < protocolContracts.length; i++) {
             // build the proposal
-            IDAO.Action[] memory actions = new IDAO.Action[](1);
-            actions[0] = IDAO.Action({
+            Action[] memory actions = new Action[](1);
+            actions[0] = Action({
                 to: protocolContracts[i],
                 value: 0,
                 data: abi.encodeCall(UUPS(protocolContracts[i]).upgradeTo, address(upgraded))
@@ -234,8 +234,8 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
     function testPauseAndUnPause() public {
         // voting - unpause first as deployed paused
         {
-            IDAO.Action[] memory actions = new IDAO.Action[](1);
-            actions[0] = IDAO.Action({
+            Action[] memory actions = new Action[](1);
+            actions[0] = Action({
                 to: address(voter),
                 value: 0,
                 data: abi.encodeCall(voter.unpause, ())
@@ -249,8 +249,8 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
 
         // repause
         {
-            IDAO.Action[] memory actions = new IDAO.Action[](1);
-            actions[0] = IDAO.Action({
+            Action[] memory actions = new Action[](1);
+            actions[0] = Action({
                 to: address(voter),
                 value: 0,
                 data: abi.encodeCall(voter.pause, ())
@@ -265,8 +265,8 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
         // escrow
         // pause
         {
-            IDAO.Action[] memory actions = new IDAO.Action[](1);
-            actions[0] = IDAO.Action({
+            Action[] memory actions = new Action[](1);
+            actions[0] = Action({
                 to: address(escrow),
                 value: 0,
                 data: abi.encodeCall(escrow.pause, ())
@@ -296,8 +296,8 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
 
         // unpause
         {
-            IDAO.Action[] memory actions = new IDAO.Action[](1);
-            actions[0] = IDAO.Action({
+            Action[] memory actions = new Action[](1);
+            actions[0] = Action({
                 to: address(escrow),
                 value: 0,
                 data: abi.encodeCall(escrow.unpause, ())
@@ -723,8 +723,8 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
             }
 
             // same issue when unpaused, votes aren't active
-            IDAO.Action[] memory actions = new IDAO.Action[](1);
-            actions[0] = IDAO.Action({
+            Action[] memory actions = new Action[](1);
+            actions[0] = Action({
                 to: address(voter),
                 value: 0,
                 data: abi.encodeCall(voter.unpause, ())
@@ -776,13 +776,13 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
             {
                 string memory metadataURI0 = "ipfs://gauge0";
                 string memory metadataURI1 = "ipfs://gauge1";
-                IDAO.Action[] memory actions = new IDAO.Action[](2);
-                actions[0] = IDAO.Action({
+                Action[] memory actions = new Action[](2);
+                actions[0] = Action({
                     to: address(voter),
                     value: 0,
                     data: abi.encodeWithSelector(voter.createGauge.selector, gauge0, metadataURI0)
                 });
-                actions[1] = IDAO.Action({
+                actions[1] = Action({
                     to: address(voter),
                     value: 0,
                     data: abi.encodeWithSelector(voter.createGauge.selector, gauge1, metadataURI1)
@@ -1084,13 +1084,13 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
 
         // governance changes some params: warmup is now one day, cooldown is a week
         {
-            IDAO.Action[] memory actions = new IDAO.Action[](2);
-            actions[0] = IDAO.Action({
+            Action[] memory actions = new Action[](2);
+            actions[0] = Action({
                 to: address(curve),
                 value: 0,
                 data: abi.encodeWithSelector(curve.setWarmupPeriod.selector, 1 days)
             });
-            actions[1] = IDAO.Action({
+            actions[1] = Action({
                 to: address(queue),
                 value: 0,
                 data: abi.encodeWithSelector(queue.setCooldown.selector, 1 weeks)
@@ -1191,18 +1191,18 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
 
         // we recover it from him
         {
-            IDAO.Action[] memory actions = new IDAO.Action[](3);
-            actions[0] = IDAO.Action({
+            Action[] memory actions = new Action[](3);
+            actions[0] = Action({
                 to: address(lock),
                 value: 0,
                 data: abi.encodeWithSelector(lock.setWhitelisted.selector, address(jordi), true)
             });
-            actions[1] = IDAO.Action({
+            actions[1] = Action({
                 to: address(escrow),
                 value: 0,
                 data: abi.encodeWithSelector(escrow.sweepNFT.selector, 4, jordi)
             });
-            actions[2] = IDAO.Action({
+            actions[2] = Action({
                 to: address(lock),
                 value: 0,
                 data: abi.encodeWithSelector(lock.setWhitelisted.selector, address(jordi), false)
@@ -1216,8 +1216,8 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
 
         // jordan convinces the dev team to give him sweeper access and tries to rug all the tokens, he cant
         {
-            IDAO.Action[] memory actions = new IDAO.Action[](1);
-            actions[0] = IDAO.Action({
+            Action[] memory actions = new Action[](1);
+            actions[0] = Action({
                 to: address(dao),
                 value: 0,
                 data: abi.encodeCall(dao.grant, (address(escrow), jordan, escrow.SWEEPER_ROLE()))
@@ -1336,9 +1336,7 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
         return string(hexString);
     }
 
-    function _buildMsigProposal(
-        IDAO.Action[] memory actions
-    ) internal returns (uint256 proposalId) {
+    function _buildMsigProposal(Action[] memory actions) internal returns (uint256 proposalId) {
         // prank the first signer who will create stuff
         vm.startPrank(signers[0]);
         {
@@ -1379,9 +1377,7 @@ contract TestE2EV2 is Test, IWithdrawalQueueErrors, IGaugeVote, IEscrowCurveToke
         vm.stopPrank();
     }
 
-    function _buildSignProposal(
-        IDAO.Action[] memory actions
-    ) internal returns (uint256 proposalId) {
+    function _buildSignProposal(Action[] memory actions) internal returns (uint256 proposalId) {
         proposalId = _buildMsigProposal(actions);
         _signExecuteMultisigProposal(proposalId);
         return proposalId;
