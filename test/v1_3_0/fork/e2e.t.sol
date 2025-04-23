@@ -514,6 +514,7 @@ contract TestE2EV1_3_0 is
     }
 
     function testLifeCycle() public {
+        vm.warp(1);
         epochStartTime = weekStartTs(block.timestamp);
 
         // first we give the guys each some tokens of the underlying

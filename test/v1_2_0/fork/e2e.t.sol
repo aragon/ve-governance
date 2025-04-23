@@ -508,6 +508,7 @@ contract TestE2EV1_2_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
     }
 
     function testLifeCycle() public {
+        vm.warp(1);
         epochStartTime = weekStartTs(block.timestamp);
 
         // first we give the guys each some tokens of the underlying
