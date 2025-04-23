@@ -5,8 +5,8 @@ import {ILock} from "@escrow-interfaces/ILock.sol";
 import {ERC721EnumerableUpgradeable as ERC721Enumerable} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 import {ReentrancyGuardUpgradeable as ReentrancyGuard} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
-import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
+import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx-commons/permission/auth/DaoAuthorizableUpgradeable.sol";
+import {IDAO} from "@aragon/osx-commons/dao/IDAO.sol";
 
 /// @title NFT representation of an escrow locking mechanism
 contract Lock is ILock, ERC721Enumerable, UUPSUpgradeable, DaoAuthorizable, ReentrancyGuard {

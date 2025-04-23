@@ -7,7 +7,7 @@ import {IERC20MetadataUpgradeable as IERC20Metadata} from "@openzeppelin/contrac
 import {IERC721EnumerableMintableBurnable as IERC721EMB} from "./interfaces/IERC721EMB.sol";
 
 // veGovernance
-import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
+import {IDAO} from "@aragon/osx-commons/dao/IDAO.sol";
 import {ISimpleGaugeVoter} from "@voting/ISimpleGaugeVoter.sol";
 import {IClock} from "@clock/IClock.sol";
 import {IEscrowCurveIncreasing as IEscrowCurve} from "./interfaces/IEscrowCurveIncreasing.sol";
@@ -22,7 +22,7 @@ import {SafeCastUpgradeable as SafeCast} from "@openzeppelin/contracts-upgradeab
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {ReentrancyGuardUpgradeable as ReentrancyGuard} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {PausableUpgradeable as Pausable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
-import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
+import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx-commons/permission/auth/DaoAuthorizableUpgradeable.sol";
 
 contract VotingEscrow is
     IVotingEscrow,

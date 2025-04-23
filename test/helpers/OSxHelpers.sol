@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.8;
 
-import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
-import {PermissionLib} from "@aragon/osx/core/permission/PermissionLib.sol";
+import {Action} from "@aragon/osx-commons/executors/IExecutor.sol";
+import {PermissionLib} from "@aragon/osx/core/permission/PermissionManager.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {PluginRepo} from "@aragon/osx/framework/plugin/repo/PluginRepo.sol";
-import {IPluginSetup} from "@aragon/osx/framework/plugin/setup/IPluginSetup.sol";
+import {IPluginSetup} from "@aragon/osx-commons/plugin/setup/IPluginSetup.sol";
 import {MockDAOFactory, PluginSetupRef} from "@mocks/osx/MockDAOFactory.sol";
 import {MockPluginSetupProcessor} from "@mocks/osx/MockPSP.sol";
 
@@ -14,9 +14,13 @@ function bytes32ToAddress(bytes32 _bytes32) pure returns (address) {
 }
 
 /// @dev call the PSP with an action wrapped in grant/revoke root permissions
-function wrapGrantRevokeRoot(DAO _dao, address _psp, IDAO.Action memory _action) view returns (IDAO.Action[] memory) {
-    IDAO.Action[] memory actions = new IDAO.Action[](3);
-    actions[0] = IDAO.Action({
+function wrapGrantRevokeRoot(
+    DAO _dao,
+    address _psp,
+    Action memory _action
+) view returns (Action[] memory) {
+    Action[] memory actions = new Action[](3);
+    actions[0] = Action({
         to: address(_dao),
         value: 0,
         data: abi.encodeCall(_dao.grant, (address(_dao), _psp, _dao.ROOT_PERMISSION_ID()))
@@ -24,7 +28,7 @@ function wrapGrantRevokeRoot(DAO _dao, address _psp, IDAO.Action memory _action)
 
     actions[1] = _action;
 
-    actions[2] = IDAO.Action({
+    actions[2] = Action({
         to: address(_dao),
         value: 0,
         data: abi.encodeCall(_dao.revoke, (address(_dao), _psp, _dao.ROOT_PERMISSION_ID()))
@@ -37,11 +41,11 @@ function wrapGrantRevokeRoot(DAO _dao, address _psp, IDAO.Action memory _action)
 function wrapGrantRevokeRoot(
     DAO _dao,
     address _psp,
-    IDAO.Action[] memory _actions
-) view returns (IDAO.Action[] memory) {
+    Action[] memory _actions
+) view returns (Action[] memory) {
     uint8 len = uint8(_actions.length);
-    IDAO.Action[] memory actions = new IDAO.Action[](len + 2);
-    actions[0] = IDAO.Action({
+    Action[] memory actions = new Action[](len + 2);
+    actions[0] = Action({
         to: address(_dao),
         value: 0,
         data: abi.encodeCall(_dao.grant, (address(_dao), _psp, _dao.ROOT_PERMISSION_ID()))
@@ -51,7 +55,7 @@ function wrapGrantRevokeRoot(
         actions[i + 1] = _actions[i];
     }
 
-    actions[len + 1] = IDAO.Action({
+    actions[len + 1] = Action({
         to: address(_dao),
         value: 0,
         data: abi.encodeCall(_dao.revoke, (address(_dao), _psp, _dao.ROOT_PERMISSION_ID()))
@@ -94,7 +98,10 @@ function _mockDAOSettings() pure returns (MockDAOFactory.DAOSettings memory) {
 // all this data is unused in the mock
 function _mockPluginSetupRef() pure returns (PluginSetupRef memory) {
     return
-        PluginSetupRef({pluginSetupRepo: PluginRepo(address(0)), versionTag: PluginRepo.Tag({release: 1, build: 0})});
+        PluginSetupRef({
+            pluginSetupRepo: PluginRepo(address(0)),
+            versionTag: PluginRepo.Tag({release: 1, build: 0})
+        });
 }
 
 function _mockPrepareInstallationParams(
@@ -117,9 +124,14 @@ function _mockApplyInstallationParams(
 }
 
 /// we don't use most of the plugin settings in the mock so just ignore it
-function _mockPluginSettings(bytes memory data) pure returns (MockDAOFactory.PluginSettings[] memory) {
+function _mockPluginSettings(
+    bytes memory data
+) pure returns (MockDAOFactory.PluginSettings[] memory) {
     MockDAOFactory.PluginSettings[] memory settings = new MockDAOFactory.PluginSettings[](1);
-    settings[0] = MockDAOFactory.PluginSettings({pluginSetupRef: _mockPluginSetupRef(), data: data});
+    settings[0] = MockDAOFactory.PluginSettings({
+        pluginSetupRef: _mockPluginSetupRef(),
+        data: data
+    });
     return settings;
 }
 
@@ -133,5 +145,10 @@ function _mockApplyUninstallationParams(
     address plugin,
     PermissionLib.MultiTargetPermission[] memory permissions
 ) pure returns (MockPluginSetupProcessor.ApplyUninstallationParams memory) {
-    return MockPluginSetupProcessor.ApplyUninstallationParams(plugin, _mockPluginSetupRef(), permissions);
+    return
+        MockPluginSetupProcessor.ApplyUninstallationParams(
+            plugin,
+            _mockPluginSetupRef(),
+            permissions
+        );
 }

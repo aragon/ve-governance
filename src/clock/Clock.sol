@@ -2,12 +2,12 @@
 pragma solidity ^0.8.17;
 
 // interfaces
-import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
+import {IDAO} from "@aragon/osx-commons/dao/IDAO.sol";
 import {IClock} from "./IClock.sol";
 
 // contracts
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
+import {DaoAuthorizableUpgradeable as DaoAuthorizable} from "@aragon/osx-commons/permission/auth/DaoAuthorizableUpgradeable.sol";
 
 /// @title Clock
 contract Clock is IClock, DaoAuthorizable, UUPSUpgradeable {

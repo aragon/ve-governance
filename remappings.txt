@@ -3,8 +3,10 @@ forge-std/=lib/forge-std/src/
 utils/=test/utils/
 
 @aragon/osx/=lib/osx/packages/contracts/src/
+@aragon/osx-commons/=lib/osx-commons/contracts/src/
+@aragon/osx-commons-contracts/=lib/osx-commons/contracts/
 @aragon/admin/=lib/osx/packages/contracts/src/plugins/governance/admin/
-@aragon/multisig/=lib/osx/packages/contracts/src/plugins/governance/multisig/
+@aragon/multisig/=lib/multisig-plugin/packages/contracts/src/
 
 @interfaces/=src/interfaces/
 @mocks/=test/mocks/

@@ -2,9 +2,9 @@ pragma solidity ^0.8.17;
 
 import {TestHelpers} from "@helpers/TestHelpers.sol";
 import {console2 as console} from "forge-std/console2.sol";
-import {DaoUnauthorized} from "@aragon/osx/core/utils/auth.sol";
+import {DaoUnauthorized} from "@aragon/osx-commons/permission/auth/auth.sol";
 
-import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
+import {IDAO} from "@aragon/osx-commons/dao/IDAO.sol";
 import {DAO, createTestDAO} from "@mocks/MockDAO.sol";
 import {Clock, QuadraticIncreasingEscrow, ILockedBalanceIncreasing, IVotingEscrowIncreasing as IVotingEscrow, IEscrowCurveIncreasing as IEscrowCurve} from "../../../versions.sol";
 

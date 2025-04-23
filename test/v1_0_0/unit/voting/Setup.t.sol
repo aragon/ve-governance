@@ -4,9 +4,9 @@ import {Test} from "forge-std/Test.sol";
 import {console2 as console} from "forge-std/console2.sol";
 
 // aragon contracts
-import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
+import {IDAO} from "@aragon/osx-commons/dao/IDAO.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
-import {IPluginSetup} from "@aragon/osx/framework/plugin/setup/IPluginSetup.sol";
+import {IPluginSetup} from "@aragon/osx-commons/plugin/setup/IPluginSetup.sol";
 import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
 
 import {MockPluginSetupProcessor} from "@mocks/osx/MockPSP.sol";

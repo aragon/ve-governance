@@ -4,7 +4,7 @@ pragma solidity ^0.8.17;
 import "forge-std/Test.sol";
 
 import {Clock} from "@clock/Clock.sol";
-import {DaoUnauthorized} from "@aragon/osx/core/utils/auth.sol";
+import {DaoUnauthorized} from "@aragon/osx-commons/permission/auth/auth.sol";
 import {DAO} from "@mocks/MockDAO.sol";
 
 import {createTestDAO} from "@mocks/MockDAO.sol";
