@@ -101,11 +101,12 @@ contract EscrowIVotesAdapter is
     ///      Note that sender must first undelegate all token ids before calling this function.
     function delegate(address _delegatee) public whenNotPaused {
         address sender = _msgSender();
-        address oldDelegatee = delegates(sender);
 
         if (numberOfDelegatedTokens[sender] != 0) {
             revert DelegationNotAllowed();
         }
+        
+        address oldDelegatee = delegates(sender);
 
         delegatees_[sender] = _delegatee;
 
