@@ -207,56 +207,59 @@ contract EscrowIVotesAdapter is
             revert OnlyEscrow();
         }
 
-        // we expect _data to contain boolean. If the length is not 32, 
+        // we expect _data to contain boolean. If the length is not 32,
         // return early and not try to decode to avoid reverting.
-        if(_data.length != 32) return;
+        if (_data.length != 32) return;
 
-        bool updateCounter = abi.decode(_data, (bool));
+        // determines if we should only run checkpointing
+        // and not token delegation count/status updates
+        // only relevant in edge cases w. merging
+        bool checkpointOnly = abi.decode(_data, (bool));
 
         address fromDelegatee = delegates(_from);
         address toDelegatee = delegates(_to);
 
-        if (_from == _to || fromDelegatee == toDelegatee) {
+        // undelegated src and recipient, no balances to update
+        if (fromDelegatee == address(0) && toDelegatee == address(0)) {
             return;
         }
 
         IVotingEscrow.LockedBalance memory locked = IVotingEscrow(escrow).locked(_tokenId);
 
+        // voting power is being sent from a delegate
         if (fromDelegatee != address(0)) {
-            (int256 bias, int256 slope) = _getBiasAndSlope(fromDelegatee, locked, _negative);
-            _checkpoint(bias, slope, fromDelegatee);
+            // can be skipped if there is no updates
+            if (locked.amount != 0) {
+                (int256 bias, int256 slope) = _getBiasAndSlope(fromDelegatee, locked, _negative);
+                _checkpoint(bias, slope, fromDelegatee);
+            }
 
             numberOfDelegatedTokens[_from]--;
-
-            // burn occurs.
-            if (_to == address(0)) {
-                tokenIsDelegated[_tokenId] = false;
-            }
         }
+        // else this is new delegate voting power being added
+        else {}
 
+        // voting power is being recieved by an active delegate
         if (toDelegatee != address(0)) {
-            (int256 bias, int256 slope) = _getBiasAndSlope(toDelegatee, locked, _positive);
-            _checkpoint(bias, slope, toDelegatee);
+            // can be skipped if there is no updates
+            if (locked.amount != 0) {
+                (int256 bias, int256 slope) = _getBiasAndSlope(toDelegatee, locked, _positive);
+                _checkpoint(bias, slope, toDelegatee);
+            }
 
-            // If mint occurs and delegatee exists, always update.
-            // If not mint, only update if `updateCounter` is true.
-            //  1. In transfer case, updateCounter must always be true.
-            //  2. In merge case, it must be false, because delegatee doesn't 
-            // receive a new token, but `_from` token(in merge)'s power only.
-            if (_from == address(0) || updateCounter) {
+            // in most cases checkpointOnly will be false
+            // exception would be merging into a delegated recipient
+            if (!checkpointOnly) {
                 numberOfDelegatedTokens[_to]++;
                 tokenIsDelegated[_tokenId] = true;
-            } else {
-                tokenIsDelegated[_tokenId] = false;
             }
         }
-
-        // Only call if at least from or to's delegatee exists.
-        // Otherwise skip as it would be pointless as there's 
-        // nothing to update if both delegatees are address 0.
-        if(fromDelegatee != address(0) || toDelegatee != address(0)) {
-            IVotingEscrow(escrow).updateVotingPower(fromDelegatee, toDelegatee);
+        // else this is new delegate voting power being burned
+        else {
+            tokenIsDelegated[_tokenId] = false;
         }
+
+        IVotingEscrow(escrow).updateVotingPower(fromDelegatee, toDelegatee);
 
         uint256[] memory tokenIds = new uint256[](1);
         tokenIds[0] = _tokenId;

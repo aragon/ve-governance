@@ -378,12 +378,28 @@ contract VotingEscrowV1_2_0 is
         // Note that this function must be called before we
         // empty `lockedFrom`'s amount to 0. `moveDelegateVotes`
         // relies that lock still contains the amount.
-        _moveDelegateVotes(
-            IERC721EMB(lockNFT).ownerOf(_from),
-            IERC721EMB(lockNFT).ownerOf(_to),
-            _from,
-            abi.encode(false)
-        );
+        {
+            address ownerFrom = IERC721EMB(lockNFT).ownerOf(_from);
+            address ownerTo = IERC721EMB(lockNFT).ownerOf(_to);
+
+            if (ownerFrom == ownerTo) {
+                _moveDelegateVotes(
+                    ownerFrom,
+                    ownerTo,
+                    // tokenIds start from 1 so 0 is always empty
+                    // in a self transfer we update counts but not amount
+                    0,
+                    abi.encode(false)
+                );
+            } else {
+                // if delegated originally need to burn the delegated VP
+                if (IEscrowIVotesAdapter(ivotesAdapter).delegates(ownerTo) != address(0)) {
+                    _moveDelegateVotes(ownerFrom, address(0), _from, abi.encode(true));
+                }
+                // then move but skip checkpointing logic
+                _moveDelegateVotes(ownerFrom, ownerTo, _from, abi.encode(true));
+            }
+        }
 
         // Update for `_from`.
         IERC721EMB(lockNFT).burn(_from);
@@ -467,7 +483,7 @@ contract VotingEscrowV1_2_0 is
         locked_.amount = amount2;
         _tokenId2 = _createSplitNFT(sender, locked_);
 
-        // 2 new NFTs were minted to sender. Update 
+        // 2 new NFTs were minted to sender. Update
         // sender's delegatee's power for both tokens.
         _moveDelegateVotes(address(0), sender, _tokenId1);
         _moveDelegateVotes(address(0), sender, _tokenId2);
@@ -563,13 +579,19 @@ contract VotingEscrowV1_2_0 is
             IERC20(token).safeTransfer(address(queue), fee);
         }
 
+        // clear the delegate votes
+        // we don't strictly speaking need to do this as the escrow
+        // can't vote
+        // or we could do it when we checkpoint the vp above
+        _moveDelegateVotes(address(this), address(0), _tokenId);
+
         // clear out the token data
         _locked[_tokenId] = LockedBalance(0, 0);
         totalLocked -= value;
 
         // Burn the NFT and transfer the tokens to the user
         IERC721EMB(lockNFT).burn(_tokenId);
-        
+
         IERC20(token).safeTransfer(sender, value - fee);
 
         emit Withdraw(sender, _tokenId, value - fee, block.timestamp, totalLocked);
@@ -610,17 +632,42 @@ contract VotingEscrowV1_2_0 is
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IDelegateMoveVote
-    function moveDelegateVotes(address _from, address _to, uint256 _tokenId, bytes memory _data) public whenNotPaused {
+    function moveDelegateVotes(
+        address _from,
+        address _to,
+        uint256 _tokenId,
+        bytes memory _data
+    ) public whenNotPaused {
         if (msg.sender != lockNFT) revert OnlyLockNFT();
 
         _moveDelegateVotes(_from, _to, _tokenId, _data);
     }
 
-    function _moveDelegateVotes(address _from, address _to, uint256 _tokenId) private {
-        IEscrowIVotesAdapter(ivotesAdapter).moveDelegateVotes(_from, _to, _tokenId, abi.encode(true));
+    /// @inheritdoc IDelegateMoveVote
+    function moveDelegateVotes(address _from, address _to, uint256 _tokenId) public whenNotPaused {
+        if (msg.sender != lockNFT) revert OnlyLockNFT();
+
+        _moveDelegateVotes(_from, _to, _tokenId);
     }
 
-    function _moveDelegateVotes(address _from, address _to, uint256 _tokenId, bytes memory _data) private {
+    // default to including checkpoints
+    function _moveDelegateVotes(address _from, address _to, uint256 _tokenId) private {
+        bool CHECKPOINT_ONLY = false;
+        IEscrowIVotesAdapter(ivotesAdapter).moveDelegateVotes(
+            _from,
+            _to,
+            _tokenId,
+            abi.encode(CHECKPOINT_ONLY)
+        );
+    }
+
+    /// @dev allows passing extra arguments to the delegate votes functions
+    function _moveDelegateVotes(
+        address _from,
+        address _to,
+        uint256 _tokenId,
+        bytes memory _data
+    ) private {
         IEscrowIVotesAdapter(ivotesAdapter).moveDelegateVotes(_from, _to, _tokenId, _data);
     }
 
