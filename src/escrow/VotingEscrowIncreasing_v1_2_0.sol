@@ -444,35 +444,28 @@ contract VotingEscrowV1_2_0 is
         if (locked_.amount <= _value) revert SplitAmountTooBig();
 
         // Ensure that amounts of new tokens will be greater than `minDeposit`.
-        uint208 amount1 = locked_.amount - _value.toUint208();
-        uint208 amount2 = _value.toUint208();
+        uint208 amount1 = locked_.amount - _value.toUint208(); // 50 - 20 = 30
+        uint208 amount2 = _value.toUint208(); // 20
 
         if (amount1 < minDeposit || amount2 < minDeposit) {
             revert AmountTooSmall();
         }
 
-        // Note that this function must be called before we
-        // empty `locked_`'s amount to 0. `moveDelegateVotes`
-        // relies that lock still contains the amount.
-        // Remove `_from`'s delegatee's power.
         _moveDelegateVotes(IERC721EMB(lockNFT).ownerOf(_from), address(0), _from);
 
-        IERC721EMB(lockNFT).burn(_from);
-        _locked[_from] = LockedBalance(0, 0);
-        _checkpoint(_from, locked_, LockedBalance(0, locked_.start));
+        _checkpoint(_from, locked_, LockedBalance(amount1, locked_.start));
 
-        locked_.amount = amount1;
-        _tokenId1 = _createSplitNFT(sender, locked_);
+        _locked[_from] = LockedBalance(amount1, locked_.start);
 
         locked_.amount = amount2;
-        _tokenId2 = _createSplitNFT(sender, locked_);
+        _tokenId1 = _createSplitNFT(sender, locked_);
 
-        // 2 new NFTs were minted to sender. Update 
+        // 2 new NFTs were minted to sender. Update
         // sender's delegatee's power for both tokens.
+        _moveDelegateVotes(address(0), sender, _from);
         _moveDelegateVotes(address(0), sender, _tokenId1);
-        _moveDelegateVotes(address(0), sender, _tokenId2);
 
-        emit Split(_from, _tokenId1, _tokenId2, sender, amount1, amount2);
+        emit Split(_from, _from, _tokenId1, sender, amount1, amount2);
     }
 
     /// @notice creates a new token in checkpoint and mint.
@@ -569,7 +562,7 @@ contract VotingEscrowV1_2_0 is
 
         // Burn the NFT and transfer the tokens to the user
         IERC721EMB(lockNFT).burn(_tokenId);
-        
+
         IERC20(token).safeTransfer(sender, value - fee);
 
         emit Withdraw(sender, _tokenId, value - fee, block.timestamp, totalLocked);
@@ -610,17 +603,32 @@ contract VotingEscrowV1_2_0 is
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IDelegateMoveVote
-    function moveDelegateVotes(address _from, address _to, uint256 _tokenId, bytes memory _data) public whenNotPaused {
+    function moveDelegateVotes(
+        address _from,
+        address _to,
+        uint256 _tokenId,
+        bytes memory _data
+    ) public whenNotPaused {
         if (msg.sender != lockNFT) revert OnlyLockNFT();
 
         _moveDelegateVotes(_from, _to, _tokenId, _data);
     }
 
     function _moveDelegateVotes(address _from, address _to, uint256 _tokenId) private {
-        IEscrowIVotesAdapter(ivotesAdapter).moveDelegateVotes(_from, _to, _tokenId, abi.encode(true));
+        IEscrowIVotesAdapter(ivotesAdapter).moveDelegateVotes(
+            _from,
+            _to,
+            _tokenId,
+            abi.encode(true)
+        );
     }
 
-    function _moveDelegateVotes(address _from, address _to, uint256 _tokenId, bytes memory _data) private {
+    function _moveDelegateVotes(
+        address _from,
+        address _to,
+        uint256 _tokenId,
+        bytes memory _data
+    ) private {
         IEscrowIVotesAdapter(ivotesAdapter).moveDelegateVotes(_from, _to, _tokenId, _data);
     }
 

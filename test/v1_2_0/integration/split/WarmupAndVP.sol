@@ -53,63 +53,55 @@ contract TestSplit_WarmUpAndVotingPower is
     }
 
     function test_Split_BeforeWarmupPeriod_A() public givenWarmupPeriodLessThanMaxTime {
-        uint256 value = Lock_1_Amount - 10e18;
+        uint256 value = 10e18;
 
-        (uint256 tokenId1, uint256 tokenId2) = escrow.split(from, value);
+        (uint256 tokenId1, ) = escrow.split(from, value);
 
         // Split should not cause any changes to the warmup.
         assertEq(escrow.votingPower(from), 0);
         assertEq(escrow.votingPower(tokenId1), 0);
-        assertEq(escrow.votingPower(tokenId2), 0);
         assertFalse(curve.isWarm(from));
         assertFalse(curve.isWarm(tokenId1));
-        assertFalse(curve.isWarm(tokenId2));
 
         // move after warmup time.
         // Warmup has been reached, so vp must be non-zero 
         // and isWarm true for new tokens.
         vm.warp(weekStart + warmupPeriod + 1 seconds);
 
-        assertEq(escrow.votingPower(from), 0);
-        assertEq(escrow.votingPower(tokenId1), bias(10e18, block.timestamp - weekStart));
-        assertEq(escrow.votingPower(tokenId2), bias(value, block.timestamp - weekStart));
-        assertFalse(curve.isWarm(from));
+        assertEq(escrow.votingPower(from), bias(Lock_1_Amount - value, block.timestamp - weekStart));
+        assertEq(escrow.votingPower(tokenId1), bias(value, block.timestamp - weekStart));
+        assertTrue(curve.isWarm(from));
         assertTrue(curve.isWarm(tokenId1));
-        assertTrue(curve.isWarm(tokenId2));
     }
 
     function test_Split_AfterWarmupPeriod() public givenWarmupPeriodLessThanMaxTime {
         vm.warp(block.timestamp + warmupPeriod + 1 seconds);
 
-        uint256 value = Lock_1_Amount - 10e18;
+        uint256 value = 10e18;
 
-        (uint256 tokenId1, uint256 tokenId2) = escrow.split(from, value);
+        (uint256 tokenId1, ) = escrow.split(from, value);
 
         // Warmup has been reached, so vp must be non-zero 
         // and isWarm true for new tokens.
-        assertEq(escrow.votingPower(from), 0);
-        assertEq(escrow.votingPower(tokenId1), bias(10e18, block.timestamp - weekStart));
-        assertEq(escrow.votingPower(tokenId2), bias(value, block.timestamp - weekStart));
-        assertFalse(curve.isWarm(from));
+        assertEq(escrow.votingPower(from), bias(Lock_1_Amount - value, block.timestamp - weekStart));
+        assertEq(escrow.votingPower(tokenId1), bias(value, block.timestamp - weekStart));
+        assertTrue(curve.isWarm(from));
         assertTrue(curve.isWarm(tokenId1));
-        assertTrue(curve.isWarm(tokenId2));
     }
 
     function test_Split_BeforeWarmupPeriod_B() public givenWarmupPeriodGreaterThanMaxTime {
         uint256 currentTs = block.timestamp;
 
-        uint256 value = Lock_1_Amount - 10e18;
+        uint256 value = 10e18;
 
-        (uint256 tokenId1, uint256 tokenId2) = escrow.split(from, value);
+        (uint256 tokenId1, ) = escrow.split(from, value);
 
         // Warmup has not been reached, so vp must be 0 
         // and isWarm false for all tokens.
         assertEq(escrow.votingPower(from), 0);
         assertEq(escrow.votingPower(tokenId1), 0);
-        assertEq(escrow.votingPower(tokenId1), 0);
         assertFalse(curve.isWarm(from));
         assertFalse(curve.isWarm(tokenId1));
-        assertFalse(curve.isWarm(tokenId2));
 
         vm.warp(weekStart + maxTime);
 
@@ -117,18 +109,15 @@ contract TestSplit_WarmUpAndVotingPower is
         // and isWarm false for all tokens.
         assertEq(escrow.votingPower(from), 0);
         assertEq(escrow.votingPower(tokenId1), 0);
-        assertEq(escrow.votingPower(tokenId2), 0);
         assertFalse(curve.isWarm(from));
         assertFalse(curve.isWarm(tokenId1));
-        assertFalse(curve.isWarm(tokenId2));
 
         // Warmup has been reached, so vp must be non-zero 
         // and isWarm true for new tokens.
         vm.warp(currentTs + warmupPeriod + 1 seconds);
-        assertEq(escrow.votingPower(tokenId1), bias(10e18, maxTime));
-        assertEq(escrow.votingPower(tokenId2), bias(value, maxTime));
-        assertFalse(curve.isWarm(from));
+        assertEq(escrow.votingPower(from), bias(Lock_1_Amount - value, maxTime));
+        assertEq(escrow.votingPower(tokenId1), bias(value, maxTime));
+        assertTrue(curve.isWarm(from));
         assertTrue(curve.isWarm(tokenId1));
-        assertTrue(curve.isWarm(tokenId2));
     }
 }

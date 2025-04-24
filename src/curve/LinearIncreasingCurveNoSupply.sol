@@ -355,12 +355,15 @@ contract LinearIncreasingCurveNoSupply is
 
                 uint256 fromLockedEnd = _fromLocked.start + maxTime();
 
-                // Only add old lock's slope in case it's not mature yet.
-                if (block.timestamp < fromLockedEnd) {
-                    newLockSlope += oldLockSlope;
-                }
+                // If the new locked amount is smaller, we directly override it.
+                if(_newLocked.amount > _fromLocked.amount) {
+                    newLockBias += oldLockBias;
 
-                newLockBias += oldLockBias;
+                    // Only add old lock's slope in case it's not mature yet.
+                    if (block.timestamp < fromLockedEnd) {
+                        newLockSlope += oldLockSlope;
+                    }
+                }
             }
         }
 

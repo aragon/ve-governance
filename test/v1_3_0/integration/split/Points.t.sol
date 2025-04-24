@@ -27,7 +27,7 @@ import {
     IEscrowCurveGlobalStorage
 } from "../../versions.sol";
 
-contract TestSplit_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage, EscrowBase {
+contract TestSplit_Points_oe is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage, EscrowBase {
     function setUp() public override {
         super.setUp();
 
@@ -38,7 +38,7 @@ contract TestSplit_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage
 
     function test_Split_TokenNotMature() public {
         // 1. the tokenId's point must become 0
-        // 2. we should have 2 new tokenIds with `value` and `Lock_1_Amount - value` with their according bias and slope.
+        // 2. we should have one new tokenIds with `value` and `Lock_1_Amount - value` with old token with their according bias and slope.
         // 3. bias and slope on the latest global point must include the same slope and bias as it was originally before splitting.
         // 4. slope changes must still include the original token's slope at the same original end.
         uint256 value = 20e18;
@@ -58,19 +58,17 @@ contract TestSplit_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage
         uint256 elapsed = block.timestamp - weekStartTs;
 
         // 1
-        assertTokenPoint(tokenId, 2, 0, 0, weekStartTs, block.timestamp);
-
-        // 2
         assertTokenPoint(
+            tokenId,
             2,
-            1,
             biasFP(Lock_1_Amount - value, elapsed),
             slope1,
             weekStartTs,
             block.timestamp
         );
 
-        assertTokenPoint(3, 1, biasFP(value, elapsed), slope2, weekStartTs, block.timestamp);
+        // 2
+        assertTokenPoint(2, 1, biasFP(value, elapsed), slope2, weekStartTs, block.timestamp);
 
         // 3
         assertGlobalPoint(
@@ -86,7 +84,7 @@ contract TestSplit_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage
 
     function test_Split_TokenAlreadyMature() public {
         // 1. the tokenId's point must become 0
-        // 2. we should have 2 new tokenIds with `value` and `Lock_1_Amount - value` with their according bias and slope.
+        // 2. we should have one new tokenId with `value` and current token with `Lock_1_Amount - value` with their according bias and slope.
         // 3. slope on the last global point must be 0 as it was stored after both tokens were mature. bias must be maxed out.
         // 4. slope changes must still include the original token's slope at the same original end.
         uint256 value = 20e18;
@@ -98,30 +96,20 @@ contract TestSplit_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage
         vm.warp(endTs + 1 hours);
 
         escrow.split(tokenId, value);
-
-        // 1
-        assertTokenPoint(tokenId, 2, 0, 0, weekStartTs, block.timestamp);
-
         uint256 elapsed = endTs - weekStartTs;
 
-        // 2
+        // 1
         assertTokenPoint(
+            tokenId,
             2,
-            1,
             biasFP(Lock_1_Amount - value, elapsed),
             0,
             weekStartTs,
             block.timestamp
         );
 
-        assertTokenPoint(
-            3,
-            1,
-            biasFP(value, elapsed),
-            0,
-            weekStartTs,
-            block.timestamp
-        );
+        // 2
+        assertTokenPoint(2, 1, biasFP(value, elapsed), 0, weekStartTs, block.timestamp);
 
         // 3
         uint256 lastIndex = (block.timestamp - Lock_1_start) / checkpointInterval + 2;

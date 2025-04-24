@@ -95,24 +95,22 @@ contract TestEscrowSplit is EscrowBase {
         escrow.split(from, Lock_1_Amount - 10);
     }
 
-    function test_fromTokenIsCorrectlyBurnt() public {
+    function test_fromTokenIsRetainedWithCorrectValue() public {
         vm.warp(checkpointInterval + 1 hours);
 
         uint256 from = escrow.createLock(Lock_1_Amount);
 
-        escrow.split(from, Lock_1_Amount - 10);
+        escrow.split(from, 10e18);
 
         LockedBalance memory lockedFrom = escrow.locked(from);
 
-        // check that `from` token object doesn't exist anymore
-        assertEq(lockedFrom.start, 0);
-        assertEq(lockedFrom.amount, 0);
+        assertEq(lockedFrom.start, weekStartTs(block.timestamp));
+        assertEq(lockedFrom.amount, Lock_1_Amount - 10e18);
 
-        vm.expectRevert();
-        nftLock.ownerOf(from);
+        assertEq(nftLock.ownerOf(from), address(this));
     }
 
-    function test_CreatesTwoNewTokensAndWithSameStartDate() public {
+    function test_CreatesNewTokenWithSameStartDate() public {
         vm.warp(checkpointInterval + 1 hours);
 
         uint256 originalTokenStartTs = weekStartTs(block.timestamp);
@@ -129,8 +127,8 @@ contract TestEscrowSplit is EscrowBase {
         vm.warp(block.timestamp + checkpointInterval + 1 hours);
         escrow.split(from, splitVal);
 
-        LockedBalance memory token1 = escrow.locked(from + 1);
-        LockedBalance memory token2 = escrow.locked(from + 2);
+        LockedBalance memory token1 = escrow.locked(from);
+        LockedBalance memory token2 = escrow.locked(from + 1);
 
         assertEq(token1.amount, token1Value);
         assertEq(token1.start, originalTokenStartTs);
@@ -145,8 +143,8 @@ contract TestEscrowSplit is EscrowBase {
         vm.expectEmit();
         emit Split(
             from,
+            from,
             from + 1,
-            from + 2,
             address(this),
             uint208(Lock_1_Amount - splitVal),
             uint208(splitVal)
