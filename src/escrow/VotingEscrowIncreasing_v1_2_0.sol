@@ -460,7 +460,7 @@ contract VotingEscrowV1_2_0 is
         locked_.amount = amount2;
         uint256 newTokenId = _createSplitNFT(sender, locked_);
 
-        // 2 new NFTs were minted to sender. Update
+        // a new NFT was minted to sender. Update
         // sender's delegatee's power for both tokens.
         _moveDelegateVotes(address(0), sender, _from);
         _moveDelegateVotes(address(0), sender, newTokenId);
