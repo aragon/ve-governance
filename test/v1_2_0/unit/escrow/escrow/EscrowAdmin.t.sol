@@ -25,6 +25,17 @@ contract TestEscrowAdmin is EscrowBase {
         escrow.setLockNFT(address(0));
     }
 
+    function testSetIVotesAdapter(address _newIVotesAdapter) public {
+        escrow.setIVotesAdapter(_newIVotesAdapter);
+        assertEq(escrow.ivotesAdapter(), _newIVotesAdapter);
+
+        bytes memory err = _authErr(attacker, address(escrow), escrow.ESCROW_ADMIN_ROLE());
+        vm.prank(attacker);
+        vm.expectRevert(err);
+        escrow.setIVotesAdapter(_newIVotesAdapter);
+        escrow.setIVotesAdapter(address(0));
+    }
+
     function testSetCurve(address _newCurve) public {
         escrow.setCurve(_newCurve);
         assertEq(escrow.curve(), _newCurve);

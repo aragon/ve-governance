@@ -96,12 +96,11 @@ contract EscrowIVotesAdapter is
     ///      Note that sender must first undelegate all token ids before calling this function.
     function delegate(address _delegatee) public whenNotPaused {
         address sender = _msgSender();
+        address oldDelegatee = delegates(sender);
 
         if (numberOfDelegatedTokens[sender] != 0) {
             revert DelegationNotAllowed();
         }
-
-        address oldDelegatee = delegates(sender);
 
         delegatees_[sender] = _delegatee;
 
@@ -191,7 +190,7 @@ contract EscrowIVotesAdapter is
 
         emit TokensUndelegated(sender, delegatee, _tokenIds);
     }
-
+    
     function moveDelegateVotes(address _from, address _to, uint256 _tokenId) external whenNotPaused {
         if (_msgSender() != escrow) {
             revert OnlyEscrow();
@@ -227,10 +226,13 @@ contract EscrowIVotesAdapter is
             numberOfDelegatedTokens[_from]--;
         }
 
-        if (_to == address(escrow)) {
-            // transfering to address(escrow) is the same as `beginWithdrawal`, i.e burn.
+        // This can occur if the receiver of the token:
+        //  1. has no delegatee.
+        //  2. is an escrow contract(in case of `beginWithdrawal`)
+        //  3. transfer occurs to special addresses - i.e address(0), address(1), e.t.c)
+        if (toDelegatee == address(0)) {
             tokenIsDelegated[_tokenId] = false;
-        } else if (toDelegatee != address(0)) {
+        } else {
             (int256 bias, int256 slope) = _getBiasAndSlope(toDelegatee, locked, _positive);
             _checkpoint(bias, slope, toDelegatee);
 
