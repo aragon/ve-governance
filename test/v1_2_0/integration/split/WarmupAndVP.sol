@@ -55,7 +55,7 @@ contract TestSplit_WarmUpAndVotingPower is
     function test_Split_BeforeWarmupPeriod_A() public givenWarmupPeriodLessThanMaxTime {
         uint256 value = 10e18;
 
-        (uint256 tokenId1, ) = escrow.split(from, value);
+        uint256 tokenId1 = escrow.split(from, value);
 
         // Split should not cause any changes to the warmup.
         assertEq(escrow.votingPower(from), 0);
@@ -79,7 +79,7 @@ contract TestSplit_WarmUpAndVotingPower is
 
         uint256 value = 10e18;
 
-        (uint256 tokenId1, ) = escrow.split(from, value);
+        uint256 tokenId1 = escrow.split(from, value);
 
         // Warmup has been reached, so vp must be non-zero 
         // and isWarm true for new tokens.
@@ -94,7 +94,7 @@ contract TestSplit_WarmUpAndVotingPower is
 
         uint256 value = 10e18;
 
-        (uint256 tokenId1, ) = escrow.split(from, value);
+        uint256 tokenId1 = escrow.split(from, value);
 
         // Warmup has not been reached, so vp must be 0 
         // and isWarm false for all tokens.

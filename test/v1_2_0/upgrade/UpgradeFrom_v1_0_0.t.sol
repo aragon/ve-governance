@@ -333,10 +333,10 @@ contract RegressionV1_0_0__to__V1_2_0 is Test, IGaugeVote, FixedPointBase {
 
         // split the lock that were created before the upgrade.
         vm.prank(ALICE_ADDRESS);
-        (uint256 id1, uint256 id2) = escrowUpgrade.split(aliceToken, 50 ether);
+        uint256 newTokenId = escrowUpgrade.split(aliceToken, 50 ether);
 
-        uint256 vpAfterUpgradeAndSplit = escrowUpgrade.votingPower(id1) +
-            escrowUpgrade.votingPower(id2);
+        uint256 vpAfterUpgradeAndSplit = escrowUpgrade.votingPower(aliceToken) +
+            escrowUpgrade.votingPower(newTokenId);
 
         assertEq(vpBeforeUpgrade, vpAfterUpgradeAndSplit);
     }

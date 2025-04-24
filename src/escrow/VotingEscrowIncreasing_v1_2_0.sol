@@ -428,7 +428,7 @@ contract VotingEscrowV1_2_0 is
     function split(
         uint256 _from,
         uint256 _value
-    ) public whenNotPaused returns (uint256 _tokenId1, uint256 _tokenId2) {
+    ) public whenNotPaused returns (uint256) {
         address sender = _msgSender();
 
         // Only allow split to whitelisted accounts.
@@ -444,8 +444,8 @@ contract VotingEscrowV1_2_0 is
         if (locked_.amount <= _value) revert SplitAmountTooBig();
 
         // Ensure that amounts of new tokens will be greater than `minDeposit`.
-        uint208 amount1 = locked_.amount - _value.toUint208(); // 50 - 20 = 30
-        uint208 amount2 = _value.toUint208(); // 20
+        uint208 amount1 = locked_.amount - _value.toUint208(); 
+        uint208 amount2 = _value.toUint208();
 
         if (amount1 < minDeposit || amount2 < minDeposit) {
             revert AmountTooSmall();
@@ -458,14 +458,16 @@ contract VotingEscrowV1_2_0 is
         _locked[_from] = LockedBalance(amount1, locked_.start);
 
         locked_.amount = amount2;
-        _tokenId1 = _createSplitNFT(sender, locked_);
+        uint256 newTokenId = _createSplitNFT(sender, locked_);
 
         // 2 new NFTs were minted to sender. Update
         // sender's delegatee's power for both tokens.
         _moveDelegateVotes(address(0), sender, _from);
-        _moveDelegateVotes(address(0), sender, _tokenId1);
+        _moveDelegateVotes(address(0), sender, newTokenId);
 
-        emit Split(_from, _from, _tokenId1, sender, amount1, amount2);
+        emit Split(_from, _from, newTokenId, sender, amount1, amount2);
+
+        return newTokenId;
     }
 
     /// @notice creates a new token in checkpoint and mint.
