@@ -105,7 +105,7 @@ contract EscrowIVotesAdapter is
         if (numberOfDelegatedTokens[sender] != 0) {
             revert DelegationNotAllowed();
         }
-        
+
         address oldDelegatee = delegates(sender);
 
         delegatees_[sender] = _delegatee;
@@ -234,7 +234,11 @@ contract EscrowIVotesAdapter is
             (int256 bias, int256 slope) = _getBiasAndSlope(toDelegatee, locked, _positive);
             _checkpoint(bias, slope, toDelegatee);
 
-            // mint occurs.
+            // If mint occurs and delegatee exists, always update.
+            // If not mint, only update if `updateCounter` is true.
+            //  1. In transfer case, updateCounter must always be true.
+            //  2. In merge case, it must be false, because delegatee doesn't 
+            // receive a new token, but `_from` token(in merge)'s power only.
             if (_from == address(0) || updateCounter) {
                 numberOfDelegatedTokens[_to]++;
                 tokenIsDelegated[_tokenId] = true;
