@@ -248,6 +248,10 @@ contract EscrowIVotesAdapter is
         }
 
         IVotingEscrow(escrow).updateVotingPower(fromDelegatee, toDelegatee);
+
+        uint256[] memory tokenIds = new uint256[](1);
+        tokenIds[0] = _tokenId;
+        emit TokensDelegated(_from, toDelegatee, tokenIds);
     }
 
     /*//////////////////////////////////////////////////////////////
