@@ -15,6 +15,7 @@ import {
     IVotesUpgradeable as IVotes
 } from "@openzeppelin/contracts-upgradeable/governance/utils/IVotesUpgradeable.sol";
 import {PluginUUPSUpgradeable} from "@aragon/osx/core/plugin/PluginUUPSUpgradeable.sol";
+import {console2 as console} from "forge-std/console2.sol";
 
 contract AddressGaugeVoter is
     IAddressGaugeVoter,
@@ -328,7 +329,7 @@ contract AddressGaugeVoter is
     ) internal view virtual returns (uint256) {
         return (_weight * 10e32) / _totalWeight;
     }
-
+    
     function _votesForGauge(
         uint256 _weight,
         uint256 _votingPower

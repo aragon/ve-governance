@@ -135,13 +135,13 @@ contract Base is
         return EscrowIVotesAdapterA(address(impl).deployUUPSProxy(initCalldata));
     }
 
-    function getIds(uint256 _tokenId) internal view returns (uint256[] memory) {
+    function getIds(uint256 _tokenId) internal pure returns (uint256[] memory) {
         uint256[] memory ids = new uint256[](1);
         ids[0] = _tokenId;
         return ids;
     }
 
-    function getIds(uint256 _tokenId1, uint256 _tokenId2) internal view returns (uint256[] memory) {
+    function getIds(uint256 _tokenId1, uint256 _tokenId2) internal pure returns (uint256[] memory) {
         uint256[] memory ids = new uint256[](2);
         ids[0] = _tokenId1;
         ids[1] = _tokenId2;
@@ -176,7 +176,6 @@ contract Base is
         );
     }
 
-    // DAO::hasPermission(ERC1967Proxy: [0x03A6a84cD762D9707A21605b548aaaB891562aAb], TestVotingWithDelegation: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], 0xfda1ae526c1fb38407f23e8b7712f7cfacc146f3e340a04221488331e0d42014, 0x071d21710000000000000000000000000000000000000000000000000000000000000777000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000086d65746164617461000000000000000000000000000000000000000000000000)
     function _mockPermissions() internal {
         vm.mockCall(
             address(dao),

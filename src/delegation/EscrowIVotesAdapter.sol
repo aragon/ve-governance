@@ -200,11 +200,14 @@ contract EscrowIVotesAdapter is
     function moveDelegateVotes(
         address _from,
         address _to,
-        uint256 _tokenId
+        uint256 _tokenId,
+        bytes memory _data
     ) external whenNotPaused {
         if (_msgSender() != escrow) {
             revert OnlyEscrow();
         }
+
+        bool updateCounter = abi.decode(_data, (bool));
 
         address fromDelegatee = delegates(_from);
         address toDelegatee = delegates(_to);
@@ -215,40 +218,33 @@ contract EscrowIVotesAdapter is
 
         IVotingEscrow.LockedBalance memory locked = IVotingEscrow(escrow).locked(_tokenId);
 
-        // mint is occuring and the receiver already has a delegatee.
-        // Increase the delegatee's voting power.
-        if (_from == address(0) && toDelegatee != address(0)) {
-            (int256 bias, int256 slope) = _getBiasAndSlope(toDelegatee, locked, _positive);
-            _checkpoint(bias, slope, toDelegatee);
-
-            tokenIsDelegated[_tokenId] = true;
-            numberOfDelegatedTokens[_to]++;
-
-            uint256[] memory tokenIds = new uint256[](1);
-            tokenIds[0] = _tokenId;
-            emit TokensDelegated(_from, toDelegatee, tokenIds);
-
-            IVotingEscrow(escrow).updateVotingPower(fromDelegatee, toDelegatee);
-
-            return;
-        }
-
         if (fromDelegatee != address(0)) {
             (int256 bias, int256 slope) = _getBiasAndSlope(fromDelegatee, locked, _negative);
             _checkpoint(bias, slope, fromDelegatee);
 
             numberOfDelegatedTokens[_from]--;
+
+            // burn occurs.
+            if (_to == address(0)) {
+                tokenIsDelegated[_tokenId] = false;
+            }
         }
 
-        if (_to == address(escrow)) {
-            // transfering to address(escrow) is the same as `beginWithdrawal`, i.e burn.
-            tokenIsDelegated[_tokenId] = false;
-        } else if (toDelegatee != address(0)) {
+        if (toDelegatee != address(0)) {
             (int256 bias, int256 slope) = _getBiasAndSlope(toDelegatee, locked, _positive);
             _checkpoint(bias, slope, toDelegatee);
 
-            numberOfDelegatedTokens[_to]++;
-            tokenIsDelegated[_tokenId] = true;
+            // If mint occurs and delegatee exists, always update.
+            // If not mint, only update if `updateCounter` is true.
+            //  1. In transfer case, updateCounter must always be true.
+            //  2. In merge case, it must be false, because delegatee doesn't 
+            // receive a new token, but `_from` token(in merge)'s power only.
+            if (_from == address(0) || updateCounter) {
+                numberOfDelegatedTokens[_to]++;
+                tokenIsDelegated[_tokenId] = true;
+            } else {
+                tokenIsDelegated[_tokenId] = false;
+            }
         }
 
         IVotingEscrow(escrow).updateVotingPower(fromDelegatee, toDelegatee);

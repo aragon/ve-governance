@@ -1,11 +1,8 @@
 pragma solidity ^0.8.17;
 
 import {TestHelpers} from "@helpers/TestHelpers.sol";
-import {console2 as console} from "forge-std/console2.sol";
-import {DaoUnauthorized} from "@aragon/osx/core/utils/auth.sol";
 
-import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
-import {DAO, createTestDAO} from "@mocks/MockDAO.sol";
+import {DAO} from "@mocks/MockDAO.sol";
 import {
     Clock,
     Curve,
@@ -20,14 +17,14 @@ import {FixedPointBase} from "../../../base/FixedPointBase.sol";
 contract MockEscrow {
     address public token;
     Curve public curve;
-    mapping(uint => IVotingEscrow.LockedBalance) _locked;
+    mapping(uint => IVotingEscrow.LockedBalance) locked_;
 
     function setCurve(Curve _curve) external {
         curve = _curve;
     }
 
     function setLocked(uint256 _tokenId, IVotingEscrow.LockedBalance memory _locked) external {
-        _locked = _locked;
+        locked_[_tokenId] = _locked;
     }
 
     function checkpoint(
@@ -35,12 +32,12 @@ contract MockEscrow {
         IVotingEscrow.LockedBalance memory _oldLocked,
         IVotingEscrow.LockedBalance memory _newLocked
     ) external {
-        _locked[_tokenId] = _newLocked;
+        locked_[_tokenId] = _newLocked;
         return curve.checkpoint(_tokenId, _oldLocked, _newLocked);
     }
 
     function locked(uint256 _tokenId) external view returns (IVotingEscrow.LockedBalance memory) {
-        return _locked[_tokenId];
+        return locked_[_tokenId];
     }
 }
 
@@ -82,6 +79,6 @@ contract CurveBase is TestHelpers, FixedPointBase, ILockedBalanceIncreasing {
 
         escrow.setCurve(curve);
 
-        super.initialize(curve.maxTime(), clock.checkpointInterval());
+        FixedPointBase.initialize(curve.maxTime(), clock.checkpointInterval());
     }
 }
