@@ -351,11 +351,8 @@ contract VotingEscrowV1_2_0 is
         // mint the NFT before and emit the event to complete the lock
         IERC721EMB(lockNFT).mint(_to, newTokenId);
 
-        _moveDelegateVotes(
-            address(0),
-            IERC721EMB(lockNFT).ownerOf(_to),
-            _to
-        );
+        // Update `_to`'s delegate power.
+        _moveDelegateVotes(address(0), _to, newTokenId);
 
         emit Deposit(_to, newTokenId, startTime, _value, totalLocked);
 
@@ -456,11 +453,8 @@ contract VotingEscrowV1_2_0 is
         // Note that this function must be called before we
         // empty `locked_`'s amount to 0. `moveDelegateVotes`
         // relies that lock still contains the amount.
-        _moveDelegateVotes(
-            IERC721EMB(lockNFT).ownerOf(_from),
-            address(0),
-            _from
-        );
+        // Remove `_from`'s delegatee's power.
+        _moveDelegateVotes(IERC721EMB(lockNFT).ownerOf(_from), address(0), _from);
 
         IERC721EMB(lockNFT).burn(_from);
         _locked[_from] = LockedBalance(0, 0);
@@ -472,17 +466,10 @@ contract VotingEscrowV1_2_0 is
         locked_.amount = amount2;
         _tokenId2 = _createSplitNFT(sender, locked_);
 
-        _moveDelegateVotes(
-            address(0),
-            IERC721EMB(lockNFT).ownerOf(_to),
-            _from
-        );
-
-        _moveDelegateVotes(
-            address(0),
-            IERC721EMB(lockNFT).ownerOf(_to),
-            _from
-        );
+        // 2 new NFTs were minted to sender. Update 
+        // sender's delegatee's power for both tokens.
+        _moveDelegateVotes(address(0), sender, _tokenId1);
+        _moveDelegateVotes(address(0), sender, _tokenId2);
 
         emit Split(_from, _tokenId1, _tokenId2, sender, amount1, amount2);
     }
@@ -581,13 +568,6 @@ contract VotingEscrowV1_2_0 is
 
         // Burn the NFT and transfer the tokens to the user
         IERC721EMB(lockNFT).burn(_tokenId);
-
-        _moveDelegateVotes(
-            IERC721EMB(lockNFT).ownerOf(_tokenId),
-            address(0),
-            _tokenId
-        );
-
         
         IERC20(token).safeTransfer(sender, value - fee);
 
