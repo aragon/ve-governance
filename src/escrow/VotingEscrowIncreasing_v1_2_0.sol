@@ -381,7 +381,8 @@ contract VotingEscrowV1_2_0 is
         _moveDelegateVotes(
             IERC721EMB(lockNFT).ownerOf(_from),
             IERC721EMB(lockNFT).ownerOf(_to),
-            _from
+            _from,
+            abi.encode(false)
         );
 
         // Update for `_from`.
@@ -609,14 +610,18 @@ contract VotingEscrowV1_2_0 is
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IDelegateMoveVote
-    function moveDelegateVotes(address _from, address _to, uint256 _tokenId) public whenNotPaused {
+    function moveDelegateVotes(address _from, address _to, uint256 _tokenId, bytes memory _data) public whenNotPaused {
         if (msg.sender != lockNFT) revert OnlyLockNFT();
 
-        _moveDelegateVotes(_from, _to, _tokenId);
+        _moveDelegateVotes(_from, _to, _tokenId, _data);
     }
 
     function _moveDelegateVotes(address _from, address _to, uint256 _tokenId) private {
-        IEscrowIVotesAdapter(ivotesAdapter).moveDelegateVotes(_from, _to, _tokenId);
+        IEscrowIVotesAdapter(ivotesAdapter).moveDelegateVotes(_from, _to, _tokenId, abi.encode(true));
+    }
+
+    function _moveDelegateVotes(address _from, address _to, uint256 _tokenId, bytes memory _data) private {
+        IEscrowIVotesAdapter(ivotesAdapter).moveDelegateVotes(_from, _to, _tokenId, _data);
     }
 
     /// @inheritdoc IDelegateUpdateVotingPower

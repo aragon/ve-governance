@@ -29,7 +29,8 @@ interface IDelegateMoveVote {
     /// @param _from The current delegatee of `_tokenId`.
     /// @param _to The new delegatee of `_tokenId`
     /// @param _tokenId The token id that is being transferred.
-    function moveDelegateVotes(address _from, address _to, uint256 _tokenId) external;
+    /// @param _data The extra abi encoded data.
+    function moveDelegateVotes(address _from, address _to, uint256 _tokenId, bytes memory _data) external;
 }
 
 interface IDelegateUpdateVotingPower {

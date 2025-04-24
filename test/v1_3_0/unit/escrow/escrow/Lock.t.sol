@@ -110,5 +110,5 @@ contract NFTReentrant is IDelegateMoveVote {
 
     // Ensure this function exists on reentrant contract
     // so it doesn't fail because of it.
-    function moveDelegateVotes(address, address, uint256) public {}
+    function moveDelegateVotes(address, address, uint256, bytes memory) public {}
 }

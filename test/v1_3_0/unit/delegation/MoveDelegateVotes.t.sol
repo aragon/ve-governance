@@ -4,6 +4,8 @@ import {Base} from "./Base.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 
 contract TestMoveDelegateVotes is Base {
+    bytes private updateCounter = abi.encode(true);
+
     function setUp() public override {
         super.setUp();
     }
@@ -12,12 +14,12 @@ contract TestMoveDelegateVotes is Base {
         dg.pause();
         
         vm.expectRevert("Pausable: paused");
-        dg.moveDelegateVotes(alice, bob, 1);
+        dg.moveDelegateVotes(alice, bob, 1, updateCounter);
     }
 
     function testRevert_IfNotCalledByEscrow() public {
         vm.expectRevert(OnlyEscrow.selector);
-        dg.moveDelegateVotes(alice, bob, 1);
+        dg.moveDelegateVotes(alice, bob, 1, updateCounter);
     }
 
     function test_OnlyUpdatesFromDelegateeWhenToIsNotSet() public {
@@ -43,7 +45,7 @@ contract TestMoveDelegateVotes is Base {
         assertEq(dg.getVotes(bob), 0);
 
         vm.prank(address(escrow));
-        dg.moveDelegateVotes(tokenOwner, bob, 1);
+        dg.moveDelegateVotes(tokenOwner, bob, 1, updateCounter);
 
         assertEq(dg.getVotes(alice), token2Bias);
         assertEq(dg.getVotes(bob), 0);
@@ -62,7 +64,7 @@ contract TestMoveDelegateVotes is Base {
         assertEq(dg.getVotes(bob), 0);
 
         vm.prank(address(escrow));
-        dg.moveDelegateVotes(sender, tokenReceiver, 1);
+        dg.moveDelegateVotes(sender, tokenReceiver, 1, updateCounter);
 
         assertEq(dg.getVotes(bob), bias(10, block.timestamp - weekStartTs((block.timestamp))));
     }
@@ -102,7 +104,7 @@ contract TestMoveDelegateVotes is Base {
         assertEq(dg.getVotes(bob), 0);
 
         vm.prank(address(escrow));
-        dg.moveDelegateVotes(tokenOwner, tokenReceiver, 1);
+        dg.moveDelegateVotes(tokenOwner, tokenReceiver, 1, updateCounter);
 
         assertEq(dg.getVotes(alice), token2Bias);
         assertEq(dg.getVotes(bob), token1Bias);

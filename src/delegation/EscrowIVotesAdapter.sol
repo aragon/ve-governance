@@ -64,13 +64,18 @@ contract EscrowIVotesAdapter is
         _disableInitializers();
     }
 
-    function initialize(address _dao, address _escrow, address _clock, bool _startPaused) external initializer {
+    function initialize(
+        address _dao,
+        address _escrow,
+        address _clock,
+        bool _startPaused
+    ) external initializer {
         __PluginUUPSUpgradeable_init(IDAO(_dao));
         __ReentrancyGuard_init();
         escrow = _escrow;
         clock = _clock;
 
-        if(_startPaused) _pause();
+        if (_startPaused) _pause();
 
         maxTime = IClock(clock).epochDuration() * CurveConstantLib.MAX_EPOCHS;
     }
@@ -190,11 +195,18 @@ contract EscrowIVotesAdapter is
 
         emit TokensUndelegated(sender, delegatee, _tokenIds);
     }
-    
-    function moveDelegateVotes(address _from, address _to, uint256 _tokenId) external whenNotPaused {
+
+    function moveDelegateVotes(
+        address _from,
+        address _to,
+        uint256 _tokenId,
+        bytes memory _data
+    ) external whenNotPaused {
         if (_msgSender() != escrow) {
             revert OnlyEscrow();
         }
+
+        bool updateCounter = abi.decode(_data, (bool));
 
         address fromDelegatee = delegates(_from);
         address toDelegatee = delegates(_to);
@@ -202,42 +214,32 @@ contract EscrowIVotesAdapter is
         if (_from == _to || fromDelegatee == toDelegatee) {
             return;
         }
-        
+
         IVotingEscrow.LockedBalance memory locked = IVotingEscrow(escrow).locked(_tokenId);
-
-        // mint is occuring and the receiver already has a delegatee.
-        // Increase the delegatee's voting power.
-        if (_from == address(0) && toDelegatee != address(0)) {
-            (int256 bias, int256 slope) = _getBiasAndSlope(toDelegatee, locked, _positive);
-            _checkpoint(bias, slope, toDelegatee);
-
-            tokenIsDelegated[_tokenId] = true;
-            numberOfDelegatedTokens[_to]++;
-
-            IVotingEscrow(escrow).updateVotingPower(fromDelegatee, toDelegatee);
-
-            return;
-        }
 
         if (fromDelegatee != address(0)) {
             (int256 bias, int256 slope) = _getBiasAndSlope(fromDelegatee, locked, _negative);
             _checkpoint(bias, slope, fromDelegatee);
 
             numberOfDelegatedTokens[_from]--;
+
+            // burn occurs.
+            if (_to == address(0)) {
+                tokenIsDelegated[_tokenId] = false;
+            }
         }
 
-        // This can occur if the receiver of the token:
-        //  1. has no delegatee.
-        //  2. is an escrow contract(in case of `beginWithdrawal`)
-        //  3. transfer occurs to special addresses - i.e address(0), address(1), e.t.c)
-        if (toDelegatee == address(0)) {
-            tokenIsDelegated[_tokenId] = false;
-        } else {
+        if (toDelegatee != address(0)) {
             (int256 bias, int256 slope) = _getBiasAndSlope(toDelegatee, locked, _positive);
             _checkpoint(bias, slope, toDelegatee);
 
-            numberOfDelegatedTokens[_to]++;
-            tokenIsDelegated[_tokenId] = true;
+            // mint occurs.
+            if (_from == address(0) || updateCounter) {
+                numberOfDelegatedTokens[_to]++;
+                tokenIsDelegated[_tokenId] = true;
+            } else {
+                tokenIsDelegated[_tokenId] = false;
+            }
         }
 
         IVotingEscrow(escrow).updateVotingPower(fromDelegatee, toDelegatee);
@@ -247,7 +249,10 @@ contract EscrowIVotesAdapter is
                         Checkpoint Functions
     //////////////////////////////////////////////////////////////*/
 
-    function checkpointTransition(address _delegatee, uint256 _transitionCount) external whenNotPaused {
+    function checkpointTransition(
+        address _delegatee,
+        uint256 _transitionCount
+    ) external whenNotPaused {
         _checkpoint(0, 0, _delegatee, _transitionCount);
     }
 

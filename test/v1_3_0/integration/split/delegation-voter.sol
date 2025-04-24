@@ -56,6 +56,7 @@ contract TestSplit_DelegationAndVoter is IEscrowCurveTokenStorage, IEscrowCurveG
         uint256 checkpointTs = weekStartTs(block.timestamp);
 
         assertEq(ivotesAdapter.tokenIsDelegated(1), true);
+        assertEq(ivotesAdapter.numberOfDelegatedTokens(alice), 1);
         assertEq(voter.votes(alice, gauge), bias(aliceAmount, block.timestamp - checkpointTs));
         assertEq(ivotesAdapter.getVotes(alice), bias(aliceAmount, block.timestamp - checkpointTs));
 
@@ -68,6 +69,7 @@ contract TestSplit_DelegationAndVoter is IEscrowCurveTokenStorage, IEscrowCurveG
         assertEq(ivotesAdapter.tokenIsDelegated(1), false);
         assertEq(ivotesAdapter.tokenIsDelegated(2), true);
         assertEq(ivotesAdapter.tokenIsDelegated(3), true);
+        assertEq(ivotesAdapter.numberOfDelegatedTokens(alice), 2);
 
         // we only update the votes on undelegation -
         // i.e when new voting power is less than currently recorded vote's power.
@@ -75,5 +77,6 @@ contract TestSplit_DelegationAndVoter is IEscrowCurveTokenStorage, IEscrowCurveG
         // Even though she got automatically delegated tokenId = 2 and 3, we still don't update.
         // See AddressGaugeVoter for more details.
         assertEq(voter.votes(alice, gauge), 0);
+        
     }
 }

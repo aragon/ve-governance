@@ -91,6 +91,8 @@ contract TestMerge_DelegationAndVoter is
         assertEq(ivotesAdapter.getVotes(bob), bobBias);
         assertTrue(ivotesAdapter.tokenIsDelegated(1));
         assertTrue(ivotesAdapter.tokenIsDelegated(2));
+        assertEq(ivotesAdapter.numberOfDelegatedTokens(alice), 1);
+        assertEq(ivotesAdapter.numberOfDelegatedTokens(bob), 1);
 
         // Run merge
         uint256 lockEnd = checkpointTs + maxTime;
@@ -116,7 +118,9 @@ contract TestMerge_DelegationAndVoter is
         // See AddressGaugeVoter for more details.
         assertEq(voter.votes(bob, gauge), bobBias);
 
-        // assertFalse(ivotesAdapter.tokenIsDelegated(1));
+        assertFalse(ivotesAdapter.tokenIsDelegated(1));
         assertTrue(ivotesAdapter.tokenIsDelegated(2));
+        assertEq(ivotesAdapter.numberOfDelegatedTokens(alice), 0);
+        assertEq(ivotesAdapter.numberOfDelegatedTokens(bob), 1);
     }
 }
