@@ -207,6 +207,10 @@ contract EscrowIVotesAdapter is
             revert OnlyEscrow();
         }
 
+        // we expect _data to contain boolean. If the length is not 32, 
+        // return early and not try to decode to avoid reverting.
+        if(_data.length != 32) return;
+
         bool updateCounter = abi.decode(_data, (bool));
 
         address fromDelegatee = delegates(_from);
@@ -247,11 +251,16 @@ contract EscrowIVotesAdapter is
             }
         }
 
-        IVotingEscrow(escrow).updateVotingPower(fromDelegatee, toDelegatee);
+        // Only call if at least from or to's delegatee exists.
+        // Otherwise skip as it would be pointless as there's 
+        // nothing to update if both delegatees are address 0.
+        if(fromDelegatee != address(0) || toDelegatee != address(0)) {
+            IVotingEscrow(escrow).updateVotingPower(fromDelegatee, toDelegatee);
+        }
 
         uint256[] memory tokenIds = new uint256[](1);
         tokenIds[0] = _tokenId;
-        emit TokensDelegated(_from, toDelegatee, tokenIds);
+        emit TokensDelegated(fromDelegatee, toDelegatee, tokenIds);
     }
 
     /*//////////////////////////////////////////////////////////////

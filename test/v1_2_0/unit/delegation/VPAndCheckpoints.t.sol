@@ -101,7 +101,6 @@ contract TestVPAndCheckpoints is Base {
 
         uint256 amount1 = 10;
         uint256 start1 = weekStartTs(block.timestamp);
-        uint256 start1Ts = block.timestamp;
         _mockLocked(singleId[0], amount1, start1);
 
         dg.delegate(singleId);
