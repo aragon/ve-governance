@@ -12,7 +12,7 @@ contract TestMoveDelegateVotes is Base {
 
     function test_shouldRevertIfPaused() public {
         dg.pause();
-        
+
         vm.expectRevert("Pausable: paused");
         dg.moveDelegateVotes(alice, bob, 1, updateCounter);
     }
@@ -44,8 +44,15 @@ contract TestMoveDelegateVotes is Base {
         assertEq(dg.getVotes(alice), total);
         assertEq(dg.getVotes(bob), 0);
 
-        vm.prank(address(escrow));
-        dg.moveDelegateVotes(tokenOwner, bob, 1, updateCounter);
+        vm.startPrank(address(escrow));
+        {
+            uint256[] memory tokenIds = new uint256[](1);
+            tokenIds[0] = 1;
+            vm.expectEmit();
+            emit TokensDelegated(tokenOwner, address(0x0), tokenIds);
+            dg.moveDelegateVotes(tokenOwner, bob, 1, updateCounter);
+        }
+        vm.stopPrank();
 
         assertEq(dg.getVotes(alice), token2Bias);
         assertEq(dg.getVotes(bob), 0);
@@ -63,8 +70,15 @@ contract TestMoveDelegateVotes is Base {
 
         assertEq(dg.getVotes(bob), 0);
 
-        vm.prank(address(escrow));
-        dg.moveDelegateVotes(sender, tokenReceiver, 1, updateCounter);
+        vm.startPrank(address(escrow));
+        {
+            uint256[] memory tokenIds = new uint256[](1);
+            tokenIds[0] = 1;
+            vm.expectEmit();
+            emit TokensDelegated(sender, bob, tokenIds);
+            dg.moveDelegateVotes(sender, tokenReceiver, 1, updateCounter);
+        }
+        vm.stopPrank();
 
         assertEq(dg.getVotes(bob), bias(10, block.timestamp - weekStartTs((block.timestamp))));
     }
@@ -103,8 +117,15 @@ contract TestMoveDelegateVotes is Base {
         assertEq(dg.getVotes(alice), total);
         assertEq(dg.getVotes(bob), 0);
 
-        vm.prank(address(escrow));
-        dg.moveDelegateVotes(tokenOwner, tokenReceiver, 1, updateCounter);
+        vm.startPrank(address(escrow));
+        {
+            uint256[] memory tokenIds = new uint256[](1);
+            tokenIds[0] = 1;
+            vm.expectEmit();
+            emit TokensDelegated(tokenOwner, bob, tokenIds);
+            dg.moveDelegateVotes(tokenOwner, tokenReceiver, 1, updateCounter);
+        }
+        vm.stopPrank();
 
         assertEq(dg.getVotes(alice), token2Bias);
         assertEq(dg.getVotes(bob), token1Bias);
