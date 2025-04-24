@@ -49,7 +49,7 @@ contract TestMoveDelegateVotes is Base {
             uint256[] memory tokenIds = new uint256[](1);
             tokenIds[0] = 1;
             vm.expectEmit();
-            emit TokensDelegated(tokenOwner, address(0x0), tokenIds);
+            emit TokensDelegated(bob, address(0x0), tokenIds);
             dg.moveDelegateVotes(tokenOwner, bob, 1, updateCounter);
         }
         vm.stopPrank();
@@ -75,7 +75,7 @@ contract TestMoveDelegateVotes is Base {
             uint256[] memory tokenIds = new uint256[](1);
             tokenIds[0] = 1;
             vm.expectEmit();
-            emit TokensDelegated(sender, bob, tokenIds);
+            emit TokensDelegated(tokenReceiver, bob, tokenIds);
             dg.moveDelegateVotes(sender, tokenReceiver, 1, updateCounter);
         }
         vm.stopPrank();
@@ -122,7 +122,7 @@ contract TestMoveDelegateVotes is Base {
             uint256[] memory tokenIds = new uint256[](1);
             tokenIds[0] = 1;
             vm.expectEmit();
-            emit TokensDelegated(tokenOwner, bob, tokenIds);
+            emit TokensDelegated(tokenReceiver, bob, tokenIds);
             dg.moveDelegateVotes(tokenOwner, tokenReceiver, 1, updateCounter);
         }
         vm.stopPrank();
