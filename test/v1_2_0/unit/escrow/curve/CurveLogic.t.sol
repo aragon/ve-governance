@@ -1,7 +1,5 @@
 pragma solidity ^0.8.17;
 
-import {console2 as console} from "forge-std/console2.sol";
-
 import {
     Clock,
     Curve,
@@ -9,7 +7,7 @@ import {
     IVotingEscrowIncreasing as IVotingEscrow,
     IEscrowCurveIncreasing as IEscrowCurve
 } from "../../../versions.sol";
-import {CurveBase, MockEscrow} from "./CurveBase.t.sol";
+import {CurveBase} from "./CurveBase.t.sol";
 
 contract TestQuadraticIncreasingCurveLogic is CurveBase {
     address attacker = address(0x1);
@@ -53,5 +51,16 @@ contract TestQuadraticIncreasingCurveLogic is CurveBase {
             biasFP(100, 1 hours) + biasFP(200, 1 hours)
         );
         assertEq(curve.tokenPointHistory(1, 1).coefficients[1], slopeFP(200) + slopeFP(100));
+    }
+
+    // bias functions use the 1e18 multiplier on the amount, so
+    // passing higher than uint192 will result in an overflow.
+    // This is not a problem in curve because in createLock:
+    // amount.toUint208() * 1e18 is used and if overflow occurs, 
+    // lock would not be created in the first place, meaning that 
+    // only those locks are created that fit in, hence bias functions 
+    // on those amounts later on will be valid.
+    function testFuzz_previewMaxBias(uint192 _amount) public view {
+        assertEq(curve.previewMaxBias(_amount), bias(_amount, maxTime));
     }
 }
