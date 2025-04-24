@@ -64,13 +64,18 @@ contract EscrowIVotesAdapter is
         _disableInitializers();
     }
 
-    function initialize(address _dao, address _escrow, address _clock, bool _startPaused) external initializer {
+    function initialize(
+        address _dao,
+        address _escrow,
+        address _clock,
+        bool _startPaused
+    ) external initializer {
         __PluginUUPSUpgradeable_init(IDAO(_dao));
         __ReentrancyGuard_init();
         escrow = _escrow;
         clock = _clock;
 
-        if(_startPaused) _pause();
+        if (_startPaused) _pause();
 
         maxTime = IClock(clock).epochDuration() * CurveConstantLib.MAX_EPOCHS;
     }
@@ -192,7 +197,11 @@ contract EscrowIVotesAdapter is
         emit TokensUndelegated(sender, delegatee, _tokenIds);
     }
 
-    function moveDelegateVotes(address _from, address _to, uint256 _tokenId) external whenNotPaused {
+    function moveDelegateVotes(
+        address _from,
+        address _to,
+        uint256 _tokenId
+    ) external whenNotPaused {
         if (_msgSender() != escrow) {
             revert OnlyEscrow();
         }
@@ -203,7 +212,7 @@ contract EscrowIVotesAdapter is
         if (_from == _to || fromDelegatee == toDelegatee) {
             return;
         }
-        
+
         IVotingEscrow.LockedBalance memory locked = IVotingEscrow(escrow).locked(_tokenId);
 
         // mint is occuring and the receiver already has a delegatee.
@@ -214,6 +223,10 @@ contract EscrowIVotesAdapter is
 
             tokenIsDelegated[_tokenId] = true;
             numberOfDelegatedTokens[_to]++;
+
+            uint256[] memory tokenIds = new uint256[](1);
+            tokenIds[0] = _tokenId;
+            emit TokensDelegated(_from, toDelegatee, tokenIds);
 
             IVotingEscrow(escrow).updateVotingPower(fromDelegatee, toDelegatee);
 
@@ -239,13 +252,20 @@ contract EscrowIVotesAdapter is
         }
 
         IVotingEscrow(escrow).updateVotingPower(fromDelegatee, toDelegatee);
+
+        uint256[] memory tokenIds = new uint256[](1);
+        tokenIds[0] = _tokenId;
+        emit TokensDelegated(_from, toDelegatee, tokenIds);
     }
 
     /*//////////////////////////////////////////////////////////////
                         Checkpoint Functions
     //////////////////////////////////////////////////////////////*/
 
-    function checkpointTransition(address _delegatee, uint256 _transitionCount) external whenNotPaused {
+    function checkpointTransition(
+        address _delegatee,
+        uint256 _transitionCount
+    ) external whenNotPaused {
         _checkpoint(0, 0, _delegatee, _transitionCount);
     }
 
