@@ -350,6 +350,13 @@ contract VotingEscrowV1_2_0 is
 
         // mint the NFT before and emit the event to complete the lock
         IERC721EMB(lockNFT).mint(_to, newTokenId);
+
+        _moveDelegateVotes(
+            address(0),
+            IERC721EMB(lockNFT).ownerOf(_to),
+            _to
+        );
+
         emit Deposit(_to, newTokenId, startTime, _value, totalLocked);
 
         return newTokenId;
@@ -465,6 +472,18 @@ contract VotingEscrowV1_2_0 is
         locked_.amount = amount2;
         _tokenId2 = _createSplitNFT(sender, locked_);
 
+        _moveDelegateVotes(
+            address(0),
+            IERC721EMB(lockNFT).ownerOf(_to),
+            _from
+        );
+
+        _moveDelegateVotes(
+            address(0),
+            IERC721EMB(lockNFT).ownerOf(_to),
+            _from
+        );
+
         emit Split(_from, _tokenId1, _tokenId2, sender, amount1, amount2);
     }
 
@@ -562,6 +581,14 @@ contract VotingEscrowV1_2_0 is
 
         // Burn the NFT and transfer the tokens to the user
         IERC721EMB(lockNFT).burn(_tokenId);
+
+        _moveDelegateVotes(
+            IERC721EMB(lockNFT).ownerOf(_tokenId),
+            address(0),
+            _tokenId
+        );
+
+        
         IERC20(token).safeTransfer(sender, value - fee);
 
         emit Withdraw(sender, _tokenId, value - fee, block.timestamp, totalLocked);
