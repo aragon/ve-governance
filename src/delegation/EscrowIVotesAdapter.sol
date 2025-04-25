@@ -244,7 +244,7 @@ contract EscrowIVotesAdapter is
 
         uint256[] memory tokenIds = new uint256[](1);
         tokenIds[0] = _tokenId;
-        emit TokensDelegated(fromDelegatee, toDelegatee, tokenIds);
+        emit TokensDelegated(_to, toDelegatee, tokenIds);
     }
 
     /*//////////////////////////////////////////////////////////////
