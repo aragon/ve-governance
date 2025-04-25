@@ -5,6 +5,8 @@ import {
     IVotesUpgradeable
 } from "@openzeppelin/contracts-upgradeable/governance/utils/IVotesUpgradeable.sol";
 
+import {ILockedBalanceIncreasing} from "@escrow/IVotingEscrowIncreasing.sol";
+
 interface IEscrowIVotesAdapterErrorsAndEvents {
     event AutoDelegationSet(address indexed delegate, bool enabled);
     event TokensDelegated(address indexed sender, address indexed delegatee, uint256[] tokenIds);
@@ -29,15 +31,13 @@ interface IDelegateMoveVote {
     /// @param _from The current delegatee of `_tokenId`.
     /// @param _to The new delegatee of `_tokenId`
     /// @param _tokenId The token id that is being transferred.
-    /// @param _data The extra abi encoded data.
+    /// @param _locked The lock data of the token.
     function moveDelegateVotes(
         address _from,
         address _to,
         uint256 _tokenId,
-        bytes memory _data
+        ILockedBalanceIncreasing.LockedBalance memory _locked
     ) external;
-
-    function moveDelegateVotes(address _from, address _to, uint256 _tokenId) external;
 }
 
 interface IDelegateUpdateVotingPower {

@@ -201,20 +201,11 @@ contract EscrowIVotesAdapter is
         address _from,
         address _to,
         uint256 _tokenId,
-        bytes memory _data
+        IVotingEscrow.LockedBalance memory locked
     ) external whenNotPaused {
         if (_msgSender() != escrow) {
             revert OnlyEscrow();
         }
-
-        // we expect _data to contain boolean. If the length is not 32,
-        // return early and not try to decode to avoid reverting.
-        if (_data.length != 32) return;
-
-        // determines if we should only run checkpointing
-        // and not token delegation count/status updates
-        // only relevant in edge cases w. merging
-        bool checkpointOnly = abi.decode(_data, (bool));
 
         address fromDelegatee = delegates(_from);
         address toDelegatee = delegates(_to);
@@ -224,11 +215,9 @@ contract EscrowIVotesAdapter is
             return;
         }
 
-        IVotingEscrow.LockedBalance memory locked = IVotingEscrow(escrow).locked(_tokenId);
-
         // voting power is being sent from a delegate
         if (fromDelegatee != address(0)) {
-            // can be skipped if there is no updates
+            // can be skipped if there are no updates
             if (locked.amount != 0) {
                 (int256 bias, int256 slope) = _getBiasAndSlope(fromDelegatee, locked, _negative);
                 _checkpoint(bias, slope, fromDelegatee);
@@ -247,12 +236,8 @@ contract EscrowIVotesAdapter is
                 _checkpoint(bias, slope, toDelegatee);
             }
 
-            // in most cases checkpointOnly will be false
-            // exception would be merging into a delegated recipient
-            if (!checkpointOnly) {
-                numberOfDelegatedTokens[_to]++;
-                tokenIsDelegated[_tokenId] = true;
-            }
+            numberOfDelegatedTokens[_to]++;
+            tokenIsDelegated[_tokenId] = true;
         }
         // else this is new delegate voting power being burned
         else {
