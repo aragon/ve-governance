@@ -3,7 +3,7 @@ pragma solidity ^0.8.17;
 import {EscrowBase} from "../../../base/EscrowBase.sol";
 
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
-import {IDelegateMoveVote} from "@delegation/IEscrowIVotesAdapter.sol";
+import {IDelegateMoveVoteCaller} from "@escrow/IVotingEscrowIncreasing_v1_2_0.sol";
 
 import {
     Lock,
@@ -97,7 +97,7 @@ contract TestLockMintBurn is IEscrowCurveTokenStorage, IGaugeVote, EscrowBase {
     }
 }
 
-contract NFTReentrant is IDelegateMoveVote {
+contract NFTReentrant is IDelegateMoveVoteCaller {
     function onERC721Received(address, address, uint256, bytes memory) public returns (bytes4) {
         (bool success, ) = msg.sender.call(
             abi.encodeWithSignature("mint(address,uint256)", address(this), 1)
@@ -110,5 +110,5 @@ contract NFTReentrant is IDelegateMoveVote {
 
     // Ensure this function exists on reentrant contract
     // so it doesn't fail because of it.
-    function moveDelegateVotes(address, address, uint256, bytes memory) public {}
+    function moveDelegateVotes(address, address, uint256) public {}
 }

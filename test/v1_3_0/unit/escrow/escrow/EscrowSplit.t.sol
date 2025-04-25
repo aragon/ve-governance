@@ -95,6 +95,22 @@ contract TestEscrowSplit is EscrowBase {
         escrow.split(from, Lock_1_Amount - 10);
     }
 
+    function test_shouldSucceed_ifSenderApproved() public {
+        address sender = address(123);
+        escrow.enableSplit();
+        
+        uint256 from = escrow.createLock(Lock_1_Amount);
+        uint256 splitValue = 10e18;
+
+        vm.expectRevert();
+        vm.prank(sender);
+        escrow.split(from, splitValue);
+
+        nftLock.approve(sender, from);
+        vm.prank(sender);
+        escrow.split(from, splitValue);
+    }
+
     function test_fromTokenIsCorrectlyBurnt() public {
         vm.warp(checkpointInterval + 1 hours);
 

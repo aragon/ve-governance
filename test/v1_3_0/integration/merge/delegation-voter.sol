@@ -34,13 +34,11 @@ contract TestMerge_DelegationAndVoter is
         vm.warp(1);
 
         address alice = address(0x123);
-        address bob = address(0x456);
 
-        uint256 aliceAmount = 15e18;
-        uint256 bobAmount = 20e18;
+        uint256 amount1 = 15e18;
+        uint256 amount2 = 20e18;
 
-        token.transfer(alice, aliceAmount);
-        token.transfer(bob, bobAmount);
+        token.transfer(alice, amount1 + amount2);
 
         address gauge = address(0x777);
 
@@ -50,77 +48,59 @@ contract TestMerge_DelegationAndVoter is
         vm.warp(2 weeks + 1 hours + 1);
         voter.createGauge(gauge, "metadata");
 
-        // alice creates lock, delegates to herself and votes.
+        // alice creates 2 locks(nfts), delegates to herself and votes.
         {
             vm.startPrank(alice);
-            token.approve(address(escrow), aliceAmount);
-            escrow.createLock(aliceAmount);
+            token.approve(address(escrow), amount1 + amount2);
+
+            escrow.createLock(amount1);
             ivotesAdapter.delegate(alice);
-            nftLock.setApprovalForAll(address(this), true);
+            
+            escrow.createLock(amount2);
 
+            // vote
             IAddressGaugeVote.GaugeVote[] memory votes = new IAddressGaugeVote.GaugeVote[](1);
             votes[0] = IAddressGaugeVote.GaugeVote(100, gauge);
             voter.vote(votes);
 
-            vm.stopPrank();
-        }
-
-        // bob creates lock, delegates to himself and votes.
-        {
-            vm.startPrank(bob);
-            token.approve(address(escrow), bobAmount);
-            escrow.createLock(bobAmount);
-            ivotesAdapter.delegate(bob);
+            // approve so address(this) can call merge..
             nftLock.setApprovalForAll(address(this), true);
 
-            IAddressGaugeVote.GaugeVote[] memory votes = new IAddressGaugeVote.GaugeVote[](1);
-            votes[0] = IAddressGaugeVote.GaugeVote(100, gauge);
-            voter.vote(votes);
             vm.stopPrank();
         }
 
         uint256 checkpointTs = weekStartTs(block.timestamp);
 
         // Assert pre-state before running merge.
-        uint256 aliceBias = bias(aliceAmount, block.timestamp - checkpointTs);
-        uint256 bobBias = bias(bobAmount, block.timestamp - checkpointTs);
+        uint256 aliceBias = bias(amount1 + amount2, block.timestamp - checkpointTs);
 
         assertEq(voter.votes(alice, gauge), aliceBias);
-        assertEq(voter.votes(bob, gauge), bobBias);
         assertEq(ivotesAdapter.getVotes(alice), aliceBias);
-        assertEq(ivotesAdapter.getVotes(bob), bobBias);
         assertTrue(ivotesAdapter.tokenIsDelegated(1));
         assertTrue(ivotesAdapter.tokenIsDelegated(2));
-        assertEq(ivotesAdapter.numberOfDelegatedTokens(alice), 1);
-        assertEq(ivotesAdapter.numberOfDelegatedTokens(bob), 1);
+        assertEq(ivotesAdapter.numberOfDelegatedTokens(alice), 2);
 
         // Run merge
         uint256 lockEnd = checkpointTs + maxTime;
         vm.warp(lockEnd + 1 seconds);
         escrow.merge(1, 2);
 
-        // Assert state after merge..
+        // // Assert state after merge..
 
-        // Since tokenId = 1 is burnt due to merge,
-        // Alice must lose its power on the delegation.
-        assertEq(ivotesAdapter.getVotes(alice), 0);
+        // Even though tokenId = 1 is burnt due to merge,
+        // Alice still must not lose its power as that 
+        // token's amount is merged into another. Note that 
+        // bias must be recalculated as merge occured after maxTime,
+        // so duration will be different.
+        assertEq(ivotesAdapter.getVotes(alice), bias(amount1 + amount2, maxTime));
 
-        // Since tokenId 1 is merged into tokenId2 and
-        // Bob already had a delegate(himself),his delegation
-        // power must increase by tokenId 1's power.
-        assertEq(ivotesAdapter.getVotes(bob), bias(35e18, lockEnd - checkpointTs));
-
-        // Gauge must lose Alice's recorded vote as token got burnt.
-        assertEq(voter.votes(alice, gauge), 0);
-
-        // Note that bob's recorded votes must not increase as
-        // we do not update vote record on an increasing voting power.
-        // See AddressGaugeVoter for more details.
-        assertEq(voter.votes(bob, gauge), bobBias);
+        // Gauge must still have the same power of Alice's recorded vote.
+        // It's still `aliceBias` as we don't update the vote record on voter
+        // if new voting power is greater than old one unless user re-votes manually.
+        assertEq(voter.votes(alice, gauge), aliceBias);
 
         assertFalse(ivotesAdapter.tokenIsDelegated(1));
         assertTrue(ivotesAdapter.tokenIsDelegated(2));
-        assertEq(ivotesAdapter.numberOfDelegatedTokens(alice), 0);
-        assertEq(ivotesAdapter.numberOfDelegatedTokens(bob), 1);
+        assertEq(ivotesAdapter.numberOfDelegatedTokens(alice), 1);
     }
 }

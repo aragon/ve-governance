@@ -23,7 +23,7 @@ import {VotingEscrowV1_2_0 as VotingEscrow} from "@escrow/VotingEscrowIncreasing
 import {IClockUser, IClockV1_2_0 as IClock} from "@clock/IClock_v1_2_0.sol";
 
 import {PluginUUPSUpgradeable} from "@aragon/osx/core/plugin/PluginUUPSUpgradeable.sol";
-import {IEscrowIVotesAdapter} from "./IEscrowIVotesAdapter.sol";
+import {IEscrowIVotesAdapter, IDelegateMoveVoteRecipient} from "./IEscrowIVotesAdapter.sol";
 import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 import {SignedFixedPointMath} from "@libs/SignedFixedPointMathLib.sol";
 
@@ -197,66 +197,50 @@ contract EscrowIVotesAdapter is
         emit TokensUndelegated(sender, delegatee, _tokenIds);
     }
 
+    /// @inheritdoc IDelegateMoveVoteRecipient
     function moveDelegateVotes(
         address _from,
         address _to,
         uint256 _tokenId,
-        bytes memory _data
+        IVotingEscrow.LockedBalance memory _locked
     ) external whenNotPaused {
         if (_msgSender() != escrow) {
             revert OnlyEscrow();
         }
-
-        // we expect _data to contain boolean. If the length is not 32, 
-        // return early and not try to decode to avoid reverting.
-        if(_data.length != 32) return;
-
-        bool updateCounter = abi.decode(_data, (bool));
-
+        
         address fromDelegatee = delegates(_from);
         address toDelegatee = delegates(_to);
 
-        if (_from == _to || fromDelegatee == toDelegatee) {
+        // undelegated src and recipient, no balances to update
+        if (fromDelegatee == address(0) && toDelegatee == address(0)) {
             return;
         }
 
-        IVotingEscrow.LockedBalance memory locked = IVotingEscrow(escrow).locked(_tokenId);
-
         if (fromDelegatee != address(0)) {
-            (int256 bias, int256 slope) = _getBiasAndSlope(fromDelegatee, locked, _negative);
-            _checkpoint(bias, slope, fromDelegatee);
+            // can be skipped if there are no updates
+            if (_locked.amount != 0) {
+                (int256 bias, int256 slope) = _getBiasAndSlope(fromDelegatee, _locked, _negative);
+                _checkpoint(bias, slope, fromDelegatee);
+            }
 
             numberOfDelegatedTokens[_from]--;
-
-            // burn occurs.
-            if (_to == address(0)) {
-                tokenIsDelegated[_tokenId] = false;
-            }
         }
 
         if (toDelegatee != address(0)) {
-            (int256 bias, int256 slope) = _getBiasAndSlope(toDelegatee, locked, _positive);
-            _checkpoint(bias, slope, toDelegatee);
-
-            // If mint occurs and delegatee exists, always update.
-            // If not mint, only update if `updateCounter` is true.
-            //  1. In transfer case, updateCounter must always be true.
-            //  2. In merge case, it must be false, because delegatee doesn't 
-            // receive a new token, but `_from` token(in merge)'s power only.
-            if (_from == address(0) || updateCounter) {
-                numberOfDelegatedTokens[_to]++;
-                tokenIsDelegated[_tokenId] = true;
-            } else {
-                tokenIsDelegated[_tokenId] = false;
+            // can be skipped if there are no updates
+            if (_locked.amount != 0) {
+                (int256 bias, int256 slope) = _getBiasAndSlope(toDelegatee, _locked, _positive);
+                _checkpoint(bias, slope, toDelegatee);
             }
-        }
 
-        // Only call if at least from or to's delegatee exists.
-        // Otherwise skip as it would be pointless as there's 
-        // nothing to update if both delegatees are address 0.
-        if(fromDelegatee != address(0) || toDelegatee != address(0)) {
-            IVotingEscrow(escrow).updateVotingPower(fromDelegatee, toDelegatee);
+            numberOfDelegatedTokens[_to]++;
+            tokenIsDelegated[_tokenId] = true;
+        } else {
+            // else this is new delegate voting power being burned
+            tokenIsDelegated[_tokenId] = false;
         }
+        
+        IVotingEscrow(escrow).updateVotingPower(fromDelegatee, toDelegatee);
 
         uint256[] memory tokenIds = new uint256[](1);
         tokenIds[0] = _tokenId;
