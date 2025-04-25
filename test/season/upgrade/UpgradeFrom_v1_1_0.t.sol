@@ -44,7 +44,7 @@ import {
 import {Upgrades} from "@foundry-upgrades/LegacyUpgrades.sol";
 import {Options} from "@foundry-upgrades/Options.sol";
 
-contract RegressionV1_1_0__to__V1_2_0 is Test, IGaugeVote {
+contract RegressionV1_1_0__to__V1_2_0_kk is Test, IGaugeVote {
     GaugesDaoFactoryV1_1_0 factory;
 
     TokenGaugeVoter voter;
