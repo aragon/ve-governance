@@ -254,7 +254,11 @@ contract EscrowIVotesAdapter is
             tokenIsDelegated[_tokenId] = false;
         }
 
-        IVotingEscrow(escrow).updateVotingPower(fromDelegatee, toDelegatee);
+        // If trasfer is a merge or split of tokens owned by the same delegatee,
+        // we don't need to update the voting power.
+        if (fromDelegatee != toDelegatee) {
+            IVotingEscrow(escrow).updateVotingPower(fromDelegatee, toDelegatee);
+        }
     }
 
     /*//////////////////////////////////////////////////////////////

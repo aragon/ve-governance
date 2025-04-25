@@ -4,7 +4,6 @@ import {Base, ILockedBalanceIncreasing, VotingEscrow} from "./Base.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 
 contract TestMoveDelegateVotes is Base {
-
     function setUp() public override {
         super.setUp();
     }
@@ -48,7 +47,7 @@ contract TestMoveDelegateVotes is Base {
             uint256[] memory tokenIds = new uint256[](1);
             tokenIds[0] = 1;
             vm.expectEmit();
-            emit TokensDelegated(bob, address(0x0), tokenIds);
+            emit TokensUndelegated(tokenOwner, alice, tokenIds);
             dg.moveDelegateVotes(tokenOwner, bob, 1, VotingEscrow(address(escrow)).locked(1));
         }
         vm.stopPrank();
@@ -121,8 +120,15 @@ contract TestMoveDelegateVotes is Base {
             uint256[] memory tokenIds = new uint256[](1);
             tokenIds[0] = 1;
             vm.expectEmit();
+            emit TokensUndelegated(tokenOwner, alice, tokenIds);
+            vm.expectEmit();
             emit TokensDelegated(tokenReceiver, bob, tokenIds);
-            dg.moveDelegateVotes(tokenOwner, tokenReceiver, 1, VotingEscrow(address(escrow)).locked(1));
+            dg.moveDelegateVotes(
+                tokenOwner,
+                tokenReceiver,
+                1,
+                VotingEscrow(address(escrow)).locked(1)
+            );
         }
         vm.stopPrank();
 

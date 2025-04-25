@@ -11,13 +11,6 @@ interface IEscrowIVotesAdapterErrorsAndEvents {
     event AutoDelegationSet(address indexed delegate, bool enabled);
     event TokensDelegated(address indexed sender, address indexed delegatee, uint256[] tokenIds);
     event TokensUndelegated(address indexed sender, address indexed delegatee, uint256[] tokenIds);
-    event DelegatedTokenTransfered(
-        address from,
-        address indexed _fromDelegatee,
-        address to,
-        address indexed toDelegatee,
-        uint256 indexed tokenId
-    );
 
     error OnlyEscrow();
 
