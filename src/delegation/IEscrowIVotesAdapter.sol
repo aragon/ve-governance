@@ -11,6 +11,7 @@ interface IEscrowIVotesAdapterErrorsAndEvents {
     event AutoDelegationSet(address indexed delegate, bool enabled);
     event TokensDelegated(address indexed sender, address indexed delegatee, uint256[] tokenIds);
     event TokensUndelegated(address indexed sender, address indexed delegatee, uint256[] tokenIds);
+    
 
     error OnlyEscrow();
 
@@ -23,6 +24,7 @@ interface IEscrowIVotesAdapterErrorsAndEvents {
 
     error TokenAlreadyDelegated(uint256 tokenId);
     error TokenNotDelegated(uint256 tokenId);
+    error VotingPowerZero(uint256 tokenId);
 }
 
 interface IDelegateMoveVoteRecipient {

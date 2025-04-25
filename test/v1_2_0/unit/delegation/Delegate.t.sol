@@ -3,7 +3,7 @@ pragma solidity ^0.8.17;
 import {Base} from "./Base.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 
-contract TestDelegate is Base {
+contract TestDelegate_omg is Base {
     function setUp() public override {
         super.setUp();
     }
@@ -78,6 +78,19 @@ contract TestDelegate is Base {
         dg.delegate(singleId);
     }
 
+    function testRevert_IfVotingPowerZeroAtLeastForOneToken() public {
+        dg.delegate(alice);
+
+        _mockLocked(multiIds[0], 10, weekStartTs(block.timestamp));
+        _mockLocked(multiIds[1], 10, weekStartTs(block.timestamp));
+
+        _mockVotingPower(multiIds[0], 1);
+        _mockVotingPower(multiIds[1], 0);
+
+        vm.expectRevert(abi.encodeWithSelector(VotingPowerZero.selector, multiIds[1]));
+        dg.delegate(multiIds);
+    }
+
     function testRevert_IfNotApprovedOrOwner() public {
         dg.delegate(alice);
 
@@ -121,6 +134,7 @@ contract TestDelegate is Base {
         assertEq(dg.numberOfDelegatedTokens(sender), multiIds.length);
 
         _mockLocked(3, 10, start);
+        _mockVotingPower(3, 1);
 
         dg.delegate(getIds(3));
 

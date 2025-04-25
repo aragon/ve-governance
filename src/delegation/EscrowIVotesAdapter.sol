@@ -140,6 +140,13 @@ contract EscrowIVotesAdapter is
                 revert TokenAlreadyDelegated(tokenId);
             }
 
+            // Ensure that voting power is greater than 0.
+            // This can not be figured out with only `locked` data, as
+            // token might exist, but might not be warm.
+            if(IVotingEscrow(escrow).votingPower(tokenId) == 0) {
+                revert VotingPowerZero(tokenId);
+            }
+
             tokenIsDelegated[tokenId] = true;
 
             IVotingEscrow.LockedBalance memory locked = IVotingEscrow(escrow).locked(tokenId);
