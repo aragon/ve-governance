@@ -143,7 +143,7 @@ contract EscrowIVotesAdapter is
             // Ensure that voting power is greater than 0.
             // This can not be figured out with only `locked` data, as
             // token might exist, but might not be warm.
-            if(IVotingEscrow(escrow).votingPower(tokenId) == 0) {
+            if (IVotingEscrow(escrow).votingPower(tokenId) == 0) {
                 revert VotingPowerZero(tokenId);
             }
 
@@ -214,7 +214,7 @@ contract EscrowIVotesAdapter is
         if (_msgSender() != escrow) {
             revert OnlyEscrow();
         }
-        
+
         address fromDelegatee = delegates(_from);
         address toDelegatee = delegates(_to);
 
@@ -246,12 +246,13 @@ contract EscrowIVotesAdapter is
             // else this is new delegate voting power being burned
             tokenIsDelegated[_tokenId] = false;
         }
-        
+
         IVotingEscrow(escrow).updateVotingPower(fromDelegatee, toDelegatee);
 
         uint256[] memory tokenIds = new uint256[](1);
         tokenIds[0] = _tokenId;
         emit TokensDelegated(_to, toDelegatee, tokenIds);
+        emit DelegatedTokenTransfered(_from, fromDelegatee, _to, toDelegatee, _tokenId);
     }
 
     /*//////////////////////////////////////////////////////////////
