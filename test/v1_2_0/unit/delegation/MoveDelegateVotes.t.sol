@@ -43,7 +43,13 @@ contract TestMoveDelegateVotes is Base {
         assertEq(dg.getVotes(bob), 0);
 
         vm.startPrank(address(escrow));
-        dg.moveDelegateVotes(tokenOwner, bob, 1, VotingEscrow(address(escrow)).locked(1));
+        {
+            uint256[] memory tokenIds = new uint256[](1);
+            tokenIds[0] = 1;
+            vm.expectEmit();
+            emit TokensDelegated(bob, address(0x0), tokenIds);
+            dg.moveDelegateVotes(tokenOwner, bob, 1, VotingEscrow(address(escrow)).locked(1));
+        }
         vm.stopPrank();
 
         assertEq(dg.getVotes(alice), token2Bias);
@@ -63,7 +69,13 @@ contract TestMoveDelegateVotes is Base {
         assertEq(dg.getVotes(bob), 0);
 
         vm.startPrank(address(escrow));
-        dg.moveDelegateVotes(sender, tokenReceiver, 1, VotingEscrow(address(escrow)).locked(1));
+        {
+            uint256[] memory tokenIds = new uint256[](1);
+            tokenIds[0] = 1;
+            vm.expectEmit();
+            emit TokensDelegated(tokenReceiver, bob, tokenIds);
+            dg.moveDelegateVotes(sender, tokenReceiver, 1, VotingEscrow(address(escrow)).locked(1));
+        }
         vm.stopPrank();
 
         assertEq(dg.getVotes(bob), bias(10, block.timestamp - weekStartTs((block.timestamp))));
@@ -104,9 +116,15 @@ contract TestMoveDelegateVotes is Base {
         assertEq(dg.getVotes(bob), 0);
 
         vm.startPrank(address(escrow));
-        dg.moveDelegateVotes(tokenOwner, tokenReceiver, 1, VotingEscrow(address(escrow)).locked(1));
+        {
+            uint256[] memory tokenIds = new uint256[](1);
+            tokenIds[0] = 1;
+            vm.expectEmit();
+            emit TokensDelegated(tokenReceiver, bob, tokenIds);
+            dg.moveDelegateVotes(tokenOwner, tokenReceiver, 1, VotingEscrow(address(escrow)).locked(1));
+        }
         vm.stopPrank();
-        
+
         assertEq(dg.getVotes(alice), token2Bias);
         assertEq(dg.getVotes(bob), token1Bias);
     }
