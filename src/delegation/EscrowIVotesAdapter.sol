@@ -223,6 +223,9 @@ contract EscrowIVotesAdapter is
             return;
         }
 
+        uint256[] memory tokenIds = new uint256[](1);
+        tokenIds[0] = _tokenId;
+
         if (fromDelegatee != address(0)) {
             // can be skipped if there are no updates
             if (_locked.amount != 0) {
@@ -231,6 +234,8 @@ contract EscrowIVotesAdapter is
             }
 
             numberOfDelegatedTokens[_from]--;
+
+            emit TokensUndelegated(_from, fromDelegatee, tokenIds);
         }
 
         if (toDelegatee != address(0)) {
@@ -242,17 +247,14 @@ contract EscrowIVotesAdapter is
 
             numberOfDelegatedTokens[_to]++;
             tokenIsDelegated[_tokenId] = true;
+
+            emit TokensDelegated(_to, toDelegatee, tokenIds);
         } else {
             // else this is new delegate voting power being burned
             tokenIsDelegated[_tokenId] = false;
         }
 
         IVotingEscrow(escrow).updateVotingPower(fromDelegatee, toDelegatee);
-
-        uint256[] memory tokenIds = new uint256[](1);
-        tokenIds[0] = _tokenId;
-        emit TokensDelegated(_to, toDelegatee, tokenIds);
-        emit DelegatedTokenTransfered(_from, fromDelegatee, _to, toDelegatee, _tokenId);
     }
 
     /*//////////////////////////////////////////////////////////////
