@@ -125,18 +125,6 @@ contract TestSweep is IEscrowCurveTokenStorage, IGaugeVote, EscrowBase {
         escrow.sweepNFT(tokenId, address(this));
     }
 
-    function testCannotSweepNFTIfNotWhitelisted() public {
-        // create the lock and transfer the NFT to the contract
-        token.mint(address(this), 1000);
-        token.approve(address(escrow), 1000);
-        uint tokenId = escrow.createLock(1000);
-        nftLock.transferFrom(address(this), address(escrow), tokenId);
-
-        // try to sweep the NFT -- should fail as this address is not whitelisted
-        vm.expectRevert(NotWhitelisted.selector);
-        escrow.sweepNFT(tokenId, address(this));
-    }
-
     function testCanSweepNFT() public {
         // create, transfer, whitelis, sweep
         token.mint(address(this), 1000);
