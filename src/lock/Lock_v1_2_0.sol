@@ -103,7 +103,7 @@ contract LockV1_2_0 is ILock, ERC721Enumerable, UUPSUpgradeable, DaoAuthorizable
         super._transfer(_from, _to, _tokenId);
 
         // no need to update delegate votes on self transfer
-        if (!(_from == _to)) {
+        if (_from != _to) {
             IVotingEscrow(escrow).moveDelegateVotes(_from, _to, _tokenId);
         }
     }
