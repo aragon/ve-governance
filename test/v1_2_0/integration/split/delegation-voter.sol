@@ -71,8 +71,8 @@ contract TestSplit_DelegationAndVoter is
         vm.prank(alice);
         escrow.split(1, 5e18);
 
-        // // Even though tokenId was destroyed, split produced
-        // // 2 new tokenIds of which's power sum must be the same.
+        // Even though tokenId was destroyed, split produced
+        // 2 new tokenIds of which's power sum must be the same.
         assertEq(ivotesAdapter.getVotes(alice), bias(aliceAmount, block.timestamp - checkpointTs));
         assertEq(ivotesAdapter.tokenIsDelegated(1), true);
         assertEq(ivotesAdapter.tokenIsDelegated(2), true);

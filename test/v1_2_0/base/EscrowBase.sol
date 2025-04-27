@@ -25,8 +25,9 @@ import {
     VotingEscrow,
     Curve as LinearIncreasingCurve,
     ExitQueue,
-    SimpleGaugeVoter,
-    SimpleGaugeVoterSetup,
+    GaugeVoter as AddressGaugeVoter,
+    GaugeVoterSetup as AddressGaugeVoterSetup,
+    IGaugeVote as IAddressGaugeVote,
     IVotingEscrowEventsStorageErrorsEvents,
     IWhitelistErrors,
     IWhitelistEvents,
@@ -60,7 +61,7 @@ contract EscrowBase is
     Lock nftLock;
     VotingEscrow escrow;
     LinearIncreasingCurve curve;
-    SimpleGaugeVoter voter;
+    AddressGaugeVoter voter;
     ExitQueue queue;
     Clock clock;
     EscrowIVotesAdapter ivotesAdapter;
@@ -367,14 +368,14 @@ contract EscrowBase is
         bool _reset,
         address _clock,
         address _ivotesAdapter
-    ) public returns (SimpleGaugeVoter) {
-        SimpleGaugeVoter impl = new SimpleGaugeVoter();
+    ) public returns (AddressGaugeVoter) {
+        AddressGaugeVoter impl = new AddressGaugeVoter();
 
         bytes memory initCalldata = abi.encodeCall(
-            SimpleGaugeVoter.initialize,
+            AddressGaugeVoter.initialize,
             (_dao, _escrow, _reset, _clock, _ivotesAdapter, true)
         );
-        return SimpleGaugeVoter(address(impl).deployUUPSProxy(initCalldata));
+        return AddressGaugeVoter(address(impl).deployUUPSProxy(initCalldata));
     }
 
     function _deployExitQueue(

@@ -4,8 +4,7 @@ pragma solidity ^0.8.0;
 import "./IVotingEscrowIncreasing.sol";
 import {IEscrowIVotesAdapter} from "@delegation/IEscrowIVotesAdapter.sol";
 import {
-    IDelegateUpdateVotingPower,
-    IDelegateMoveVote
+    IDelegateUpdateVotingPower
 } from "../delegation/IEscrowIVotesAdapter.sol";
 
 interface IVotingEscrowExiting {
@@ -47,8 +46,7 @@ interface IMerge is ILockedBalanceIncreasing, IMergeEventsAndErrors {
 interface ISplitEventsAndErrors {
     event Split(
         uint256 indexed _from,
-        uint256 indexed _tokenId1,
-        uint256 indexed _tokenId2,
+        uint256 indexed newTokenId,
         address _sender,
         uint208 _splitAmount1,
         uint208 _splitAmount2
@@ -71,11 +69,24 @@ interface ISplit is ISplitEventsAndErrors {
     ) external returns (uint256 _newTokenId);
 }
 
+interface IDelegateMoveVoteCaller {
+    /// @notice After a token transfer, decreases `_from`'s voting power and increases `_to`'s voting power.
+    /// @dev Called upon a token transfer.
+    /// @param _from The current delegatee of `_tokenId`.
+    /// @param _to The new delegatee of `_tokenId`
+    /// @param _tokenId The token id that is being transferred.
+    function moveDelegateVotes(
+        address _from,
+        address _to,
+        uint256 _tokenId
+    ) external;
+}
+
 interface IVotingEscrowIncreasingV1_2_0 is
     IVotingEscrowIncreasing,
     IVotingEscrowExiting,
     IMerge,
     ISplit,
     IDelegateUpdateVotingPower,
-    IDelegateMoveVote
+    IDelegateMoveVoteCaller
 {}

@@ -46,7 +46,14 @@ contract TestEscrowSplit is EscrowBase {
     }
 
     function test_shouldRevert_ifNotWhitelisted() public {
+        // owner is address(this)
         uint256 from = escrow.createLock(Lock_1_Amount);
+
+        escrow.setEnableSplit(address(this), false);
+        
+        // approve so address(123) can also call split
+        // It still should fail as owner itself is not whitelisted.
+        nftLock.approve(address(123), from);
 
         vm.expectRevert(SplitNotWhitelisted.selector);
         vm.prank(address(123));
@@ -62,6 +69,11 @@ contract TestEscrowSplit is EscrowBase {
         vm.startPrank(sender);
         vm.expectRevert(IVotingEscrowCoreErrors.NotApprovedOrOwner.selector);
         escrow.split(from, 10);
+    }
+
+    function test_shouldRevert_IfTokenHasNoOwner() public {
+        vm.expectRevert("ERC721: invalid token ID");
+        escrow.split(15, 10);
     }
 
     function test_shouldRevert_IfNewAmountsLessThanMinDeposit() public {
@@ -142,7 +154,6 @@ contract TestEscrowSplit is EscrowBase {
         uint256 from = escrow.createLock(Lock_1_Amount);
         vm.expectEmit();
         emit Split(
-            from,
             from,
             from + 1,
             address(this),

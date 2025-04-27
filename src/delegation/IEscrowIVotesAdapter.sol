@@ -5,6 +5,8 @@ import {
     IVotesUpgradeable
 } from "@openzeppelin/contracts-upgradeable/governance/utils/IVotesUpgradeable.sol";
 
+import {ILockedBalanceIncreasing} from "@escrow/IVotingEscrowIncreasing.sol";
+
 interface IEscrowIVotesAdapterErrorsAndEvents {
     event AutoDelegationSet(address indexed delegate, bool enabled);
     event TokensDelegated(address indexed sender, address indexed delegatee, uint256[] tokenIds);
@@ -21,16 +23,22 @@ interface IEscrowIVotesAdapterErrorsAndEvents {
 
     error TokenAlreadyDelegated(uint256 tokenId);
     error TokenNotDelegated(uint256 tokenId);
+    error VotingPowerZero(uint256 tokenId);
 }
 
-interface IDelegateMoveVote {
+interface IDelegateMoveVoteRecipient {
     /// @notice After a token transfer, decreases `_from`'s voting power and increases `_to`'s voting power.
     /// @dev Called upon a token transfer.
     /// @param _from The current delegatee of `_tokenId`.
     /// @param _to The new delegatee of `_tokenId`
     /// @param _tokenId The token id that is being transferred.
-    /// @param _data The extra abi encoded data.
-    function moveDelegateVotes(address _from, address _to, uint256 _tokenId, bytes memory _data) external;
+    /// @param _locked The lock data of the token.
+    function moveDelegateVotes(
+        address _from,
+        address _to,
+        uint256 _tokenId,
+        ILockedBalanceIncreasing.LockedBalance memory _locked
+    ) external;
 }
 
 interface IDelegateUpdateVotingPower {
@@ -50,7 +58,7 @@ interface IEscrowIVotesAdapterStorage {
 interface IEscrowIVotesAdapter is
     IEscrowIVotesAdapterErrorsAndEvents,
     IEscrowIVotesAdapterStorage,
-    IDelegateMoveVote,
+    IDelegateMoveVoteRecipient,
     IVotesUpgradeable
 {
     /// @notice Allows to delegate `_tokenIds` to the current delegatee

@@ -89,6 +89,14 @@ contract Base is
         // to test thoroughly the behaviour of the functions.
         // So we set it to true.
         dg.setAutoDelegationDisabled(true);
+
+        // delegate function calls `VotingPower` on escrow
+        // and reverts if the returned result is 0.
+        // The below tokenIds are the ones we test the function with,
+        // So we mock them to return non-zero value, so tests don't fail.
+        _mockVotingPower(singleId[0], 1);
+        _mockVotingPower(multiIds[0], 1);
+        _mockVotingPower(multiIds[1], 1);
     }
 
     function _deployDAO() internal {
@@ -197,6 +205,14 @@ contract Base is
             address(escrow),
             abi.encodeWithSelector(VotingEscrow.locked.selector, (_tokenId)),
             abi.encode(ILockedBalanceIncreasing.LockedBalance(uint208(_amount), uint48(_start)))
+        );
+    }
+
+    function _mockVotingPower(uint256 _tokenId, uint256 _vp) internal {
+        vm.mockCall(
+            address(escrow),
+            abi.encodeWithSelector(VotingEscrow.votingPower.selector, (_tokenId)),
+            abi.encode(_vp)
         );
     }
 }

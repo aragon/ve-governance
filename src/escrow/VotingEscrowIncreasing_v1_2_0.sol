@@ -21,7 +21,8 @@ import {
     IVotingEscrowIncreasingV1_2_0 as IVotingEscrow,
     IVotingEscrowExiting,
     IMerge,
-    ISplit
+    ISplit,
+    IDelegateMoveVoteCaller
 } from "./IVotingEscrowIncreasing_v1_2_0.sol";
 import {IClockV1_2_0 as IClock} from "@clock/IClock_v1_2_0.sol";
 import {ExitQueue} from "@queue/ExitQueue.sol";
@@ -46,7 +47,6 @@ import {
     DaoAuthorizableUpgradeable as DaoAuthorizable
 } from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
 import {
-    IDelegateMoveVote,
     IDelegateUpdateVotingPower,
     IEscrowIVotesAdapter
 } from "../delegation/IEscrowIVotesAdapter.sol";
@@ -222,6 +222,12 @@ contract VotingEscrowV1_2_0 is
         emit SplitWhitelistSet(SPLIT_WHITELIST_ANY_ADDRESS, true);
     }
 
+    /// @notice Return true if any address is whitelisted or an `_account`.
+    function canSplit(address _account) public view virtual returns (bool) {
+        // Only allow split to whitelisted accounts.
+        return splitWhitelisted[SPLIT_WHITELIST_ANY_ADDRESS] || splitWhitelisted[_account];
+    }
+
     /*//////////////////////////////////////////////////////////////
                       Getters: ERC721 Functions
     //////////////////////////////////////////////////////////////*/
@@ -352,7 +358,7 @@ contract VotingEscrowV1_2_0 is
         IERC721EMB(lockNFT).mint(_to, newTokenId);
 
         // Update `_to`'s delegate power.
-        _moveDelegateVotes(address(0), _to, newTokenId);
+        _moveDelegateVotes(address(0), _to, newTokenId, lock);
 
         emit Deposit(_to, newTokenId, startTime, _value, totalLocked);
 
@@ -363,10 +369,18 @@ contract VotingEscrowV1_2_0 is
     function merge(uint256 _from, uint256 _to) public whenNotPaused {
         address sender = _msgSender();
 
-        if (!isApprovedOrOwner(sender, _from)) revert NotApprovedOrOwner();
-        if (!isApprovedOrOwner(sender, _to)) revert NotApprovedOrOwner();
-
         if (_from == _to) revert SameNFT();
+
+        address ownerFrom = IERC721EMB(lockNFT).ownerOf(_from);
+        address ownerTo = IERC721EMB(lockNFT).ownerOf(_to);
+
+        // Both nfts must have the same owner.
+        if (ownerFrom != ownerTo) revert NotSameOwner();
+
+        // sender can either be approved or owner.
+        if (!isApprovedOrOwner(sender, _from) || !isApprovedOrOwner(sender, _to)) {
+            revert NotApprovedOrOwner();
+        }
 
         LockedBalance memory oldLockedFrom = _locked[_from];
         LockedBalance memory oldLockedTo = _locked[_to];
@@ -375,32 +389,29 @@ contract VotingEscrowV1_2_0 is
             revert CannotMerge(_from, _to);
         }
 
-        // Note that this function must be called before we
-        // empty `lockedFrom`'s amount to 0. `moveDelegateVotes`
-        // relies that lock still contains the amount.
-        _moveDelegateVotes(
-            IERC721EMB(lockNFT).ownerOf(_from),
-            IERC721EMB(lockNFT).ownerOf(_to),
-            _from,
-            abi.encode(false)
-        );
+        // We only allow merge when both tokens have the same owner. 
+        // After the merge, owner still should have the same voting power
+        // as one token gets merged into another. For this reason, 
+        // We call `_moveDelegateVotes` with empty locked, so it doesn't 
+        // reduce/increase the same voting power for gas efficiency. 
+        // Note that we still decrease owner's delegated token count 
+        // as `_from` token is destroyed.
+        _moveDelegateVotes(ownerFrom, address(0), _from, LockedBalance(0, 0));
 
         // Update for `_from`.
+        // Note that on the checkpoint, we still don't 
+        // remove `start` for historical reasons.
         IERC721EMB(lockNFT).burn(_from);
         _locked[_from] = LockedBalance(0, 0);
-        LockedBalance memory newLockedFrom = LockedBalance(0, oldLockedFrom.start);
-
-        _checkpoint(_from, oldLockedFrom, newLockedFrom);
+        _checkpoint(_from, oldLockedFrom, LockedBalance(0, oldLockedFrom.start));
 
         // update for `_to`.
+        uint208 newLockedAmount = oldLockedFrom.amount + oldLockedTo.amount;
         _checkpoint(
             _to,
             oldLockedTo,
-            LockedBalance(oldLockedFrom.amount + oldLockedTo.amount, oldLockedTo.start)
+            LockedBalance(newLockedAmount, oldLockedTo.start)
         );
-
-        uint208 newLockedAmount = oldLockedFrom.amount + oldLockedTo.amount;
-
         _locked[_to] = LockedBalance(newLockedAmount, oldLockedTo.start);
 
         emit Merged(sender, _from, _to, oldLockedFrom.amount, oldLockedTo.amount, newLockedAmount);
@@ -429,43 +440,47 @@ contract VotingEscrowV1_2_0 is
 
     /// @inheritdoc ISplit
     function split(uint256 _from, uint256 _value) public whenNotPaused returns (uint256) {
+        if(_value == 0) revert ZeroAmount();
+
         address sender = _msgSender();
 
-        // Only allow split to whitelisted accounts.
-        if (!splitWhitelisted[SPLIT_WHITELIST_ANY_ADDRESS] && !splitWhitelisted[sender]) {
-            revert SplitNotWhitelisted();
-        }
+        // For some erc721, `ownerOf` reverts and for some, 
+        // it returns address(0). For safety, if it doesn't revert, 
+        // we also check if it's not address(0).
+        address owner = IERC721EMB(lockNFT).ownerOf(_from); 
+        if(owner == address(0)) revert NoOwner();
 
-        LockedBalance memory locked_ = _locked[_from];
-
+        if (!canSplit(owner)) revert SplitNotWhitelisted();
+    
+        // Sender must either be approved or the owner.
         if (!isApprovedOrOwner(sender, _from)) revert NotApprovedOrOwner();
 
-        if (_value == 0) revert ZeroAmount();
+        LockedBalance memory locked_ = _locked[_from];
         if (locked_.amount <= _value) revert SplitAmountTooBig();
 
         // Ensure that amounts of new tokens will be greater than `minDeposit`.
         uint208 amount1 = locked_.amount - _value.toUint208();
         uint208 amount2 = _value.toUint208();
-
         if (amount1 < minDeposit || amount2 < minDeposit) {
             revert AmountTooSmall();
         }
 
-        _moveDelegateVotes(IERC721EMB(lockNFT).ownerOf(_from), address(0), _from);
-
+        // update for `_from`.
         _checkpoint(_from, locked_, LockedBalance(amount1, locked_.start));
-
         _locked[_from] = LockedBalance(amount1, locked_.start);
 
+        // update for `newTokenId`.
         locked_.amount = amount2;
-        uint256 newTokenId = _createSplitNFT(sender, locked_);
+        uint256 newTokenId = _createSplitNFT(owner, locked_);
 
-        // a new NFT was minted to sender. Update
-        // sender's delegatee's power for both tokens.
-        _moveDelegateVotes(address(0), sender, _from);
-        _moveDelegateVotes(address(0), sender, newTokenId);
+        // owner gets minted a new tokenId. Since `split` function 
+        // just splits the same amount into two tokenIds, there's no need 
+        // to update voting power on ivotesAdapter, as total doesn't change.
+        // We still call `_moveDelegateVotes` with zero LockedBalance to 
+        // make sure we update delegatee's token count due to newtokenId.
+        _moveDelegateVotes(address(0), owner, newTokenId, LockedBalance(0, 0));
 
-        emit Split(_from, _from, newTokenId, sender, amount1, amount2);
+        emit Split(_from, newTokenId, sender, amount1, amount2);
 
         return newTokenId;
     }
@@ -604,34 +619,21 @@ contract VotingEscrowV1_2_0 is
                         Moving Delegation Votes Logic
     //////////////////////////////////////////////////////////////*/
 
-    /// @inheritdoc IDelegateMoveVote
-    function moveDelegateVotes(
-        address _from,
-        address _to,
-        uint256 _tokenId,
-        bytes memory _data
-    ) public whenNotPaused {
+    /// @inheritdoc IDelegateMoveVoteCaller
+    function moveDelegateVotes(address _from, address _to, uint256 _tokenId) public whenNotPaused {
         if (msg.sender != lockNFT) revert OnlyLockNFT();
+        LockedBalance memory locked_ = _locked[_tokenId];
 
-        _moveDelegateVotes(_from, _to, _tokenId, _data);
-    }
-
-    function _moveDelegateVotes(address _from, address _to, uint256 _tokenId) private {
-        IEscrowIVotesAdapter(ivotesAdapter).moveDelegateVotes(
-            _from,
-            _to,
-            _tokenId,
-            abi.encode(true)
-        );
+        _moveDelegateVotes(_from, _to, _tokenId, locked_);
     }
 
     function _moveDelegateVotes(
         address _from,
         address _to,
         uint256 _tokenId,
-        bytes memory _data
+        LockedBalance memory _locked
     ) private {
-        IEscrowIVotesAdapter(ivotesAdapter).moveDelegateVotes(_from, _to, _tokenId, _data);
+        IEscrowIVotesAdapter(ivotesAdapter).moveDelegateVotes(_from, _to, _tokenId, _locked);
     }
 
     /// @inheritdoc IDelegateUpdateVotingPower

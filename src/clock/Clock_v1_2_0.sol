@@ -195,11 +195,10 @@ contract ClockV1_2_0 is IClockV1_2_0, DaoAuthorizable, UUPSUpgradeable {
     }
 
     /// @notice Number of seconds until the next checkpoint interval (relative)
-    /// @dev If exactly at the start of the checkpoint interval, returns 0
+    /// @dev If exactly at the start of the checkpoint interval, returns the interval
     function resolveEpochNextCheckpointIn(uint256 timestamp) public pure returns (uint256) {
         unchecked {
             uint256 elapsed = resolveElapsedInEpoch(timestamp);
-            // elapsed > deposit interval, then subtract the interval
             if (elapsed >= CHECKPOINT_INTERVAL) elapsed -= CHECKPOINT_INTERVAL;
             return CHECKPOINT_INTERVAL - elapsed;
         }
@@ -213,6 +212,20 @@ contract ClockV1_2_0 is IClockV1_2_0, DaoAuthorizable, UUPSUpgradeable {
     function resolveEpochNextCheckpointTs(uint256 timestamp) public pure returns (uint256) {
         unchecked {
             return timestamp + resolveEpochNextCheckpointIn(timestamp);
+        }
+    }
+
+    function epochPrevCheckpointElapsed() external view returns (uint256) {
+        return resolveEpochPrevCheckpointElapsed(block.timestamp);
+    }
+
+    /// @notice Number of seconds since the prev checkpoint interval (relative)
+    /// @dev If exactly at the start of the checkpoint interval, returns 0
+    function resolveEpochPrevCheckpointElapsed(uint256 timestamp) public pure returns (uint256) {
+        unchecked {
+            uint256 elapsed = resolveElapsedInEpoch(timestamp);
+            if (elapsed >= CHECKPOINT_INTERVAL) elapsed -= CHECKPOINT_INTERVAL;
+            return elapsed;
         }
     }
 

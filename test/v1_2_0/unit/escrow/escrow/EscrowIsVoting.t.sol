@@ -16,6 +16,8 @@ import {
 contract TestIsVoting is IEscrowCurveTokenStorage, EscrowBase {
     function setUp() public override {
         super.setUp();
+
+        super.mintAndApproveEscrow();
     }
 
     function test_shouldRevertIfNonExistentToken() public {
@@ -31,11 +33,12 @@ contract TestIsVoting is IEscrowCurveTokenStorage, EscrowBase {
     }
 
     function test_shouldCallGaugeVoterWithCorrectDelegateeAddress() public {
-        uint256 tokenId = 1;
         address bob = address(456);
 
-        vm.prank(address(escrow));
-        nftLock.mint(address(this), tokenId);
+        uint256 tokenId = escrow.createLock(Lock_1_Amount);
+        
+        // set warmup to 0, so token immediatelly gains vp > 0 (required for delegation).
+        curve.setWarmupPeriod(0);
 
         // address(this) is an owner. bob becomes a delegatee.
         ivotesAdapter.setAutoDelegationDisabled(true);
