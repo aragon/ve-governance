@@ -80,7 +80,7 @@ contract LockV1_2_0 is ILock, ERC721Enumerable, UUPSUpgradeable, DaoAuthorizable
                               Transfers
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Transfers disabled by default, only whitelisted addresses can receive transfers
+    /// @notice Transfers disabled by default, whitelisted addresses are allowed to be involved in transfers
     function setWhitelisted(address _account, bool _isWhitelisted) external auth(LOCK_ADMIN_ROLE) {
         if (_account == escrow) revert ForbiddenWhitelistAddress();
         whitelisted[_account] = _isWhitelisted;
@@ -96,11 +96,11 @@ contract LockV1_2_0 is ILock, ERC721Enumerable, UUPSUpgradeable, DaoAuthorizable
     /// @dev Override the transfer to check if the recipient is whitelisted
     /// This avoids needing to check for mint/burn but is less idomatic than beforeTokenTransfer
     function _transfer(address _from, address _to, uint256 _tokenId) internal override {
-        if (!whitelisted[WHITELIST_ANY_ADDRESS] && !whitelisted[_to]) {
+        if (whitelisted[WHITELIST_ANY_ADDRESS] || whitelisted[_to] || whitelisted[_from]) {
+            super._transfer(_from, _to, _tokenId);
+        } else {
             revert NotWhitelisted();
         }
-
-        super._transfer(_from, _to, _tokenId);
         
         if(_from != _to) {
             IVotingEscrow(escrow).moveDelegateVotes(_from, _to, _tokenId);

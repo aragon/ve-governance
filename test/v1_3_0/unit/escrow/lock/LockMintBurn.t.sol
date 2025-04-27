@@ -17,7 +17,7 @@ import {
     ILock
 } from "../../../versions.sol";
 
-contract TestLockMintBurn is IEscrowCurveTokenStorage, IGaugeVote, EscrowBase {
+contract TestLock is IEscrowCurveTokenStorage, IGaugeVote, EscrowBase {
     function testDeploy(
         string memory _name,
         string memory _symbol,
