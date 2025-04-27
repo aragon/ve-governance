@@ -89,6 +89,14 @@ contract Base is
         // to test thoroughly the behaviour of the functions.
         // So we set it to true.
         dg.setAutoDelegationDisabled(true);
+
+        // delegate function calls `VotingPower` on escrow
+        // and reverts if the returned result is 0.
+        // The below tokenIds are the ones we test the function with,
+        // So we mock them to return non-zero value, so tests don't fail.
+        _mockVotingPower(singleId[0], 1);
+        _mockVotingPower(multiIds[0], 1);
+        _mockVotingPower(multiIds[1], 1);
     }
 
     function _deployDAO() internal {
@@ -176,7 +184,6 @@ contract Base is
         );
     }
 
-    // DAO::hasPermission(ERC1967Proxy: [0x03A6a84cD762D9707A21605b548aaaB891562aAb], TestVotingWithDelegation: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], 0xfda1ae526c1fb38407f23e8b7712f7cfacc146f3e340a04221488331e0d42014, 0x071d21710000000000000000000000000000000000000000000000000000000000000777000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000086d65746164617461000000000000000000000000000000000000000000000000)
     function _mockPermissions() internal {
         vm.mockCall(
             address(dao),
@@ -198,6 +205,14 @@ contract Base is
             address(escrow),
             abi.encodeWithSelector(VotingEscrow.locked.selector, (_tokenId)),
             abi.encode(ILockedBalanceIncreasing.LockedBalance(uint208(_amount), uint48(_start)))
+        );
+    }
+
+    function _mockVotingPower(uint256 _tokenId, uint256 _vp) internal {
+        vm.mockCall(
+            address(escrow),
+            abi.encodeWithSelector(VotingEscrow.votingPower.selector, (_tokenId)),
+            abi.encode(_vp)
         );
     }
 }
