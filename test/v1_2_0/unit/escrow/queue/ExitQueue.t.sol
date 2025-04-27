@@ -250,7 +250,6 @@ contract TestExitQueue is ExitQueueBase, ITicket {
         vm.assume(_holder != address(0));
         vm.warp(1 weeks);
 
-        uint time = block.timestamp;
         // set the lock to start at 1 week
         escrow.setMockLockedBalance(100e18, 1 weeks);
 

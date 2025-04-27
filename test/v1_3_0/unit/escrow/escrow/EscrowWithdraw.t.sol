@@ -187,10 +187,15 @@ contract TestWithdraw is IEscrowCurveTokenStorage, IGaugeVote, ITicket, EscrowBa
 
         token.mint(_who, _dep);
         uint tokenId;
+
+        // set warmup to 0, so token immediatelly gains vp > 0 (required for delegation).
+        curve.setWarmupPeriod(0);
+        
         vm.startPrank(_who);
         {
             token.approve(address(escrow), _dep);
             tokenId = escrow.createLock(_dep);
+
 
             ivotesAdapter.delegate(_who);
 

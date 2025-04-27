@@ -80,11 +80,51 @@ contract TestEscrowMerge is IEscrowCurveTokenStorage, EscrowBase, IMergeEventsAn
         escrow.merge(from, to);
     }
 
+    function test_shouldRevert_NFTsAreOwnedByDifferentAccounts() public {
+        address fromOwner = address(123);
+        address toOwner = address(456);
+
+        token.transfer(fromOwner, Lock_1_Amount);
+        token.transfer(toOwner, Lock_2_Amount);
+
+        vm.startPrank(fromOwner);
+        token.approve(address(escrow), Lock_1_Amount);
+        uint256 from = escrow.createLock(Lock_1_Amount);
+        vm.stopPrank();
+
+        vm.startPrank(toOwner);
+        token.approve(address(escrow), Lock_2_Amount);
+        uint256 to = escrow.createLock(Lock_2_Amount);
+        vm.stopPrank();
+
+        vm.expectRevert(IVotingEscrowCoreErrors.NotSameOwner.selector);
+        escrow.merge(from, to);
+    }
+
     function test_shouldRevert_BothNFTsAreSame() public {
         uint256 from = escrow.createLock(Lock_1_Amount);
 
         vm.expectRevert(SameNFT.selector);
         escrow.merge(from, from);
+    }
+
+    function test_shouldSucceed_IfSenderIsApproved() public {
+        address sender = address(123);
+
+        uint256 from = escrow.createLock(Lock_1_Amount);
+        uint256 to = escrow.createLock(Lock_1_Amount);
+        
+        nftLock.approve(sender, from);
+
+        // Should revert as sender is only approved for `from` tokenId.
+        vm.expectRevert(IVotingEscrowCoreErrors.NotApprovedOrOwner.selector);
+        vm.prank(sender);
+        escrow.merge(from, to);
+
+        // Sender becomes approved for also `to` tokenId.
+        nftLock.approve(sender, to);
+        vm.prank(sender);
+        escrow.merge(from, to);        
     }
 
     function test_StartDate_NotChangeForToToken() public {

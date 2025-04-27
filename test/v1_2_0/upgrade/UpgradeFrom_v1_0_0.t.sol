@@ -44,7 +44,8 @@ import {
     EscrowIVotesAdapter,
     Lock as LockV1_2_0,
     GaugeVoter as AddressGaugeVoter,
-    IGaugeVote as IAddressGaugeVote
+    IGaugeVote as IAddressGaugeVote,
+    IVotingEscrowCoreErrors
 } from "test/v1_2_0/versions.sol";
 import {
     UpgradeGaugesFactoryV1_0_0__V1_2_0 as UpgradeFactory,
@@ -296,8 +297,24 @@ contract RegressionV1_0_0__to__V1_2_0 is Test, IGaugeVote, FixedPointBase {
         _mockApprovedOwner(address(this), bobToken);
 
         escrowUpgrade = VotingEscrowV1_2_0(address(escrow));
+        lockUpgrade = LockV1_2_0(address(lock));
 
         // merge tokens/locks that were created before the upgrade.
+        // Note that we created locks(tokens) to different addresses.
+        // It must be owned by the same address to do the merge.
+        vm.expectRevert(IVotingEscrowCoreErrors.NotSameOwner.selector);
+        escrowUpgrade.merge(aliceToken, bobToken);
+
+        // Enable transfers of nfts, so alice can transfer it to bob
+        // which would cause both tokens to have the same owner.
+        // hence we can do the merge.
+        vm.prank(address(dao));
+        lockUpgrade.enableTransfers();
+
+        vm.prank(ALICE_ADDRESS);
+        lockUpgrade.transferFrom(ALICE_ADDRESS, BOB_ADDRESS, aliceToken);
+
+        // we can do merge now, since both tokens have same owner(bob).
         escrowUpgrade.merge(aliceToken, bobToken);
 
         assertEq(escrowUpgrade.votingPower(aliceToken), 0);

@@ -101,31 +101,10 @@ contract LockV1_2_0 is ILock, ERC721Enumerable, UUPSUpgradeable, DaoAuthorizable
         }
 
         super._transfer(_from, _to, _tokenId);
-    }
-
-    /// @dev Hook that is called before any token transfer - including mint/burn.
-    function _beforeTokenTransfer(
-        address _from,
-        address _to,
-        uint256 _tokenId,
-        uint256 _data
-    ) internal virtual override {
-        // Calls ERC721Enumerable's `_beforeTokenTransfer`
-        super._beforeTokenTransfer(_from, _to, _tokenId, _data);
-
-        // `burn` can only be called by escrow which only calls
-        // it upon `beginWithdrawal/merge/split`. 
-        // in `merge/split`, we manually call `moveDelegateVotes`.
-        // in `beginWithdrawal`, `transfer` occurs which already calls this hook.
-        // This means that at the time that `burn` is called, `moveDelegateVotes`
-        // would have already been called, hence there's no need to call it again,
-        // hence we skip if that's the case.
         
-        if (_to == address(0)) {
-            return;
+        if(_from != _to) {
+            IVotingEscrow(escrow).moveDelegateVotes(_from, _to, _tokenId);
         }
-
-        IVotingEscrow(escrow).moveDelegateVotes(_from, _to, _tokenId);
     }
 
     /*//////////////////////////////////////////////////////////////
