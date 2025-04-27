@@ -42,7 +42,11 @@ contract TestIncreasingCurveLogic is CurveBase {
         LockedBalance memory second = LockedBalance({amount: 200, start: 1 weeks});
 
         escrow.checkpoint(1, LockedBalance(0, 0), first);
-        escrow.checkpoint(1, first, second);
+        escrow.checkpoint(
+            1,
+            first,
+            LockedBalance({amount: first.amount + second.amount, start: 1 weeks})
+        );
 
         // check we have only 1 token interval
         assertEq(curve.tokenPointIntervals(1), 1);
@@ -52,17 +56,15 @@ contract TestIncreasingCurveLogic is CurveBase {
         );
         assertEq(curve.tokenPointHistory(1, 1).coefficients[1], slopeFP(200) + slopeFP(100));
     }
-    
+
     // bias functions use the 1e18 multiplier on the amount, so
     // passing higher than uint192 will result in an overflow.
     // This is not a problem in curve because in createLock:
-    // amount.toUint208() * 1e18 is used and if overflow occurs, 
-    // lock would not be created in the first place, meaning that 
-    // only those locks are created that fit in, hence bias functions 
+    // amount.toUint208() * 1e18 is used and if overflow occurs,
+    // lock would not be created in the first place, meaning that
+    // only those locks are created that fit in, hence bias functions
     // on those amounts later on will be valid.
     function testFuzz_previewMaxBias(uint192 _amount) public view {
         assertEq(curve.previewMaxBias(_amount), bias(_amount, maxTime));
     }
 }
-
-

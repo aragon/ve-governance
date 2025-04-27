@@ -392,9 +392,12 @@ contract VotingEscrowV1_2_0 is
 
         _checkpoint(_from, oldLockedFrom, newLockedFrom);
 
-        // Update for `_to`.
-        oldLockedFrom.start = oldLockedTo.start;
-        _checkpoint(_to, oldLockedTo, oldLockedFrom);
+        // update for `_to`.
+        _checkpoint(
+            _to,
+            oldLockedTo,
+            LockedBalance(oldLockedFrom.amount + oldLockedTo.amount, oldLockedTo.start)
+        );
 
         uint208 newLockedAmount = oldLockedFrom.amount + oldLockedTo.amount;
 
@@ -425,10 +428,7 @@ contract VotingEscrowV1_2_0 is
     }
 
     /// @inheritdoc ISplit
-    function split(
-        uint256 _from,
-        uint256 _value
-    ) public whenNotPaused returns (uint256) {
+    function split(uint256 _from, uint256 _value) public whenNotPaused returns (uint256) {
         address sender = _msgSender();
 
         // Only allow split to whitelisted accounts.
@@ -444,7 +444,7 @@ contract VotingEscrowV1_2_0 is
         if (locked_.amount <= _value) revert SplitAmountTooBig();
 
         // Ensure that amounts of new tokens will be greater than `minDeposit`.
-        uint208 amount1 = locked_.amount - _value.toUint208(); 
+        uint208 amount1 = locked_.amount - _value.toUint208();
         uint208 amount2 = _value.toUint208();
 
         if (amount1 < minDeposit || amount2 < minDeposit) {

@@ -110,4 +110,43 @@ contract TestSplit_Supply is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage
             biasFP(Lock_1_Amount - value, endTs - weekStartTs) + biasFP(value, endTs - weekStartTs)
         );
     }
+
+    function testFuzz_Split(
+        uint192 _lock1Amount,
+        uint192 _splitValue,
+        uint48 _fromLockTime,
+        uint192 _splitTime
+    ) public {
+       (_fromLockTime, _splitTime) = boundLockCreationFuzzTimes(_fromLockTime, _splitTime);
+
+        // Split requirements to work with.
+        vm.assume(_lock1Amount > 0 && _splitValue > 0);
+        vm.assume(_splitValue < _lock1Amount);
+        uint256 minDeposit = escrow.minDeposit();
+        vm.assume(_splitValue >= minDeposit && _lock1Amount - _splitValue >= minDeposit);
+        
+        mintAndApproveEscrow(uint256(_lock1Amount));
+
+        // Create 2 locks on fuzzed times and
+        // merge them on fuzzed time as well.
+        vm.warp(_fromLockTime);
+        uint256 from = escrow.createLock(_lock1Amount);
+        vm.warp(_splitTime);
+        escrow.split(from, _splitValue);
+
+        uint256 currentTs = block.timestamp;
+        uint256 fromLockWeekTs = weekStartTs(_fromLockTime);
+        uint256 fromLockEnd = fromLockWeekTs + maxTime;
+
+        int256 bias;
+        if (_splitTime > fromLockEnd) {
+            bias = biasFP(_lock1Amount, maxTime);
+        } else {
+            bias =
+                biasFP(_lock1Amount - _splitValue, _splitTime - fromLockWeekTs) +
+                biasFP(_splitValue, _splitTime - fromLockWeekTs);
+        }
+
+        assertTotalSupply(currentTs, bias);
+    }
 }

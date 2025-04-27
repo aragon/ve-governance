@@ -398,74 +398,41 @@ contract LinearIncreasingCurve is
         }
 
         uint256 newEnd = _newLocked.start + maxTime();
-        int256 newDSlope = slopeChanges[newEnd];
 
-        // If the newLocked hasn't ended, add its slope
-        // to the latest global point. newLocked could be
-        // ended in case of merge, when a token is already mature.
-        if (block.timestamp < newEnd) {
-            lastPoint.slope += newLockSlope;
-            newDSlope += newLockSlope;
-        } else {
+        // newLocked could be ended in case of merge, when 
+        // a token is already mature.
+        if(block.timestamp >= newEnd) {
             newLockSlope = 0;
         }
-        
-        lastPoint.bias += newLockBias;
+
+        (int256 oldLockBias, int256 oldLockSlope) = (0, 0);
+        if(_fromLocked.amount > 0) {
+            (oldLockBias, oldLockSlope) = _getBiasAndSlope(
+                block.timestamp - _fromLocked.start,
+                _fromLocked.amount
+            );
+        }
+
+
+        lastPoint.bias += (newLockBias - oldLockBias);
+        lastPoint.slope += (newLockSlope - oldLockSlope);
 
         uint256 tokenLatestIndex = tokenPointLatestIndex[_tokenId];
 
         // The `tokenId` already exists..
         if (tokenLatestIndex > 0) {
-            uint256 _fromLockedEnd = _fromLocked.start + maxTime();
+            uint256 fromLockedEnd = _fromLocked.start + maxTime();
 
-            // Get the slope and bias for `_fromLocked`...
-            (int256 oldLockBias, int256 oldLockSlope) = _getBiasAndSlope(
-                block.timestamp - _fromLocked.start,
-                _fromLocked.amount
-            );
-
-            if (_newLocked.amount < _fromLocked.amount) {
-                lastPoint.bias -= oldLockBias;
-                if (_fromLockedEnd > block.timestamp) {
-                    // If `fromLocked` ends in the future, we must subtract its slope
-                    // as from this moment on(due to making amount=0),
-                    // the slope must not be included. Note that in case the end is
-                    // in the past, we already subtracted it inside the above loop.
-                    lastPoint.slope -= oldLockSlope;
-                    newDSlope -= oldLockSlope;
-                }
-            } else {
-                newLockBias += oldLockBias;
-
-                if (_fromLockedEnd > block.timestamp) {
-                    // Only add old lock's slope in case it's not mature yet.
-                    newLockSlope += oldLockSlope;
-
-                    // fromLocked's current end is in the future and
-                    // since `fromLocked` gets destroyed, its slope must be
-                    // recorded on the newLocked's end. If both `ends` are equal,
-                    // old slope is already included/recorded when it was first stored.
-                    if (_fromLockedEnd != newEnd) {
-                        newDSlope += oldLockSlope;
-                    }
-                }
-            }
-
-            // If ends are not equal and fromLocked's end
-            // is in the future, we must clear it out.
-            if (_fromLockedEnd != newEnd && _fromLockedEnd >= block.timestamp) {
-                int256 oldDSlope = slopeChanges[_fromLockedEnd] - oldLockSlope;
-                if (oldDSlope < 0) oldDSlope = 0;
-                slopeChanges[_fromLockedEnd] = oldDSlope;
+            if(fromLockedEnd > block.timestamp) {
+                slopeChanges[fromLockedEnd]-= oldLockSlope;
             }
         }
 
         if (lastPoint.slope < 0) lastPoint.slope = 0;
         if (lastPoint.bias < 0) lastPoint.bias = 0;
-        if (newDSlope < 0) newDSlope = 0;
 
         // store new slope change
-        slopeChanges[newEnd] = newDSlope;
+        slopeChanges[newEnd] += newLockSlope;
 
         // Record the latest global point.
         _storeLatestGlobalPoint(lastPoint, _globalPointLatestIndex);

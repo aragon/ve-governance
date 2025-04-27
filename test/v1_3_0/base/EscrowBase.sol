@@ -15,6 +15,7 @@ import {MockERC20} from "@mocks/MockERC20.sol";
 import {createTestDAO} from "@mocks/MockDAO.sol";
 
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import {console2 as console} from "forge-std/console2.sol";
 
 import "@helpers/OSxHelpers.sol";
 import {ProxyLib} from "@libs/ProxyLib.sol";
@@ -176,6 +177,11 @@ contract EscrowBase is
         token.approve(address(escrow), 10000000e18);
     }
 
+    function mintAndApproveEscrow(uint256 _amount) internal {
+        token.mint(address(this), _amount);
+        token.approve(address(escrow), _amount);
+    }
+
     function slopeChanges(uint256 _end) internal view returns (int256 slope) {
         return curve.slopeChanges(_end);
     }
@@ -221,6 +227,73 @@ contract EscrowBase is
 
     function assertVotingPower(uint256 _tokenId, uint256 _t, int256 _amountFP) internal view {
         assertEq(curve.votingPowerAt(_tokenId, _t), uint256(_amountFP / 1e18));
+    }
+
+    // Useful to bound the times of when locks get created.
+    // We use 254 weeks as a maximum duration between the previous 
+    // lock created and current one. See `LinearIncreasingCurve`'s 
+    // `_checkpoint` for more details(loop).
+    function boundLockCreationFuzzTimes(
+        uint256 _t1,
+        uint256 _t2,
+        uint256 _t3
+    ) internal pure returns(uint48, uint48, uint48) {
+        _t1 = bound(_t1, 0, 254 weeks);
+        _t2 = bound(_t2, _t1, _t1 + 254 weeks);
+        _t3 = bound(_t3, _t2, _t2 + 254 weeks);
+
+        return (uint48(_t1), uint48(_t2), uint48(_t3));
+    }
+
+    // Useful to bound the times of when locks get created.
+    // We use 254 weeks as a maximum duration between the previous 
+    // lock created and current one. See `LinearIncreasingCurve`'s 
+    // `_checkpoint` for more details(loop).
+    function boundLockCreationFuzzTimes(
+        uint256 _t1,
+        uint256 _t2
+    ) internal pure returns(uint48, uint48) {
+        _t1 = bound(_t1, 0, 254 weeks);
+        _t2 = bound(_t2, _t1, _t1 + 254 weeks);
+
+        return (uint48(_t1), uint48(_t2));
+    }
+
+    // Helper function to count how many records 
+    // would be stored when 3 locks get created.
+    function expectedIndex(
+        uint256 _firstLockTime,
+        uint256 _secondLockTime,
+        uint256 _mergeTime
+    ) public view returns (uint256) {
+        uint256 mergeWeekStartTs = weekStartTs(_mergeTime);
+        uint256 fromLockWeekStartTs = weekStartTs(_firstLockTime);
+
+        if (_firstLockTime == _secondLockTime && _secondLockTime == _mergeTime) {
+            return 1;
+        }
+
+        // How many weeks between the first lock and the last lock.
+        uint256 count = (_mergeTime - fromLockWeekStartTs) / 1 weeks;
+
+        // If merge time is not exactly matching the week start time, 
+        // it wouldn't be included in week count above.
+        if (_mergeTime != mergeWeekStartTs) {
+            count++;
+        }
+
+        // Add one more for the first lock, as it also 
+        // wouldn't be included in week counts.
+        count++;
+
+        // Add one more only if second lock's ts doesn't match the week ts.
+        if (_secondLockTime != _firstLockTime && _secondLockTime != _mergeTime) {
+            if ((_secondLockTime % 1 weeks) != 0) {
+                count++;
+            }
+        }
+
+        return count;
     }
 
     // The default sender to contract calls ends up a test contract itself.

@@ -123,4 +123,5 @@ contract TestMerge_WarmUpAndVotingPower is
         assertFalse(curve.isWarm(from));
         assertTrue(curve.isWarm(to));
     }
+    
 }

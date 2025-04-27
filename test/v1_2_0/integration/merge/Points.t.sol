@@ -141,4 +141,84 @@ contract TestMerge_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage
             currentTs
         );
     }
+
+    function testFuzz_Merge(
+        uint192 _lock1Amount,
+        uint192 _lock2Amount,
+        uint48 _fromLockTime,
+        uint48 _toLockTime,
+        uint48 _mergeTime
+    ) public {
+        (_fromLockTime, _toLockTime, _mergeTime) = boundLockCreationFuzzTimes(
+            _fromLockTime,
+            _toLockTime,
+            _mergeTime
+        );
+
+        vm.assume(_toLockTime >= _fromLockTime && _mergeTime >= _toLockTime);
+        vm.assume(_lock1Amount > 0 && _lock2Amount > 0);
+
+        // If start dates of locks don't match,
+        // in order to merge, both tokens have to be mature.
+        // So we restrict `_mergeTime` to be greater than
+        // both token's maturity date.
+        if (_fromLockTime != _toLockTime) {
+            vm.assume(_mergeTime > _toLockTime + maxTime);
+        }
+
+        mintAndApproveEscrow(uint256(_lock1Amount) + uint256(_lock2Amount));
+
+        // Create 2 locks on fuzzed times and
+        // merge them on fuzzed time as well.
+        vm.warp(_fromLockTime);
+        uint256 from = escrow.createLock(_lock1Amount);
+        vm.warp(_toLockTime);
+        uint256 to = escrow.createLock(_lock2Amount);
+        vm.warp(_mergeTime);
+        escrow.merge(from, to);
+
+        uint256 currentTs = block.timestamp;
+        uint256 fromLockWeekTs = weekStartTs(_fromLockTime);
+        uint256 toLockWeekTs = weekStartTs(_toLockTime);
+        uint256 toLockEnd = toLockWeekTs + maxTime;
+        
+        assertTokenPoint(
+            from,
+            // If the dates match, it should use
+            // a single block/record for gas efficiency,
+            // otherwise 2.
+            _mergeTime == _fromLockTime ? 1 : 2,
+            0,
+            0,
+            fromLockWeekTs,
+            currentTs
+        );
+
+        int256 bias;
+
+        if (_mergeTime >= toLockEnd) {
+            bias = biasFP(_lock1Amount, maxTime) + biasFP(_lock2Amount, maxTime);
+        } else {
+            bias =
+                biasFP(_lock1Amount, _mergeTime - fromLockWeekTs) +
+                biasFP(_lock2Amount, _mergeTime - toLockWeekTs);
+        }
+
+        int256 slope = 0;
+        if (_mergeTime < toLockEnd) {
+            slope = slopeFP(_lock1Amount) + slopeFP(_lock2Amount);
+        }
+
+        assertTokenPoint(
+            to,
+            // If the dates match, it should use
+            // a single block/record for gas efficiency,
+            // otherwise 2.
+            _mergeTime == _toLockTime ? 1 : 2,
+            bias,
+            slope,
+            toLockWeekTs,
+            currentTs
+        );
+    }
 }

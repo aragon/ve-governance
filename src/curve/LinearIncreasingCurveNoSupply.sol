@@ -341,32 +341,6 @@ contract LinearIncreasingCurveNoSupply is
 
         uint256 tokenLatestIndex = tokenPointLatestIndex[_tokenId];
 
-        // The `tokenId` already exists..
-        if (tokenLatestIndex > 0) {
-            // If the amount is 0, newLockBias and newLockSlope
-            // would be 0 in which case we don't need to do
-            // anything, but store them directly on a new tokenpoint.
-            if (_newLocked.amount != 0) {
-                // Get the slope and bias for `_fromLocked`...
-                (int256 oldLockBias, int256 oldLockSlope) = _getBiasAndSlope(
-                    block.timestamp - _fromLocked.start,
-                    _fromLocked.amount
-                );
-
-                uint256 fromLockedEnd = _fromLocked.start + maxTime();
-
-                // If the new locked amount is smaller, we directly override it.
-                if(_newLocked.amount > _fromLocked.amount) {
-                    newLockBias += oldLockBias;
-
-                    // Only add old lock's slope in case it's not mature yet.
-                    if (block.timestamp < fromLockedEnd) {
-                        newLockSlope += oldLockSlope;
-                    }
-                }
-            }
-        }
-
         // Create new token point and store.
         TokenPoint memory tNew;
         tNew.writtenTs = uint128(block.timestamp);
