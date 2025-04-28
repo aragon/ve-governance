@@ -227,13 +227,21 @@ contract LinearIncreasingCurve is
         return _isWarm(_tokenId, _ts);
     }
 
-    function _isWarm(uint256 _tokenId, uint256 _ts) public view returns (bool) {
+    function _isWarm(uint256 _tokenId, uint256 _ts) internal view virtual returns (bool) {
         IVotingEscrow.LockedBalance memory locked = IVotingEscrow(escrow).locked(_tokenId);
 
         // This could occur if user withdraw in which case lock is removed.
         // In such case, `_tokenId` is treated as if it never existed
         // in which case we anyways return false.
         if (locked.amount == 0) return false;
+
+        // If locked.amount is non-zero, we should at least have one point in history.
+        // So it's safe to access the first element.
+        TokenPoint memory originalPoint = _tokenPointHistory[_tokenId][1];
+
+        if (originalPoint.checkpointTs > originalPoint.writtenTs) {
+            return _ts > originalPoint.writtenTs + warmupPeriod;
+        }
 
         return _ts > locked.start + warmupPeriod;
     }
