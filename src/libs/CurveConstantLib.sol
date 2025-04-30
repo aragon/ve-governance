@@ -17,6 +17,5 @@ library CurveConstantLib {
     int256 internal constant SHARED_QUADRATIC_COEFFICIENT = 0;
 
     /// @dev the maxiumum number of epochs the cure can keep increasing
-    /// 26 epochs in a year, 2 years = 52 epochs
-    uint256 internal constant MAX_EPOCHS = 52;
+    uint256 internal constant MAX_EPOCHS = 5;
 }

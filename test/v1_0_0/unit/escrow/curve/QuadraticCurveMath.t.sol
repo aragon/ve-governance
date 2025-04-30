@@ -146,6 +146,11 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
 
         // warp to the start of period 2
         vm.warp(start + clock.epochDuration());
+        // excel:     600.985714300000000000
+        // PRB:       600.985163959347100568
+        // solmate:   600.985163959347101852
+        // python :   600.985714285714341888
+        // solmate2:  600.985163959347101952
         assertEq(
             curve.votingPowerAt(tokenIdFirst, block.timestamp),
             428780192307461588352,
@@ -156,9 +161,9 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
         uint256 expectedMaxII = 1999999999971481600000000000;
 
         // warp to the final period
-        // TECHNICALLY, this should round to a whole max
-        // but FP arithmetic has a small rounding error and it finishes just below
-        vm.warp(start + clock.epochDuration() * 52);
+        // TECHNICALLY, this should finish at exactly 5 periodd and 6 * voting power
+        // but FP arithmetic has a small rounding error
+        vm.warp(start + clock.epochDuration() * 5);
         assertEq(
             curve.votingPowerAt(tokenIdFirst, block.timestamp),
             expectedMaxI,
