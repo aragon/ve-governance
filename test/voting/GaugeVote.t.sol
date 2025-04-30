@@ -53,7 +53,6 @@ contract TestGaugeVote is GaugeVotingBase {
         {
             token.approve(address(escrow), lockDeposit);
             tokenId = escrow.createLock(lockDeposit);
-            ids.push(tokenId);
         }
         vm.stopPrank();
 
@@ -67,25 +66,24 @@ contract TestGaugeVote is GaugeVotingBase {
         voter.createGauge(gauge, "metadata");
     }
 
-    function testFuzz_canVoteAnytime(uint256 time) public {
-        vm.assume(time > block.timestamp);
+    function testFuzz_cannotVoteOutsideVotingWindow(uint256 time) public {
         // warp to a random time
         vm.warp(time);
 
-        votes.push(GaugeVote(1000, gauge));
+        // should now be inactive (we don't test this part herewe have the epoch logic tests)
+        vm.assume(!voter.votingActive());
 
-        vm.startPrank(owner);
-        {
-            // try to vote
-            voter.vote(tokenId, votes);
+        // try to vote
+        vm.expectRevert(VotingInactive.selector);
+        voter.vote(0, votes);
 
-            // try to reset
-            voter.reset(tokenId);
+        // try to reset
+        vm.expectRevert(VotingInactive.selector);
+        voter.reset(0);
 
-            // vote multiple
-            voter.voteMultiple(ids, votes);
-        }
-        vm.stopPrank();
+        // vote multiple
+        vm.expectRevert(VotingInactive.selector);
+        voter.voteMultiple(ids, votes);
     }
 
     // can't vote if you don't own the token
