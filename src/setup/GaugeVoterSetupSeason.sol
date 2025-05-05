@@ -309,7 +309,7 @@ contract GaugeVoterSetupSeason is PluginSetup {
         return abi.encode(_params);
     }
 
-    /// @notice  utility for external applications create the encoded setup data.
+    /// @notice Simple utility for external applications create the encoded setup data.
     function encodeSetupData(
         bool isPaused,
         string calldata veTokenName,
