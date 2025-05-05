@@ -329,7 +329,7 @@ contract AddressGaugeVoter is
     ) internal view virtual returns (uint256) {
         return (_weight * 10e32) / _totalWeight;
     }
-    
+
     function _votesForGauge(
         uint256 _weight,
         uint256 _votingPower
@@ -392,6 +392,20 @@ contract AddressGaugeVoter is
         if (!gaugeExists(_gauge)) revert GaugeDoesNotExist(_gauge);
         gauges[_gauge].metadataURI = _metadataURI;
         emit GaugeMetadataUpdated(_gauge, _metadataURI);
+    }
+
+    /*///////////////////////////////////////////////////////////////
+                                Setters
+    //////////////////////////////////////////////////////////////*/
+
+    function setEnableUpdateVotingPowerHook(
+        bool _enableUpdateVotingPowerHook
+    ) external auth(GAUGE_ADMIN_ROLE) {
+        enableUpdateVotingPowerHook = _enableUpdateVotingPowerHook;
+    }
+
+    function setIVotesAdapter(address _ivotesAdapter) external auth(GAUGE_ADMIN_ROLE) {
+        ivotesAdapter = _ivotesAdapter;
     }
 
     /*///////////////////////////////////////////////////////////////
