@@ -190,4 +190,41 @@ contract TestGaugeManage is GaugeVotingBase {
         vm.expectRevert(err);
         voter.reset();
     }
+
+    function testCanSetEnableUpdateVotingPowerHook() public {
+        voter.setEnableUpdateVotingPowerHook(true);
+        assertEq(voter.enableUpdateVotingPowerHook(), true);
+
+        voter.setEnableUpdateVotingPowerHook(false);
+        assertEq(voter.enableUpdateVotingPowerHook(), false);
+    }
+
+    function testRevertSetEnableUpdateVotingPowerHookWhenNotAdmin() public {
+        // revert if not gauge admin
+        bool isEnabled = voter.enableUpdateVotingPowerHook();
+        vm.startPrank(address(0x123));
+        {
+            vm.expectRevert(_authErr(address(0x123), address(voter), voter.GAUGE_ADMIN_ROLE()));
+            voter.setEnableUpdateVotingPowerHook(!isEnabled);
+        }
+        assertEq(voter.enableUpdateVotingPowerHook(), isEnabled);
+    }
+
+    function testCanSetIVotesAdapter() public {
+        address newAdapter = address(0x123);
+        voter.setIVotesAdapter(newAdapter);
+        assertEq(voter.ivotesAdapter(), newAdapter);
+    }
+
+    function testRevertSetIVotesAdapterWhenNotAdmin() public {
+        address votesAddapterAddress = voter.ivotesAdapter();
+        // revert if not gauge admin
+        vm.startPrank(address(0x123));
+        {
+            vm.expectRevert(_authErr(address(0x123), address(voter), voter.GAUGE_ADMIN_ROLE()));
+            voter.setIVotesAdapter(address(0));
+        }
+        vm.stopPrank();
+        assertEq(voter.ivotesAdapter(), votesAddapterAddress);
+    }
 }
