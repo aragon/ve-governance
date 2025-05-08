@@ -104,43 +104,35 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
         // warmup complete
         vm.warp(block.timestamp + 1);
 
-        // python:              449.206279554928541696
-        // solmate (optimized): 449.206254284606635135
         assertEq(
             curve.votingPowerAt(tokenIdFirst, block.timestamp),
-            449206254284606635135,
+            480788803290265642662,
             "Balance incorrect after warmup"
         );
         assertEq(curve.isWarm(tokenIdFirst), true, "Still warming up");
 
-        // python:    1067784543380942056100724736
-        // solmate:   1067784483312193385000000000
         assertEq(
             curve.votingPowerAt(tokenIdSecond, block.timestamp),
-            1067784483312193385000000000,
+            1142857694003341279000000000,
             "Balance incorrect after warmup II"
         );
 
         // warp to the start of period 2
         vm.warp(start + clock.epochDuration());
-        // excel:     600.985714300000000000
-        // PRB:       600.985163959347100568
-        // solmate:   600.985163959347101852
-        // python :   600.985714285714341888
-        // solmate2:  600.985163959347101952
+
         assertEq(
             curve.votingPowerAt(tokenIdFirst, block.timestamp),
-            600985163959347101952,
+            701149999999634728896,
             "Balance incorrect after p1"
         );
 
-        uint256 expectedMaxI = 2524126241845405205760;
-        uint256 expectedMaxII = 5999967296216704000000000000;
+        uint256 expectedMaxI = 1262069999998904186688;
+        uint256 expectedMaxII = 2999999999997395200000000000;
 
         // warp to the final period
-        // TECHNICALLY, this should finish at exactly 5 periodd and 6 * voting power
+        // TECHNICALLY, this should finish at exactly 3 periods and 3x voting power
         // but FP arithmetic has a small rounding error
-        vm.warp(start + clock.epochDuration() * 5);
+        vm.warp(start + clock.epochDuration() * 3);
         assertEq(
             curve.votingPowerAt(tokenIdFirst, block.timestamp),
             expectedMaxI,
