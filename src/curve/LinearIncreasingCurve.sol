@@ -365,6 +365,8 @@ contract LinearIncreasingCurve is
 
         {
             uint256 checkpointInterval = IClock(clock).checkpointInterval();
+            // :(
+            if (block.timestamp % checkpointInterval == 0) revert("no shennanigans");
 
             uint256 lastPointCheckpoint = lastPoint.writtenTs;
             uint256 t_i = (lastPointCheckpoint / checkpointInterval) * checkpointInterval;
@@ -397,42 +399,65 @@ contract LinearIncreasingCurve is
             }
         }
 
-        uint256 newEnd = _newLocked.start + maxTime();
+        uint256 _maxTime = maxTime();
+        uint256 newLockedEnd = _newLocked.start + _maxTime;
+        uint256 fromLockedEnd = _fromLocked.start + _maxTime;
+        if (
+            // from lock exists
+            _fromLocked.start != 0 &&
+            // new locked exists
+            _newLocked.start != 0 &&
+            // the start dates are different
+            _fromLocked.start != _newLocked.start &&
+            // but they are not yet mature
+            (newLockedEnd <= block.timestamp || fromLockedEnd <= block.timestamp)
+            // ------------------Lock------Block
+            //                         block gt lock this is okay
+            // ------------------Block------lock
+            //                         block lt lock this is not okay
+        ) {
+            revert("tokens with different start times can only be used if mature");
+        }
 
-        // newLocked could be ended in case of merge, when 
+        // newLocked could be ended in case of merge, when
         // a token is already mature.
-        if(block.timestamp >= newEnd) {
+        if (newLockedEnd <= block.timestamp) {
             newLockSlope = 0;
         }
 
         (int256 oldLockBias, int256 oldLockSlope) = (0, 0);
-        if(_fromLocked.amount > 0) {
+
+        if (_fromLocked.amount > 0) {
             (oldLockBias, oldLockSlope) = _getBiasAndSlope(
                 block.timestamp - _fromLocked.start,
                 _fromLocked.amount
             );
-        }
 
+            // In case fromLocked already ended, its slope would already
+            // be subtracted from `lastPoint.slope` in the above for loop.
+            // So we make this 0 to not subtract double times.
+            if (fromLockedEnd <= block.timestamp) {
+                oldLockSlope = 0;
+            }
+        }
 
         lastPoint.bias += (newLockBias - oldLockBias);
         lastPoint.slope += (newLockSlope - oldLockSlope);
 
-        uint256 tokenLatestIndex = tokenPointLatestIndex[_tokenId];
-
-        // The `tokenId` already exists..
-        if (tokenLatestIndex > 0) {
-            uint256 fromLockedEnd = _fromLocked.start + maxTime();
-
-            if(fromLockedEnd > block.timestamp) {
-                slopeChanges[fromLockedEnd]-= oldLockSlope;
-            }
-        }
-
         if (lastPoint.slope < 0) lastPoint.slope = 0;
         if (lastPoint.bias < 0) lastPoint.bias = 0;
 
+        uint256 tokenLatestIndex = tokenPointLatestIndex[_tokenId];
+
+        // The token point already exists..
+        if (tokenLatestIndex > 0) {
+            if (fromLockedEnd > block.timestamp) {
+                slopeChanges[fromLockedEnd] -= oldLockSlope;
+            }
+        }
+
         // store new slope change
-        slopeChanges[newEnd] += newLockSlope;
+        slopeChanges[newLockedEnd] += newLockSlope;
 
         // Record the latest global point.
         _storeLatestGlobalPoint(lastPoint, _globalPointLatestIndex);

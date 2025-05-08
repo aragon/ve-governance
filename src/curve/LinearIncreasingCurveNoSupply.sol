@@ -152,7 +152,7 @@ contract LinearIncreasingCurveNoSupply is
     }
 
     /// @notice Returns the bias for the given time elapsed and amount, up to the maximum time
-    /// @dev Note that the returned value includes the linear and constant 
+    /// @dev Note that the returned value includes the linear and constant
     ///     coefficients multiplication, which is not the case in `getBias`.
     function getBias(uint256 timeElapsed, uint256 amount) public view returns (uint256) {
         int256[3] memory coefficients = _getCoefficients(amount);
