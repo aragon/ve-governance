@@ -297,7 +297,7 @@ contract LinearIncreasingCurve is
 
         if (!_isWarm(_tokenId, _t, originalPoint)) return 0;
 
-        // Grab last point before `_t.
+        // Grab last point before `_t`.
         TokenPoint memory lastPoint = _tokenPointHistory[_tokenId][interval];
         int256 bias = lastPoint.coefficients[0];
         int256 slope = lastPoint.coefficients[1];
