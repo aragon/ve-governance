@@ -133,14 +133,14 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
 
         assertEq(
             curve.votingPowerAt(tokenIdFirst, block.timestamp),
-            422423619325633557508,
+            480788803290265642662,
             "Balance incorrect after warmup"
         );
         assertEq(curve.isWarm(tokenIdFirst), true, "Still warming up");
 
         assertEq(
             curve.votingPowerAt(tokenIdSecond, block.timestamp),
-            1004120895019214998000000000,
+            1142857694003341279000000000,
             "Balance incorrect after warmup II"
         );
 
@@ -148,17 +148,17 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
         vm.warp(start + clock.epochDuration());
         assertEq(
             curve.votingPowerAt(tokenIdFirst, block.timestamp),
-            428780192307461588352,
+            701149999999634728896,
             "Balance incorrect after p1"
         );
 
-        uint256 expectedMaxI = 841379999988002594304;
-        uint256 expectedMaxII = 1999999999971481600000000000;
+        uint256 expectedMaxI = 1262069999998904186688;
+        uint256 expectedMaxII = 2999999999997395200000000000;
 
         // warp to the final period
         // TECHNICALLY, this should round to a whole max
         // but FP arithmetic has a small rounding error and it finishes just below
-        vm.warp(start + clock.epochDuration() * 52);
+        vm.warp(start + clock.epochDuration() * 3);
         assertEq(
             curve.votingPowerAt(tokenIdFirst, block.timestamp),
             expectedMaxI,
