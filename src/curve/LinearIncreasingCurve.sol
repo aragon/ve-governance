@@ -374,6 +374,12 @@ contract LinearIncreasingCurve is
         {
             uint256 checkpointInterval = IClock(clock).checkpointInterval();
 
+            // For safety reasons, we don't allow checkpoints
+            // on the exact checkpointInterval.
+            if (block.timestamp % checkpointInterval == 0) {
+                revert CheckpointOnDepositIntervalNotAllowed();
+            }
+
             uint256 lastPointCheckpoint = lastPoint.writtenTs;
             uint256 t_i = (lastPointCheckpoint / checkpointInterval) * checkpointInterval;
 
@@ -405,75 +411,63 @@ contract LinearIncreasingCurve is
             }
         }
 
-        uint256 newEnd = _newLocked.start + maxTime();
-        int256 newDSlope = slopeChanges[newEnd];
+        uint256 _maxTime = maxTime();
+        uint256 newLockedEnd = _newLocked.start + _maxTime;
+        uint256 fromLockedEnd = _fromLocked.start + _maxTime;
 
-        // If the newLocked hasn't ended, add its slope
-        // to the latest global point. newLocked could be
-        // ended in case of merge, when a token is already mature.
-        if (block.timestamp < newEnd) {
-            lastPoint.slope += newLockSlope;
-            newDSlope += newLockSlope;
-        } else {
+        // The following condition is true if merging non-mature locks with different start dates.
+        // current version of ve-governance is built around the assumption that merge can only
+        // occur if tokens are either mature or have the same start dates. Even though `escrow`
+        // does this check before calling `checkpoint` on curve, it's still a safety measure to repeat
+        // the check in case the code of checkpoint might be called by another contract in the future.
+        if (
+            _fromLocked.start != 0 &&
+            _newLocked.start != 0 &&
+            _fromLocked.start != _newLocked.start &&
+            (newLockedEnd >= block.timestamp || fromLockedEnd >= block.timestamp)
+        ) {
+            revert InvalidLocks(_tokenId, _fromLocked, _newLocked);
+        }
+
+        // newLocked could be ended in case of merge, when
+        // a token is already mature.
+        if (newLockedEnd <= block.timestamp) {
             newLockSlope = 0;
         }
 
-        lastPoint.bias += newLockBias;
+        (int256 oldLockBias, int256 oldLockSlope) = (0, 0);
 
-        uint256 tokenLatestIndex = tokenPointLatestIndex[_tokenId];
-
-        // The `tokenId` already exists..
-        if (tokenLatestIndex > 0) {
-            uint256 _fromLockedEnd = _fromLocked.start + maxTime();
-
-            // Get the slope and bias for `_fromLocked`...
-            (int256 oldLockBias, int256 oldLockSlope) = _getBiasAndSlope(
+        if (_fromLocked.amount > 0) {
+            (oldLockBias, oldLockSlope) = _getBiasAndSlope(
                 block.timestamp - _fromLocked.start,
                 _fromLocked.amount
             );
 
-            if (_newLocked.amount == 0) {
-                lastPoint.bias -= oldLockBias;
-                if (_fromLockedEnd > block.timestamp) {
-                    // If `fromLocked` ends in the future, we must subtract its slope
-                    // as from this moment on(due to making amount=0),
-                    // the slope must not be included. Note that in case the end is
-                    // in the past, we already subtracted it inside the above loop.
-                    lastPoint.slope -= oldLockSlope;
-                    newDSlope -= oldLockSlope;
-                }
-            } else {
-                newLockBias += oldLockBias;
-
-                if (_fromLockedEnd > block.timestamp) {
-                    // Only add old lock's slope in case it's not mature yet.
-                    newLockSlope += oldLockSlope;
-
-                    // fromLocked's current end is in the future and
-                    // since `fromLocked` gets destroyed, its slope must be
-                    // recorded on the newLocked's end. If both `ends` are equal,
-                    // old slope is already included/recorded when it was first stored.
-                    if (_fromLockedEnd != newEnd) {
-                        newDSlope += oldLockSlope;
-                    }
-                }
-            }
-
-            // If ends are not equal and fromLocked's end
-            // is in the future, we must clear it out.
-            if (_fromLockedEnd != newEnd && _fromLockedEnd >= block.timestamp) {
-                int256 oldDSlope = slopeChanges[_fromLockedEnd] - oldLockSlope;
-                if (oldDSlope < 0) oldDSlope = 0;
-                slopeChanges[_fromLockedEnd] = oldDSlope;
+            // In case fromLocked already ended, its slope would already
+            // be subtracted from `lastPoint.slope` in the above for loop.
+            // So we make this 0 to not subtract double times.
+            if (fromLockedEnd <= block.timestamp) {
+                oldLockSlope = 0;
             }
         }
 
+        lastPoint.bias += (newLockBias - oldLockBias);
+        lastPoint.slope += (newLockSlope - oldLockSlope);
+
         if (lastPoint.slope < 0) lastPoint.slope = 0;
         if (lastPoint.bias < 0) lastPoint.bias = 0;
-        if (newDSlope < 0) newDSlope = 0;
+
+        uint256 tokenLatestIndex = tokenPointLatestIndex[_tokenId];
+
+        // The token point already exists..
+        if (tokenLatestIndex > 0) {
+            if (fromLockedEnd > block.timestamp) {
+                slopeChanges[fromLockedEnd] -= oldLockSlope;
+            }
+        }
 
         // store new slope change
-        slopeChanges[newEnd] = newDSlope;
+        slopeChanges[newLockedEnd] += newLockSlope;
 
         // Record the latest global point.
         _storeLatestGlobalPoint(lastPoint, _globalPointLatestIndex);

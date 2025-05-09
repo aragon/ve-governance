@@ -701,7 +701,7 @@ contract TestE2EV1_3_0 is
         }
         // we then fast forward 1 week and check that his voting power has increased as expected with the new lock
         {
-            goToEpochStartPlus(5 weeks);
+            goToEpochStartPlus(5 weeks + 1 seconds);
 
             // calculate elapsed time since we made the first lock
             uint timeElapsedSinceFirstLock = block.timestamp -

@@ -38,7 +38,7 @@ contract TestSplit_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage
 
     function test_Split_TokenNotMature() public {
         // 1. the tokenId's point must become 0
-        // 2. we should have 2 new tokenIds with `value` and `Lock_1_Amount - value` with their according bias and slope.
+        // 2. we should have one new tokenId with `value` and `Lock_1_Amount - value` with old token with their according bias and slope.
         uint256 value = 20e18;
         uint256 tokenId = escrow.createLock(Lock_1_Amount);
         uint256 weekStartTs = weekStartTs(block.timestamp);
@@ -55,24 +55,22 @@ contract TestSplit_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage
         uint256 elapsed = block.timestamp - weekStartTs;
 
         // 1
-        assertTokenPoint(tokenId, 2, 0, 0, weekStartTs, block.timestamp);
-
-        // 2
         assertTokenPoint(
+            tokenId,
             2,
-            1,
             biasFP(Lock_1_Amount - value, elapsed),
             slope1,
             weekStartTs,
             block.timestamp
         );
 
-        assertTokenPoint(3, 1, biasFP(value, elapsed), slope2, weekStartTs, block.timestamp);
+        // 2
+        assertTokenPoint(2, 1, biasFP(value, elapsed), slope2, weekStartTs, block.timestamp);
     }
 
     function test_Split_TokenAlreadyMature() public {
         // 1. the tokenId's point must become 0
-        // 2. we should have 2 new tokenIds with `value` and `Lock_1_Amount - value` with their according bias and slope.
+        // 2. we should have one new tokenId with `value` and `Lock_1_Amount - value` with old token with their according bias and slope.
         uint256 value = 20e18;
         uint256 tokenId = escrow.createLock(Lock_1_Amount);
         uint256 weekStartTs = weekStartTs(block.timestamp);
@@ -83,28 +81,77 @@ contract TestSplit_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage
 
         escrow.split(tokenId, value);
 
-        // 1
-        assertTokenPoint(tokenId, 2, 0, 0, weekStartTs, block.timestamp);
-
         uint256 elapsed = endTs - weekStartTs;
 
-        // 2
+        // 1
         assertTokenPoint(
+            tokenId,
             2,
-            1,
             biasFP(Lock_1_Amount - value, elapsed),
             0,
             weekStartTs,
             block.timestamp
         );
 
-        assertTokenPoint(
-            3,
-            1,
-            biasFP(value, elapsed),
-            0,
-            weekStartTs,
-            block.timestamp
-        );
+        // 2
+        assertTokenPoint(2, 1, biasFP(value, elapsed), 0, weekStartTs, block.timestamp);
+    }
+
+    function testFuzz_Split(
+        uint192 _lock1Amount,
+        uint192 _splitValue,
+        uint48 _fromLockTime,
+        uint192 _splitTime
+    ) public {
+        (_fromLockTime, _splitTime) = boundLockCreationFuzzTimes(_fromLockTime, _splitTime);
+
+        // Split requirements to work with.
+        vm.assume(_lock1Amount > 0 && _splitValue > 0);
+        vm.assume(_splitValue < _lock1Amount);
+        uint256 minDeposit = escrow.minDeposit();
+        vm.assume(_splitValue >= minDeposit && _lock1Amount - _splitValue >= minDeposit);
+
+        mintAndApproveEscrow(uint256(_lock1Amount));
+
+        // Create 2 locks on fuzzed times and
+        // merge them on fuzzed time as well.
+        vm.warp(_fromLockTime);
+        uint256 from = escrow.createLock(_lock1Amount);
+        vm.warp(_splitTime);
+        escrow.split(from, _splitValue);
+
+        uint256 currentTs = block.timestamp;
+        uint256 fromLockWeekTs = weekStartTs(_fromLockTime);
+        uint256 fromLockEnd = fromLockWeekTs + maxTime;
+
+        {
+            int256 bias1;
+            int256 slope1;
+            int256 bias2;
+            int256 slope2;
+            if (_splitTime >= fromLockEnd) {
+                bias1 = biasFP(_lock1Amount - _splitValue, maxTime);
+                bias2 = biasFP(_splitValue, maxTime);
+            } else {
+                bias1 = biasFP(_lock1Amount - _splitValue, _splitTime - fromLockWeekTs);
+                bias2 = biasFP(_splitValue, _splitTime - fromLockWeekTs);
+                slope1 = slopeFP(_lock1Amount - _splitValue);
+                slope2 = slopeFP(_splitValue);
+            }
+
+            assertTokenPoint(
+                from,
+                // If the dates match, it should use
+                // a single block/record for gas efficiency,
+                // otherwise 2.
+                _splitTime == _fromLockTime ? 1 : 2,
+                bias1,
+                slope1,
+                fromLockWeekTs,
+                currentTs
+            );
+
+            assertTokenPoint(2, 1, bias2, slope2, fromLockWeekTs, currentTs);
+        }
     }
 }

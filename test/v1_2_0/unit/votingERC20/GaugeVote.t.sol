@@ -16,7 +16,7 @@ import "@helpers/OSxHelpers.sol";
 
 import {GaugeVotingBase} from "./GaugeVotingBase.sol";
 
-contract TestGaugeVote is GaugeVotingBase {
+contract TestGaugeVoteWithERC20 is GaugeVotingBase {
     uint256[] ids;
     GaugeVote[] votes;
 
@@ -35,33 +35,26 @@ contract TestGaugeVote is GaugeVotingBase {
     function setUp() public override {
         super.setUp();
 
-        // reset clock. Start from 1 to avoid creating lock 
-        // at week boundary(0 would be a week boundary).
-        // This is to ensure that checkpoint doesn't 
-        // revert because of this.
-        vm.warp(1);
-
+        // reset clock
+        vm.warp(0);
         time = block.timestamp;
 
         // means we have voting power
         curve.setWarmupPeriod(0);
 
-        // mint underlying and stake
-        token.mint(owner, lockDeposit);
+        // mint underlying
+        votingToken.mint(owner, lockDeposit);
+
         vm.startPrank(owner);
         {
-            // delegate to himself...
-            ivotesAdapter.delegate(owner);
-
-            token.approve(address(escrow), lockDeposit);
-            tokenId = escrow.createLock(lockDeposit);
+            votingToken.delegate(owner);
         }
         vm.stopPrank();
 
         // activate cp & warp to an active window
         _increaseTime(2 weeks + 1 hours + 1);
 
-        assertGt(escrow.votingPower(tokenId), 0);
+        assertEq(votingToken.getVotes(owner), lockDeposit);
         assertTrue(voter.votingActive(), "voting should be active");
 
         // create a gauge
@@ -112,13 +105,9 @@ contract TestGaugeVote is GaugeVotingBase {
         address person = address(0x69);
         curve.setWarmupPeriod(1000 weeks);
 
-        // create a second lock
-        token.mint(person, lockDeposit);
         vm.startPrank(person);
         {
-            token.approve(address(escrow), lockDeposit);
-            uint256 newTokenId = escrow.createLock(lockDeposit);
-            assertEq(escrow.votingPower(newTokenId), 0);
+            assertEq(votingToken.getVotes(person), 0);
             vm.expectRevert(NoVotingPower.selector);
             voter.vote(votes);
         }
@@ -181,7 +170,7 @@ contract TestGaugeVote is GaugeVotingBase {
         // create the vote
         votes.push(GaugeVote(_weight, gauge));
 
-        uint votingPower = escrow.votingPower(tokenId);
+        uint votingPower = votingToken.getVotes(owner);
 
         // vote
         vm.startPrank(owner);
@@ -226,7 +215,7 @@ contract TestGaugeVote is GaugeVotingBase {
         votes.push(GaugeVote(_weight0, gauge));
         votes.push(GaugeVote(_weight1, newGauge));
 
-        uint votingPower = escrow.votingPower(tokenId);
+        uint votingPower = votingToken.getVotes(owner);
 
         vm.startPrank(owner);
         {
@@ -262,7 +251,7 @@ contract TestGaugeVote is GaugeVotingBase {
         // vote
         votes.push(GaugeVote(1000, gauge));
 
-        uint votingPower = escrow.votingPower(tokenId);
+        uint votingPower = votingToken.getVotes(owner);
 
         // vote then reset
         vm.startPrank(owner);
@@ -320,7 +309,7 @@ contract TestGaugeVote is GaugeVotingBase {
         }
         vm.stopPrank();
 
-        uint newVotingPower = escrow.votingPower(tokenId);
+        uint newVotingPower = votingToken.getVotes(owner);
 
         // check the vote
         assertEq(voter.isVoting(owner), true);
@@ -335,39 +324,15 @@ contract TestGaugeVote is GaugeVotingBase {
     }
 
     function testCanVoteForMultiple() public {
-        uint secondDeposit = 500 ether;
-
         // create a second gauge
         address gauge2 = address(0x69);
         voter.createGauge(gauge2, "metadata");
 
-        // create a second lock
-        token.mint(owner, secondDeposit);
-        uint tokenIdNew;
-        vm.startPrank(owner);
-
-        {
-            token.approve(address(escrow), secondDeposit);
-            tokenIdNew = escrow.createLock(secondDeposit);
-        }
-        vm.stopPrank();
-
         // jump 2 weeks so that we have voting power
         vm.warp(block.timestamp + 2 weeks);
 
-        assertGt(escrow.votingPower(tokenIdNew), 0);
-
-        // get all the token Ids for the user
-        uint256[] memory tokens = escrow.ownedTokens(owner);
-
-        vm.prank(owner);
-        nftLock.setApprovalForAll(address(voter), true);
-
-        uint vp0 = escrow.votingPower(tokens[0]);
-        uint vp1 = escrow.votingPower(tokens[1]);
-
-        uint totalVotingPower = escrow.votingPowerForAccount(owner);
-        assertEq(totalVotingPower, vp0 + vp1);
+        uint votingPower = votingToken.getVotes(owner);
+        assertGt(votingPower, 0);
 
         // vote multiple
         votes.push(GaugeVote(50, gauge));
@@ -379,8 +344,8 @@ contract TestGaugeVote is GaugeVotingBase {
         // we expect the vote for the first token to be 50/150 of the total voting power
         // and the second to be 100/150 of the total voting power
 
-        uint expectedVotesForGauge = (50 * totalVotingPower) / (50 + 100);
-        uint expectedVotesForGauge2 = (100 * totalVotingPower) / (50 + 100);
+        uint expectedVotesForGauge = (50 * votingPower) / (50 + 100);
+        uint expectedVotesForGauge2 = (100 * votingPower) / (50 + 100);
 
         // check the vote
         assertEq(voter.isVoting(owner), true);
@@ -409,48 +374,42 @@ contract TestGaugeVote is GaugeVotingBase {
         votes.push(GaugeVote(75, gauge2));
 
         // create lock for A
-        token.mint(personA, 1000 ether);
-        uint tokenIdA;
+        votingToken.mint(personA, 1000 ether);
         vm.startPrank(personA);
         {
-            ivotesAdapter.delegate(personA);
-            token.approve(address(escrow), 1000 ether);
-            tokenIdA = escrow.createLock(1000 ether);
+            votingToken.delegate(personA);
         }
         vm.stopPrank();
 
         // create lock for B
-        token.mint(personB, 1000 ether);
-        uint tokenIdB;
+        votingToken.mint(personB, 1000 ether);
         vm.startPrank(personB);
         {
-            ivotesAdapter.delegate(personB);
-            token.approve(address(escrow), 1000 ether);
-            tokenIdB = escrow.createLock(1000 ether);
+            votingToken.delegate(personB);
         }
         vm.stopPrank();
 
         // jump 2 weeks so that we have voting power
         vm.warp(block.timestamp + 2 weeks);
 
-        assertGt(escrow.votingPower(tokenIdA), 0);
-        assertGt(escrow.votingPower(tokenIdB), 0);
+        uint aVotingPower = votingToken.getVotes(personA);
+        uint bVotingPower = votingToken.getVotes(personB);
+
+        assertGt(aVotingPower, 0);
+        assertGt(bVotingPower, 0);
 
         // vote for A then vote for B
         vm.prank(personA);
         voter.vote(votes);
 
-        uint256 expectedBVotingPowerGauge0 = (75 * escrow.votingPower(tokenIdB)) / 100;
-        uint256 expectedAVotingPowerGauge0 = (25 * escrow.votingPower(tokenIdA)) / 100;
-        uint256 expectedBVotingPowerGauge1 = (25 * escrow.votingPower(tokenIdB)) / 100;
-        uint256 expectedAVotingPowerGauge1 = (75 * escrow.votingPower(tokenIdA)) / 100;
+        uint256 expectedBVotingPowerGauge0 = (75 * bVotingPower) / 100;
+        uint256 expectedAVotingPowerGauge0 = (25 * aVotingPower) / 100;
+        uint256 expectedBVotingPowerGauge1 = (25 * bVotingPower) / 100;
+        uint256 expectedAVotingPowerGauge1 = (75 * aVotingPower) / 100;
 
         // flip the votes
         votes[0] = GaugeVote(75, gauge);
         votes[1] = GaugeVote(25, gauge2);
-
-        uint aVotingPower = escrow.votingPower(tokenIdA);
-        uint bVotingPower = escrow.votingPower(tokenIdB);
 
         uint epoch = voter.epochId();
         // same vote for b

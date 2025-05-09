@@ -101,7 +101,10 @@ END @ 104 weeks (52 * PERIOD)  Voting Power: 841380000000000000000 | 841 | 2.00x
         uint tokenIdSecond = 2;
         uint208 depositFirst = 420.69e18;
         uint208 depositSecond = 1_000_000_000e18;
-        uint start = 52 weeks;
+        
+        // add + 1seconds so it doesn't get to 
+        // be exact checkpointInterval.
+        uint start = 52 weeks + 1 hours;
 
         // initial conditions, no balance
         assertEq(curve.votingPowerAt(tokenIdFirst, 0), 0, "Balance before deposit");

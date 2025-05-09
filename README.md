@@ -261,3 +261,19 @@ The main workflow in the Aragon VE Governance build is as follows:
 ## Curve design
 
 To build a flexible approach to curve design, we reviewed implementations such as seen in Curve and Aerodrome and attempted to generalise [Details on the curve design research can be found here](https://github.com/jordaniza/ve-explainer/blob/main/README.md)
+
+# Important note on upgrades and warmups
+
+If upgrading from 1-0-0 or 1-1-0 to 1-2-0+, please note the behaviour changes with regards to _new_ locks:
+
+- Locks created pre upgrade will have start dates recorded at the _end_ of the current weekly interval
+- Locks created post upgrade will have start dates recorded at the _start_ of the current weekly interval
+
+The main risk vector here is the potential underflow concerns for 1-2-0+ contracts assuming lock.start >= block.timestamp.
+
+While the contracts have been tested for this, we still recommend the following precautions:
+
+1. Set warmup periods to zero at least 1 deposit interval before the upgrade.
+2. Pause the contracts between the upgrade and the next deposit interval.
+
+This ensures that all stakers who would be placed into a warmup period pre-upgrade have consistent behaviour post upgrade. This also ensures all stakers post upgrade have active locks - consistent with the expectations of the 1-2-0 contracts.
