@@ -37,7 +37,8 @@ contract TestGaugeVote is GaugeVotingBase {
 
         // reset clock. Start from 1 to avoid creating lock 
         // at week boundary(0 would be a week boundary).
-        // This is to ensure that checkpoint doesn't revert because of this.
+        // This is to ensure that checkpoint doesn't 
+        // revert because of this.
         vm.warp(1);
         time = block.timestamp;
 

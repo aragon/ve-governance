@@ -326,16 +326,40 @@ contract LinearIncreasingCurveNoSupply is
             revert InvalidCheckpoint();
         }
 
+        uint256 checkpointInterval = IClock(clock).checkpointInterval();
+
+        // For safety reasons, we don't allow checkpoints
+        // on the exact checkpointInterval.
+        if (block.timestamp % checkpointInterval == 0) {
+            revert CheckpointOnDepositIntervalNotAllowed();
+        }
+
+        uint256 _maxTime = maxTime();
+        uint256 newLockedEnd = _newLocked.start + _maxTime;
+        uint256 fromLockedEnd = _fromLocked.start + _maxTime;
+
+        // The following condition is true if merging non-mature locks with different start dates.
+        // current version of ve-governance is built around the assumption that merge can only 
+        // occur if tokens are either mature or have the same start dates. Even though `escrow` 
+        // does this check before calling `checkpoint` on curve, it's still a safety measure to repeat 
+        // the check in case the code of checkpoint might be called by another contract in the future.
+        if (
+            _fromLocked.start != 0 &&
+            _newLocked.start != 0 &&
+            _fromLocked.start != _newLocked.start &&
+            (newLockedEnd >= block.timestamp || fromLockedEnd >= block.timestamp)
+        ) {
+            revert InvalidLocks(_tokenId, _fromLocked, _newLocked);
+        }
+
         // Get the slope and bias for `_newLocked`...
         (int256 newLockBias, int256 newLockSlope) = _getBiasAndSlope(
             block.timestamp - _newLocked.start,
             _newLocked.amount
         );
 
-        uint256 newEnd = _newLocked.start + maxTime();
-
         // If the new lock is mature, don't include the slope.
-        if (block.timestamp >= newEnd) {
+        if (block.timestamp >= newLockedEnd) {
             newLockSlope = 0;
         }
 

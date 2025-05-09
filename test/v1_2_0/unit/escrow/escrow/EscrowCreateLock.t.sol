@@ -22,6 +22,8 @@ import {
 } from "../../../versions.sol";
 
 contract TestCreateLock is IEscrowCurveTokenStorage, EscrowBase {
+    error CheckpointOnDepositIntervalNotAllowed();
+
     function setUp() public override {
         super.setUp();
 
@@ -248,11 +250,13 @@ contract TestCreateLock is IEscrowCurveTokenStorage, EscrowBase {
         }
         vm.stopPrank();
 
-        // matt deposits ON the next deposit date
+        // matt deposits ON the next deposit date and should revert.
         vm.warp(expectedNextDeposit);
         vm.startPrank(matt);
         {
             token.approve(address(escrow), 1 ether);
+            
+            vm.expectRevert(CheckpointOnDepositIntervalNotAllowed.selector);
             escrow.createLock(1 ether);
         }
         vm.stopPrank();
@@ -273,17 +277,11 @@ contract TestCreateLock is IEscrowCurveTokenStorage, EscrowBase {
             0,
             "shane's lock should snap to the upcoming deposit date"
         );
-        // Matt made a deposit exactly at the week's start date
-        assertEq(
-            escrow.locked(2).start,
-            expectedNextDeposit,
-            "matt's lock should snap to the next deposit date"
-        );
 
         // even though phil made a deposit after the week already started,
         // it still should snap to the week's start.
         assertEq(
-            escrow.locked(3).start,
+            escrow.locked(2).start,
             expectedNextDeposit,
             "phil's lock should snap to the next deposit date"
         );
