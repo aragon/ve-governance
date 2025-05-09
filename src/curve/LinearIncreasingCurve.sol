@@ -15,7 +15,6 @@ import {
 } from "@curve/IEscrowCurveIncreasing_v1_2_0.sol";
 
 import {IClockUser, IClockV1_2_0 as IClock} from "@clock/IClock_v1_2_0.sol";
-import {console2 as console} from "forge-std/console2.sol";
 
 // libraries
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
