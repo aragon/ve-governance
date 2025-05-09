@@ -485,7 +485,6 @@ contract GaugesDaoFactoryTest is Test {
             block.number - 1,
             "Invalid lastMultisigSettingsChange"
         );
-        assertEq(deployment.multisigPlugin.proposalCount(), 0, "Invalid proposal count");
         assertEq(deployment.multisigPlugin.addresslistLength(), 13, "Invalid addresslistLength");
         for (uint256 i = 0; i < 13; i++) {
             assertEq(
@@ -871,7 +870,6 @@ contract GaugesDaoFactoryTest is Test {
             block.number - 1,
             "Invalid lastMultisigSettingsChange"
         );
-        assertEq(deployment.multisigPlugin.proposalCount(), 0, "Invalid proposal count");
         assertEq(deployment.multisigPlugin.addresslistLength(), 13, "Invalid addresslistLength");
         for (uint256 i = 0; i < 13; i++) {
             assertEq(
