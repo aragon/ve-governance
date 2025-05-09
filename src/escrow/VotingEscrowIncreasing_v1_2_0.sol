@@ -9,6 +9,7 @@ import {
     IERC20MetadataUpgradeable as IERC20Metadata
 } from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
 import {IERC721EnumerableMintableBurnable as IERC721EMB} from "@lock/IERC721EMB.sol";
+import {console2 as console} from "forge-std/console2.sol";
 
 // veGovernance
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";

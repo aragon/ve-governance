@@ -15,6 +15,7 @@ import {
 } from "@curve/IEscrowCurveIncreasing_v1_2_0.sol";
 
 import {IClockUser, IClockV1_2_0 as IClock} from "@clock/IClock_v1_2_0.sol";
+import {console2 as console} from "forge-std/console2.sol";
 
 // libraries
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -365,8 +366,12 @@ contract LinearIncreasingCurve is
 
         {
             uint256 checkpointInterval = IClock(clock).checkpointInterval();
-            // :(
-            if (block.timestamp % checkpointInterval == 0) revert("no shennanigans");
+
+            // For safety reasons, we don't allow checkpoints
+            // on the exact checkpointInterval.
+            if (block.timestamp % checkpointInterval == 0) {
+                revert CheckpointOnDepositIntervalNotAllowed();
+            }
 
             uint256 lastPointCheckpoint = lastPoint.writtenTs;
             uint256 t_i = (lastPointCheckpoint / checkpointInterval) * checkpointInterval;
@@ -402,21 +407,19 @@ contract LinearIncreasingCurve is
         uint256 _maxTime = maxTime();
         uint256 newLockedEnd = _newLocked.start + _maxTime;
         uint256 fromLockedEnd = _fromLocked.start + _maxTime;
+
+        // The following condition is true if merging non-mature locks with different start dates.
+        // current version of ve-governance is built around the assumption that merge can only 
+        // occur if tokens are either mature or have the same start dates. Even though `escrow` 
+        // does this check before calling `checkpoint` on curve, it's still a safety measure to repeat 
+        // the check in case the code of checkpoint might be called by another contract in the future.
         if (
-            // from lock exists
             _fromLocked.start != 0 &&
-            // new locked exists
             _newLocked.start != 0 &&
-            // the start dates are different
             _fromLocked.start != _newLocked.start &&
-            // but they are not yet mature
-            (newLockedEnd <= block.timestamp || fromLockedEnd <= block.timestamp)
-            // ------------------Lock------Block
-            //                         block gt lock this is okay
-            // ------------------Block------lock
-            //                         block lt lock this is not okay
+            (newLockedEnd >= block.timestamp || fromLockedEnd >= block.timestamp)
         ) {
-            revert("tokens with different start times can only be used if mature");
+            revert InvalidLocks(_tokenId, _fromLocked, _newLocked);
         }
 
         // newLocked could be ended in case of merge, when

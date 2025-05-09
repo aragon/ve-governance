@@ -127,14 +127,17 @@ contract TestEscrowMerge is IEscrowCurveTokenStorage, EscrowBase, IMergeEventsAn
         escrow.merge(from, to);        
     }
 
-    function test_StartDate_NotChangeForToToken() public {
+    function test_StartDate_NotChangeForToToken_kk() public {
         vm.warp(checkpointInterval + 1 hours);
 
         uint256 startTime = weekStartTs(block.timestamp);
 
         uint256 from = escrow.createLock(Lock_1_Amount);
         uint256 to = escrow.createLock(Lock_2_Amount);
-        vm.warp(startTime + maxTime);
+
+        // we disallow calling checkpoints on exact 
+        // deposit interval, so move by 1 seconds.
+        vm.warp(startTime + maxTime + 1 seconds);
 
         // merge should become possible since both are mature
         assertEq(canMerge(startTime, startTime), true);

@@ -12,6 +12,7 @@ import {CurveBase} from "./CurveBase.t.sol";
 contract TestQuadraticIncreasingCurveLogic is CurveBase {
     address attacker = address(0x1);
     error InvalidCheckpoint();
+    error CheckpointOnDepositIntervalNotAllowed();
 
     function testUUPSUpgrade() public {
         address newImpl = address(new Curve());

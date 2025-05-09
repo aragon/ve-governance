@@ -97,18 +97,20 @@ WARMUP_PERIOD + 1s             Voting Power: 422423619325683040256 | 422 | 1.00x
 END @ 104 weeks (52 * PERIOD)  Voting Power: 841380000000000000000 | 841 | 2.00x
 
 **/
-    function testWritesCheckpoint() public {
+    function testWritesCheckpoint_kk() public {
         uint tokenIdFirst = 1;
         uint tokenIdSecond = 2;
         uint208 depositFirst = 420.69e18;
         uint208 depositSecond = 1_000_000_000e18;
-        uint start = 52 weeks;
+        
+        // add + 1seconds so it doesn't get to 
+        // be exact checkpointInterval.
+        uint start = 52 weeks + 1 hours;
 
         // initial conditions, no balance
         assertEq(curve.votingPowerAt(tokenIdFirst, 0), 0, "Balance before deposit");
 
         vm.warp(start);
-        vm.roll(420);
 
         // still no balance
         assertEq(curve.votingPowerAt(tokenIdFirst, 0), 0, "Balance before deposit");
