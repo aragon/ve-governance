@@ -186,8 +186,6 @@ contract TestMerge_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage
 
         vm.assume(_toLockTime >= _fromLockTime && _mergeTime >= _toLockTime);
         vm.assume(_lock1Amount > 0 && _lock2Amount > 0);
-        // vm.assume(_fromLockTime % checkpointInterval != 0 && _toLockTime % checkpointInterval != 0 && _mergeTime % checkpointInterval != 0)
-
 
         // If start dates of locks don't match,
         // in order to merge, both tokens have to be mature.
