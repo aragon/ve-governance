@@ -12,6 +12,12 @@ import {CurveBase} from "./CurveBase.t.sol";
 contract TestIncreasingCurveLogic is CurveBase {
     address attacker = address(0x1);
     error InvalidCheckpoint();
+    error CheckpointOnDepositIntervalNotAllowed();
+    error InvalidLocks(
+        uint256 tokenId,
+        ILockedBalanceIncreasing.LockedBalance fromLocked,
+        ILockedBalanceIncreasing.LockedBalance newLocked
+    );
 
     function testUUPSUpgrade() public {
         address newImpl = address(new Curve());
@@ -32,6 +38,23 @@ contract TestIncreasingCurveLogic is CurveBase {
 
         escrow.checkpoint(1, LockedBalance(0, 0), first);
         vm.expectRevert(InvalidCheckpoint.selector);
+        escrow.checkpoint(1, first, second);
+    }
+
+    function testCannotWritenewCheckpointAtWeekBoundary() public {
+        vm.warp(3 weeks);
+
+        vm.expectRevert(CheckpointOnDepositIntervalNotAllowed.selector);
+        escrow.checkpoint(1, LockedBalance(0, 0), LockedBalance({amount: 100, start: 3 weeks}));
+    }
+
+    function testCannotMergeIfNonMatureWithDifferentStartDates() public {
+        vm.warp(2 weeks + 1 hours);
+
+        LockedBalance memory first = LockedBalance({amount: 100, start: 2 weeks});
+        LockedBalance memory second = LockedBalance({amount: 200, start: 2 weeks + 1});
+
+        vm.expectRevert(abi.encodeWithSelector(InvalidLocks.selector, 1, first, second));
         escrow.checkpoint(1, first, second);
     }
 

@@ -35,8 +35,11 @@ contract TestGaugeVote is GaugeVotingBase {
     function setUp() public override {
         super.setUp();
 
-        // reset clock
-        vm.warp(0);
+        // reset clock. Start from 1 to avoid creating lock 
+        // at week boundary(0 would be a week boundary).
+        // This is to ensure that checkpoint doesn't 
+        // revert because of this.
+        vm.warp(1);
         time = block.timestamp;
 
         // means we have voting power

@@ -166,7 +166,7 @@ contract RegressionV1_0_0__to__V1_2_0 is Test, IGaugeVote, FixedPointBase {
         vm.stopPrank();
 
         // wait a bit
-        vm.warp(4 weeks);
+        vm.warp(4 weeks + 1 seconds);
 
         vm.startPrank(DAVID_ADDRESS);
         {
