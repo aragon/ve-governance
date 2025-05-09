@@ -97,7 +97,7 @@ WARMUP_PERIOD + 1s             Voting Power: 422423619325683040256 | 422 | 1.00x
 END @ 104 weeks (52 * PERIOD)  Voting Power: 841380000000000000000 | 841 | 2.00x
 
 **/
-    function testWritesCheckpoint_kk() public {
+    function testWritesCheckpoint() public {
         uint tokenIdFirst = 1;
         uint tokenIdSecond = 2;
         uint208 depositFirst = 420.69e18;

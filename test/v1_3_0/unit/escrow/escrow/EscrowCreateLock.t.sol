@@ -218,7 +218,7 @@ contract TestCreateLock is IEscrowCurveTokenStorage, EscrowBase {
         }
     }
 
-    function testTimeLogicSnapsToNextDepositDate_kk() public {
+    function testTimeLogicSnapsToNextDepositDate() public {
         // define 3 users:
 
         // shane deposits just before the next deposit date

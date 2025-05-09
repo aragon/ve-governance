@@ -127,7 +127,7 @@ contract TestEscrowMerge is IEscrowCurveTokenStorage, EscrowBase, IMergeEventsAn
         escrow.merge(from, to);        
     }
 
-    function test_StartDate_NotChangeForToToken_kk() public {
+    function test_StartDate_NotChangeForToToken() public {
         vm.warp(checkpointInterval + 1 hours);
 
         uint256 startTime = weekStartTs(block.timestamp);
