@@ -264,7 +264,7 @@ contract LinearIncreasingCurveNoSupply is
         uint256 end = originalPoint.checkpointTs + maxTime_;
 
         // If the point was created before the upgrade:
-        //    it will have `checkpointTs` greater than `writtenTs`.
+        //    it will have `checkpointTs` greater than `writtenTs` and
         //    bias would have been stored as just the amount(without bonus).
         // In such case, we make writtenTs equal to avoid checkpointTs greater.
         // This ensures that behaviour after and before upgrade are same.
