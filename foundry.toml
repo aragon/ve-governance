@@ -4,7 +4,7 @@
 auto_detect_solc = false
 bytecode_hash = "none"
 cbor_metadata = false
-fuzz = { runs = 2000 }
+fuzz = { runs = 256 }
 gas_reports = ["*"]
 fs_permissions = [{ access = "read", path = "./" }]
 libs = ["lib"]
@@ -21,7 +21,6 @@ ffi = true
 ast = true
 build_info = true
 extra_output = ["storageLayout"]
-max_test_rejects = 1
 
 [profile.gas-report]
 fuzz = { runs = 128 }

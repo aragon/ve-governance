@@ -206,18 +206,21 @@ contract EscrowBase is
         assertEq(curve.votingPowerAt(_tokenId, _t), uint256(_amountFP / 1e18));
     }
 
-        // Useful to bound the times of when locks get created.
+    // Useful to bound the times of when locks get created.
     // We use 254 weeks as a maximum duration between the previous 
     // lock created and current one. See `LinearIncreasingCurve`'s 
     // `_checkpoint` for more details(loop).
+    // NOTE that we use +1 seconds to ensure that time never gets 
+    // to be exact checkpoint interval as it reverts if so. 
+    // See `_checkpoint` in curve.
     function boundLockCreationFuzzTimes(
         uint256 _t1,
         uint256 _t2,
         uint256 _t3
-    ) internal pure returns(uint48, uint48, uint48) {
-        _t1 = bound(_t1, 0, 254 weeks);
-        _t2 = bound(_t2, _t1, _t1 + 254 weeks);
-        _t3 = bound(_t3, _t2, _t2 + 254 weeks);
+    ) internal view returns(uint48, uint48, uint48) {
+        _t1 = avoidWeekBoundary(bound(_t1, 1, 254 weeks + 1 seconds));
+        _t2 = avoidWeekBoundary(bound(_t2, _t1, _t1 + 254 weeks + 1 seconds));
+        _t3 = avoidWeekBoundary(bound(_t3, _t2, _t2 + 254 weeks + 1 seconds));
 
         return (uint48(_t1), uint48(_t2), uint48(_t3));
     }
@@ -226,12 +229,15 @@ contract EscrowBase is
     // We use 254 weeks as a maximum duration between the previous 
     // lock created and current one. See `LinearIncreasingCurve`'s 
     // `_checkpoint` for more details(loop).
+    // NOTE that we use +1 seconds to ensure that time never gets 
+    // to be exact checkpoint interval as it reverts if so. 
+    // See `_checkpoint` in curve.
     function boundLockCreationFuzzTimes(
         uint256 _t1,
         uint256 _t2
-    ) internal pure returns(uint48, uint48) {
-        _t1 = bound(_t1, 0, 254 weeks);
-        _t2 = bound(_t2, _t1, _t1 + 254 weeks);
+    ) internal view returns(uint48, uint48) {
+        _t1 = avoidWeekBoundary(bound(_t1, 1, 254 weeks + 1 seconds));
+        _t2 = avoidWeekBoundary(bound(_t2, _t1, _t1 + 254 weeks + 1 seconds));
 
         return (uint48(_t1), uint48(_t2));
     }
@@ -271,6 +277,10 @@ contract EscrowBase is
         }
 
         return count;
+    }
+
+    function avoidWeekBoundary(uint256 _t) internal view returns (uint256) {
+        return _t % checkpointInterval == 0 ? _t + 1 : _t;
     }
 
     // The default sender to contract calls ends up a test contract itself.
