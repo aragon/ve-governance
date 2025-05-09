@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.17;
 
-import {PermissionLib} from "@aragon/osx/core/permission/PermissionManager.sol";
+import {PermissionLib} from "@aragon/osx-commons/permission/PermissionLib.sol";
 import {PluginRepo} from "@aragon/osx/framework/plugin/repo/PluginRepo.sol";
 import {PluginSetup} from "@aragon/osx-commons/plugin/setup/PluginSetup.sol";
 

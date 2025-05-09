@@ -8,7 +8,7 @@ import {IDAO} from "@aragon/osx-commons/dao/IDAO.sol";
 import {IProtocolVersion} from "@aragon/osx-commons/utils/versioning/IProtocolVersion.sol";
 import {ProtocolVersion} from "@aragon/osx-commons/utils/versioning/ProtocolVersion.sol";
 import {IPluginSetup} from "@aragon/osx-commons/plugin/setup/IPluginSetup.sol";
-import {PermissionLib} from "@aragon/osx/core/permission/PermissionManager.sol";
+import {PermissionLib} from "@aragon/osx-commons/permission/PermissionLib.sol";
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";

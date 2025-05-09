@@ -6,11 +6,12 @@ import {DAOFactory} from "@aragon/osx/framework/dao/DAOFactory.sol";
 import {PluginSetupProcessor} from "@aragon/osx/framework/plugin/setup/PluginSetupProcessor.sol";
 import {hashHelpers, PluginSetupRef} from "@aragon/osx/framework/plugin/setup/PluginSetupProcessorHelpers.sol";
 import {PluginRepo} from "@aragon/osx/framework/plugin/repo/PluginRepo.sol";
-import {IPluginSetup} from "@aragon/osx/framework/plugin/setup/IPluginSetup.sol";
-import {Multisig} from "@aragon/osx/plugins/governance/multisig/Multisig.sol";
-import {MultisigSetup as MultisigPluginSetup} from "@aragon/osx/plugins/governance/multisig/MultisigSetup.sol";
-import {createERC1967Proxy} from "@aragon/osx/utils/Proxy.sol";
-import {PermissionLib} from "@aragon/osx/core/permission/PermissionLib.sol";
+import {IPlugin} from "@aragon/osx-commons/plugin/IPlugin.sol";
+import {IPluginSetup} from "@aragon/osx-commons/plugin/setup/IPluginSetup.sol";
+import {Multisig} from "@aragon/multisig/Multisig.sol";
+import {MultisigSetup as MultisigPluginSetup} from "@aragon/multisig/MultisigSetup.sol";
+import {ProxyLib} from "@aragon/osx-commons/utils/deployment/ProxyLib.sol";
+import {PermissionLib} from "@aragon/osx-commons/permission/PermissionLib.sol";
 
 /// @notice The struct containing all the parameters to deploy the DAO
 /// @param minApprovals The amount of approvals required for the multisig to be able to execute a proposal on the DAO
@@ -105,7 +106,7 @@ contract MultisigDaoFactory {
 
         dao = DAO(
             payable(
-                createERC1967Proxy(
+                ProxyLib.deployUUPSProxy(
                     address(daoBase),
                     abi.encodeCall(
                         DAO.initialize,
@@ -151,7 +152,12 @@ contract MultisigDaoFactory {
             Multisig.MultisigSettings(
                 true, // onlyListed
                 parameters.minApprovals
-            )
+            ),
+            IPlugin.TargetConfig(
+                address(dao), // target
+                IPlugin.Operation.Call // operation
+            ),
+            "" // metadata
         );
 
         (address plugin, IPluginSetup.PreparedSetupData memory preparedSetupData) = parameters

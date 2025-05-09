@@ -4,7 +4,7 @@ pragma solidity ^0.8.17;
 
 import {ERC165Checker} from "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
 import {DAO, IDAO} from "@aragon/osx/core/dao/DAO.sol";
-import {PermissionLib} from "@aragon/osx/core/permission/PermissionManager.sol";
+import {PermissionLib} from "@aragon/osx-commons/permission/PermissionLib.sol";
 import {PluginUUPSUpgradeable} from "@aragon/osx-commons/plugin/PluginUUPSUpgradeable.sol";
 import {IPlugin} from "@aragon/osx-commons/plugin/IPlugin.sol";
 import {PluginRepo} from "@aragon/osx/framework/plugin/repo/PluginRepo.sol";

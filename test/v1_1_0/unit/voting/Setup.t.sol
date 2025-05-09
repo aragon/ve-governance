@@ -4,16 +4,15 @@ import {Test} from "forge-std/Test.sol";
 import {console2 as console} from "forge-std/console2.sol";
 
 // aragon contracts
-import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
+import {IDAO} from "@aragon/osx-commons/dao/IDAO.sol";
+import {IPluginSetup} from "@aragon/osx-commons/plugin/setup/IPluginSetup.sol";
+import {PermissionLib} from "@aragon/osx/core/permission/PermissionManager.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
-import {IPluginSetup} from "@aragon/osx/framework/plugin/setup/IPluginSetup.sol";
 import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
 
 import {MockPluginSetupProcessor} from "@mocks/osx/MockPSP.sol";
 import {MockDAOFactory} from "@mocks/osx/MockDAOFactory.sol";
 import {MockERC20} from "@mocks/MockERC20.sol";
-
-import "@helpers/OSxHelpers.sol";
 
 import {VotingEscrow, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams} from "../../versions.sol";
 import {GaugeVotingBase} from "./GaugeVotingBase.sol";

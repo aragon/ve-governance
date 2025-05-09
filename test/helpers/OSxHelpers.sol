@@ -2,7 +2,7 @@
 pragma solidity ^0.8.8;
 
 import {Action} from "@aragon/osx-commons/executors/IExecutor.sol";
-import {PermissionLib} from "@aragon/osx/core/permission/PermissionManager.sol";
+import {PermissionLib} from "@aragon/osx-commons/permission/PermissionLib.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {PluginRepo} from "@aragon/osx/framework/plugin/repo/PluginRepo.sol";
 import {IPluginSetup} from "@aragon/osx-commons/plugin/setup/IPluginSetup.sol";

@@ -61,7 +61,7 @@ contract TestGaugeVote is GaugeVotingBase {
         voter.createGauge(gauge, "metadata");
     }
 
-    function testFuzz_cannotVoteOutsideVotingWindow(uint256 time) public {
+    function testFuzz_cannotVoteOutsideVotingWindow(uint256 _time) public {
         // warp to a random time
         vm.warp(_time);
 

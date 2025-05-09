@@ -10,7 +10,7 @@ import {IPluginSetup} from "@aragon/osx-commons/plugin/setup/IPluginSetup.sol";
 import {IProposal} from "@aragon/osx-commons/plugin/extensions/proposal/IProposal.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
-import {PermissionLib} from "@aragon/osx/core/permission/PermissionManager.sol";
+import {PermissionLib} from "@aragon/osx-commons/permission/PermissionLib.sol";
 import {PluginSetup} from "@aragon/osx-commons/plugin/setup/PluginSetup.sol";
 
 // these should be interfaces
