@@ -408,9 +408,9 @@ contract LinearIncreasingCurve is
         uint256 fromLockedEnd = _fromLocked.start + _maxTime;
 
         // The following condition is true if merging non-mature locks with different start dates.
-        // current version of ve-governance is built around the assumption that merge can only 
-        // occur if tokens are either mature or have the same start dates. Even though `escrow` 
-        // does this check before calling `checkpoint` on curve, it's still a safety measure to repeat 
+        // current version of ve-governance is built around the assumption that merge can only
+        // occur if tokens are either mature or have the same start dates. Even though `escrow`
+        // does this check before calling `checkpoint` on curve, it's still a safety measure to repeat
         // the check in case the code of checkpoint might be called by another contract in the future.
         if (
             _fromLocked.start != 0 &&
