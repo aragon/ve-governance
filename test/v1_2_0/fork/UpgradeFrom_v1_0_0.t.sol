@@ -38,13 +38,13 @@ import {
     IVotingEscrowCoreErrors,
     IVotingEscrowEventsStorageErrorsEvents,
     IExitMinLockCooldownErrorsAndEvents
-} from "test/v1_3_0/versions.sol";
+} from "test/v1_2_0/versions.sol";
 import {
-    UpgradeGaugesFactoryV1_0_0__V1_3_0 as UpgradeFactory,
+    UpgradeGaugesFactoryV1_0_0__V1_2_0 as UpgradeFactory,
     Deployment as DeploymentUpgrade,
     DeploymentParameters as DeploymentParametersUpgrade,
     GaugePluginSet as GaugePluginSetUpgrade
-} from "@factory/upgrades/UpgradeFactory_v1_0_0__v1_3_0.sol";
+} from "@factory/upgrades/UpgradeFactory_v1_0_0__v1_2_0.sol";
 
 import {Upgrades} from "@foundry-upgrades/LegacyUpgrades.sol";
 import {Options} from "@foundry-upgrades/Options.sol";
@@ -53,7 +53,7 @@ import {console2 as console} from "forge-std/console2.sol";
 
 import {FixedPointBase} from "../base/FixedPointBase.sol";
 
-contract RegressionV1_0_0__to__V1_3_0_Fork is
+contract RegressionV1_0_0__to__V1_2_0_Fork is
     Test,
     IGaugeVote,
     IVotingEscrowEventsStorageErrorsEvents,

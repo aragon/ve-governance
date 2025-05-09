@@ -223,11 +223,26 @@ contract LinearIncreasingCurve is
         return _isWarm(_tokenId, block.timestamp);
     }
 
+    /// @notice Returns whether the NFT is warm at the specified timestamp(`_ts`)
     function isWarm(uint256 _tokenId, uint48 _ts) public view returns (bool) {
         return _isWarm(_tokenId, _ts);
     }
 
     function _isWarm(uint256 _tokenId, uint256 _ts) internal view virtual returns (bool) {
+        TokenPoint memory originalPoint = _tokenPointHistory[_tokenId][1];
+
+        return _isWarm(_tokenId, _ts, originalPoint);
+    }
+
+    /// @dev This signature is called by votingPowerAt to avoid extra sloads
+    ///      for `originalPoint`'s checkpointTs and writtenTs. Even though
+    ///      it would already be a warm sload, extra 200 gas makes a difference
+    ///      since `votingPowerAt` is called by ivotesAdapter in a loop.
+    function _isWarm(
+        uint256 _tokenId,
+        uint256 _ts,
+        TokenPoint memory _originalPoint
+    ) private view returns (bool) {
         IVotingEscrow.LockedBalance memory locked = IVotingEscrow(escrow).locked(_tokenId);
 
         // This could occur if user withdraw in which case lock is removed.
@@ -235,12 +250,11 @@ contract LinearIncreasingCurve is
         // in which case we anyways return false.
         if (locked.amount == 0) return false;
 
-        // If locked.amount is non-zero, we should at least have one point in history.
-        // So it's safe to access the first element.
-        TokenPoint memory originalPoint = _tokenPointHistory[_tokenId][1];
-
-        if (originalPoint.checkpointTs > originalPoint.writtenTs) {
-            return _ts > originalPoint.writtenTs + warmupPeriod;
+        // Helps to avoid voting powers not being equal after and before upgrade.
+        // This is because before upgrade, checkpoint ts is always greater than writtenTs
+        // whereas in new versions, it's vice versa.
+        if (_originalPoint.checkpointTs > _originalPoint.writtenTs) {
+            return _ts > _originalPoint.writtenTs + warmupPeriod;
         }
 
         return _ts > locked.start + warmupPeriod;
@@ -277,28 +291,24 @@ contract LinearIncreasingCurve is
         // epoch 0 is an empty point
         if (interval == 0) return 0;
 
+        // Note that very first point is saved at index 1.
+        // Grab original point(the very first point for `_tokenId`).
+        TokenPoint memory originalPoint = _tokenPointHistory[_tokenId][1];
+
+        if (!_isWarm(_tokenId, _t, originalPoint)) return 0;
+
+        // Grab last point before `_t.
         TokenPoint memory lastPoint = _tokenPointHistory[_tokenId][interval];
-
-        if (!_isWarm(_tokenId, _t)) return 0;
-
         int256 bias = lastPoint.coefficients[0];
         int256 slope = lastPoint.coefficients[1];
 
-        // Note that very first point is saved at index 1.
-        TokenPoint memory originalPoint = _tokenPointHistory[_tokenId][1];
-
-        uint256 maxTime_ = maxTime();
-        uint256 end = originalPoint.checkpointTs + maxTime_;
+        uint256 end = originalPoint.checkpointTs + maxTime();
 
         // If the point was created before the upgrade:
         //    it will have `checkpointTs` greater than `writtenTs`.
         //    bias would have been stored as just the amount(without bonus).
         // In such case, we make writtenTs equal to avoid checkpointTs greater.
         // This ensures that behaviour after and before upgrade are same.
-        if (originalPoint.checkpointTs > originalPoint.writtenTs) {
-            originalPoint.writtenTs = originalPoint.checkpointTs;
-        }
-
         if (lastPoint.checkpointTs > lastPoint.writtenTs) {
             lastPoint.writtenTs = lastPoint.checkpointTs;
         }
