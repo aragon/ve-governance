@@ -46,8 +46,7 @@ interface IMerge is ILockedBalanceIncreasing, IMergeEventsAndErrors {
 interface ISplitEventsAndErrors {
     event Split(
         uint256 indexed _from,
-        uint256 indexed _tokenId1,
-        uint256 indexed _tokenId2,
+        uint256 indexed newTokenId,
         address _sender,
         uint208 _splitAmount1,
         uint208 _splitAmount2
@@ -63,12 +62,11 @@ interface ISplit is ISplitEventsAndErrors {
     /// @notice Split token into two new, separate tokens.
     /// @param _from The token id that should be split
     /// @param _value The amount that determines how token is split
-    /// @return _tokenId1 The token id of first token after splitting
-    /// @return _tokenId2 The token id of second token after splitting
+    /// @return _newTokenId The new token id after split.
     function split(
         uint256 _from,
         uint256 _value
-    ) external returns (uint256 _tokenId1, uint256 _tokenId2);
+    ) external returns (uint256 _newTokenId);
 }
 
 interface IDelegateMoveVoteCaller {

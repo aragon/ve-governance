@@ -46,7 +46,14 @@ contract TestEscrowSplit is EscrowBase {
     }
 
     function test_shouldRevert_ifNotWhitelisted() public {
+        // owner is address(this)
         uint256 from = escrow.createLock(Lock_1_Amount);
+
+        escrow.setEnableSplit(address(this), false);
+        
+        // approve so address(123) can also call split
+        // It still should fail as owner itself is not whitelisted.
+        nftLock.approve(address(123), from);
 
         vm.expectRevert(SplitNotWhitelisted.selector);
         vm.prank(address(123));
@@ -62,6 +69,11 @@ contract TestEscrowSplit is EscrowBase {
         vm.startPrank(sender);
         vm.expectRevert(IVotingEscrowCoreErrors.NotApprovedOrOwner.selector);
         escrow.split(from, 10);
+    }
+
+    function test_shouldRevert_IfTokenHasNoOwner() public {
+        vm.expectRevert("ERC721: invalid token ID");
+        escrow.split(15, 10);
     }
 
     function test_shouldRevert_IfNewAmountsLessThanMinDeposit() public {
@@ -116,16 +128,15 @@ contract TestEscrowSplit is EscrowBase {
 
         uint256 from = escrow.createLock(Lock_1_Amount);
 
-        escrow.split(from, Lock_1_Amount - 10);
+        escrow.split(from, 10e18);
 
         LockedBalance memory lockedFrom = escrow.locked(from);
 
         // check that `from` token object doesn't exist anymore
-        assertEq(lockedFrom.start, 0);
-        assertEq(lockedFrom.amount, 0);
+        assertEq(lockedFrom.start, weekStartTs(block.timestamp));
+        assertEq(lockedFrom.amount, Lock_1_Amount - 10e18);
 
-        vm.expectRevert();
-        nftLock.ownerOf(from);
+        assertEq(nftLock.ownerOf(from), address(this));
     }
 
     function test_CreatesTwoNewTokensAndWithSameStartDate() public {
@@ -145,8 +156,8 @@ contract TestEscrowSplit is EscrowBase {
         vm.warp(block.timestamp + checkpointInterval + 1 hours);
         escrow.split(from, splitVal);
 
-        LockedBalance memory token1 = escrow.locked(from + 1);
-        LockedBalance memory token2 = escrow.locked(from + 2);
+        LockedBalance memory token1 = escrow.locked(from);
+        LockedBalance memory token2 = escrow.locked(from + 1);
 
         assertEq(token1.amount, token1Value);
         assertEq(token1.start, originalTokenStartTs);
@@ -162,7 +173,6 @@ contract TestEscrowSplit is EscrowBase {
         emit Split(
             from,
             from + 1,
-            from + 2,
             address(this),
             uint208(Lock_1_Amount - splitVal),
             uint208(splitVal)

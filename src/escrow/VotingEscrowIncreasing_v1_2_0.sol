@@ -375,9 +375,7 @@ contract VotingEscrowV1_2_0 is
         address ownerTo = IERC721EMB(lockNFT).ownerOf(_to);
 
         // Both nfts must have the same owner.
-        if (ownerFrom != ownerTo) {
-            revert NotSameOwner();
-        }
+        if (ownerFrom != ownerTo) revert NotSameOwner();
 
         // sender can either be approved or owner.
         if (!isApprovedOrOwner(sender, _from) || !isApprovedOrOwner(sender, _to)) {
@@ -391,23 +389,29 @@ contract VotingEscrowV1_2_0 is
             revert CannotMerge(_from, _to);
         }
 
-        // merge is equivalant to a burn of the token ID with an empty lock
-        // as the voting power stays with the holder.
+        // We only allow merge when both tokens have the same owner. 
+        // After the merge, owner still should have the same voting power
+        // as one token gets merged into another. For this reason, 
+        // We call `_moveDelegateVotes` with empty locked, so it doesn't 
+        // reduce/increase the same voting power for gas efficiency. 
+        // Note that we still decrease owner's delegated token count 
+        // as `_from` token is destroyed.
         _moveDelegateVotes(ownerFrom, address(0), _from, LockedBalance(0, 0));
 
         // Update for `_from`.
+        // Note that on the checkpoint, we still don't 
+        // remove `start` for historical reasons.
         IERC721EMB(lockNFT).burn(_from);
         _locked[_from] = LockedBalance(0, 0);
-        LockedBalance memory newLockedFrom = LockedBalance(0, oldLockedFrom.start);
+        _checkpoint(_from, oldLockedFrom, LockedBalance(0, oldLockedFrom.start));
 
-        _checkpoint(_from, oldLockedFrom, newLockedFrom);
-
-        // Update for `_to`.
-        oldLockedFrom.start = oldLockedTo.start;
-        _checkpoint(_to, oldLockedTo, oldLockedFrom);
-
+        // update for `_to`.
         uint208 newLockedAmount = oldLockedFrom.amount + oldLockedTo.amount;
-
+        _checkpoint(
+            _to,
+            oldLockedTo,
+            LockedBalance(newLockedAmount, oldLockedTo.start)
+        );
         _locked[_to] = LockedBalance(newLockedAmount, oldLockedTo.start);
 
         emit Merged(sender, _from, _to, oldLockedFrom.amount, oldLockedTo.amount, newLockedAmount);
@@ -435,18 +439,19 @@ contract VotingEscrowV1_2_0 is
     }
 
     /// @inheritdoc ISplit
-    function split(
-        uint256 _from,
-        uint256 _value
-    ) public whenNotPaused returns (uint256 _tokenId1, uint256 _tokenId2) {
-        if (_value == 0) revert ZeroAmount();
+    function split(uint256 _from, uint256 _value) public whenNotPaused returns (uint256) {
+        if(_value == 0) revert ZeroAmount();
 
         address sender = _msgSender();
 
-        if (!canSplit(sender)) {
-            revert SplitNotWhitelisted();
-        }
+        // For some erc721, `ownerOf` reverts and for some, 
+        // it returns address(0). For safety, if it doesn't revert, 
+        // we also check if it's not address(0).
+        address owner = IERC721EMB(lockNFT).ownerOf(_from); 
+        if(owner == address(0)) revert NoOwner();
 
+        if (!canSplit(owner)) revert SplitNotWhitelisted();
+    
         // Sender must either be approved or the owner.
         if (!isApprovedOrOwner(sender, _from)) revert NotApprovedOrOwner();
 
@@ -460,23 +465,24 @@ contract VotingEscrowV1_2_0 is
             revert AmountTooSmall();
         }
 
-        _moveDelegateVotes(IERC721EMB(lockNFT).ownerOf(_from), address(0), _from, locked_);
+        // update for `_from`.
+        _checkpoint(_from, locked_, LockedBalance(amount1, locked_.start));
+        _locked[_from] = LockedBalance(amount1, locked_.start);
 
-        IERC721EMB(lockNFT).burn(_from);
-        _locked[_from] = LockedBalance(0, 0);
-        _checkpoint(_from, locked_, LockedBalance(0, locked_.start));
-
-        locked_.amount = amount1;
-        _tokenId1 = _createSplitNFT(sender, locked_);
-
+        // update for `newTokenId`.
         locked_.amount = amount2;
-        _tokenId2 = _createSplitNFT(sender, locked_);
+        uint256 newTokenId = _createSplitNFT(owner, locked_);
 
-        // 2 new NFTs were minted to sender. Update
-        // sender's delegatee's power for both tokens.
-        _moveDelegateVotes(address(0), sender, _tokenId1, LockedBalance(amount1, locked_.start));
-        _moveDelegateVotes(address(0), sender, _tokenId2, LockedBalance(amount2, locked_.start));
-        emit Split(_from, _tokenId1, _tokenId2, sender, amount1, amount2);
+        // owner gets minted a new tokenId. Since `split` function 
+        // just splits the same amount into two tokenIds, there's no need 
+        // to update voting power on ivotesAdapter, as total doesn't change.
+        // We still call `_moveDelegateVotes` with zero LockedBalance to 
+        // make sure we update delegatee's token count due to newtokenId.
+        _moveDelegateVotes(address(0), owner, newTokenId, LockedBalance(0, 0));
+
+        emit Split(_from, newTokenId, sender, amount1, amount2);
+
+        return newTokenId;
     }
 
     /// @notice creates a new token in checkpoint and mint.

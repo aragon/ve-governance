@@ -19,7 +19,11 @@ import {
     IEscrowCurveGlobalStorage
 } from "../../versions.sol";
 
-contract TestSplit_DelegationAndVoter is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage, EscrowBase {
+contract TestSplit_DelegationAndVoter is
+    IEscrowCurveTokenStorage,
+    IEscrowCurveGlobalStorage,
+    EscrowBase
+{
     function setUp() public override {
         super.setUp();
 
@@ -28,7 +32,7 @@ contract TestSplit_DelegationAndVoter is IEscrowCurveTokenStorage, IEscrowCurveG
 
     function test_Split_CorrectlyUpdatesDelegationAndVotes() public {
         vm.warp(1);
-        
+
         address alice = address(0x123);
         uint256 aliceAmount = 30e18;
         token.transfer(alice, aliceAmount);
@@ -42,7 +46,7 @@ contract TestSplit_DelegationAndVoter is IEscrowCurveTokenStorage, IEscrowCurveG
         // which is required for delegation.
         curve.setWarmupPeriod(0);
 
-        // turn on delegation to alice, so when she splits, 
+        // turn on delegation to alice, so when she splits,
         // we can test that her delegation automatically updates.
         {
             vm.startPrank(alice);
@@ -67,20 +71,17 @@ contract TestSplit_DelegationAndVoter is IEscrowCurveTokenStorage, IEscrowCurveG
         vm.prank(alice);
         escrow.split(1, 5e18);
 
-        // Even though tokenId was destroyed, split produced 
+        // Even though tokenId was destroyed, split produced
         // 2 new tokenIds of which's power sum must be the same.
         assertEq(ivotesAdapter.getVotes(alice), bias(aliceAmount, block.timestamp - checkpointTs));
-        assertEq(ivotesAdapter.tokenIsDelegated(1), false);
+        assertEq(ivotesAdapter.tokenIsDelegated(1), true);
         assertEq(ivotesAdapter.tokenIsDelegated(2), true);
-        assertEq(ivotesAdapter.tokenIsDelegated(3), true);
         assertEq(ivotesAdapter.numberOfDelegatedTokens(alice), 2);
 
-        // we only update the votes on undelegation -
-        // i.e when new voting power is less than currently recorded vote's power.
-        // So since Alice's tokenId = 1 got undelegated, we decrease.
-        // Even though she got automatically delegated tokenId = 2 and 3, we still don't update.
-        // See AddressGaugeVoter for more details.
-        assertEq(voter.votes(alice, gauge), 0);
-        
+        // Even though `split` was called not by owner of the token, but address(this), it still
+        // shouldn't change any behaviour. It's still alice that gets minted a new tokenId.
+        // Note that split doesn't change the total amount for Alice, so her recorded voting power
+        // should stay the same on voter.
+        assertEq(voter.votes(alice, gauge), bias(aliceAmount, block.timestamp - checkpointTs));
     }
 }
