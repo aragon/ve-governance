@@ -223,7 +223,7 @@ contract LinearIncreasingCurveNoSupply is
     /// @dev This signature is called by votingPowerAt to avoid extra sloads
     ///      for `originalPoint`'s checkpointTs and writtenTs. Even though
     ///      it would already be a warm sload, extra 200 gas makes a difference
-    ///      since `votingPowerAt` is called by ivotesAdapter in a loop.
+    ///      since `votingPowerAt` is frequently called
     function _isWarm(
         uint256 _tokenId,
         uint256 _ts,
