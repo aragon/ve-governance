@@ -194,7 +194,7 @@ contract RegressionV1_0_0__to__V1_2_0_Fork is
         // We revert the state so it's as if exit didn't happen.
         // This helps us to ensure that exact same asserts and 
         // exit work too after the upgrade.
-        vm.revertTo(id);
+        vm.revertToState(id);
 
         _upgrade();
 
