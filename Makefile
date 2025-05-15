@@ -73,18 +73,25 @@ deploy-preview-mode :; forge script script/Deploy.s.sol:Deploy \
      --verifier-url https://explorer.mode.network/api\? \
      -vvv
 
-deploy-preview-celo :; forge script script/Deploy.s.sol:Deploy \
+deploy-preview-celo :; forge script script/DeployGauges_v1_1_0.s.sol:DeployGaugesV1_1_0 \
   --rpc-url $(RPC_URL) \
 	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
 	-vvvvv	
 
-deploy-celo :; forge script script/Deploy.s.sol:Deploy \
+deploy-celo :; forge script script/DeployGauges_v1_1_0.s.sol:DeployGaugesV1_1_0 \
 	--rpc-url $(RPC_URL) \
 	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
 	--broadcast \
 	--slow \
 	--verify \
 	--verifier blockscout \
-	--verifier-url https://celo.blockscout.com/api\? \
+	--verifier-url "https://celo.blockscout.com/api\" \
 	-vvvvv
 
+ft-fork-100 :; forge test --match-contract TestE2E \
+	--rpc-url $(RPC_URL) \
+	-vvvvv
+
+ft-fork-110 :; forge test --match-contract TestE2EV1_1_0 \
+	--rpc-url $(RPC_URL) \
+	-vvvvv

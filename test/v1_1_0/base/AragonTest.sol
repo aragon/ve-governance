@@ -6,6 +6,7 @@ import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {RATIO_BASE} from "@aragon/osx-commons/utils/math/Ratio.sol";
 import {ALICE_ADDRESS, BOB_ADDRESS, CAROL_ADDRESS, DAVID_ADDRESS} from "test/constants.sol";
 import {Test} from "forge-std/Test.sol";
+import {PrecompileHandler} from "./PrecompiledHandlers.sol";
 
 contract AragonTest is Test {
     address immutable alice = ALICE_ADDRESS;
@@ -24,6 +25,8 @@ contract AragonTest is Test {
         vm.label(carol, "Carol");
         vm.label(david, "David");
         vm.label(randomWallet, "Random wallet");
+
+        new PrecompileHandler();
     }
 
     /// @notice Returns the address and private key associated to the given name.
