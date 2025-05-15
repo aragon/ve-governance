@@ -2,9 +2,7 @@ pragma solidity ^0.8.17;
 
 import {Base} from "./Base.sol";
 
-import {
-    EscrowIVotesAdapter
-} from "../../versions.sol";
+import {EscrowIVotesAdapter} from "../../versions.sol";
 
 contract TestDelegateAdmin is Base {
     address attacker = address(1);
