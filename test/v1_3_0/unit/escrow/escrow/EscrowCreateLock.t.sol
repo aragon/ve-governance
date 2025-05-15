@@ -73,6 +73,10 @@ contract TestCreateLock is IEscrowCurveTokenStorage, EscrowBase {
         vm.assume(_depositor != address(0) && address(_depositor).code.length == 0);
         vm.assume(_time > 0);
 
+        // checkpoint function reverts if it's called 
+        // at exact same time as week boundary. So avoid.
+        _time = uint32(avoidWeekBoundary(_time));
+
         // set the min deposit to _value
         escrow.setMinDeposit(_value);
 
