@@ -50,9 +50,9 @@ contract EscrowIVotesAdapter is
     mapping(address => address) private delegatees_;
     mapping(address => uint256) public latestPointIndex;
 
-    mapping(uint256 => bool) public tokenIsDelegated;
     mapping(address => uint) public numberOfDelegatedTokens;
     mapping(address => bool) public autoDelegationDisabled;
+    mapping(uint256 => uint256) private delegatedBitmap;
 
     uint256 private maxTime;
 
@@ -96,6 +96,27 @@ contract EscrowIVotesAdapter is
         emit AutoDelegationSet(sender, _disabled);
     }
 
+    function _setDelegated(uint256 tokenId, bool value) internal {
+        uint256 bucket = tokenId >> 8; // tokenId / 256
+        uint256 mask = 1 << (tokenId & 0xff); // tokenId % 256
+
+        if (value) {
+            delegatedBitmap[bucket] |= mask;
+        } else {
+            delegatedBitmap[bucket] &= ~mask;
+        }
+    }
+
+    function tokenIsDelegated(uint256 tokenId) public view returns (bool) {
+        uint256 bucket = tokenId >> 8;
+        uint256 mask = 1 << (tokenId & 0xff);
+        return (delegatedBitmap[bucket] & mask) != 0;
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        Delegate Functions
+    //////////////////////////////////////////////////////////////*/
+
     /// @param _delegatee The new delegatee address.
     /// @dev If auto delegation is not disabled, it will delegate all token ids that sender has.
     ///      Note that sender must first undelegate all token ids before calling this function.
@@ -136,7 +157,7 @@ contract EscrowIVotesAdapter is
                 revert NotApprovedOrOwner();
             }
 
-            if (tokenIsDelegated[tokenId]) {
+            if (tokenIsDelegated(tokenId)) {
                 revert TokenAlreadyDelegated(tokenId);
             }
 
@@ -147,7 +168,7 @@ contract EscrowIVotesAdapter is
                 revert VotingPowerZero(tokenId);
             }
 
-            tokenIsDelegated[tokenId] = true;
+            _setDelegated(tokenId, true);
 
             IVotingEscrow.LockedBalance memory locked = IVotingEscrow(escrow).locked(tokenId);
             (int256 bias, int256 slope) = _getBiasAndSlope(delegatee, locked, _positive);
@@ -182,11 +203,11 @@ contract EscrowIVotesAdapter is
                 revert NotApprovedOrOwner();
             }
 
-            if (!tokenIsDelegated[tokenId]) {
+            if (!tokenIsDelegated(tokenId)) {
                 revert TokenNotDelegated(tokenId);
             }
 
-            tokenIsDelegated[tokenId] = false;
+            _setDelegated(tokenId, false);
 
             IVotingEscrow.LockedBalance memory locked = IVotingEscrow(escrow).locked(tokenId);
             (int256 bias, int256 slope) = _getBiasAndSlope(delegatee, locked, _negative);
@@ -203,6 +224,10 @@ contract EscrowIVotesAdapter is
 
         emit TokensUndelegated(sender, delegatee, _tokenIds);
     }
+
+     /*//////////////////////////////////////////////////////////////
+                        Hook Functions
+    //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IDelegateMoveVoteRecipient
     function moveDelegateVotes(
@@ -246,12 +271,12 @@ contract EscrowIVotesAdapter is
             }
 
             numberOfDelegatedTokens[_to]++;
-            tokenIsDelegated[_tokenId] = true;
+            _setDelegated(_tokenId, true);
 
             emit TokensDelegated(_to, toDelegatee, tokenIds);
         } else {
             // else this is new delegate voting power being burned
-            tokenIsDelegated[_tokenId] = false;
+            _setDelegated(_tokenId, false);
         }
 
         // If transfer is a merge or split of tokens owned by the same delegatee,
