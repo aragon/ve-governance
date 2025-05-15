@@ -3,7 +3,7 @@ pragma solidity ^0.8.17;
 import {Base} from "./Base.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 
-contract TestDelegate_omg is Base {
+contract TestDelegate is Base {
     function setUp() public override {
         super.setUp();
     }
