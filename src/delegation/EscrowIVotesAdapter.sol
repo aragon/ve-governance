@@ -31,6 +31,7 @@ import {IClockUser, IClockV1_2_0 as IClock} from "@clock/IClock_v1_2_0.sol";
 import {IEscrowIVotesAdapter, IDelegateMoveVoteRecipient} from "./IEscrowIVotesAdapter.sol";
 import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 import {SignedFixedPointMath} from "@libs/SignedFixedPointMathLib.sol";
+import {console2 as console} from "forge-std/console2.sol";
 
 contract EscrowIVotesAdapter is
     IClockUser,
@@ -530,7 +531,10 @@ contract EscrowIVotesAdapter is
     }
 
     /// @notice Internal method authorizing the upgrade of the contract via the [upgradeability mechanism for UUPS proxies](https://docs.openzeppelin.com/contracts/4.x/api/proxy#UUPSUpgradeable) (see [ERC-1822](https://eips.ethereum.org/EIPS/eip-1822)).
-    function _authorizeUpgrade(address) internal virtual override auth(DELEGATION_ADMIN_ROLE) {}
+    function _authorizeUpgrade(address) internal virtual override auth(DELEGATION_ADMIN_ROLE) {
+        console.log("omg how 1919");
+        console.log(msg.sender);
+    }
 
     /// @dev Reserved storage space to allow for layout changes in the future.
     uint256[40] private __gap;
