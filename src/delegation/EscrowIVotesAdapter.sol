@@ -14,7 +14,13 @@ import {
     PausableUpgradeable as Pausable
 } from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
+import {
+    DaoAuthorizableUpgradeable as DaoAuthorizable
+} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
+
 import {
     IVotingEscrowIncreasingV1_2_0 as IVotingEscrow
 } from "@escrow/IVotingEscrowIncreasing_v1_2_0.sol";
@@ -22,7 +28,6 @@ import {VotingEscrowV1_2_0 as VotingEscrow} from "@escrow/VotingEscrowIncreasing
 
 import {IClockUser, IClockV1_2_0 as IClock} from "@clock/IClock_v1_2_0.sol";
 
-import {PluginUUPSUpgradeable} from "@aragon/osx/core/plugin/PluginUUPSUpgradeable.sol";
 import {IEscrowIVotesAdapter, IDelegateMoveVoteRecipient} from "./IEscrowIVotesAdapter.sol";
 import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 import {SignedFixedPointMath} from "@libs/SignedFixedPointMathLib.sol";
@@ -32,7 +37,8 @@ contract EscrowIVotesAdapter is
     ReentrancyGuard,
     IEscrowIVotesAdapter,
     Pausable,
-    PluginUUPSUpgradeable
+    DaoAuthorizable,
+    UUPSUpgradeable
 {
     using SafeCastUpgradeable for uint256;
 
@@ -50,7 +56,7 @@ contract EscrowIVotesAdapter is
     mapping(address => address) private delegatees_;
     mapping(address => uint256) public latestPointIndex;
 
-    mapping(address => uint) public numberOfDelegatedTokens;
+    mapping(address => uint256) public numberOfDelegatedTokens;
     mapping(address => bool) public autoDelegationDisabled;
     mapping(uint256 => uint256) private delegatedBitmap;
 
@@ -70,7 +76,7 @@ contract EscrowIVotesAdapter is
         address _clock,
         bool _startPaused
     ) external initializer {
-        __PluginUUPSUpgradeable_init(IDAO(_dao));
+        __DaoAuthorizableUpgradeable_init(IDAO(_dao));
         __ReentrancyGuard_init();
         escrow = _escrow;
         clock = _clock;
@@ -127,7 +133,7 @@ contract EscrowIVotesAdapter is
             revert DelegationNotAllowed();
         }
 
-        address oldDelegatee = delegates(sender);
+        address currentDelegatee = delegates(sender);
 
         delegatees_[sender] = _delegatee;
 
@@ -136,7 +142,7 @@ contract EscrowIVotesAdapter is
             delegate(tokenIds);
         }
 
-        emit DelegateChanged(sender, oldDelegatee, _delegatee);
+        emit DelegateChanged(sender, currentDelegatee, _delegatee);
     }
 
     function delegate(uint256[] memory _tokenIds) public whenNotPaused {
@@ -516,4 +522,16 @@ contract EscrowIVotesAdapter is
     function _negative(int256 _value) private pure returns (int256) {
         return -_value;
     }
+
+    /// @notice Returns the address of the implementation contract in the [proxy storage slot](https://eips.ethereum.org/EIPS/eip-1967) slot the [UUPS proxy](https://eips.ethereum.org/EIPS/eip-1822) is pointing to.
+    /// @return The address of the implementation contract.
+    function implementation() public view returns (address) {
+        return _getImplementation();
+    }
+
+    /// @notice Internal method authorizing the upgrade of the contract via the [upgradeability mechanism for UUPS proxies](https://docs.openzeppelin.com/contracts/4.x/api/proxy#UUPSUpgradeable) (see [ERC-1822](https://eips.ethereum.org/EIPS/eip-1822)).
+    function _authorizeUpgrade(address) internal virtual override auth(DELEGATION_ADMIN_ROLE) {}
+
+    /// @dev Reserved storage space to allow for layout changes in the future.
+    uint256[40] private __gap;
 }
