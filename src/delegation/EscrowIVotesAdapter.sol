@@ -134,12 +134,11 @@ contract EscrowIVotesAdapter is
         }
 
         address currentDelegatee = delegates(sender);
-
         delegatees_[sender] = _delegatee;
 
         if (!autoDelegationDisabled[sender]) {
             uint256[] memory tokenIds = VotingEscrow(escrow).ownedTokens(sender);
-            delegate(tokenIds);
+            _delegate(sender, _delegatee, tokenIds, false);
         }
 
         emit DelegateChanged(sender, currentDelegatee, _delegatee);
@@ -153,18 +152,64 @@ contract EscrowIVotesAdapter is
             revert DelegateeNotSet();
         }
 
-        int256 totalBias;
-        int256 totalSlope;
+        _delegate(sender, delegatee, _tokenIds, true);
+    }
 
-        for (uint256 i = 0; i < _tokenIds.length; i++) {
-            uint256 tokenId = _tokenIds[i];
+    function redelegate(address _delegatee) public whenNotPaused {
+        address sender = _msgSender();
+        address currentDelegatee = delegates(sender);
 
-            if (!IVotingEscrow(escrow).isApprovedOrOwner(sender, tokenId)) {
-                revert NotApprovedOrOwner();
+        uint256[] memory tokenIds = VotingEscrow(escrow).ownedTokens(sender);
+        uint256[] memory delegatedTokenIds = new uint256[](tokenIds.length);
+        uint256 count;
+
+        if (currentDelegatee != address(0)) {
+            for (uint256 i = 0; i < tokenIds.length; i++) {
+                uint256 tokenId = tokenIds[i];
+
+                if (tokenIsDelegated(tokenId)) {
+                    delegatedTokenIds[count++] = tokenId;
+                }
             }
 
-            if (tokenIsDelegated(tokenId)) {
-                revert TokenAlreadyDelegated(tokenId);
+            _undelegate(sender, currentDelegatee, delegatedTokenIds, false);
+        }
+
+        delegatees_[sender] = _delegatee;
+
+        if (!autoDelegationDisabled[sender]) {
+            _delegate(_sender, _delegatee, tokenIds, false);
+        }
+    }
+
+    function undelegate(uint256[] memory _tokenIds) public whenNotPaused {
+        address sender = _msgSender();
+        address delegatee = delegates(sender);
+
+        if (delegatee == address(0)) {
+            revert DelegateeNotSet();
+        }
+
+        _undelegate(sender, delegatee, _tokenIds, true);
+    }
+
+    function _delegate(
+        address _sender,
+        address _delegatee,
+        uint256[] memory _tokenIds,
+        bool _validate
+    ) private {
+        (int256 totalBias, int256 totalSlope) = (0, 0);
+
+        for (uint256 i = 0; i < _tokenIds.length; i++) {
+            if (_validate) {
+                if (!IVotingEscrow(escrow).isApprovedOrOwner(sender, tokenId)) {
+                    revert NotApprovedOrOwner();
+                }
+
+                if (tokenIsDelegated(tokenId)) {
+                    revert TokenAlreadyDelegated(tokenId);
+                }
             }
 
             // Ensure that voting power is greater than 0.
@@ -183,34 +228,30 @@ contract EscrowIVotesAdapter is
         }
 
         numberOfDelegatedTokens[sender] += _tokenIds.length;
-
         _checkpoint(totalBias, totalSlope, delegatee);
-
         IVotingEscrow(escrow).updateVotingPower(sender, delegatee);
-
         emit TokensDelegated(sender, delegatee, _tokenIds);
     }
 
-    function undelegate(uint256[] memory _tokenIds) public whenNotPaused {
-        address sender = _msgSender();
-        address delegatee = delegates(sender);
-
-        if (delegatee == address(0)) {
-            revert DelegateeNotSet();
-        }
-
-        int256 totalBias;
-        int256 totalSlope;
+    function _undelegate(
+        address _sender,
+        address _delegatee,
+        uint256[] memory _tokenIds,
+        bool _validate
+    ) private {
+        (int256 totalBias, int256 totalSlope) = (0, 0);
 
         for (uint256 i = 0; i < _tokenIds.length; i++) {
             uint256 tokenId = _tokenIds[i];
 
-            if (!IVotingEscrow(escrow).isApprovedOrOwner(sender, tokenId)) {
-                revert NotApprovedOrOwner();
-            }
+            if (validate) {
+                if (!IVotingEscrow(escrow).isApprovedOrOwner(sender, tokenId)) {
+                    revert NotApprovedOrOwner();
+                }
 
-            if (!tokenIsDelegated(tokenId)) {
-                revert TokenNotDelegated(tokenId);
+                if (!tokenIsDelegated(tokenId)) {
+                    revert TokenNotDelegated(tokenId);
+                }
             }
 
             _setDelegated(tokenId, false);
@@ -223,11 +264,8 @@ contract EscrowIVotesAdapter is
         }
 
         numberOfDelegatedTokens[sender] -= _tokenIds.length;
-
         _checkpoint(totalBias, totalSlope, delegatee);
-
         IVotingEscrow(escrow).updateVotingPower(sender, delegatee);
-
         emit TokensUndelegated(sender, delegatee, _tokenIds);
     }
 
