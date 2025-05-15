@@ -244,6 +244,9 @@ contract EscrowIVotesAdapter is
         for (uint256 i = 0; i < _tokenIds.length; i++) {
             uint256 tokenId = _tokenIds[i];
 
+            // This can occur if it's called by redelegate.
+            if(tokenId == 0) continue;
+
             if (validate) {
                 if (!IVotingEscrow(escrow).isApprovedOrOwner(sender, tokenId)) {
                     revert NotApprovedOrOwner();
