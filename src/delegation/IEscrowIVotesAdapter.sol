@@ -24,6 +24,7 @@ interface IEscrowIVotesAdapterErrorsAndEvents {
     error TokenAlreadyDelegated(uint256 tokenId);
     error TokenNotDelegated(uint256 tokenId);
     error VotingPowerZero(uint256 tokenId);
+    error TokenListEmpty();
 }
 
 interface IDelegateMoveVoteRecipient {

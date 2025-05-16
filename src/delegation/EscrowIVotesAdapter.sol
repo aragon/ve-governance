@@ -57,7 +57,7 @@ contract EscrowIVotesAdapter is
     mapping(address => uint256) public latestPointIndex;
 
     mapping(address => uint256) public numberOfDelegatedTokens;
-    mapping(address => bool) public autoDelegationDisabled;
+    mapping(address => bool) private autoDelegationDisabled_;
     mapping(uint256 => uint256) private delegatedBitmap;
 
     uint256 private maxTime;
@@ -98,12 +98,12 @@ contract EscrowIVotesAdapter is
     function setAutoDelegationDisabled(bool _disabled) external {
         address sender = _msgSender();
 
-        autoDelegationDisabled[sender] = _disabled;
+        autoDelegationDisabled_[sender] = _disabled;
         emit AutoDelegationSet(sender, _disabled);
     }
 
     /// @dev Internal helper function to set token delegated to true by using bitmap operations.
-    function _setDelegated(uint256 tokenId, bool value) internal {
+    function _setDelegated(uint256 tokenId, bool value) internal virtual {
         uint256 bucket = tokenId >> 8; // tokenId / 256
         uint256 mask = 1 << (tokenId & 0xff); // tokenId % 256
 
@@ -115,7 +115,7 @@ contract EscrowIVotesAdapter is
     }
 
     /// @dev Whether token is currently delegated or not.
-    function tokenIsDelegated(uint256 tokenId) public view returns (bool) {
+    function tokenIsDelegated(uint256 tokenId) public view virtual returns (bool) {
         uint256 bucket = tokenId >> 8;
         uint256 mask = 1 << (tokenId & 0xff);
         return (delegatedBitmap[bucket] & mask) != 0;
@@ -126,8 +126,8 @@ contract EscrowIVotesAdapter is
     //////////////////////////////////////////////////////////////*/
 
     /// @param _delegatee The new delegatee address.
-    /// @dev If auto delegation is not disabled, it will delegate all token ids 
-    ///      that sender currently has. Note that sender must first undelegate 
+    /// @dev If auto delegation is not disabled, it will delegate all token ids
+    ///      that sender currently has. Note that sender must first undelegate
     ///      all token ids before calling this function.
     function delegate(address _delegatee) public whenNotPaused {
         address sender = _msgSender();
@@ -139,17 +139,19 @@ contract EscrowIVotesAdapter is
         address currentDelegatee = delegates(sender);
         delegatees_[sender] = _delegatee;
 
-        if (!autoDelegationDisabled[sender] && _delegatee != address(0)) {
+        if (!autoDelegationDisabled(sender) && _delegatee != address(0)) {
             uint256[] memory tokenIds = VotingEscrow(escrow).ownedTokens(sender);
-            _delegate(sender, _delegatee, tokenIds, false);
+            if (tokenIds.length != 0) {
+                _delegate(sender, _delegatee, tokenIds, false);
+            }
         }
 
         emit DelegateChanged(sender, currentDelegatee, _delegatee);
     }
 
     /// @dev Note that `_tokenIds` must be either owned or approved to sender and tokens must not be delegated yet.
-    /// @param _tokenIds The array of token ids that will be delegated to the current delegatee of `sender`. 
-    function delegate(uint256[] memory _tokenIds) public whenNotPaused {
+    /// @param _tokenIds The array of token ids that will be delegated to the current delegatee of `sender`.
+    function delegate(uint256[] memory _tokenIds) public virtual whenNotPaused {
         address sender = _msgSender();
         address delegatee = delegates(sender);
 
@@ -157,13 +159,17 @@ contract EscrowIVotesAdapter is
             revert DelegateeNotSet();
         }
 
+        if (_tokenIds.length == 0) {
+            revert TokenListEmpty();
+        }
+
         _delegate(sender, delegatee, _tokenIds, true);
     }
-    
-    /// @dev Undelegates currently delegated tokens from the current delegatee 
+
+    /// @dev Undelegates currently delegated tokens from the current delegatee
     ///      and delegates all owned tokens by the sender to the new delegatee.
     /// @param _delegatee The new delegatee address.
-    function redelegate(address _delegatee) public whenNotPaused {
+    function redelegate(address _delegatee) public virtual whenNotPaused {
         address sender = _msgSender();
         address currentDelegatee = delegates(sender);
 
@@ -171,19 +177,21 @@ contract EscrowIVotesAdapter is
 
         if (currentDelegatee != address(0)) {
             uint256[] memory delegatedTokenIds = getDelegatedTokens(tokenIds);
-            _undelegate(sender, currentDelegatee, delegatedTokenIds, false);
+            if (delegatedTokenIds.length != 0) {
+                _undelegate(sender, currentDelegatee, delegatedTokenIds, false);
+            }
         }
 
         delegatees_[sender] = _delegatee;
 
-        if (!autoDelegationDisabled[sender] && _delegatee != address(0)) {
+        if (!autoDelegationDisabled(sender) && _delegatee != address(0) && tokenIds.length != 0) {
             _delegate(sender, _delegatee, tokenIds, false);
         }
     }
 
     /// @dev Note that the token ids must be currently delegated and must be owned/approved to the sender.
     /// @param _tokenIds The array of token ids that will be undelegated from the current delegatee.
-    function undelegate(uint256[] memory _tokenIds) public whenNotPaused {
+    function undelegate(uint256[] memory _tokenIds) public virtual whenNotPaused {
         address sender = _msgSender();
         address delegatee = delegates(sender);
 
@@ -195,11 +203,12 @@ contract EscrowIVotesAdapter is
     }
 
     /// @notice private helper function to delegate token ids to the `_delegatee`.
-    /// @dev It updates checkpoints, sets token delegation to true and 
+    /// @dev It updates checkpoints, sets token delegation to true and
     ///      updates voting power on the address gauge voter.
     /// @param _sender The address that owns `_tokenIds` and delegates.
     /// @param _delegatee The new delegatee address to which `_tokenIds` will be delegated.
-    /// @param _tokenIds The array of token ids.
+    /// @param _tokenIds The array of token ids. Note that it's caller's responsibility to not 
+    ///                  call this function for empty list of `_tokenIds`.
     /// @param _validate The boolean flag of whether to validate that token ids are owned by the `_sender` or not.
     ///                  In some cases, validation is not needed as caller already knows that there's no need.
     function _delegate(
@@ -245,11 +254,12 @@ contract EscrowIVotesAdapter is
     }
 
     /// @notice private helper function to undelegate token ids to the `_delegatee`.
-    /// @dev It updates checkpoints, sets token delegation to false and 
+    /// @dev It updates checkpoints, sets token delegation to false and
     ///      updates voting power on the address gauge voter.
     /// @param _sender The address that owns `_tokenIds` and undelegates.
     /// @param _delegatee The delegatee address from which `_tokenIds` will be undelegated.
-    /// @param _tokenIds The array of token ids.
+    /// @param _tokenIds The array of token ids. Note that it's caller's responsibility to not 
+    ///                  call this function for empty list of `_tokenIds`.
     /// @param _validate The boolean flag of whether to validate that token ids are owned by the `_sender` or not.
     ///                  In some cases, validation is not needed as caller already knows that there's no need.
     function _undelegate(
@@ -290,7 +300,9 @@ contract EscrowIVotesAdapter is
     }
 
     /// @notice It returns which tokens are currently delegated from the list of `_tokenIds`.
-    function getDelegatedTokens(uint256[] memory _tokenIds) public view returns (uint256[] memory) {
+    function getDelegatedTokens(
+        uint256[] memory _tokenIds
+    ) public view virtual returns (uint256[] memory) {
         uint256[] memory tmp = new uint256[](_tokenIds.length);
         uint256 count;
 
@@ -307,6 +319,13 @@ contract EscrowIVotesAdapter is
         }
 
         return delegatedTokenIds;
+    }
+
+    /// @notice Whether an `account` has disabled auto delegation or not.
+    /// @param _account The address on which auto delegation is checked for.
+    /// @return True if auto delegation is disabled, otherwise false.
+    function autoDelegationDisabled(address _account) public view virtual returns (bool) {
+        return autoDelegationDisabled_[_account];
     }
 
     /*//////////////////////////////////////////////////////////////

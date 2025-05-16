@@ -78,6 +78,13 @@ contract TestDelegate is Base {
         dg.delegate(singleId);
     }
 
+    function testRevert_IfTokenListEmpty() public {
+        dg.delegate(alice);
+
+        vm.expectRevert(TokenListEmpty.selector);
+        dg.delegate(new uint256[](0));
+    }
+
     function testRevert_IfVotingPowerZeroAtLeastForOneToken() public {
         dg.delegate(alice);
 
