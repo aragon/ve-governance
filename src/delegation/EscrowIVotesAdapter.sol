@@ -199,6 +199,10 @@ contract EscrowIVotesAdapter is
             revert DelegateeNotSet();
         }
 
+        if (_tokenIds.length == 0) {
+            revert TokenListEmpty();
+        }
+
         _undelegate(sender, delegatee, _tokenIds, true);
     }
 
