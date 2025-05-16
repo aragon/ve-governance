@@ -25,8 +25,9 @@ import {
     VotingEscrow,
     Curve as LinearIncreasingCurve,
     ExitQueue,
-    SimpleGaugeVoter,
-    SimpleGaugeVoterSetup,
+    GaugeVoter as AddressGaugeVoter,
+    GaugeVoterSetup as AddressGaugeVoterSetup,
+    IGaugeVote as IAddressGaugeVote,
     IVotingEscrowEventsStorageErrorsEvents,
     IWhitelistErrors,
     IWhitelistEvents,
@@ -60,7 +61,7 @@ contract EscrowBase is
     Lock nftLock;
     VotingEscrow escrow;
     LinearIncreasingCurve curve;
-    SimpleGaugeVoter voter;
+    AddressGaugeVoter voter;
     ExitQueue queue;
     Clock clock;
     EscrowIVotesAdapter ivotesAdapter;
@@ -102,7 +103,7 @@ contract EscrowBase is
         nftLock = _deployLock(address(escrow), name, symbol, address(dao));
         ivotesAdapter = _deployEscrowIVotesAdapter(address(dao), address(escrow), address(clock));
 
-        super.initialize(curve.maxTime(), clock.checkpointInterval());
+        FixedPointBase.initialize(curve.maxTime(), clock.checkpointInterval());
 
         // to be added as proxies
         voter = _deployVoter(
@@ -175,6 +176,11 @@ contract EscrowBase is
         token.approve(address(escrow), 10000000e18);
     }
 
+    function mintAndApproveEscrow(uint256 _amount) internal {
+        token.mint(address(this), _amount);
+        token.approve(address(escrow), _amount);
+    }
+
     function assertTokenPoint(
         uint256 _tokenId,
         uint256 _expectedLatestIndex,
@@ -198,6 +204,83 @@ contract EscrowBase is
 
     function assertVotingPower(uint256 _tokenId, uint256 _t, int256 _amountFP) internal view {
         assertEq(curve.votingPowerAt(_tokenId, _t), uint256(_amountFP / 1e18));
+    }
+
+    // Useful to bound the times of when locks get created.
+    // We use 254 weeks as a maximum duration between the previous 
+    // lock created and current one. See `LinearIncreasingCurve`'s 
+    // `_checkpoint` for more details(loop).
+    // NOTE that we use +1 seconds to ensure that time never gets 
+    // to be exact checkpoint interval as it reverts if so. 
+    // See `_checkpoint` in curve.
+    function boundLockCreationFuzzTimes(
+        uint256 _t1,
+        uint256 _t2,
+        uint256 _t3
+    ) internal view returns(uint48, uint48, uint48) {
+        _t1 = avoidWeekBoundary(bound(_t1, 1, 254 weeks + 1 seconds));
+        _t2 = avoidWeekBoundary(bound(_t2, _t1, _t1 + 254 weeks + 1 seconds));
+        _t3 = avoidWeekBoundary(bound(_t3, _t2, _t2 + 254 weeks + 1 seconds));
+
+        return (uint48(_t1), uint48(_t2), uint48(_t3));
+    }
+
+    // Useful to bound the times of when locks get created.
+    // We use 254 weeks as a maximum duration between the previous 
+    // lock created and current one. See `LinearIncreasingCurve`'s 
+    // `_checkpoint` for more details(loop).
+    // NOTE that we use +1 seconds to ensure that time never gets 
+    // to be exact checkpoint interval as it reverts if so. 
+    // See `_checkpoint` in curve.
+    function boundLockCreationFuzzTimes(
+        uint256 _t1,
+        uint256 _t2
+    ) internal view returns(uint48, uint48) {
+        _t1 = avoidWeekBoundary(bound(_t1, 1, 254 weeks + 1 seconds));
+        _t2 = avoidWeekBoundary(bound(_t2, _t1, _t1 + 254 weeks + 1 seconds));
+
+        return (uint48(_t1), uint48(_t2));
+    }
+
+    // Helper function to count how many records 
+    // would be stored when 3 locks get created.
+    function expectedIndex(
+        uint256 _firstLockTime,
+        uint256 _secondLockTime,
+        uint256 _mergeTime
+    ) public view returns (uint256) {
+        uint256 mergeWeekStartTs = weekStartTs(_mergeTime);
+        uint256 fromLockWeekStartTs = weekStartTs(_firstLockTime);
+
+        if (_firstLockTime == _secondLockTime && _secondLockTime == _mergeTime) {
+            return 1;
+        }
+
+        // How many weeks between the first lock and the last lock.
+        uint256 count = (_mergeTime - fromLockWeekStartTs) / 1 weeks;
+
+        // If merge time is not exactly matching the week start time, 
+        // it wouldn't be included in week count above.
+        if (_mergeTime != mergeWeekStartTs) {
+            count++;
+        }
+
+        // Add one more for the first lock, as it also 
+        // wouldn't be included in week counts.
+        count++;
+
+        // Add one more only if second lock's ts doesn't match the week ts.
+        if (_secondLockTime != _firstLockTime && _secondLockTime != _mergeTime) {
+            if ((_secondLockTime % 1 weeks) != 0) {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    function avoidWeekBoundary(uint256 _t) internal view returns (uint256) {
+        return _t % checkpointInterval == 0 ? _t + 1 : _t;
     }
 
     // The default sender to contract calls ends up a test contract itself.
@@ -295,14 +378,14 @@ contract EscrowBase is
         bool _reset,
         address _clock,
         address _ivotesAdapter
-    ) public returns (SimpleGaugeVoter) {
-        SimpleGaugeVoter impl = new SimpleGaugeVoter();
+    ) public returns (AddressGaugeVoter) {
+        AddressGaugeVoter impl = new AddressGaugeVoter();
 
         bytes memory initCalldata = abi.encodeCall(
-            SimpleGaugeVoter.initialize,
+            AddressGaugeVoter.initialize,
             (_dao, _escrow, _reset, _clock, _ivotesAdapter, true)
         );
-        return SimpleGaugeVoter(address(impl).deployUUPSProxy(initCalldata));
+        return AddressGaugeVoter(address(impl).deployUUPSProxy(initCalldata));
     }
 
     function _deployExitQueue(

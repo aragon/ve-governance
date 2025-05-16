@@ -56,6 +56,10 @@ contract DeployGaugesV1_3_0 is Script {
 
         // Create the DAO
         GaugesDaoFactory factory = new GaugesDaoFactory(parameters);
+        require(
+            keccak256(abi.encode(factory.version())) == keccak256(abi.encode("1.3.0")),
+            "Version mismatch"
+        );
         factory.deployOnce();
 
         // Done
@@ -213,6 +217,10 @@ contract DeployGaugesV1_3_0 is Script {
             );
             console.log("  Clock:", address(deployment.gaugeVoterPluginSets[i].clock));
             console.log("  NFT Lock:", address(deployment.gaugeVoterPluginSets[i].nftLock));
+            console.log(
+                "  Escrow IVotes Adapter:",
+                address(deployment.gaugeVoterPluginSets[i].delegationAdapter)
+            );
             console.log("");
 
             unchecked {

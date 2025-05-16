@@ -22,6 +22,8 @@ import {
 } from "../../../versions.sol";
 
 contract TestCreateLock is IEscrowCurveTokenStorage, EscrowBase {
+    error CheckpointOnDepositIntervalNotAllowed();
+
     function setUp() public override {
         super.setUp();
 
@@ -70,6 +72,10 @@ contract TestCreateLock is IEscrowCurveTokenStorage, EscrowBase {
         vm.assume(_value > 0);
         vm.assume(_depositor != address(0) && address(_depositor).code.length == 0);
         vm.assume(_time > 0);
+
+        // checkpoint function reverts if it's called 
+        // at exact same time as week boundary. So avoid.
+        _time = uint32(avoidWeekBoundary(_time));
 
         // set the min deposit to _value
         escrow.setMinDeposit(_value);
@@ -222,7 +228,8 @@ contract TestCreateLock is IEscrowCurveTokenStorage, EscrowBase {
         // shane deposits just before the next deposit date
         address shane = address(0x1);
 
-        // matt deposits ON the next deposit date
+        // matt deposits ON the next deposit date 
+        // which should cause a revert.
         address matt = address(0x2);
 
         // phil deposits just after the next deposit date
@@ -248,11 +255,13 @@ contract TestCreateLock is IEscrowCurveTokenStorage, EscrowBase {
         }
         vm.stopPrank();
 
-        // matt deposits ON the next deposit date
+        // matt deposits ON the next deposit date and should revert.
         vm.warp(expectedNextDeposit);
         vm.startPrank(matt);
         {
             token.approve(address(escrow), 1 ether);
+
+            vm.expectRevert(CheckpointOnDepositIntervalNotAllowed.selector);
             escrow.createLock(1 ether);
         }
         vm.stopPrank();
@@ -273,17 +282,11 @@ contract TestCreateLock is IEscrowCurveTokenStorage, EscrowBase {
             0,
             "shane's lock should snap to the upcoming deposit date"
         );
-        // Matt made a deposit exactly at the week's start date
-        assertEq(
-            escrow.locked(2).start,
-            expectedNextDeposit,
-            "matt's lock should snap to the next deposit date"
-        );
 
         // even though phil made a deposit after the week already started,
         // it still should snap to the week's start.
         assertEq(
-            escrow.locked(3).start,
+            escrow.locked(2).start,
             expectedNextDeposit,
             "phil's lock should snap to the next deposit date"
         );

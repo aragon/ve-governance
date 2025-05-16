@@ -80,7 +80,7 @@ contract LockV1_2_0 is ILock, ERC721Enumerable, UUPSUpgradeable, DaoAuthorizable
                               Transfers
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Transfers disabled by default, only whitelisted addresses can receive transfers
+    /// @notice Transfers disabled by default, whitelisted addresses are allowed to be involved in transfers
     function setWhitelisted(address _account, bool _isWhitelisted) external auth(LOCK_ADMIN_ROLE) {
         if (_account == escrow) revert ForbiddenWhitelistAddress();
         whitelisted[_account] = _isWhitelisted;
@@ -96,36 +96,15 @@ contract LockV1_2_0 is ILock, ERC721Enumerable, UUPSUpgradeable, DaoAuthorizable
     /// @dev Override the transfer to check if the recipient is whitelisted
     /// This avoids needing to check for mint/burn but is less idomatic than beforeTokenTransfer
     function _transfer(address _from, address _to, uint256 _tokenId) internal override {
-        if (!whitelisted[WHITELIST_ANY_ADDRESS] && !whitelisted[_to]) {
+        if (whitelisted[WHITELIST_ANY_ADDRESS] || whitelisted[_to] || whitelisted[_from]) {
+            super._transfer(_from, _to, _tokenId);
+        } else {
             revert NotWhitelisted();
         }
-
-        super._transfer(_from, _to, _tokenId);
-    }
-
-    /// @dev Hook that is called before any token transfer - including mint/burn.
-    function _beforeTokenTransfer(
-        address _from,
-        address _to,
-        uint256 _tokenId,
-        uint256 _data
-    ) internal virtual override {
-        // Calls ERC721Enumerable's `_beforeTokenTransfer`
-        super._beforeTokenTransfer(_from, _to, _tokenId, _data);
-
-        // `burn` can only be called by escrow which only calls
-        // it upon `beginWithdrawal/merge/split`. 
-        // in `merge/split`, we manually call `moveDelegateVotes`.
-        // in `beginWithdrawal`, `transfer` occurs which already calls this hook.
-        // This means that at the time that `burn` is called, `moveDelegateVotes`
-        // would have already been called, hence there's no need to call it again,
-        // hence we skip if that's the case.
         
-        if (_to == address(0)) {
-            return;
+        if(_from != _to) {
+            IVotingEscrow(escrow).moveDelegateVotes(_from, _to, _tokenId);
         }
-
-        IVotingEscrow(escrow).moveDelegateVotes(_from, _to, _tokenId);
     }
 
     /*//////////////////////////////////////////////////////////////

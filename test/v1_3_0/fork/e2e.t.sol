@@ -514,6 +514,7 @@ contract TestE2EV1_3_0 is
     }
 
     function testLifeCycle() public {
+        vm.warp(1);
         epochStartTime = weekStartTs(block.timestamp);
 
         // first we give the guys each some tokens of the underlying
@@ -700,7 +701,7 @@ contract TestE2EV1_3_0 is
         }
         // we then fast forward 1 week and check that his voting power has increased as expected with the new lock
         {
-            goToEpochStartPlus(5 weeks);
+            goToEpochStartPlus(5 weeks + 1 seconds);
 
             // calculate elapsed time since we made the first lock
             uint timeElapsedSinceFirstLock = block.timestamp -
@@ -853,7 +854,6 @@ contract TestE2EV1_3_0 is
 
                 vm.startPrank(alice);
                 {
-                    ivotesAdapter.setAutoDelegation(true);
                     ivotesAdapter.delegate(alice);
                     voter.vote(votes);
                 }
@@ -865,7 +865,6 @@ contract TestE2EV1_3_0 is
 
                 vm.startPrank(bob);
                 {
-                    ivotesAdapter.setAutoDelegation(true);
                     ivotesAdapter.delegate(bob);
                     voter.vote(votes);
                 }

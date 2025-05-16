@@ -213,6 +213,10 @@ contract DeployGaugesV1_2_0 is Script {
             );
             console.log("  Clock:", address(deployment.gaugeVoterPluginSets[i].clock));
             console.log("  NFT Lock:", address(deployment.gaugeVoterPluginSets[i].nftLock));
+            console.log(
+                "  Escrow IVotes Adapter:",
+                address(deployment.gaugeVoterPluginSets[i].delegationAdapter)
+            );
             console.log("");
 
             unchecked {

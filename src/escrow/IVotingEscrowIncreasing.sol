@@ -15,6 +15,8 @@ interface ILockedBalanceIncreasing {
 interface IVotingEscrowCoreErrors {
     error NoLockFound();
     error NotOwner();
+    error NoOwner();
+    error NotSameOwner();
     error NonExistentToken();
     error NotApprovedOrOwner();
     error ZeroAddress();

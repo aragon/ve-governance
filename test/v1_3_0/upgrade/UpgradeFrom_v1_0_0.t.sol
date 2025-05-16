@@ -44,7 +44,8 @@ import {
     EscrowIVotesAdapter,
     Lock as LockV1_2_0,
     GaugeVoter as AddressGaugeVoter,
-    IGaugeVote as IAddressGaugeVote
+    IGaugeVote as IAddressGaugeVote,
+    IVotingEscrowCoreErrors
 } from "test/v1_3_0/versions.sol";
 import {
     UpgradeGaugesFactoryV1_0_0__V1_3_0 as UpgradeFactory,
@@ -123,7 +124,7 @@ contract RegressionV1_0_0__to__V1_3_0 is Test, IGaugeVote, FixedPointBase {
         multisig = Multisig(deployment.multisigPlugin);
         token = MockERC20(escrow.token());
 
-        super.initialize(
+        FixedPointBase.initialize(
             clock.epochDuration() * CurveConstantLib.MAX_EPOCHS,
             clock.checkpointInterval()
         );
@@ -165,7 +166,7 @@ contract RegressionV1_0_0__to__V1_3_0 is Test, IGaugeVote, FixedPointBase {
         vm.stopPrank();
 
         // wait a bit
-        vm.warp(4 weeks);
+        vm.warp(4 weeks + 1 seconds);
 
         vm.startPrank(DAVID_ADDRESS);
         {
@@ -238,7 +239,6 @@ contract RegressionV1_0_0__to__V1_3_0 is Test, IGaugeVote, FixedPointBase {
         vm.warp(6 weeks + 3601);
         vm.startPrank(ALICE_ADDRESS);
         {
-            ivotesAdapter.setAutoDelegation(true);
             ivotesAdapter.delegate(ALICE_ADDRESS);
 
             IAddressGaugeVote.GaugeVote[] memory vote = new IAddressGaugeVote.GaugeVote[](1);
@@ -297,14 +297,29 @@ contract RegressionV1_0_0__to__V1_3_0 is Test, IGaugeVote, FixedPointBase {
         _mockApprovedOwner(address(this), bobToken);
 
         escrowUpgrade = VotingEscrowV1_2_0(address(escrow));
+        lockUpgrade = LockV1_2_0(address(lock));
 
         // merge tokens/locks that were created before the upgrade.
+        // Note that we created locks(tokens) to different addresses.
+        // It must be owned by the same address to do the merge.
+        vm.expectRevert(IVotingEscrowCoreErrors.NotSameOwner.selector);
         escrowUpgrade.merge(aliceToken, bobToken);
 
+        // Enable transfers of nfts, so alice can transfer it to bob
+        // which would cause both tokens to have the same owner.
+        // hence we can do the merge.
+        vm.prank(address(dao));
+        lockUpgrade.enableTransfers();
+
+        vm.prank(ALICE_ADDRESS);
+        lockUpgrade.transferFrom(ALICE_ADDRESS, BOB_ADDRESS, aliceToken);
+
+        // we can do merge now, since both tokens have same owner(bob).
+        escrowUpgrade.merge(aliceToken, bobToken);
+        
         assertEq(escrowUpgrade.votingPower(aliceToken), 0);
 
         uint256 bobTokenVPAfterMerge = escrowUpgrade.votingPower(bobToken);
-
         uint256 start = escrowUpgrade.locked(bobToken).start;
         uint256 expectedVPAfterMerge = bias(1_000 ether, block.timestamp - start) +
             bias(1_000 ether, block.timestamp - start);
@@ -312,7 +327,6 @@ contract RegressionV1_0_0__to__V1_3_0 is Test, IGaugeVote, FixedPointBase {
         assertEq(bobTokenVPAfterMerge, expectedVPAfterMerge);
 
         vm.startPrank(BOB_ADDRESS);
-        ivotesAdapter.setAutoDelegation(true);
         ivotesAdapter.delegate(BOB_ADDRESS);
         vm.stopPrank();
 
@@ -335,10 +349,10 @@ contract RegressionV1_0_0__to__V1_3_0 is Test, IGaugeVote, FixedPointBase {
 
         // split the lock that were created before the upgrade.
         vm.prank(ALICE_ADDRESS);
-        (uint256 id1, uint256 id2) = escrowUpgrade.split(aliceToken, 50 ether);
+        uint256 newTokenId = escrowUpgrade.split(aliceToken, 50 ether);
 
-        uint256 vpAfterUpgradeAndSplit = escrowUpgrade.votingPower(id1) +
-            escrowUpgrade.votingPower(id2);
+        uint256 vpAfterUpgradeAndSplit = escrowUpgrade.votingPower(aliceToken) +
+            escrowUpgrade.votingPower(newTokenId);
 
         assertEq(vpBeforeUpgrade, vpAfterUpgradeAndSplit);
     }

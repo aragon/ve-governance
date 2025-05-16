@@ -11,14 +11,14 @@ contract TestDelegate is Base {
     event DelegateChanged(address indexed from, address indexed to, address indexed delegate);
 
     modifier AutoDelegationEnabled() {
-        dg.setAutoDelegation(true);
+        dg.setAutoDelegationDisabled(false);
         _;
     }
 
     /*//////////////////////////////////////////////////////////////
                       IVotes Delegate
     //////////////////////////////////////////////////////////////*/
-    
+
     function test_Sets_Delegatee_Without_Delegating_Tokens() public {
         vm.expectEmit();
         emit DelegateChanged(sender, address(0), alice);
@@ -71,11 +71,31 @@ contract TestDelegate is Base {
         vm.expectRevert("Pausable: paused");
         dg.delegate(getIds(1));
     }
-    
+
     function testRevert_IfNoDelegateeIsSet() public {
         vm.expectRevert(DelegateeNotSet.selector);
 
         dg.delegate(singleId);
+    }
+
+    function testRevert_IfTokenListEmpty() public {
+        dg.delegate(alice);
+
+        vm.expectRevert(TokenListEmpty.selector);
+        dg.delegate(new uint256[](0));
+    }
+
+    function testRevert_IfVotingPowerZeroAtLeastForOneToken() public {
+        dg.delegate(alice);
+
+        _mockLocked(multiIds[0], 10, weekStartTs(block.timestamp));
+        _mockLocked(multiIds[1], 10, weekStartTs(block.timestamp));
+
+        _mockVotingPower(multiIds[0], 1);
+        _mockVotingPower(multiIds[1], 0);
+
+        vm.expectRevert(abi.encodeWithSelector(VotingPowerZero.selector, multiIds[1]));
+        dg.delegate(multiIds);
     }
 
     function testRevert_IfNotApprovedOrOwner() public {
@@ -121,6 +141,7 @@ contract TestDelegate is Base {
         assertEq(dg.numberOfDelegatedTokens(sender), multiIds.length);
 
         _mockLocked(3, 10, start);
+        _mockVotingPower(3, 1);
 
         dg.delegate(getIds(3));
 

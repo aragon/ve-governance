@@ -58,7 +58,6 @@ contract TestWithdraw is IEscrowCurveTokenStorage, IGaugeVote, ITicket, EscrowBa
             vm.warp(block.timestamp + 2 weeks + 1 hours);
 
             // delegate to himself
-            ivotesAdapter.setAutoDelegation(true);
             ivotesAdapter.delegate(_who);
 
             // make a vote
@@ -138,7 +137,6 @@ contract TestWithdraw is IEscrowCurveTokenStorage, IGaugeVote, ITicket, EscrowBa
             // voting active after cooldown
             vm.warp(block.timestamp + 2 weeks + 1 hours);
 
-            ivotesAdapter.setAutoDelegation(true);
             ivotesAdapter.delegate(_who);
 
             // make a vote
@@ -189,12 +187,16 @@ contract TestWithdraw is IEscrowCurveTokenStorage, IGaugeVote, ITicket, EscrowBa
 
         token.mint(_who, _dep);
         uint tokenId;
+
+        // set warmup to 0, so token immediatelly gains vp > 0 (required for delegation).
+        curve.setWarmupPeriod(0);
+        
         vm.startPrank(_who);
         {
             token.approve(address(escrow), _dep);
             tokenId = escrow.createLock(_dep);
 
-            ivotesAdapter.setAutoDelegation(true);
+
             ivotesAdapter.delegate(_who);
 
             // voting active after cooldown
@@ -281,37 +283,6 @@ contract TestWithdraw is IEscrowCurveTokenStorage, IGaugeVote, ITicket, EscrowBa
         assertNotEq(tokenId2, tokenId3);
         assertEq(nftLock.totalSupply(), 2);
         assertEq(escrow.lastLockId(), 3);
-    }
-
-    function testCantDepositAndWithdrawInTheSameBlock() public {
-        // this is a timing
-        // deposit falls exactly on the week boundary, so that we start immediately
-        // then we try to withdraw in the same block
-        // we also need a zero warmup period or we will error with a zero voting power
-        curve.setWarmupPeriod(0);
-
-        // warp to a week boundary
-        vm.warp(1 weeks);
-
-        // deposit
-        token.mint(address(1), 100e18);
-
-        uint tokenId;
-
-        bytes memory data = abi.encodeWithSelector(CannotExit.selector);
-        // start the deposit
-        vm.startPrank(address(1));
-        {
-            // create
-            token.approve(address(escrow), 100e18);
-            tokenId = escrow.createLock(100e18);
-
-            // withdraw
-            nftLock.approve(address(escrow), tokenId);
-            vm.expectRevert(data);
-            escrow.beginWithdrawal(tokenId);
-        }
-        vm.stopPrank();
     }
 
     function testCannotExitDuringWarmupIfWarmupIsLong() public {

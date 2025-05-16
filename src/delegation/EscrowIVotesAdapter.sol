@@ -14,7 +14,13 @@ import {
     PausableUpgradeable as Pausable
 } from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
+import {
+    DaoAuthorizableUpgradeable as DaoAuthorizable
+} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
+
 import {
     IVotingEscrowIncreasingV1_2_0 as IVotingEscrow
 } from "@escrow/IVotingEscrowIncreasing_v1_2_0.sol";
@@ -22,8 +28,7 @@ import {VotingEscrowV1_2_0 as VotingEscrow} from "@escrow/VotingEscrowIncreasing
 
 import {IClockUser, IClockV1_2_0 as IClock} from "@clock/IClock_v1_2_0.sol";
 
-import {PluginUUPSUpgradeable} from "@aragon/osx/core/plugin/PluginUUPSUpgradeable.sol";
-import {IEscrowIVotesAdapter} from "./IEscrowIVotesAdapter.sol";
+import {IEscrowIVotesAdapter, IDelegateMoveVoteRecipient} from "./IEscrowIVotesAdapter.sol";
 import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 import {SignedFixedPointMath} from "@libs/SignedFixedPointMathLib.sol";
 
@@ -32,7 +37,8 @@ contract EscrowIVotesAdapter is
     ReentrancyGuard,
     IEscrowIVotesAdapter,
     Pausable,
-    PluginUUPSUpgradeable
+    DaoAuthorizable,
+    UUPSUpgradeable
 {
     using SafeCastUpgradeable for uint256;
 
@@ -50,9 +56,9 @@ contract EscrowIVotesAdapter is
     mapping(address => address) private delegatees_;
     mapping(address => uint256) public latestPointIndex;
 
-    mapping(uint256 => bool) public tokenIsDelegated;
-    mapping(address => uint) public numberOfDelegatedTokens;
-    mapping(address => bool) public autoDelegationEnabled;
+    mapping(address => uint256) public numberOfDelegatedTokens;
+    mapping(address => bool) private autoDelegationDisabled_;
+    mapping(uint256 => uint256) private delegatedBitmap;
 
     uint256 private maxTime;
 
@@ -64,13 +70,18 @@ contract EscrowIVotesAdapter is
         _disableInitializers();
     }
 
-    function initialize(address _dao, address _escrow, address _clock, bool _startPaused) external initializer {
-        __PluginUUPSUpgradeable_init(IDAO(_dao));
+    function initialize(
+        address _dao,
+        address _escrow,
+        address _clock,
+        bool _startPaused
+    ) external initializer {
+        __DaoAuthorizableUpgradeable_init(IDAO(_dao));
         __ReentrancyGuard_init();
         escrow = _escrow;
         clock = _clock;
 
-        if(_startPaused) _pause();
+        if (_startPaused) _pause();
 
         maxTime = IClock(clock).epochDuration() * CurveConstantLib.MAX_EPOCHS;
     }
@@ -83,13 +94,41 @@ contract EscrowIVotesAdapter is
         _unpause();
     }
 
-    function setAutoDelegation(bool _enabled) external {
+    /// @dev Note that by default, auto delegation of tokenIds is turned on.
+    function setAutoDelegationDisabled(bool _disabled) external {
         address sender = _msgSender();
 
-        autoDelegationEnabled[sender] = _enabled;
-        emit AutoDelegationSet(sender, _enabled);
+        autoDelegationDisabled_[sender] = _disabled;
+        emit AutoDelegationSet(sender, _disabled);
     }
 
+    /// @dev Internal helper function to set token delegated to true by using bitmap operations.
+    function _setDelegated(uint256 tokenId, bool value) internal virtual {
+        uint256 bucket = tokenId >> 8; // tokenId / 256
+        uint256 mask = 1 << (tokenId & 0xff); // tokenId % 256
+
+        if (value) {
+            delegatedBitmap[bucket] |= mask;
+        } else {
+            delegatedBitmap[bucket] &= ~mask;
+        }
+    }
+
+    /// @dev Whether token is currently delegated or not.
+    function tokenIsDelegated(uint256 tokenId) public view virtual returns (bool) {
+        uint256 bucket = tokenId >> 8;
+        uint256 mask = 1 << (tokenId & 0xff);
+        return (delegatedBitmap[bucket] & mask) != 0;
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        Delegate Functions
+    //////////////////////////////////////////////////////////////*/
+
+    /// @param _delegatee The new delegatee address.
+    /// @dev If auto delegation is not disabled, it will delegate all token ids
+    ///      that sender currently has. Note that sender must first undelegate
+    ///      all token ids before calling this function.
     function delegate(address _delegatee) public whenNotPaused {
         address sender = _msgSender();
 
@@ -97,19 +136,65 @@ contract EscrowIVotesAdapter is
             revert DelegationNotAllowed();
         }
 
-        address oldDelegatee = delegates(sender);
+        address currentDelegatee = delegates(sender);
+        delegatees_[sender] = _delegatee;
+
+        if (!autoDelegationDisabled(sender) && _delegatee != address(0)) {
+            uint256[] memory tokenIds = VotingEscrow(escrow).ownedTokens(sender);
+            if (tokenIds.length != 0) {
+                _delegate(sender, _delegatee, tokenIds, false);
+            }
+        }
+
+        emit DelegateChanged(sender, currentDelegatee, _delegatee);
+    }
+
+    /// @dev Note that `_tokenIds` must be either owned or approved to sender and tokens must not be delegated yet.
+    /// @param _tokenIds The array of token ids that will be delegated to the current delegatee of `sender`.
+    function delegate(uint256[] memory _tokenIds) public virtual whenNotPaused {
+        address sender = _msgSender();
+        address delegatee = delegates(sender);
+
+        if (delegatee == address(0)) {
+            revert DelegateeNotSet();
+        }
+
+        if (_tokenIds.length == 0) {
+            revert TokenListEmpty();
+        }
+
+        _delegate(sender, delegatee, _tokenIds, true);
+    }
+
+    /// @dev Undelegates currently delegated tokens from the current delegatee
+    ///      and delegates all owned tokens by the sender to the new delegatee.
+    /// @param _delegatee The new delegatee address.
+    function redelegate(address _delegatee) public virtual whenNotPaused {
+        address sender = _msgSender();
+        address currentDelegatee = delegates(sender);
+
+        uint256[] memory tokenIds = VotingEscrow(escrow).ownedTokens(sender);
+        uint256 ownedTokenLength = tokenIds.length;
+
+        if (currentDelegatee != address(0) && ownedTokenLength != 0) {
+            uint256[] memory delegatedTokenIds = getDelegatedTokens(tokenIds);
+            if (delegatedTokenIds.length != 0) {
+                _undelegate(sender, currentDelegatee, delegatedTokenIds, false);
+            }
+        }
 
         delegatees_[sender] = _delegatee;
 
-        if (autoDelegationEnabled[sender]) {
-            uint256[] memory tokenIds = VotingEscrow(escrow).ownedTokens(sender);
-            delegate(tokenIds);
+        if (!autoDelegationDisabled(sender) && _delegatee != address(0) && ownedTokenLength != 0) {
+            _delegate(sender, _delegatee, tokenIds, false);
         }
 
-        emit DelegateChanged(sender, oldDelegatee, _delegatee);
+        emit DelegateChanged(sender, currentDelegatee, _delegatee);
     }
 
-    function delegate(uint256[] memory _tokenIds) public whenNotPaused {
+    /// @dev Note that the token ids must be currently delegated and must be owned/approved to the sender.
+    /// @param _tokenIds The array of token ids that will be undelegated from the current delegatee.
+    function undelegate(uint256[] memory _tokenIds) public virtual whenNotPaused {
         address sender = _msgSender();
         address delegatee = delegates(sender);
 
@@ -117,78 +202,150 @@ contract EscrowIVotesAdapter is
             revert DelegateeNotSet();
         }
 
-        int256 totalBias;
-        int256 totalSlope;
+        if (_tokenIds.length == 0) {
+            revert TokenListEmpty();
+        }
+
+        _undelegate(sender, delegatee, _tokenIds, true);
+    }
+
+    /// @notice private helper function to delegate token ids to the `_delegatee`.
+    /// @dev It updates checkpoints, sets token delegation to true and
+    ///      updates voting power on the address gauge voter.
+    /// @param _sender The address that owns `_tokenIds` and delegates.
+    /// @param _delegatee The new delegatee address to which `_tokenIds` will be delegated.
+    /// @param _tokenIds The array of token ids. Note that it's caller's responsibility to not
+    ///                  call this function for empty list of `_tokenIds`.
+    /// @param _validate The boolean flag of whether to validate that token ids are owned by the `_sender` or not.
+    ///                  In some cases, validation is not needed as caller already knows that there's no need.
+    function _delegate(
+        address _sender,
+        address _delegatee,
+        uint256[] memory _tokenIds,
+        bool _validate
+    ) internal virtual {
+        (int256 totalBias, int256 totalSlope) = (0, 0);
 
         for (uint256 i = 0; i < _tokenIds.length; i++) {
             uint256 tokenId = _tokenIds[i];
 
-            if (!IVotingEscrow(escrow).isApprovedOrOwner(sender, tokenId)) {
-                revert NotApprovedOrOwner();
+            if (_validate) {
+                if (!IVotingEscrow(escrow).isApprovedOrOwner(_sender, tokenId)) {
+                    revert NotApprovedOrOwner();
+                }
+
+                if (tokenIsDelegated(tokenId)) {
+                    revert TokenAlreadyDelegated(tokenId);
+                }
             }
 
-            if (tokenIsDelegated[tokenId]) {
-                revert TokenAlreadyDelegated(tokenId);
+            // Ensure that voting power is greater than 0.
+            // This can not be figured out with only `locked` data, as
+            // token might exist, but might not be warm.
+            if (IVotingEscrow(escrow).votingPower(tokenId) == 0) {
+                revert VotingPowerZero(tokenId);
             }
 
-            tokenIsDelegated[tokenId] = true;
+            _setDelegated(tokenId, true);
 
             IVotingEscrow.LockedBalance memory locked = IVotingEscrow(escrow).locked(tokenId);
-            (int256 bias, int256 slope) = _getBiasAndSlope(delegatee, locked, _positive);
+            (int256 bias, int256 slope) = _getBiasAndSlope(_delegatee, locked, _positive);
             totalBias += bias;
             totalSlope += slope;
         }
 
-        numberOfDelegatedTokens[sender] += _tokenIds.length;
-
-        _checkpoint(totalBias, totalSlope, delegatee);
-
-        IVotingEscrow(escrow).updateVotingPower(sender, delegatee);
-
-        emit TokensDelegated(sender, delegatee, _tokenIds);
+        numberOfDelegatedTokens[_sender] += _tokenIds.length;
+        _checkpoint(totalBias, totalSlope, _delegatee);
+        IVotingEscrow(escrow).updateVotingPower(_sender, _delegatee);
+        emit TokensDelegated(_sender, _delegatee, _tokenIds);
     }
 
-    function undelegate(uint256[] memory _tokenIds) public whenNotPaused {
-        address sender = _msgSender();
-        address delegatee = delegates(sender);
-
-        if (delegatee == address(0)) {
-            revert DelegateeNotSet();
-        }
-
-        int256 totalBias;
-        int256 totalSlope;
+    /// @notice private helper function to undelegate token ids to the `_delegatee`.
+    /// @dev It updates checkpoints, sets token delegation to false and
+    ///      updates voting power on the address gauge voter.
+    /// @param _sender The address that owns `_tokenIds` and undelegates.
+    /// @param _delegatee The delegatee address from which `_tokenIds` will be undelegated.
+    /// @param _tokenIds The array of token ids. Note that it's caller's responsibility to not
+    ///                  call this function for empty list of `_tokenIds`.
+    /// @param _validate The boolean flag of whether to validate that token ids are owned by the `_sender` or not.
+    ///                  In some cases, validation is not needed as caller already knows that there's no need.
+    function _undelegate(
+        address _sender,
+        address _delegatee,
+        uint256[] memory _tokenIds,
+        bool _validate
+    ) internal virtual {
+        (int256 totalBias, int256 totalSlope) = (0, 0);
 
         for (uint256 i = 0; i < _tokenIds.length; i++) {
             uint256 tokenId = _tokenIds[i];
 
-            if (!IVotingEscrow(escrow).isApprovedOrOwner(sender, tokenId)) {
-                revert NotApprovedOrOwner();
+            if (_validate) {
+                if (!IVotingEscrow(escrow).isApprovedOrOwner(_sender, tokenId)) {
+                    revert NotApprovedOrOwner();
+                }
+
+                if (!tokenIsDelegated(tokenId)) {
+                    revert TokenNotDelegated(tokenId);
+                }
             }
 
-            if (!tokenIsDelegated[tokenId]) {
-                revert TokenNotDelegated(tokenId);
-            }
-
-            tokenIsDelegated[tokenId] = false;
+            _setDelegated(tokenId, false);
 
             IVotingEscrow.LockedBalance memory locked = IVotingEscrow(escrow).locked(tokenId);
-            (int256 bias, int256 slope) = _getBiasAndSlope(delegatee, locked, _negative);
+            (int256 bias, int256 slope) = _getBiasAndSlope(_delegatee, locked, _negative);
 
             totalBias += bias;
             totalSlope += slope;
         }
 
-        numberOfDelegatedTokens[sender] -= _tokenIds.length;
+        numberOfDelegatedTokens[_sender] -= _tokenIds.length;
+        _checkpoint(totalBias, totalSlope, _delegatee);
+        IVotingEscrow(escrow).updateVotingPower(_sender, _delegatee);
 
-        _checkpoint(totalBias, totalSlope, delegatee);
-
-        IVotingEscrow(escrow).updateVotingPower(sender, delegatee);
-
-        emit TokensUndelegated(sender, delegatee, _tokenIds);
+        emit TokensUndelegated(_sender, _delegatee, _tokenIds);
     }
 
-    function moveDelegateVotes(address _from, address _to, uint256 _tokenId) external whenNotPaused {
+    /// @notice It returns which tokens are currently delegated from the list of `_tokenIds`.
+    function getDelegatedTokens(
+        uint256[] memory _tokenIds
+    ) public view virtual returns (uint256[] memory) {
+        uint256[] memory tmp = new uint256[](_tokenIds.length);
+        uint256 count;
+
+        for (uint256 i = 0; i < _tokenIds.length; ++i) {
+            if (tokenIsDelegated(_tokenIds[i])) {
+                tmp[count++] = _tokenIds[i];
+            }
+        }
+
+        // Trim to size
+        uint256[] memory delegatedTokenIds = new uint256[](count);
+        for (uint256 i = 0; i < count; ++i) {
+            delegatedTokenIds[i] = tmp[i];
+        }
+
+        return delegatedTokenIds;
+    }
+
+    /// @notice Whether an `account` has disabled auto delegation or not.
+    /// @param _account The address on which auto delegation is checked for.
+    /// @return True if auto delegation is disabled, otherwise false.
+    function autoDelegationDisabled(address _account) public view virtual returns (bool) {
+        return autoDelegationDisabled_[_account];
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        Hook Functions
+    //////////////////////////////////////////////////////////////*/
+
+    /// @inheritdoc IDelegateMoveVoteRecipient
+    function moveDelegateVotes(
+        address _from,
+        address _to,
+        uint256 _tokenId,
+        IVotingEscrow.LockedBalance memory _locked
+    ) public virtual whenNotPaused {
         if (_msgSender() != escrow) {
             revert OnlyEscrow();
         }
@@ -196,52 +353,57 @@ contract EscrowIVotesAdapter is
         address fromDelegatee = delegates(_from);
         address toDelegatee = delegates(_to);
 
-        if (_from == _to || fromDelegatee == toDelegatee) {
+        // undelegated src and recipient, no balances to update
+        if (fromDelegatee == address(0) && toDelegatee == address(0)) {
             return;
         }
-        
-        IVotingEscrow.LockedBalance memory locked = IVotingEscrow(escrow).locked(_tokenId);
 
-        // mint is occuring and the receiver already has a delegatee.
-        // Increase the delegatee's voting power.
-        if (_from == address(0) && toDelegatee != address(0)) {
-            (int256 bias, int256 slope) = _getBiasAndSlope(toDelegatee, locked, _positive);
-            _checkpoint(bias, slope, toDelegatee);
-
-            tokenIsDelegated[_tokenId] = true;
-            numberOfDelegatedTokens[_to]++;
-
-            IVotingEscrow(escrow).updateVotingPower(fromDelegatee, toDelegatee);
-
-            return;
-        }
+        uint256[] memory tokenIds = new uint256[](1);
+        tokenIds[0] = _tokenId;
 
         if (fromDelegatee != address(0)) {
-            (int256 bias, int256 slope) = _getBiasAndSlope(fromDelegatee, locked, _negative);
-            _checkpoint(bias, slope, fromDelegatee);
+            // can be skipped if there are no updates
+            if (_locked.amount != 0) {
+                (int256 bias, int256 slope) = _getBiasAndSlope(fromDelegatee, _locked, _negative);
+                _checkpoint(bias, slope, fromDelegatee);
+            }
 
             numberOfDelegatedTokens[_from]--;
+
+            emit TokensUndelegated(_from, fromDelegatee, tokenIds);
         }
 
-        if (_to == address(escrow)) {
-            // transfering to address(escrow) is the same as `beginWithdrawal`, i.e burn.
-            tokenIsDelegated[_tokenId] = false;
-        } else if (toDelegatee != address(0)) {
-            (int256 bias, int256 slope) = _getBiasAndSlope(toDelegatee, locked, _positive);
-            _checkpoint(bias, slope, toDelegatee);
+        if (toDelegatee != address(0)) {
+            // can be skipped if there are no updates
+            if (_locked.amount != 0) {
+                (int256 bias, int256 slope) = _getBiasAndSlope(toDelegatee, _locked, _positive);
+                _checkpoint(bias, slope, toDelegatee);
+            }
 
             numberOfDelegatedTokens[_to]++;
-            tokenIsDelegated[_tokenId] = true;
+            _setDelegated(_tokenId, true);
+
+            emit TokensDelegated(_to, toDelegatee, tokenIds);
+        } else {
+            // else this is new delegate voting power being burned
+            _setDelegated(_tokenId, false);
         }
 
-        IVotingEscrow(escrow).updateVotingPower(fromDelegatee, toDelegatee);
+        // If transfer is a merge or split of tokens owned by the same delegatee,
+        // we don't need to update the voting power.
+        if (fromDelegatee != toDelegatee) {
+            IVotingEscrow(escrow).updateVotingPower(fromDelegatee, toDelegatee);
+        }
     }
 
     /*//////////////////////////////////////////////////////////////
                         Checkpoint Functions
     //////////////////////////////////////////////////////////////*/
 
-    function checkpointTransition(address _delegatee, uint256 _transitionCount) external whenNotPaused {
+    function checkpointTransition(
+        address _delegatee,
+        uint256 _transitionCount
+    ) external whenNotPaused {
         _checkpoint(0, 0, _delegatee, _transitionCount);
     }
 
@@ -464,4 +626,16 @@ contract EscrowIVotesAdapter is
     function _negative(int256 _value) private pure returns (int256) {
         return -_value;
     }
+
+    /// @notice Returns the address of the implementation contract in the [proxy storage slot](https://eips.ethereum.org/EIPS/eip-1967) slot the [UUPS proxy](https://eips.ethereum.org/EIPS/eip-1822) is pointing to.
+    /// @return The address of the implementation contract.
+    function implementation() public view returns (address) {
+        return _getImplementation();
+    }
+
+    /// @notice Internal method authorizing the upgrade of the contract via the [upgradeability mechanism for UUPS proxies](https://docs.openzeppelin.com/contracts/4.x/api/proxy#UUPSUpgradeable) (see [ERC-1822](https://eips.ethereum.org/EIPS/eip-1822)).
+    function _authorizeUpgrade(address) internal virtual override auth(DELEGATION_ADMIN_ROLE) {}
+
+    /// @dev Reserved storage space to allow for layout changes in the future.
+    uint256[40] private __gap;
 }

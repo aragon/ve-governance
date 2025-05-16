@@ -23,7 +23,8 @@ test-ui :; forge test --match-path "test/**/{unit,integration}/**/*.sol"
 test-ui-100 :; forge test --match-path "test/v1_0_0/{unit,integration}/**/*.sol" 
 test-ui-110 :; forge test --match-path "test/v1_1_0/{unit,integration}/**/*.sol" 
 test-ui-120 :; forge test --match-path "test/v1_2_0/{unit,integration}/**/*.sol" 
-test-ui-130 :; forge test --match-path "test/v1_3_0/{unit,integration}/**/*.sol" 
+test-ui-130 :; forge test --match-path "test/v1_3_0/{unit,integration}/**/*.sol"
+test-ui-season :; forge test --match-path "test/season/{unit,integration}/**/*.sol"
 	
 # run unit tests
 test-unit :; forge test --match-path "test/**/unit/**/*.sol"
@@ -33,11 +34,13 @@ test-unit-100 :; forge test --match-path "test/v1_0_0/unit/**/*.sol"
 test-unit-110 :; forge test --match-path "test/v1_1_0/unit/**/*.sol" 
 test-unit-120 :; forge test --match-path "test/v1_2_0/unit/**/*.sol" 
 test-unit-130 :; forge test --match-path "test/v1_3_0/unit/**/*.sol" 
+test-unit-season :; forge test --match-path "test/season/unit/**/*.sol" 
 
 # regression and upgrade tests
 test-upgrade-110 :; forge test --match-path "test/v1_1_0/upgrade/**/*.sol" --force
 test-upgrade-120 :; forge test --match-path "test/v1_2_0/upgrade/**/*.sol" --force
 test-upgrade-130 :; forge test --match-path "test/v1_3_0/upgrade/**/*.sol" --force
+test-upgrade-season :; forge test --match-path "test/season/upgrade/**/*.sol" --force
 
 #### Fork testing ####
 
@@ -144,6 +147,23 @@ deploy-mode-sepolia :; forge script DeployGauges \
 	--verifier-url https://sepolia.explorer.mode.network/api\? \
 	-vvvvv
 
+
+
+deploy-preview-1-3-sepolia :; forge script script/deploy/DeployGauges_v1_3_0.s.sol:DeployGaugesV1_3_0 \
+	--rpc-url $(RPC_URL) \
+	-vvvvv
+
+deploy-1-3-sepolia :; forge script script/deploy/DeployGauges_v1_3_0.s.sol:DeployGaugesV1_3_0 \
+	--rpc-url $(RPC_URL) \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	--broadcast \
+	--verify \
+	--slow \
+	--etherscan-api-key $(ETHERSCAN_API_KEY) \
+	-vvvvv
+
+
+
 ### Other scripts ###
 seed-preview-mode-sepolia :; forge script SeedState \
 	--rpc-url https://sepolia.mode.network \
@@ -170,4 +190,8 @@ deploy-ethereum-sepolia :; forge script DeployGauges \
 	--verify \
 	--verifier blockscout \
 	--etherscan-api-key $(ETHERSCAN_API_KEY) \
+	-vvvvv
+
+get-deployment-values-sepolia-1-2 :; forge script script/utils/GetDeploymentValues_v1_2_0.sol:GetFactoryValuesV1_2_0 \
+	--rpc-url $(RPC_URL) \
 	-vvvvv

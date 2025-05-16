@@ -44,6 +44,12 @@ interface IEscrowCurveErrorsAndEvents {
     error InvalidTokenId();
     error InvalidCheckpoint();
     error OnlyEscrow();
+    error CheckpointOnDepositIntervalNotAllowed();
+    error InvalidLocks(
+        uint256 tokenId,
+        ILockedBalanceIncreasing.LockedBalance fromLocked,
+        ILockedBalanceIncreasing.LockedBalance newLocked
+    );
 }
 
 interface IEscrowCurveCore is IEscrowCurveErrorsAndEvents {

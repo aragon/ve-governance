@@ -6,6 +6,7 @@ import {console2 as console} from "forge-std/console2.sol";
 
 // aragon contracts
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
+import {DaoUnauthorized} from "@aragon/osx/core/utils/auth.sol";
 
 import {createTestDAO} from "@mocks/MockDAO.sol";
 import {
@@ -72,7 +73,7 @@ contract Base is
         voter = _deployVoter(address(dao), address(clock), address(escrow), address(dg));
 
         _mockApprovedOwner(true);
-        _mockPermissions();
+        // _mockPermissions();
 
         uint256 maxTime = IClock(clock).epochDuration() * CurveConstantLib.MAX_EPOCHS;
 
@@ -84,6 +85,19 @@ contract Base is
             _where: address(dg),
             _permissionId: dg.DELEGATION_ADMIN_ROLE()
         });
+
+        // almost all tests need delegation to be disabled by default 
+        // to test thoroughly the behaviour of the functions.
+        // So we set it to true.
+        dg.setAutoDelegationDisabled(true);
+
+        // delegate function calls `VotingPower` on escrow
+        // and reverts if the returned result is 0.
+        // The below tokenIds are the ones we test the function with,
+        // So we mock them to return non-zero value, so tests don't fail.
+        _mockVotingPower(singleId[0], 1);
+        _mockVotingPower(multiIds[0], 1);
+        _mockVotingPower(multiIds[1], 1);
     }
 
     function _deployDAO() internal {
@@ -130,13 +144,13 @@ contract Base is
         return EscrowIVotesAdapterA(address(impl).deployUUPSProxy(initCalldata));
     }
 
-    function getIds(uint256 _tokenId) internal view returns (uint256[] memory) {
+    function getIds(uint256 _tokenId) internal pure returns (uint256[] memory) {
         uint256[] memory ids = new uint256[](1);
         ids[0] = _tokenId;
         return ids;
     }
 
-    function getIds(uint256 _tokenId1, uint256 _tokenId2) internal view returns (uint256[] memory) {
+    function getIds(uint256 _tokenId1, uint256 _tokenId2) internal pure returns (uint256[] memory) {
         uint256[] memory ids = new uint256[](2);
         ids[0] = _tokenId1;
         ids[1] = _tokenId2;
@@ -171,7 +185,6 @@ contract Base is
         );
     }
 
-    // DAO::hasPermission(ERC1967Proxy: [0x03A6a84cD762D9707A21605b548aaaB891562aAb], TestVotingWithDelegation: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], 0xfda1ae526c1fb38407f23e8b7712f7cfacc146f3e340a04221488331e0d42014, 0x071d21710000000000000000000000000000000000000000000000000000000000000777000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000086d65746164617461000000000000000000000000000000000000000000000000)
     function _mockPermissions() internal {
         vm.mockCall(
             address(dao),
@@ -194,5 +207,28 @@ contract Base is
             abi.encodeWithSelector(VotingEscrow.locked.selector, (_tokenId)),
             abi.encode(ILockedBalanceIncreasing.LockedBalance(uint208(_amount), uint48(_start)))
         );
+    }
+
+    function _mockVotingPower(uint256 _tokenId, uint256 _vp) internal {
+        vm.mockCall(
+            address(escrow),
+            abi.encodeWithSelector(VotingEscrow.votingPower.selector, (_tokenId)),
+            abi.encode(_vp)
+        );
+    }
+
+    function _authErr(
+        address _caller,
+        address _contract,
+        bytes32 _perm
+    ) internal view returns (bytes memory) {
+        return
+            abi.encodeWithSelector(
+                DaoUnauthorized.selector,
+                address(dao),
+                _contract,
+                _caller,
+                _perm
+            );
     }
 }

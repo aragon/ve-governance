@@ -15,6 +15,7 @@ import {
     IVotesUpgradeable as IVotes
 } from "@openzeppelin/contracts-upgradeable/governance/utils/IVotesUpgradeable.sol";
 import {PluginUUPSUpgradeable} from "@aragon/osx/core/plugin/PluginUUPSUpgradeable.sol";
+import {console2 as console} from "forge-std/console2.sol";
 
 contract AddressGaugeVoter is
     IAddressGaugeVoter,
@@ -391,6 +392,20 @@ contract AddressGaugeVoter is
         if (!gaugeExists(_gauge)) revert GaugeDoesNotExist(_gauge);
         gauges[_gauge].metadataURI = _metadataURI;
         emit GaugeMetadataUpdated(_gauge, _metadataURI);
+    }
+
+    /*///////////////////////////////////////////////////////////////
+                                Setters
+    //////////////////////////////////////////////////////////////*/
+
+    function setEnableUpdateVotingPowerHook(
+        bool _enableUpdateVotingPowerHook
+    ) external auth(GAUGE_ADMIN_ROLE) {
+        enableUpdateVotingPowerHook = _enableUpdateVotingPowerHook;
+    }
+
+    function setIVotesAdapter(address _ivotesAdapter) external auth(GAUGE_ADMIN_ROLE) {
+        ivotesAdapter = _ivotesAdapter;
     }
 
     /*///////////////////////////////////////////////////////////////

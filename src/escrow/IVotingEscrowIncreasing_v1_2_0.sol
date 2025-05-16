@@ -4,8 +4,7 @@ pragma solidity ^0.8.0;
 import "./IVotingEscrowIncreasing.sol";
 import {IEscrowIVotesAdapter} from "@delegation/IEscrowIVotesAdapter.sol";
 import {
-    IDelegateUpdateVotingPower,
-    IDelegateMoveVote
+    IDelegateUpdateVotingPower
 } from "../delegation/IEscrowIVotesAdapter.sol";
 
 interface IVotingEscrowExiting {
@@ -47,8 +46,7 @@ interface IMerge is ILockedBalanceIncreasing, IMergeEventsAndErrors {
 interface ISplitEventsAndErrors {
     event Split(
         uint256 indexed _from,
-        uint256 indexed _tokenId1,
-        uint256 indexed _tokenId2,
+        uint256 indexed newTokenId,
         address _sender,
         uint208 _splitAmount1,
         uint208 _splitAmount2
@@ -64,12 +62,24 @@ interface ISplit is ISplitEventsAndErrors {
     /// @notice Split token into two new, separate tokens.
     /// @param _from The token id that should be split
     /// @param _value The amount that determines how token is split
-    /// @return _tokenId1 The token id of first token after splitting
-    /// @return _tokenId2 The token id of second token after splitting
+    /// @return _newTokenId The new token id after split.
     function split(
         uint256 _from,
         uint256 _value
-    ) external returns (uint256 _tokenId1, uint256 _tokenId2);
+    ) external returns (uint256 _newTokenId);
+}
+
+interface IDelegateMoveVoteCaller {
+    /// @notice After a token transfer, decreases `_from`'s voting power and increases `_to`'s voting power.
+    /// @dev Called upon a token transfer.
+    /// @param _from The current delegatee of `_tokenId`.
+    /// @param _to The new delegatee of `_tokenId`
+    /// @param _tokenId The token id that is being transferred.
+    function moveDelegateVotes(
+        address _from,
+        address _to,
+        uint256 _tokenId
+    ) external;
 }
 
 interface IVotingEscrowIncreasingV1_2_0 is
@@ -78,5 +88,5 @@ interface IVotingEscrowIncreasingV1_2_0 is
     IMerge,
     ISplit,
     IDelegateUpdateVotingPower,
-    IDelegateMoveVote
+    IDelegateMoveVoteCaller
 {}

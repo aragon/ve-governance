@@ -152,7 +152,7 @@ contract LinearIncreasingCurveNoSupply is
     }
 
     /// @notice Returns the bias for the given time elapsed and amount, up to the maximum time
-    /// @dev Note that the returned value includes the linear and constant 
+    /// @dev Note that the returned value includes the linear and constant
     ///     coefficients multiplication, which is not the case in `getBias`.
     function getBias(uint256 timeElapsed, uint256 amount) public view returns (uint256) {
         int256[3] memory coefficients = _getCoefficients(amount);
@@ -209,17 +209,39 @@ contract LinearIncreasingCurveNoSupply is
         return _isWarm(_tokenId, block.timestamp);
     }
 
+    /// @notice Returns whether the NFT is warm at the specified timestamp(`_ts`)
     function isWarm(uint256 _tokenId, uint48 _ts) public view returns (bool) {
         return _isWarm(_tokenId, _ts);
     }
 
-    function _isWarm(uint256 _tokenId, uint256 _ts) public view returns (bool) {
+    function _isWarm(uint256 _tokenId, uint256 _ts) internal view virtual returns (bool) {
+        TokenPoint memory originalPoint = _tokenPointHistory[_tokenId][1];
+
+        return _isWarm(_tokenId, _ts, originalPoint);
+    }
+
+    /// @dev This signature is called by votingPowerAt to avoid extra sloads
+    ///      for `originalPoint`'s checkpointTs and writtenTs. Even though
+    ///      it would already be a warm sload, extra 200 gas makes a difference
+    ///      since `votingPowerAt` is frequently called
+    function _isWarm(
+        uint256 _tokenId,
+        uint256 _ts,
+        TokenPoint memory _originalPoint
+    ) private view returns (bool) {
         IVotingEscrow.LockedBalance memory locked = IVotingEscrow(escrow).locked(_tokenId);
 
         // This could occur if user withdraw in which case lock is removed.
         // In such case, `_tokenId` is treated as if it never existed
         // in which case we anyways return false.
         if (locked.amount == 0) return false;
+
+        // Helps to avoid voting powers not being equal after and before upgrade.
+        // This is because before upgrade, checkpoint ts is always greater than writtenTs
+        // whereas in new versions, it's vice versa.
+        if (_originalPoint.checkpointTs > _originalPoint.writtenTs) {
+            return _ts > _originalPoint.writtenTs + warmupPeriod;
+        }
 
         return _ts > locked.start + warmupPeriod;
     }
@@ -250,28 +272,24 @@ contract LinearIncreasingCurveNoSupply is
         // epoch 0 is an empty point
         if (interval == 0) return 0;
 
+        // Note that very first point is saved at index 1.
+        // Grab original point(the very first point for `_tokenId`).
+        TokenPoint memory originalPoint = _tokenPointHistory[_tokenId][1];
+
+        if (!_isWarm(_tokenId, _t, originalPoint)) return 0;
+
+        // Grab last point before `_t`.
         TokenPoint memory lastPoint = _tokenPointHistory[_tokenId][interval];
-
-        if (!_isWarm(_tokenId, _t)) return 0;
-
         int256 bias = lastPoint.coefficients[0];
         int256 slope = lastPoint.coefficients[1];
 
-        // Note that very first point is saved at index 1.
-        TokenPoint memory originalPoint = _tokenPointHistory[_tokenId][1];
-
-        uint256 maxTime_ = maxTime();
-        uint256 end = originalPoint.checkpointTs + maxTime_;
+        uint256 end = originalPoint.checkpointTs + maxTime();
 
         // If the point was created before the upgrade:
         //    it will have `checkpointTs` greater than `writtenTs`.
         //    bias would have been stored as just the amount(without bonus).
         // In such case, we make writtenTs equal to avoid checkpointTs greater.
         // This ensures that behaviour after and before upgrade are same.
-        if (originalPoint.checkpointTs > originalPoint.writtenTs) {
-            originalPoint.writtenTs = originalPoint.checkpointTs;
-        }
-
         if (lastPoint.checkpointTs > lastPoint.writtenTs) {
             lastPoint.writtenTs = lastPoint.checkpointTs;
         }
@@ -326,43 +344,44 @@ contract LinearIncreasingCurveNoSupply is
             revert InvalidCheckpoint();
         }
 
+        uint256 checkpointInterval = IClock(clock).checkpointInterval();
+
+        // For safety reasons, we don't allow checkpoints
+        // on the exact checkpointInterval.
+        if (block.timestamp % checkpointInterval == 0) {
+            revert CheckpointOnDepositIntervalNotAllowed();
+        }
+
+        uint256 _maxTime = maxTime();
+        uint256 newLockedEnd = _newLocked.start + _maxTime;
+        uint256 fromLockedEnd = _fromLocked.start + _maxTime;
+
+        // The following condition is true if merging non-mature locks with different start dates.
+        // current version of ve-governance is built around the assumption that merge can only
+        // occur if tokens are either mature or have the same start dates. Even though `escrow`
+        // does this check before calling `checkpoint` on curve, it's still a safety measure to repeat
+        // the check in case the code of checkpoint might be called by another contract in the future.
+        if (
+            _fromLocked.start != 0 &&
+            _newLocked.start != 0 &&
+            _fromLocked.start != _newLocked.start &&
+            (newLockedEnd >= block.timestamp || fromLockedEnd >= block.timestamp)
+        ) {
+            revert InvalidLocks(_tokenId, _fromLocked, _newLocked);
+        }
+
         // Get the slope and bias for `_newLocked`...
         (int256 newLockBias, int256 newLockSlope) = _getBiasAndSlope(
             block.timestamp - _newLocked.start,
             _newLocked.amount
         );
 
-        uint256 newEnd = _newLocked.start + maxTime();
-
         // If the new lock is mature, don't include the slope.
-        if (block.timestamp >= newEnd) {
+        if (block.timestamp >= newLockedEnd) {
             newLockSlope = 0;
         }
 
         uint256 tokenLatestIndex = tokenPointLatestIndex[_tokenId];
-
-        // The `tokenId` already exists..
-        if (tokenLatestIndex > 0) {
-            // If the amount is 0, newLockBias and newLockSlope
-            // would be 0 in which case we don't need to do
-            // anything, but store them directly on a new tokenpoint.
-            if (_newLocked.amount != 0) {
-                // Get the slope and bias for `_fromLocked`...
-                (int256 oldLockBias, int256 oldLockSlope) = _getBiasAndSlope(
-                    block.timestamp - _fromLocked.start,
-                    _fromLocked.amount
-                );
-
-                uint256 fromLockedEnd = _fromLocked.start + maxTime();
-
-                // Only add old lock's slope in case it's not mature yet.
-                if (block.timestamp < fromLockedEnd) {
-                    newLockSlope += oldLockSlope;
-                }
-
-                newLockBias += oldLockBias;
-            }
-        }
 
         // Create new token point and store.
         TokenPoint memory tNew;

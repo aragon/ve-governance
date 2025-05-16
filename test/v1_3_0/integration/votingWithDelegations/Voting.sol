@@ -27,6 +27,13 @@ contract TestVotingWithDelegation is EscrowBase {
 
         // create a gauge
         voter.createGauge(gauge, "metadata");
+
+        // token must have voting power > 0 in order to delegate.
+        // Base contract sets it as > 0, meaning that at the time
+        // of running these tests, token will have vp > 0.
+        // so we set warmup period = 0 and each token immediatelly
+        // has non-zero vp.
+        curve.setWarmupPeriod(0);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -37,7 +44,6 @@ contract TestVotingWithDelegation is EscrowBase {
         uint256 start = weekStartTs((block.timestamp));
 
         // make tokenOwner self delegatee
-        ivotesAdapter.setAutoDelegation(true);
         ivotesAdapter.delegate(tokenOwner);
 
         assertEq(ivotesAdapter.numberOfDelegatedTokens(tokenOwner), 2);
@@ -68,7 +74,6 @@ contract TestVotingWithDelegation is EscrowBase {
         uint256 start = weekStartTs((block.timestamp));
 
         // make tokenOwner self delegatee
-        ivotesAdapter.setAutoDelegation(true);
         ivotesAdapter.delegate(alice);
 
         assertEq(ivotesAdapter.numberOfDelegatedTokens(tokenOwner), 2);
@@ -103,14 +108,17 @@ contract TestVotingWithDelegation is EscrowBase {
 
         {
             // make Alice delegatee with tokenId = 1 and 2
+            ivotesAdapter.setAutoDelegationDisabled(true);
             ivotesAdapter.delegate(alice);
             ivotesAdapter.delegate(tokenIds);
         }
 
         {
             // make Bob delegatee
-            vm.prank(tokenReceiver);
+            vm.startPrank(tokenReceiver);
+            ivotesAdapter.setAutoDelegationDisabled(true);
             ivotesAdapter.delegate(bob);
+            vm.stopPrank();
         }
 
         assertEq(ivotesAdapter.numberOfDelegatedTokens(tokenOwner), 2);
