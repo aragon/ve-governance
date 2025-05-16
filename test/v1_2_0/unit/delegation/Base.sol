@@ -6,6 +6,7 @@ import {console2 as console} from "forge-std/console2.sol";
 
 // aragon contracts
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
+import {DaoUnauthorized} from "@aragon/osx/core/utils/auth.sol";
 
 import {createTestDAO} from "@mocks/MockDAO.sol";
 import {
@@ -72,7 +73,6 @@ contract Base is
         voter = _deployVoter(address(dao), address(clock), address(escrow), address(dg));
 
         _mockApprovedOwner(true);
-        _mockPermissions();
 
         uint256 maxTime = IClock(clock).epochDuration() * CurveConstantLib.MAX_EPOCHS;
 
@@ -214,5 +214,20 @@ contract Base is
             abi.encodeWithSelector(VotingEscrow.votingPower.selector, (_tokenId)),
             abi.encode(_vp)
         );
+    }
+
+    function _authErr(
+        address _caller,
+        address _contract,
+        bytes32 _perm
+    ) internal view returns (bytes memory) {
+        return
+            abi.encodeWithSelector(
+                DaoUnauthorized.selector,
+                address(dao),
+                _contract,
+                _caller,
+                _perm
+            );
     }
 }

@@ -176,6 +176,7 @@ contract GaugeVoterSetupV1_3_0 is PluginSetup {
             deps.escrow,
             deps.clock,
             deps.nftLock,
+            deps.ivotesAdapter,
             PermissionLib.Operation.Grant
         );
 
@@ -209,6 +210,7 @@ contract GaugeVoterSetupV1_3_0 is PluginSetup {
         address escrow = _payload.currentHelpers[2];
         address clock = _payload.currentHelpers[3];
         address nftLock = _payload.currentHelpers[4];
+        address ivotesAdapter = _payload.currentHelpers[5];
 
         permissions = getPermissions(
             _dao,
@@ -218,6 +220,7 @@ contract GaugeVoterSetupV1_3_0 is PluginSetup {
             escrow,
             clock,
             nftLock,
+            ivotesAdapter,
             PermissionLib.Operation.Revoke
         );
     }
@@ -234,10 +237,11 @@ contract GaugeVoterSetupV1_3_0 is PluginSetup {
         address _escrow,
         address _clock,
         address _nft,
+        address _ivotesAdapter,
         PermissionLib.Operation _grantOrRevoke
     ) public view returns (PermissionLib.MultiTargetPermission[] memory) {
         PermissionLib.MultiTargetPermission[]
-            memory permissions = new PermissionLib.MultiTargetPermission[](10);
+            memory permissions = new PermissionLib.MultiTargetPermission[](11);
 
         permissions[0] = PermissionLib.MultiTargetPermission({
             permissionId: GaugeVoter(_plugin).GAUGE_ADMIN_ROLE(),
@@ -296,6 +300,14 @@ contract GaugeVoterSetupV1_3_0 is PluginSetup {
         });
 
         permissions[7] = PermissionLib.MultiTargetPermission({
+            permissionId: EscrowIVotesAdapter(_ivotesAdapter).DELEGATION_ADMIN_ROLE(),
+            where: _ivotesAdapter,
+            who: _dao,
+            operation: _grantOrRevoke,
+            condition: PermissionLib.NO_CONDITION
+        });
+
+        permissions[8] = PermissionLib.MultiTargetPermission({
             permissionId: VotingEscrow(_escrow).PAUSER_ROLE(),
             where: _escrow,
             who: _dao,
@@ -303,7 +315,7 @@ contract GaugeVoterSetupV1_3_0 is PluginSetup {
             condition: PermissionLib.NO_CONDITION
         });
 
-        permissions[8] = PermissionLib.MultiTargetPermission({
+        permissions[9] = PermissionLib.MultiTargetPermission({
             permissionId: VotingEscrow(_escrow).SWEEPER_ROLE(),
             where: _escrow,
             who: _dao,
@@ -311,7 +323,7 @@ contract GaugeVoterSetupV1_3_0 is PluginSetup {
             condition: PermissionLib.NO_CONDITION
         });
 
-        permissions[9] = PermissionLib.MultiTargetPermission({
+        permissions[10] = PermissionLib.MultiTargetPermission({
             permissionId: ExitQueue(_queue).WITHDRAW_ROLE(),
             where: _queue,
             who: _dao,
