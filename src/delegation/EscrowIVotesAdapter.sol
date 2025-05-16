@@ -174,8 +174,9 @@ contract EscrowIVotesAdapter is
         address currentDelegatee = delegates(sender);
 
         uint256[] memory tokenIds = VotingEscrow(escrow).ownedTokens(sender);
+        uint256 ownedTokenLength = tokenIds.length;
 
-        if (currentDelegatee != address(0)) {
+        if (currentDelegatee != address(0) && ownedTokenLength != 0) {
             uint256[] memory delegatedTokenIds = getDelegatedTokens(tokenIds);
             if (delegatedTokenIds.length != 0) {
                 _undelegate(sender, currentDelegatee, delegatedTokenIds, false);
@@ -184,9 +185,11 @@ contract EscrowIVotesAdapter is
 
         delegatees_[sender] = _delegatee;
 
-        if (!autoDelegationDisabled(sender) && _delegatee != address(0) && tokenIds.length != 0) {
+        if (!autoDelegationDisabled(sender) && _delegatee != address(0) && ownedTokenLength != 0) {
             _delegate(sender, _delegatee, tokenIds, false);
         }
+
+        emit DelegateChanged(sender, currentDelegatee, _delegatee);
     }
 
     /// @dev Note that the token ids must be currently delegated and must be owned/approved to the sender.
@@ -211,7 +214,7 @@ contract EscrowIVotesAdapter is
     ///      updates voting power on the address gauge voter.
     /// @param _sender The address that owns `_tokenIds` and delegates.
     /// @param _delegatee The new delegatee address to which `_tokenIds` will be delegated.
-    /// @param _tokenIds The array of token ids. Note that it's caller's responsibility to not 
+    /// @param _tokenIds The array of token ids. Note that it's caller's responsibility to not
     ///                  call this function for empty list of `_tokenIds`.
     /// @param _validate The boolean flag of whether to validate that token ids are owned by the `_sender` or not.
     ///                  In some cases, validation is not needed as caller already knows that there's no need.
@@ -262,7 +265,7 @@ contract EscrowIVotesAdapter is
     ///      updates voting power on the address gauge voter.
     /// @param _sender The address that owns `_tokenIds` and undelegates.
     /// @param _delegatee The delegatee address from which `_tokenIds` will be undelegated.
-    /// @param _tokenIds The array of token ids. Note that it's caller's responsibility to not 
+    /// @param _tokenIds The array of token ids. Note that it's caller's responsibility to not
     ///                  call this function for empty list of `_tokenIds`.
     /// @param _validate The boolean flag of whether to validate that token ids are owned by the `_sender` or not.
     ///                  In some cases, validation is not needed as caller already knows that there's no need.
