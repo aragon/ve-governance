@@ -3,7 +3,7 @@ pragma solidity ^0.8.17;
 import {Base} from "./Base.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 
-contract TestDelegate_omg is Base {
+contract TestDelegate is Base {
     function setUp() public override {
         super.setUp();
     }
@@ -76,6 +76,13 @@ contract TestDelegate_omg is Base {
         vm.expectRevert(DelegateeNotSet.selector);
 
         dg.delegate(singleId);
+    }
+
+    function testRevert_IfTokenListEmpty() public {
+        dg.delegate(alice);
+
+        vm.expectRevert(TokenListEmpty.selector);
+        dg.delegate(new uint256[](0));
     }
 
     function testRevert_IfVotingPowerZeroAtLeastForOneToken() public {

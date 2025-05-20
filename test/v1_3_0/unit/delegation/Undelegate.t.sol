@@ -22,7 +22,7 @@ contract TestUndelegate is Base {
         dg.delegate(alice);
 
         dg.pause();
-        
+
         vm.expectRevert("Pausable: paused");
         dg.undelegate(getIds(1));
     }
@@ -38,6 +38,13 @@ contract TestUndelegate is Base {
         vm.expectRevert(DelegateeNotSet.selector);
 
         dg.undelegate(singleId);
+    }
+
+    function testRevert_IfTokenListEmpty() public {
+        dg.delegate(alice);
+
+        vm.expectRevert(TokenListEmpty.selector);
+        dg.undelegate(new uint256[](0));
     }
 
     function testRevert_IfTokenNotDelegated() public givenDelegatedTokens {
