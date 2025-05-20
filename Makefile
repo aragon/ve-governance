@@ -41,7 +41,12 @@ ft-mode-migration :; forge test --match-contract TestMigrate \
 	--rpc-url https://mainnet.mode.network/ \
 	--fork-block-number 17215462 \
 	-vv
-	 
+
+# Fork testing - mainnet
+ft-mainnet-fork :; forge test --match-contract TestE2EV2 \
+	--rpc-url $(RPC_URL) \
+	--fork-block-number 22523012 \
+	-vvv
 
 
 
