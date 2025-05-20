@@ -48,7 +48,7 @@ contract TestIncreasingCurveLogic is CurveBase {
         escrow.checkpoint(1, LockedBalance(0, 0), LockedBalance({amount: 100, start: 3 weeks}));
     }
 
-    function testCannotMergeIfNonMatureWithDifferentStartDates_omg() public {
+    function testCannotMergeIfNonMatureWithDifferentStartDates() public {
         vm.warp(2 weeks + 1 hours);
 
         LockedBalance memory first = LockedBalance({amount: 100, start: 2 weeks});

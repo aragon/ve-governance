@@ -36,7 +36,7 @@ contract TestVotingPower_oe is IEscrowCurveTokenStorage, IEscrowCurveGlobalStora
         vm.warp(1);
     }
 
-    function test_whenOnlyOneTokenPoint_kk() public {
+    function test_whenOnlyOneTokenPoint() public {
         // Given: no prior locks existing
         // 1. votingPower should be 0 during warmup and equal to bias after warmup
         // 2. votingPower shouldn't increase after end time.
