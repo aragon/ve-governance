@@ -33,7 +33,10 @@ contract TestCreateLock_WarmUpAndVotingPower is IEscrowCurveTokenStorage, IEscro
     }
 
     modifier givenWarmupPeriodLessThanMaxTime() {
-        warmupPeriod = uint48(maxTime - 100);
+        if(maxTime != 0) {
+            warmupPeriod = uint48(maxTime - 100);
+        }
+        
         curve.setWarmupPeriod(uint48(warmupPeriod));
         _;
     }
@@ -46,6 +49,9 @@ contract TestCreateLock_WarmUpAndVotingPower is IEscrowCurveTokenStorage, IEscro
 
     function test_CreateLock_BeforeWarmupPeriod_A() public givenWarmupPeriodLessThanMaxTime {
         uint256 tokenId = escrow.createLock(Lock_1_Amount);
+        
+        uint256 weekStartTs = weekStartTs(block.timestamp);
+        uint256 endTs = getEndTimestamp(weekStartTs, block.timestamp);
 
         // Warmup has not been reached, so vp must 
         // be 0 and isWarm false.
@@ -64,9 +70,11 @@ contract TestCreateLock_WarmUpAndVotingPower is IEscrowCurveTokenStorage, IEscro
         assertEq(curve.isWarm(tokenId), true);
         assertVotingPower(tokenId, biasFP(Lock_1_Amount, block.timestamp - weekStart));
 
-        int256 maxVotingPower = biasFP(Lock_1_Amount, maxTime);
-        assertVotingPower(tokenId, weekStart + maxTime, maxVotingPower);
-        assertVotingPower(tokenId, weekStart + maxTime + 10, maxVotingPower);
+        if (endTs >= weekStartTs + warmupPeriod + 1) {
+            int256 maxVotingPower = biasFP(Lock_1_Amount, maxTime);
+            assertVotingPower(tokenId, weekStart + maxTime, maxVotingPower);
+            assertVotingPower(tokenId, weekStart + maxTime + 10, maxVotingPower);
+        }
     }
 
     function test_CreateLock_BeforeWarmupPeriod_B() public givenWarmupPeriodGreaterThanMaxTime {

@@ -70,6 +70,7 @@ contract TestMerge_DelegationAndVoter is
         }
 
         uint256 checkpointTs = weekStartTs(block.timestamp);
+        uint256 writtenTs = block.timestamp;
 
         // Assert pre-state before running merge.
         uint256 aliceBias = bias(amount1 + amount2, block.timestamp - checkpointTs);
@@ -81,11 +82,11 @@ contract TestMerge_DelegationAndVoter is
         assertEq(ivotesAdapter.numberOfDelegatedTokens(alice), 2);
 
         // Run merge
-        uint256 lockEnd = checkpointTs + maxTime;
+        uint256 lockEnd = getEndTimestamp(checkpointTs, writtenTs);
         vm.warp(lockEnd + 1 seconds);
         escrow.merge(1, 2);
 
-        // // Assert state after merge..
+        // Assert state after merge..
 
         // Even though tokenId = 1 is burnt due to merge,
         // Alice still must not lose its power as that 

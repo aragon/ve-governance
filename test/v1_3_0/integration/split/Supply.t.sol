@@ -42,7 +42,7 @@ contract TestSplit_Supply is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage
         uint256 value = 20e18;
         uint256 tokenId = escrow.createLock(Lock_1_Amount);
         uint256 weekStartTs = weekStartTs(block.timestamp);
-        uint256 endTs = weekStartTs + maxTime;
+        uint256 endTs = getEndTimestamp(weekStartTs, block.timestamp);
 
         // Still warp just to ensure that we changed the current timestamp
         // but not wrap after the end.
@@ -79,7 +79,7 @@ contract TestSplit_Supply is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage
         uint256 value = 20e18;
         uint256 tokenId = escrow.createLock(Lock_1_Amount);
         uint256 weekStartTs = weekStartTs(block.timestamp);
-        uint256 endTs = weekStartTs + maxTime;
+        uint256 endTs = getEndTimestamp(weekStartTs, block.timestamp);
 
         // warp after the token end so it's mature.
         vm.warp(endTs + 1 hours);

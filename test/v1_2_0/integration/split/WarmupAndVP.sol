@@ -41,7 +41,10 @@ contract TestSplit_WarmUpAndVotingPower is
     }
 
     modifier givenWarmupPeriodLessThanMaxTime() {
-        warmupPeriod = uint48(maxTime - 100);
+        if(maxTime != 0) {
+            warmupPeriod = uint48(maxTime - 100);
+        }
+        
         curve.setWarmupPeriod(uint48(warmupPeriod));
         _;
     }

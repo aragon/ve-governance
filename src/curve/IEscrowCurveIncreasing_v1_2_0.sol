@@ -2,10 +2,19 @@
 pragma solidity ^0.8.0;
 
 import "./IEscrowCurveIncreasing.sol";
+import {ILockedBalanceIncreasing} from "@escrow/IVotingEscrowIncreasing.sol";
 
 /*///////////////////////////////////////////////////////////////
                         Global Curve
 //////////////////////////////////////////////////////////////*/
+
+interface blaxblux {
+    function checkpoint1(
+        uint256 _tokenId,
+        ILockedBalanceIncreasing.LockedBalance memory _oldLocked,
+        ILockedBalanceIncreasing.LockedBalance memory _newLocked
+    ) external;
+}
 
 interface IEscrowCurveGlobalStorage {
     /// @notice Captures the shape of the aggregate voting curve at a specific point in time

@@ -52,7 +52,8 @@ contract TestMerge_Supply is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage
         int256 currentTotalBiasFP = biasFP(Lock_1_Amount, currentTs - weekStartTs) +
             biasFP(Lock_2_Amount, currentTs - weekStartTs);
 
-        uint256 end = weekStartTs + maxTime;
+        uint256 end = getEndTimestamp(weekStartTs, currentTs);
+        
         int256 LOCK_1_MAX = biasFP(Lock_1_Amount, end - weekStartTs);
         int256 LOCK_2_MAX = biasFP(Lock_2_Amount, end - weekStartTs);
 

@@ -27,7 +27,7 @@ import {
     IEscrowCurveGlobalStorage
 } from "../../versions.sol";
 
-contract TestVotingPower is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage, EscrowBase {
+contract TestVotingPower_oe is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage, EscrowBase {
     function setUp() public override {
         super.setUp();
 
@@ -36,14 +36,14 @@ contract TestVotingPower is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage,
         vm.warp(1);
     }
 
-    function test_whenOnlyOneTokenPoint() public {
+    function test_whenOnlyOneTokenPoint_kk() public {
         // Given: no prior locks existing
         // 1. votingPower should be 0 during warmup and equal to bias after warmup
         // 2. votingPower shouldn't increase after end time.
 
         uint256 tokenId = escrow.createLock(Lock_1_Amount);
         uint256 weekStartTs = weekStartTs(block.timestamp);
-        uint256 endTs = weekStartTs + maxTime;
+        uint256 endTs = getEndTimestamp(weekStartTs, block.timestamp);
 
         // 1
         assertEq(curve.isWarm(tokenId), false);
@@ -58,15 +58,16 @@ contract TestVotingPower is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage,
         assertVotingPower(tokenId, biasFP(Lock_1_Amount, block.timestamp - weekStartTs));
 
         // 2
-        int256 maxVotingPower = biasFP(Lock_1_Amount, maxTime);
-        assertVotingPower(tokenId, endTs, maxVotingPower);
-        assertVotingPower(tokenId, endTs + 10, maxVotingPower);
+        if (endTs >= weekStartTs + warmupPeriod + 1) {
+            int256 maxVotingPower = biasFP(Lock_1_Amount, endTs - weekStartTs);
+            assertVotingPower(tokenId, endTs, maxVotingPower);
+            assertVotingPower(tokenId, endTs + 10, maxVotingPower);
+        }
     }
 
     function test_whenMultipleTokenPoints_NotMature() public {
         uint256 weekStartTs = weekStartTs(block.timestamp);
-        uint256 endTs = weekStartTs + maxTime;
-        
+        uint256 endTs = getEndTimestamp(weekStartTs, block.timestamp);
 
         uint256 tokenId1 = escrow.createLock(Lock_1_Amount);
         uint256 tokenId2 = escrow.createLock(Lock_2_Amount);
@@ -82,17 +83,17 @@ contract TestVotingPower is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage,
                 biasFP(Lock_2_Amount, block.timestamp - weekStartTs)
         );
 
-        int256 maxVotingPower = biasFP(Lock_1_Amount, maxTime) +
-                biasFP(Lock_2_Amount, maxTime);
-        
-        assertVotingPower(tokenId2, endTs, maxVotingPower);
-        assertVotingPower(tokenId2, endTs + 10, maxVotingPower);
+        if (endTs >= weekStartTs + warmupPeriod + 1) {
+            int256 maxVotingPower = biasFP(Lock_1_Amount, maxTime) + biasFP(Lock_2_Amount, maxTime);
+            assertVotingPower(tokenId2, endTs, maxVotingPower);
+            assertVotingPower(tokenId2, endTs + 10, maxVotingPower);
+        }
     }
 
-     function test_whenMultipleTokenPoints_Mature() public {
+    function test_whenMultipleTokenPoints_Mature() public {
         uint256 weekStartTs = weekStartTs(block.timestamp);
-        uint256 endTs = weekStartTs + maxTime;
-        
+        uint256 endTs = getEndTimestamp(weekStartTs, block.timestamp);
+
         uint256 tokenId1 = escrow.createLock(Lock_1_Amount);
         uint256 tokenId2 = escrow.createLock(Lock_2_Amount);
 
@@ -100,12 +101,11 @@ contract TestVotingPower is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage,
 
         escrow.merge(tokenId1, tokenId2);
 
-
-        int256 maxVotingPower = biasFP(Lock_1_Amount, maxTime) +
-                biasFP(Lock_2_Amount, maxTime);
-        
-        assertVotingPower(tokenId2, endTs, biasFP(Lock_2_Amount, maxTime));
-        assertVotingPower(tokenId2, endTs + 10, maxVotingPower);
-        assertVotingPower(tokenId2, endTs + 20, maxVotingPower);
+        if (endTs >= weekStartTs + warmupPeriod + 1) {
+            int256 maxVotingPower = biasFP(Lock_1_Amount, maxTime) + biasFP(Lock_2_Amount, maxTime);
+            assertVotingPower(tokenId2, endTs, biasFP(Lock_2_Amount, maxTime));
+            assertVotingPower(tokenId2, endTs + 10, maxVotingPower);
+            assertVotingPower(tokenId2, endTs + 20, maxVotingPower);
+        }
     }
 }

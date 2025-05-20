@@ -52,7 +52,7 @@ contract TestQuadraticIncreasingCurveLogic is CurveBase {
         vm.warp(2 weeks + 1 hours);
 
         LockedBalance memory first = LockedBalance({amount: 100, start: 2 weeks});
-        LockedBalance memory second = LockedBalance({amount: 200, start: 2 weeks + 1});
+        LockedBalance memory second = LockedBalance({amount: 200, start: 2 weeks + 1 hours});
 
         vm.expectRevert(abi.encodeWithSelector(InvalidLocks.selector, 1, first, second));
         escrow.checkpoint(1, first, second);

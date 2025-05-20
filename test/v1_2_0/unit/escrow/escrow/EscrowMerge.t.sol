@@ -63,6 +63,13 @@ contract TestEscrowMerge is IEscrowCurveTokenStorage, EscrowBase, IMergeEventsAn
 
         uint256 startForTo = weekStartTs(block.timestamp);
 
+        // warp back before the start of second lock 
+        // to make sure 2nd lock hasn't become mature yet.
+        // This is important when maxTime is 0. Without this, 
+        // when maxTime = 0, at merge time, both locks are 
+        // immediatelly mature and we can't test this behaviour.
+        vm.warp(startForFrom + 2 hours);
+
         assertEq(canMerge(startForFrom, startForTo), false);
 
         //reverts as start dates are different and tokens are not mature.
