@@ -42,7 +42,8 @@ import {
     IVotingEscrowEventsStorageErrorsEvents,
     IVotingEscrowCoreErrors,
     IMergeEventsAndErrors,
-    ISplitEventsAndErrors
+    ISplitEventsAndErrors,
+    IVotingEscrowCore
 } from "@escrow/IVotingEscrowIncreasing_v1_2_0.sol";
 import {
     IAddressGaugeVote as IGaugeVote,
