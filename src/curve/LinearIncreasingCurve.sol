@@ -205,7 +205,7 @@ contract LinearIncreasingCurve is
         return IClock(clock).epochDuration() * MAX_EPOCHS;
     }
 
-    function previewMaxBias(uint256 amount) external view virtual returns (uint256) {
+    function previewMaxBias(uint256 amount) external view returns (uint256) {
         return getBias(maxTime(), amount);
     }
 
