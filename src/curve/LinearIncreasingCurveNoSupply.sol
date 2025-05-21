@@ -112,26 +112,26 @@ contract LinearIncreasingCurveNoSupply is
     //////////////////////////////////////////////////////////////*/
 
     /// @return The coefficient for the curve's linear term, for the given amount
-    function _getLinearCoeff(uint256 amount) internal pure returns (int256) {
+    function _getLinearCoeff(uint256 amount) internal pure virtual returns (int256) {
         return amount.toInt256() * SHARED_LINEAR_COEFFICIENT;
     }
 
     /// @return The constant coefficient of the increasing curve, for the given amount
     /// @dev In this case, the constant term is 1 so we just case the amount
-    function _getConstantCoeff(uint256 amount) public pure returns (int256) {
+    function _getConstantCoeff(uint256 amount) internal pure virtual returns (int256) {
         return amount.toInt256() * SHARED_CONSTANT_COEFFICIENT;
     }
 
     /// @return The coefficients of the quadratic curve, for the given amount
     /// @dev The coefficients are returned in the order [constant, linear, quadratic]
-    function _getCoefficients(uint256 amount) public pure returns (int256[3] memory) {
+    function _getCoefficients(uint256 amount) internal pure virtual returns (int256[3] memory) {
         return [_getConstantCoeff(amount), _getLinearCoeff(amount), 0];
     }
 
     /// @return The coefficients of the quadratic curve, for the given amount
     /// @dev The coefficients are returned in the order [constant, linear, quadratic]
     /// and are converted to regular 256-bit signed integers instead of their fixed-point representation
-    function getCoefficients(uint256 amount) public pure returns (int256[3] memory) {
+    function getCoefficients(uint256 amount) public pure virtual returns (int256[3] memory) {
         int256[3] memory coefficients = _getCoefficients(amount);
 
         return [
@@ -187,7 +187,7 @@ contract LinearIncreasingCurveNoSupply is
         return (int256(bias), slope);
     }
 
-    function maxTime() public view returns (uint256) {
+    function maxTime() public view virtual returns (uint256) {
         return IClock(clock).epochDuration() * MAX_EPOCHS;
     }
 
@@ -205,12 +205,12 @@ contract LinearIncreasingCurveNoSupply is
     }
 
     /// @notice Returns whether the NFT is warm
-    function isWarm(uint256 _tokenId) public view returns (bool) {
+    function isWarm(uint256 _tokenId) public view virtual returns (bool) {
         return _isWarm(_tokenId, block.timestamp);
     }
 
     /// @notice Returns whether the NFT is warm at the specified timestamp(`_ts`)
-    function isWarm(uint256 _tokenId, uint48 _ts) public view returns (bool) {
+    function isWarm(uint256 _tokenId, uint48 _ts) public view virtual returns (bool) {
         return _isWarm(_tokenId, _ts);
     }
 
@@ -228,7 +228,7 @@ contract LinearIncreasingCurveNoSupply is
         uint256 _tokenId,
         uint256 _ts,
         TokenPoint memory _originalPoint
-    ) private view returns (bool) {
+    ) internal view virtual returns (bool) {
         IVotingEscrow.LockedBalance memory locked = IVotingEscrow(escrow).locked(_tokenId);
 
         // This could occur if user withdraw in which case lock is removed.
