@@ -13,15 +13,19 @@ To get started, ensure that [Foundry](https://getfoundry.sh/) is installed on yo
   # debian
   sudo apt install build-essential
 
-  # arch
-  sudo pacman -S base-devel
+# arch
 
-  # nix
-  nix-env -iA nixpkgs.gnumake
+sudo pacman -S base-devel
 
-  # macOS
-  brew install make
-  ```
+# nix
+
+nix-env -iA nixpkgs.gnumake
+
+# macOS
+
+brew install make
+
+```
 
 </details>
 
@@ -30,30 +34,32 @@ To get started, ensure that [Foundry](https://getfoundry.sh/) is installed on yo
 The `Makefile` as the target launcher of the project. It's the recommended way to work with it. It manages the env variables of common tasks and executes only the steps that require being run.
 
 ```
-$ make 
+
+$ make
 Available targets:
 
-- make init    Check the required tools and dependencies
-- make clean   Clean the build artifacts
+- make init Check the required tools and dependencies
+- make clean Clean the build artifacts
 
-- make test            Run unit tests, locally
-- make test-coverage   Generate an HTML coverage report under ./report
+- make test Run unit tests, locally
+- make test-coverage Generate an HTML coverage report under ./report
 
-- make test-fork-mint-testnet   Clean fork test, minting test tokens (testnet)
-- make test-fork-mint-prodnet   Clean fork test, minting test tokens (production network)
+- make test-fork-mint-testnet Clean fork test, minting test tokens (testnet)
+- make test-fork-mint-prodnet Clean fork test, minting test tokens (production network)
 
-- make test-fork-testnet   Fork test using the existing token(s), new factory (testnet)
-- make test-fork-prodnet   Fork test using the existing token(s), new factory (production network)
+- make test-fork-testnet Fork test using the existing token(s), new factory (testnet)
+- make test-fork-prodnet Fork test using the existing token(s), new factory (production network)
 
-- make test-fork-factory-testnet   Fork test using an existing factory (testnet)
-- make test-fork-factory-prodnet   Fork test using an existing factory (production network)
+- make test-fork-factory-testnet Fork test using an existing factory (testnet)
+- make test-fork-factory-prodnet Fork test using an existing factory (production network)
 
-- make pre-deploy-mint-testnet   Simulate a deployment to the testnet, minting test token(s)
-- make pre-deploy-testnet        Simulate a deployment to the testnet
-- make pre-deploy-prodnet        Simulate a deployment to the production network
+- make pre-deploy-mint-testnet Simulate a deployment to the testnet, minting test token(s)
+- make pre-deploy-testnet Simulate a deployment to the testnet
+- make pre-deploy-prodnet Simulate a deployment to the production network
 
-- make deploy-testnet        Deploy to the testnet and verify
-- make deploy-prodnet        Deploy to the production network and verify
+- make deploy-testnet Deploy to the testnet and verify
+- make deploy-prodnet Deploy to the production network and verify
+
 ```
 
 Run `make init`:
@@ -91,78 +97,71 @@ Deployments are done using the deployment factory. This is a singleton contract 
 Check the available make targets to simulate and deploy the smart contracts:
 
 ```
-- make pre-deploy-testnet    Simulate a deployment to the defined testnet
-- make pre-deploy-prodnet    Simulate a deployment to the defined production network
-- make deploy-testnet        Deploy to the defined testnet network and verify
-- make deploy-prodnet        Deploy to the production network and verify
-```
+
+- make pre-deploy-testnet Simulate a deployment to the defined testnet
+- make pre-deploy-prodnet Simulate a deployment to the defined production network
+- make deploy-testnet Deploy to the defined testnet network and verify
+- make deploy-prodnet Deploy to the production network and verify
+
+````
 
 ### Deployment Checklist
 
-- [ ] I have cloned the official repository on my computer and I have checked out the corresponding branch
-- [ ] I am using the latest official docker engine, running a Debian Linux (stable) image
-  - [ ] I have run `docker run --rm -it -v .:/deployment debian:bookworm-slim`
-  - [ ] I have run `apt update && apt install -y make curl git vim neovim bc`
-  - [ ] I have run `curl -L https://foundry.paradigm.xyz | bash`
-  - [ ] I have run `source /root/.bashrc && foundryup`
-  - [ ] I have run `cd /deployment`
-  - [ ] I have run `make init`
-  - [ ] I have printed the contents of `.env` and `.env.test` on the screen
-- [ ] I am opening an editor on the `/deployment` folder, within the Docker container
-- [ ] The `.env` file contains the correct parameters for the deployment
-  - [ ] I have created a brand new burner wallet with `cast wallet new` and copied the private key to `DEPLOYMENT_PRIVATE_KEY` within `.env`
-  - [ ] I have reviewed the target network and RPC URL
-  - [ ] I have checked that the JSON file under `MULTISIG_MEMBERS_JSON_FILE_NAME` contains the correct list of signers
-  - [ ] I have ensured all multisig members have undergone a proper security review and are aware of the security implications of being on said multisig
-  - [ ] I have checked that `MIN_APPROVALS` and `MULTISIG_PROPOSAL_EXPIRATION_PERIOD` are correct
-  - [ ] I have verified that `TOKEN1_ADDRESS` corresponds to an ERC20 contract on the target chain (same for TOKEN2 if applicable)
-  - [ ] I have checked that `VE_TOKEN1_NAME` and `VE_TOKEN1_SYMBOL` are correct (same for TOKEN2 if applicable)
-  - I have checked that fee percent, warmup period, cooldown period, min lock duration, and min deposit:
-    - [ ] Have the expected values
-    - [ ] Cannot leave the voting contract or user tokens locked out
-  - [ ] I have checked that `VOTING_PAUSED` is true, should voting not be active right away
-  - [ ] The multisig plugin repo and version:
-    - [ ] Correspond to the official contract on the target network
-    - [ ] Point to the latest stable release available
+- [x] I have cloned the official repository on my computer and I have checked out the corresponding branch
+- [x] The `.env` file contains the correct parameters for the deployment
+  - [x] I have created a brand new burner wallet with `cast wallet new` and copied the private key to `DEPLOYMENT_PRIVATE_KEY` within `.env`
+  - [x] I have reviewed the target network and RPC URL
+  - [x] I have checked that the JSON file under `MULTISIG_MEMBERS_JSON_FILE_NAME` contains the correct list of signers
+  - [x] I have ensured all multisig members have undergone a proper security review and are aware of the security implications of being on said multisig
+  - [x] I have checked that `MIN_APPROVALS` and `MULTISIG_PROPOSAL_EXPIRATION_PERIOD` are correct
+  - [x] I have verified that `TOKEN1_ADDRESS` corresponds to an ERC20 contract on the target chain (same for TOKEN2 if applicable)
+  - [x] I have checked that `VE_TOKEN1_NAME` and `VE_TOKEN1_SYMBOL` are correct (same for TOKEN2 if applicable)
+  - [x] I have checked that fee percent, warmup period, cooldown period, min lock duration, and min deposit:
+    - [x] Have the expected values
+    - [x] Cannot leave the voting contract or user tokens locked out
+  - [x] I have checked that `VOTING_PAUSED` is true, should voting not be active right away
+  - [x] The multisig plugin repo and version:
+    - [x] Correspond to the official contract on the target network
+    - [x] Point to the latest stable release available
   - The plugin ENS subdomain
-    - [ ] Contains a meaningful and unique value
+    - [x] Contains a meaningful and unique value
   - The given OSx addresses:
-    - [ ] Exist on the target network
-    - [ ] Contain the latest stable official version of the OSx DAO implementation, the Plugin Setup Processor and the Plugin Repo Factory
-    - [ ] I have verified the values on https://www.npmjs.com/package/@aragon/osx-commons-configs?activeTab=code > `/@aragon/osx-commons-configs/dist/deployments/json/`
-- [ ] I have updated the `CurveConstantLib` and `Clock` with any new constants.
-- [ ] All my unit tests pass (`make test`)
+    - [x] Exist on the target network
+    - [x] Contain the latest stable official version of the OSx DAO implementation, the Plugin Setup Processor and the Plugin Repo Factory
+    - [x] I have verified the values on https://www.npmjs.com/package/@aragon/osx-commons-configs?activeTab=code > `/@aragon/osx-commons-configs/dist/deployments/json/`
+- [x] I have updated the `CurveConstantLib` and `Clock` with any new constants.
+- [x] All my unit tests pass (`make test`)
 - **Target test network**
-  - [ ] I have defined `FORK_TESTNET_BLOCK_NUMBER` on `.env.test`, with the current block number
-  - [ ] I have run a fork test in `new-factory` mode with minted tokens against the official OSx contracts on the testnet
+  - [x] I have defined `FORK_TESTNET_BLOCK_NUMBER` on `.env.test`, with the current block number
+  - [x] I have run a fork test in `new-factory` mode with minted tokens against the official OSx contracts on the testnet
     - `make test-fork-mint-testnet`
-  - [ ] I have deployed my contracts successfully to the target testnet
+  - [x] I have deployed my contracts successfully to the target testnet
     - `make deploy-testnet`
-  - [ ] I have updated `FACTORY_ADDRESS` on `.env.test` with the address of the deployed factory
+  - [x] I have updated `FACTORY_ADDRESS` on `.env.test` with the address of the deployed factory
   - If there is a live token with an address holding ≥ 3000 tokens on the testnet:
-    - [ ] I have defined `TEST_TOKEN_WHALE` on `.env.test`
-    - [ ] I have run a fork test in `new-factory` mode with the live token on the testnet
+    - [x] I have defined `TEST_TOKEN_WHALE` on `.env.test`
+    - [x] I have run a fork test in `new-factory` mode with the live token on the testnet
       - `make test-fork-testnet`
-    - [ ] I have confirmed that tests still work in `existing-factory` mode with the live token(s) and the already deployed factory on the testnet.
+    - [x] I have confirmed that tests still work in `existing-factory` mode with the live token(s) and the already deployed factory on the testnet.
       - `make test-fork-factory-testnet`
 - **Target production network**
-  - [ ] I have defined `FORK_PRODNET_BLOCK_NUMBER` on `.env.test`, with the current block number
-  - [ ] I have run a fork test in `new-factory` mode with minted tokens against the official OSx contracts on the prodnet
+  - [x] I have defined `FORK_PRODNET_BLOCK_NUMBER` on `.env.test`, with the current block number
+  - [x] I have run a fork test in `new-factory` mode with minted tokens against the official OSx contracts on the prodnet
     - `make test-fork-mint-prodnet`
   - If the live token has an address holding ≥ 3000 tokens on the prodnet:
-    - [ ] I have defined `TEST_TOKEN_WHALE` on `.env.test`
-    - [ ] I have updated `TOKEN1_ADDRESS` to have the address of the testnet token deployed above
-    - [ ] I have run a fork test in `new-factory` mode with the live token on the prodnet
+    - [x] I have defined `TEST_TOKEN_WHALE` on `.env.test`
+    - [x] I have updated `TOKEN1_ADDRESS` to have the address of the testnet token deployed above
+    - [x] I have run a fork test in `new-factory` mode with the live token on the prodnet
       - `make test-fork-prodnet`
-    - [ ] I have confirmed that tests still work in `existing-factory` mode with the live token(s) and the already deployed factory on the prodnet.
+    - [x] I have confirmed that tests still work in `existing-factory` mode with the live token(s) and the already deployed factory on the prodnet.
       - `make test-fork-factory-prodnet`
-    - [ ] I have reverted `TOKEN1_ADDRESS` to the intended address of the token on the production network
-- [ ] My deployment wallet is a newly created account, ready for safe production deploys.
+    - [x] I have reverted `TOKEN1_ADDRESS` to the intended address of the token on the production network
+- [x] My deployment wallet is a newly created account, ready for safe production deploys.
 - My computer:
-  - [ ] Is running in a safe physical location and a trusted network
-  - [ ] It exposes no services or ports
-  - [ ] The wifi or wired network used does does not have open ports to a WAN
-- [ ] I have previewed my deploy without any errors
+  - [x] Is running in a safe physical location and a trusted network
+  - [x] It exposes no services or ports
+  - [x] The wifi or wired network used does does not have open ports to a WAN
+- [] I have previewed my deploy without any errors
   - `make pre-deploy-prodnet`
 - [ ] My wallet has sufficient native token for gas
   - At least, 15% more than the estimated simulation
@@ -189,7 +188,7 @@ You can of course run all commands from the command line:
 ```sh
 # Load the env vars
 source .env
-```
+````
 
 ```sh
 # run unit tests

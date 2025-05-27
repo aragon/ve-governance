@@ -45,8 +45,8 @@ ft-mode-migration :; forge test --match-contract TestMigrate \
 # Fork testing - mainnet
 ft-mainnet-fork :; forge test --match-contract TestE2EV2 \
 	--rpc-url $(RPC_URL) \
-	--fork-block-number 22523012 \
 	-vvv
+	# --fork-block-number 22524023 \
 
 
 
@@ -92,3 +92,29 @@ deploy-sepolia :; forge script DeployGauges \
 	--etherscan-api-key $(ETHERSCAN_API_KEY) \
 	-vvv
 
+deploy-preview-mainnet :; forge script DeployGauges \
+	--rpc-url $(RPC_URL) \
+	-vvvv
+
+deploy-mainnet :; forge script DeployGauges \
+	--rpc-url $(RPC_URL) \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	--broadcast \
+	--slow \
+	--verify \
+	--etherscan-api-key $(ETHERSCAN_API_KEY) \
+	-vvv
+
+deploy-preview-multisig-mainnet :; forge script DeployMultisig \
+	--rpc-url $(RPC_URL) \
+	-vvvv
+
+deploy-multisig-mainnet :; forge script DeployMultisig \
+	--rpc-url $(RPC_URL) \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	--broadcast \
+	--slow \
+	--resume \
+	--verify \
+	--etherscan-api-key $(ETHERSCAN_API_KEY) \
+	-vvv
