@@ -172,7 +172,7 @@ contract RegressionV1_0_0__to__V1_3_0_Fork is
         assertEq(vpBefore2, vpAfter2);
     }
 
-    function test_Exit_oe() public {
+    function test_Exit() public {
         vm.startPrank(address(dao));
         queue.setMinLock(5 days);
         queue.setCooldown(5 days);
