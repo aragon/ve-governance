@@ -35,15 +35,12 @@ contract TestGaugeVote is GaugeVotingBase {
     function setUp() public override {
         super.setUp();
 
-        // reset clock. Start from 1 to avoid creating lock 
+        // reset clock. Start from 1 to avoid creating lock
         // at week boundary(0 would be a week boundary).
-        // This is to ensure that checkpoint doesn't 
+        // This is to ensure that checkpoint doesn't
         // revert because of this.
         vm.warp(1);
         time = block.timestamp;
-
-        // means we have voting power
-        curve.setWarmupPeriod(0);
 
         // mint underlying and stake
         token.mint(owner, lockDeposit);

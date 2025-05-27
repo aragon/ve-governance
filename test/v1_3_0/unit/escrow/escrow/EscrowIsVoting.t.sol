@@ -36,8 +36,6 @@ contract TestIsVoting is IEscrowCurveTokenStorage, EscrowBase {
         address bob = address(456);
 
         uint256 tokenId = escrow.createLock(Lock_1_Amount);
-        // set warmup to 0, so token immediatelly gains vp > 0 (required for delegation).
-        curve.setWarmupPeriod(0);
 
         // address(this) is an owner. bob becomes a delegatee.
         ivotesAdapter.setAutoDelegationDisabled(true);

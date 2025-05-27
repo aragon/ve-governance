@@ -29,9 +29,15 @@ import {
     IEscrowCurveGlobalStorage,
     IEscrowCurveIncreasingV1_2_0 as IEscrowCurveIncreasing,
     IEscrowCurveTokenStorage,
-    IEscrowCurveGlobalStorage
+    IEscrowCurveGlobalStorage,
+    IDeprecated
 } from "@curve/IEscrowCurveIncreasing_v1_2_0.sol";
-import {IExitQueue, ITicket, IExitQueueErrorsAndEvents, IExitMinLockCooldownErrorsAndEvents} from "@queue/IExitQueue.sol";
+import {
+    IExitQueue,
+    ITicket,
+    IExitQueueErrorsAndEvents,
+    IExitMinLockCooldownErrorsAndEvents
+} from "@queue/IExitQueue.sol";
 import {ILock, IWhitelistErrors, IWhitelistEvents} from "@lock/ILock.sol";
 import {
     IMerge,
