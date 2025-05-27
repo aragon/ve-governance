@@ -132,19 +132,8 @@ END @ 104 weeks (52 * PERIOD)  Voting Power: 841380000000000000000 | 841 | 2.00x
         assertEq(tokenPoint.checkpointTs, block.timestamp, "CP Timestamp is incorrect");
         assertEq(tokenPoint.writtenTs, block.timestamp, "Written Timestamp is incorrect");
 
-        // balance now is zero but Warm up
-        assertEq(curve.votingPowerAt(tokenIdFirst, 0), 0, "Balance after deposit before warmup");
-        assertEq(curve.isWarm(tokenIdFirst), false, "Not warming up");
-
-        // wait for warmup
-        vm.warp(block.timestamp + curve.warmupPeriod());
-        assertEq(curve.votingPowerAt(tokenIdFirst, 0), 0, "Balance after deposit before warmup");
-        assertEq(curve.isWarm(tokenIdFirst), false, "Not warming up");
-        assertEq(curve.isWarm(tokenIdSecond), false, "Not warming up II");
-
-        // warmup complete
-        vm.warp(block.timestamp + 1);
-
+        assertEq(curve.isWarm(tokenIdFirst), true, "Not warming up");
+        
         assertEq(
             curve.votingPowerAt(tokenIdFirst, block.timestamp),
             422423619325633557508,

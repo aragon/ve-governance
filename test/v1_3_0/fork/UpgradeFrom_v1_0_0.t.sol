@@ -1,4 +1,3 @@
-
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.17;
 
@@ -159,8 +158,7 @@ contract RegressionV1_0_0__to__V1_3_0_Fork is
         // we still treat it as its starting date to be from next epoch.
         // If we treat it as start of creation week's start ts,
         // voting powers wouldn't match before and after upgrade.
-        // hence, even after the upgrade, token still should not be warm.
-        assertFalse(curve.isWarm(tokenId));
+        assertTrue(curve.isWarm(tokenId));
 
         vm.warp(nextEpoch);
         assertTrue(curve.isWarm(tokenId));
@@ -174,26 +172,25 @@ contract RegressionV1_0_0__to__V1_3_0_Fork is
         assertEq(vpBefore2, vpAfter2);
     }
 
-    function test_Exit() public {
+    function test_Exit_oe() public {
         vm.startPrank(address(dao));
-        curve.setWarmupPeriod(5 days);
         queue.setMinLock(5 days);
         queue.setCooldown(5 days);
         vm.stopPrank();
 
         // we start at sunday
         vm.warp(block.timestamp + 6 days);
-        
+
         uint256 lockWrittenTs = block.timestamp;
 
         uint256 tokenId = escrow.createLock(20e18);
         lock.approve(address(escrow), tokenId);
-        
+
         uint256 id = vm.snapshotState();
         _exitAssertions(tokenId, lockWrittenTs);
 
         // We revert the state so it's as if exit didn't happen.
-        // This helps us to ensure that exact same asserts and 
+        // This helps us to ensure that exact same asserts and
         // exit work too after the upgrade.
         vm.revertToState(id);
 
@@ -207,12 +204,12 @@ contract RegressionV1_0_0__to__V1_3_0_Fork is
         vm.expectRevert(CannotExit.selector);
         escrow.beginWithdrawal(_tokenId);
 
-        // we get to friday. 
+        // we get to friday.
         // next epoch already started and 5 days passed from writtenTs.
         vm.warp(block.timestamp + 5 days + 1 seconds);
 
-        // we still can not exit because from `lock.start(which is _lockWrittenTs + 1 days)`, 
-        // 5 days hasn't passed yet which is minLock requirement, 
+        // we still can not exit because from `lock.start(which is _lockWrittenTs + 1 days)`,
+        // 5 days hasn't passed yet which is minLock requirement,
         vm.expectRevert(
             abi.encodeWithSelector(
                 MinLockNotReached.selector,
@@ -235,7 +232,7 @@ contract RegressionV1_0_0__to__V1_3_0_Fork is
         assertTrue(queue.canExit(_tokenId));
     }
 
-     function _votingPowerAt(
+    function _votingPowerAt(
         uint256 _tokenId,
         uint256 _at,
         uint256 _fallbackTs
@@ -319,7 +316,12 @@ contract RegressionV1_0_0__to__V1_3_0_Fork is
         vm.stopPrank();
     }
 
-    function onERC721Received(address, address, uint256, bytes memory) public pure returns (bytes4) {
+    function onERC721Received(
+        address,
+        address,
+        uint256,
+        bytes memory
+    ) public pure returns (bytes4) {
         return this.onERC721Received.selector;
     }
 }

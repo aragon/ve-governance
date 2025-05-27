@@ -39,7 +39,7 @@ contract TestCreateLock_Supply is IEscrowCurveTokenStorage, IEscrowCurveGlobalSt
         // 1. total bias at block.timestamp must be amount + slope * (block.timestamp - weekStart)
         // 2. total bias at t must be amount + slope * (t - weekStart)
         // 3. total bias must be the same at end and end + `t` (i.e stops increasing)
-        // 4. votingPower should be 0 during warmup and equal to bias after warmup
+        // 4. votingPower is correct.
 
         uint256 tokenId = escrow.createLock(Lock_1_Amount);
 
@@ -54,16 +54,6 @@ contract TestCreateLock_Supply is IEscrowCurveTokenStorage, IEscrowCurveGlobalSt
         assertTotalSupply(endTs + 10, biasFP(Lock_1_Amount, endTs - weekStartTs));
 
         // 4
-        assertEq(curve.isWarm(tokenId), false);
-        assertVotingPower(tokenId, 0);
-
-        vm.warp(weekStartTs + warmupPeriod);
-
-        assertEq(curve.isWarm(tokenId), false);
-        assertVotingPower(tokenId, 0);
-
-        vm.warp(weekStartTs + warmupPeriod + 1);
-        assertEq(curve.isWarm(tokenId), true);
         assertVotingPower(tokenId, biasFP(Lock_1_Amount, block.timestamp - weekStartTs));
     }
 

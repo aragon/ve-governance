@@ -219,45 +219,17 @@ contract LinearIncreasingCurve is
     }
 
     /// @notice Returns whether the NFT is warm
-    function isWarm(uint256 _tokenId) public view virtual returns (bool) {
-        return _isWarm(_tokenId, block.timestamp);
+    /// @dev In this version, warm functionality has been deprecated. 
+    ///      For backwards compatibility, always return true.
+    function isWarm(uint256) public view virtual returns (bool) {
+        return true;
     }
 
     /// @notice Returns whether the NFT is warm at the specified timestamp(`_ts`)
-    function isWarm(uint256 _tokenId, uint48 _ts) public view virtual returns (bool) {
-        return _isWarm(_tokenId, _ts);
-    }
-
-    function _isWarm(uint256 _tokenId, uint256 _ts) internal view virtual returns (bool) {
-        TokenPoint memory originalPoint = _tokenPointHistory[_tokenId][1];
-
-        return _isWarm(_tokenId, _ts, originalPoint);
-    }
-
-    /// @dev This signature is called by votingPowerAt to avoid extra sloads
-    ///      for `originalPoint`'s checkpointTs and writtenTs. Even though
-    ///      it would already be a warm sload, extra 200 gas makes a difference
-    ///      since `votingPowerAt` is called by ivotesAdapter in a loop.
-    function _isWarm(
-        uint256 _tokenId,
-        uint256 _ts,
-        TokenPoint memory _originalPoint
-    ) internal view virtual returns (bool) {
-        IVotingEscrow.LockedBalance memory locked = IVotingEscrow(escrow).locked(_tokenId);
-
-        // This could occur if user withdraw in which case lock is removed.
-        // In such case, `_tokenId` is treated as if it never existed
-        // in which case we anyways return false.
-        if (locked.amount == 0) return false;
-
-        // Helps to avoid voting powers not being equal after and before upgrade.
-        // This is because before upgrade, checkpoint ts is always greater than writtenTs
-        // whereas in new versions, it's vice versa.
-        if (_originalPoint.checkpointTs > _originalPoint.writtenTs) {
-            return _ts > _originalPoint.writtenTs + warmupPeriod;
-        }
-
-        return _ts > locked.start + warmupPeriod;
+    /// @dev In this version, warm functionality has been deprecated. 
+    ///      For backwards compatibility, always return true.
+    function isWarm(uint256, uint48) public view virtual returns (bool) {
+        return true;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -295,8 +267,6 @@ contract LinearIncreasingCurve is
         // Grab original point(the very first point for `_tokenId`).
         TokenPoint memory originalPoint = _tokenPointHistory[_tokenId][1];
 
-        if (!_isWarm(_tokenId, _t, originalPoint)) return 0;
-
         // Grab last point before `_t`.
         TokenPoint memory lastPoint = _tokenPointHistory[_tokenId][interval];
         int256 bias = lastPoint.coefficients[0];
@@ -311,6 +281,7 @@ contract LinearIncreasingCurve is
         // This ensures that behaviour after and before upgrade are same.
         if (lastPoint.checkpointTs > lastPoint.writtenTs) {
             lastPoint.writtenTs = lastPoint.checkpointTs;
+            if(_t < lastPoint.writtenTs) return 0;
         }
 
         uint256 elapsed = _t - lastPoint.writtenTs;

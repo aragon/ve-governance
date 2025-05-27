@@ -158,8 +158,7 @@ contract RegressionV1_0_0__to__V1_2_0_Fork is
         // we still treat it as its starting date to be from next epoch.
         // If we treat it as start of creation week's start ts,
         // voting powers wouldn't match before and after upgrade.
-        // hence, even after the upgrade, token still should not be warm.
-        assertFalse(curve.isWarm(tokenId));
+        assertTrue(curve.isWarm(tokenId));
 
         vm.warp(nextEpoch);
         assertTrue(curve.isWarm(tokenId));

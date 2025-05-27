@@ -110,19 +110,10 @@ contract TestGaugeVote is GaugeVotingBase {
     // can't vote if you have zero voting power
     function testCannotVoteIfYouHaveZeroVotingPower() public {
         address person = address(0x69);
-        curve.setWarmupPeriod(1000 weeks);
 
-        // create a second lock
-        token.mint(person, lockDeposit);
-        vm.startPrank(person);
-        {
-            token.approve(address(escrow), lockDeposit);
-            uint256 newTokenId = escrow.createLock(lockDeposit);
-            assertEq(escrow.votingPower(newTokenId), 0);
-            vm.expectRevert(NoVotingPower.selector);
-            voter.vote(votes);
-        }
-        vm.stopPrank();
+        vm.prank(person);
+        vm.expectRevert(NoVotingPower.selector);
+        voter.vote(votes);
     }
 
     function testCannotVoteWithNoVotes() public {
