@@ -701,7 +701,8 @@ contract TestE2EV1_2_0 is
 
             assertEq(
                 escrow.votingPowerForAccount(alice),
-                curve.getBias(timeElapsedSinceFirstLock, depositAlice0) + curve.getBias(timeElapsedSinceSecondLock, depositAlice1),
+                curve.getBias(timeElapsedSinceFirstLock, depositAlice0) +
+                    curve.getBias(timeElapsedSinceSecondLock, depositAlice1),
                 "Alice should have the both locks active"
             );
         }
@@ -1046,15 +1047,11 @@ contract TestE2EV1_2_0 is
             );
         }
 
-        // governance changes some params: warmup is now one day, cooldown is a week
+        // governance changes some params: cooldown is a week
         {
-            IDAO.Action[] memory actions = new IDAO.Action[](2);
+            IDAO.Action[] memory actions = new IDAO.Action[](1);
+
             actions[0] = IDAO.Action({
-                to: address(curve),
-                value: 0,
-                data: abi.encodeWithSelector(curve.setWarmupPeriod.selector, 1 days)
-            });
-            actions[1] = IDAO.Action({
                 to: address(queue),
                 value: 0,
                 data: abi.encodeWithSelector(queue.setCooldown.selector, 1 weeks)
@@ -1063,7 +1060,6 @@ contract TestE2EV1_2_0 is
             _buildSignProposal(actions);
 
             // check the new params
-            assertEq(curve.warmupPeriod(), 1 days, "Curve should have the correct warmup period");
             assertEq(queue.cooldown(), 1 weeks, "Queue should have the correct cooldown period");
         }
 
