@@ -42,8 +42,6 @@ contract TestMerge_DelegationAndVoter is
 
         address gauge = address(0x777);
 
-        curve.setWarmupPeriod(0);
-
         // activate cp & warp to an active window
         vm.warp(2 weeks + 1 hours + 1);
         voter.createGauge(gauge, "metadata");
@@ -55,7 +53,7 @@ contract TestMerge_DelegationAndVoter is
 
             escrow.createLock(amount1);
             ivotesAdapter.delegate(alice);
-            
+
             escrow.createLock(amount2);
 
             // vote
@@ -88,8 +86,8 @@ contract TestMerge_DelegationAndVoter is
         // // Assert state after merge..
 
         // Even though tokenId = 1 is burnt due to merge,
-        // Alice still must not lose its power as that 
-        // token's amount is merged into another. Note that 
+        // Alice still must not lose its power as that
+        // token's amount is merged into another. Note that
         // bias must be recalculated as merge occured after maxTime,
         // so duration will be different.
         assertEq(ivotesAdapter.getVotes(alice), bias(amount1 + amount2, maxTime));

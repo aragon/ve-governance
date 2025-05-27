@@ -42,10 +42,6 @@ contract TestSplit_DelegationAndVoter is
         voter.createGauge(gauge, "metadata");
         escrow.enableSplit();
 
-        // set to 0, so tokens immediatelly gain voting power > 0
-        // which is required for delegation.
-        curve.setWarmupPeriod(0);
-
         // turn on delegation to alice, so when she splits,
         // we can test that her delegation automatically updates.
         {
