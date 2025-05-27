@@ -76,7 +76,6 @@ contract GaugesDaoFactoryTest is Test {
             // Gauge Voter
             tokenParameters: tokenParameters,
             feePercent: 50, // 0.5%
-            warmupPeriod: 1234,
             cooldownPeriod: 2345,
             minLockDuration: 3456,
             minDeposit: 1,
@@ -145,7 +144,6 @@ contract GaugesDaoFactoryTest is Test {
         );
 
         assertEq(actualParams.feePercent, creationParams.feePercent, "Incorrect feePercent");
-        assertEq(actualParams.warmupPeriod, creationParams.warmupPeriod, "Incorrect warmupPeriod");
         assertEq(
             actualParams.cooldownPeriod,
             creationParams.cooldownPeriod,
@@ -243,7 +241,6 @@ contract GaugesDaoFactoryTest is Test {
             // Gauge Voter
             tokenParameters: tokenParameters,
             feePercent: 100, // 100/10k = 1%
-            warmupPeriod: 7654,
             cooldownPeriod: 6543,
             minLockDuration: 5432,
             minDeposit: 1 ether,
@@ -312,7 +309,6 @@ contract GaugesDaoFactoryTest is Test {
         );
 
         assertEq(actualParams.feePercent, creationParams.feePercent, "Incorrect feePercent");
-        assertEq(actualParams.warmupPeriod, creationParams.warmupPeriod, "Incorrect warmupPeriod");
         assertEq(
             actualParams.cooldownPeriod,
             creationParams.cooldownPeriod,
@@ -430,7 +426,6 @@ contract GaugesDaoFactoryTest is Test {
             // Gauge Voter
             tokenParameters: tokenParameters,
             feePercent: 500,
-            warmupPeriod: 1234,
             cooldownPeriod: 2345,
             minLockDuration: 3456,
             minDeposit: 1,
@@ -550,11 +545,7 @@ contract GaugesDaoFactoryTest is Test {
             address(0),
             "Empty curve address"
         );
-        assertEq(
-            deployment.gaugeVoterPluginSets[0].curve.warmupPeriod(),
-            1234,
-            "Incorrect warmupPeriod"
-        );
+
         assertNotEq(
             address(deployment.gaugeVoterPluginSets[0].exitQueue),
             address(0),
@@ -647,11 +638,7 @@ contract GaugesDaoFactoryTest is Test {
             address(0),
             "Empty curve address"
         );
-        assertEq(
-            deployment.gaugeVoterPluginSets[1].curve.warmupPeriod(),
-            1234,
-            "Incorrect warmupPeriod"
-        );
+
         assertNotEq(
             address(deployment.gaugeVoterPluginSets[1].exitQueue),
             address(0),
@@ -822,7 +809,6 @@ contract GaugesDaoFactoryTest is Test {
             // Gauge Voter
             tokenParameters: tokenParameters,
             feePercent: 20, // 20/10k = 0.2%
-            warmupPeriod: 5678,
             cooldownPeriod: 6789,
             minLockDuration: 7890,
             minDeposit: 0.1 ether,
@@ -942,11 +928,7 @@ contract GaugesDaoFactoryTest is Test {
             address(0),
             "Empty curve address"
         );
-        assertEq(
-            deployment.gaugeVoterPluginSets[0].curve.warmupPeriod(),
-            5678,
-            "Incorrect warmupPeriod"
-        );
+
         assertNotEq(
             address(deployment.gaugeVoterPluginSets[0].exitQueue),
             address(0),
@@ -1039,11 +1021,7 @@ contract GaugesDaoFactoryTest is Test {
             address(0),
             "Empty curve address"
         );
-        assertEq(
-            deployment.gaugeVoterPluginSets[1].curve.warmupPeriod(),
-            5678,
-            "Incorrect warmupPeriod"
-        );
+
         assertNotEq(
             address(deployment.gaugeVoterPluginSets[1].exitQueue),
             address(0),
@@ -1136,11 +1114,7 @@ contract GaugesDaoFactoryTest is Test {
             address(0),
             "Empty curve address"
         );
-        assertEq(
-            deployment.gaugeVoterPluginSets[2].curve.warmupPeriod(),
-            5678,
-            "Incorrect warmupPeriod"
-        );
+
         assertNotEq(
             address(deployment.gaugeVoterPluginSets[2].exitQueue),
             address(0),
@@ -1317,7 +1291,6 @@ contract GaugesDaoFactoryTest is Test {
             // Gauge Voter
             tokenParameters: tokenParameters,
             feePercent: 500, // 500/10k = 5%
-            warmupPeriod: 1234,
             cooldownPeriod: 2345,
             minLockDuration: 3456,
             minDeposit: 10 ether,

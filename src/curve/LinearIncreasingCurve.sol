@@ -58,6 +58,7 @@ contract LinearIncreasingCurve is
     mapping(uint256 => uint256) public tokenPointLatestIndex;
 
     /// @notice The warmup period for the curve
+    /// @dev Deprecated in this version, but kept for backwards compatibility.
     uint48 public warmupPeriod;
 
     /// @dev tokenId => tokenPointIntervals => TokenPoint
@@ -105,14 +106,8 @@ contract LinearIncreasingCurve is
     }
 
     /// @param _escrow VotingEscrow contract address
-    function initialize(
-        address _escrow,
-        address _dao,
-        uint48 _warmupPeriod,
-        address _clock
-    ) external initializer {
+    function initialize(address _escrow, address _dao, address _clock) external initializer {
         escrow = _escrow;
-        warmupPeriod = _warmupPeriod;
         clock = _clock;
 
         __ReentrancyGuard_init();
@@ -210,29 +205,6 @@ contract LinearIncreasingCurve is
     }
 
     /*//////////////////////////////////////////////////////////////
-                              Warmup
-    //////////////////////////////////////////////////////////////*/
-
-    function setWarmupPeriod(uint48 _warmupPeriod) external auth(CURVE_ADMIN_ROLE) {
-        warmupPeriod = _warmupPeriod;
-        emit WarmupSet(_warmupPeriod);
-    }
-
-    /// @notice Returns whether the NFT is warm
-    /// @dev In this version, warm functionality has been deprecated. 
-    ///      For backwards compatibility, always return true.
-    function isWarm(uint256) public view virtual returns (bool) {
-        return true;
-    }
-
-    /// @notice Returns whether the NFT is warm at the specified timestamp(`_ts`)
-    /// @dev In this version, warm functionality has been deprecated. 
-    ///      For backwards compatibility, always return true.
-    function isWarm(uint256, uint48) public view virtual returns (bool) {
-        return true;
-    }
-
-    /*//////////////////////////////////////////////////////////////
                               BALANCE
     //////////////////////////////////////////////////////////////*/
 
@@ -281,7 +253,7 @@ contract LinearIncreasingCurve is
         // This ensures that behaviour after and before upgrade are same.
         if (lastPoint.checkpointTs > lastPoint.writtenTs) {
             lastPoint.writtenTs = lastPoint.checkpointTs;
-            if(_t < lastPoint.writtenTs) return 0;
+            if (_t < lastPoint.writtenTs) return 0;
         }
 
         uint256 elapsed = _t - lastPoint.writtenTs;
@@ -620,4 +592,26 @@ contract LinearIncreasingCurve is
 
     /// @dev Reserved storage space to allow for layout changes in the future.
     uint256[42] private __gap;
+
+    /*//////////////////////////////////////////////////////////////
+                          DEPRECATED: Warmup
+    //////////////////////////////////////////////////////////////*/
+
+    function setWarmupPeriod(uint48) external {
+        revert Deprecated();
+    }
+
+    /// @notice Returns whether the NFT is warm
+    /// @dev In this version, warm functionality has been deprecated.
+    ///      For backwards compatibility, always return true.
+    function isWarm(uint256) public view virtual returns (bool) {
+        return true;
+    }
+
+    /// @notice Returns whether the NFT is warm at the specified timestamp(`_ts`)
+    /// @dev In this version, warm functionality has been deprecated.
+    ///      For backwards compatibility, always return true.
+    function isWarm(uint256, uint48) public view virtual returns (bool) {
+        return true;
+    }
 }

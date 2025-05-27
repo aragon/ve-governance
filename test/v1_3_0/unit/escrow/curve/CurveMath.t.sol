@@ -102,8 +102,8 @@ END @ 104 weeks (52 * PERIOD)  Voting Power: 841380000000000000000 | 841 | 2.00x
         uint tokenIdSecond = 2;
         uint208 depositFirst = 420.69e18;
         uint208 depositSecond = 1_000_000_000e18;
-        
-        // add + 1seconds so it doesn't get to 
+
+        // add + 1seconds so it doesn't get to
         // be exact checkpointInterval.
         uint start = 52 weeks + 1 hours;
 
@@ -132,8 +132,19 @@ END @ 104 weeks (52 * PERIOD)  Voting Power: 841380000000000000000 | 841 | 2.00x
         assertEq(tokenPoint.checkpointTs, block.timestamp, "CP Timestamp is incorrect");
         assertEq(tokenPoint.writtenTs, block.timestamp, "Written Timestamp is incorrect");
 
-        assertEq(curve.isWarm(tokenIdFirst), true, "Not warming up");
-        
+        // balance now is zero but Warm up
+        assertEq(curve.votingPowerAt(tokenIdFirst, 0), 0, "Balance after deposit before warmup");
+        assertEq(curve.isWarm(tokenIdFirst), false, "Not warming up");
+
+        // wait for warmup
+        vm.warp(block.timestamp + curve.warmupPeriod());
+        assertEq(curve.votingPowerAt(tokenIdFirst, 0), 0, "Balance after deposit before warmup");
+        assertEq(curve.isWarm(tokenIdFirst), false, "Not warming up");
+        assertEq(curve.isWarm(tokenIdSecond), false, "Not warming up II");
+
+        // warmup complete
+        vm.warp(block.timestamp + 1);
+
         assertEq(
             curve.votingPowerAt(tokenIdFirst, block.timestamp),
             422423619325633557508,

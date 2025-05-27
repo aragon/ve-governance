@@ -73,15 +73,12 @@ contract TestCreateLock is IEscrowCurveTokenStorage, EscrowBase {
         vm.assume(_depositor != address(0) && address(_depositor).code.length == 0);
         vm.assume(_time > 0);
 
-        // checkpoint function reverts if it's called 
+        // checkpoint function reverts if it's called
         // at exact same time as week boundary. So avoid.
         _time = uint32(avoidWeekBoundary(_time));
 
         // set the min deposit to _value
         escrow.setMinDeposit(_value);
-
-        // set zero warmup for this test
-        curve.setWarmupPeriod(0);
 
         vm.warp(_time);
         token.mint(_depositor, _value);
@@ -228,7 +225,7 @@ contract TestCreateLock is IEscrowCurveTokenStorage, EscrowBase {
         // shane deposits just before the next deposit date
         address shane = address(0x1);
 
-        // matt deposits ON the next deposit date 
+        // matt deposits ON the next deposit date
         // which should cause a revert.
         address matt = address(0x2);
 
@@ -327,7 +324,7 @@ contract TestCreateLock is IEscrowCurveTokenStorage, EscrowBase {
         TaxERC20 janky = new TaxERC20();
 
         escrow = _deployEscrow(address(janky), address(dao), address(clock), 1);
-        curve = _deployCurve(address(escrow), address(dao), 3 days, address(clock));
+        curve = _deployCurve(address(escrow), address(dao), address(clock));
         nftLock = _deployLock(address(escrow), name, symbol, address(dao));
 
         // grant this contract admin privileges
