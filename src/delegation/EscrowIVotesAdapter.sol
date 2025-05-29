@@ -16,6 +16,7 @@ import {
 import {IERC721EnumerableMintableBurnable as IERC721EMB} from "@lock/IERC721EMB.sol";
 
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {IERC6372} from "@openzeppelin/contracts/interfaces/IERC6372.sol";
 
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {
@@ -35,6 +36,7 @@ import {SignedFixedPointMath} from "@libs/SignedFixedPointMathLib.sol";
 
 contract EscrowIVotesAdapter is
     IClockUser,
+    IERC6372,
     ReentrancyGuard,
     IEscrowIVotesAdapter,
     Pausable,
@@ -334,6 +336,19 @@ contract EscrowIVotesAdapter is
     /// @return True if auto delegation is disabled, otherwise false.
     function autoDelegationDisabled(address _account) public view virtual returns (bool) {
         return autoDelegationDisabled_[_account];
+    }
+    
+    /*//////////////////////////////////////////////////////////////
+                        IERC6372 Functions
+    //////////////////////////////////////////////////////////////*/
+
+    function clock() external view returns (uint48) {
+        return uint48(block.timestamp);
+    }
+
+
+    function CLOCK_MODE() external view returns (string memory) {
+        return "mode=timestamp";
     }
 
     /*//////////////////////////////////////////////////////////////
