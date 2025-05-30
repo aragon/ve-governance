@@ -341,11 +341,12 @@ contract EscrowIVotesAdapter is
                         IERC6372 Functions
     //////////////////////////////////////////////////////////////*/
 
+    /// @inheritdoc IERC6372
     function clock() external view returns (uint48) {
         return uint48(block.timestamp);
     }
 
-
+    /// @inheritdoc IERC6372
     function CLOCK_MODE() external view returns (string memory) {
         return "mode=timestamp";
     }
