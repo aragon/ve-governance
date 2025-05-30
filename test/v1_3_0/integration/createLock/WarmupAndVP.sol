@@ -37,8 +37,10 @@ contract TestCreateLock_WarmUpAndVotingPower is IEscrowCurveTokenStorage, IEscro
 
         assertVotingPower(tokenId, biasFP(Lock_1_Amount, block.timestamp - weekStart));
 
+        uint256 endTs = getEndTimestamp(weekStart, block.timestamp);
+
         int256 maxVotingPower = biasFP(Lock_1_Amount, maxTime);
-        assertVotingPower(tokenId, weekStart + maxTime, maxVotingPower);
-        assertVotingPower(tokenId, weekStart + maxTime + 10, maxVotingPower);
+        assertVotingPower(tokenId, endTs, maxVotingPower);
+        assertVotingPower(tokenId, endTs + 10, maxVotingPower);
     }
 }

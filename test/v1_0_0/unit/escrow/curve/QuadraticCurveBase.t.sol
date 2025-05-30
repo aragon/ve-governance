@@ -15,6 +15,8 @@ import {
 } from "../../../versions.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
+import {FixedPointBase} from "../../../base/FixedPointBase.sol";
+import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 
 contract MockEscrow {
     address public token;
@@ -33,7 +35,7 @@ contract MockEscrow {
     }
 }
 
-contract QuadraticCurveBase is TestHelpers, ILockedBalanceIncreasing {
+contract QuadraticCurveBase is TestHelpers, ILockedBalanceIncreasing, FixedPointBase {
     using ProxyLib for address;
     QuadraticIncreasingEscrow internal curve;
     Clock internal clock;
@@ -64,5 +66,10 @@ contract QuadraticCurveBase is TestHelpers, ILockedBalanceIncreasing {
         });
 
         escrow.setCurve(curve);
+
+        FixedPointBase.initialize(
+            clock.epochDuration() * CurveConstantLib.MAX_EPOCHS,
+            clock.checkpointInterval()
+        );
     }
 }
