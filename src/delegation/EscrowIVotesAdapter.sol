@@ -28,14 +28,13 @@ import {
 } from "@escrow/IVotingEscrowIncreasing_v1_2_0.sol";
 import {VotingEscrowV1_2_0 as VotingEscrow} from "@escrow/VotingEscrowIncreasing_v1_2_0.sol";
 
-import {IClockUser, IClockV1_2_0 as IClock} from "@clock/IClock_v1_2_0.sol";
+import {IClockV1_2_0 as IClock} from "@clock/IClock_v1_2_0.sol";
 
 import {IEscrowIVotesAdapter, IDelegateMoveVoteRecipient} from "./IEscrowIVotesAdapter.sol";
 import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 import {SignedFixedPointMath} from "@libs/SignedFixedPointMathLib.sol";
 
 contract EscrowIVotesAdapter is
-    IClockUser,
     IERC6372,
     ReentrancyGuard,
     IEscrowIVotesAdapter,
@@ -52,7 +51,7 @@ contract EscrowIVotesAdapter is
     address public escrow;
 
     /// @notice Clock contract for epoch duration
-    address public clock;
+    address public escrowClock;
 
     mapping(address => mapping(uint256 => int256)) internal slopeChanges;
     mapping(address => mapping(uint256 => GlobalPoint)) internal pointHistory;
@@ -82,11 +81,11 @@ contract EscrowIVotesAdapter is
         __DaoAuthorizableUpgradeable_init(IDAO(_dao));
         __ReentrancyGuard_init();
         escrow = _escrow;
-        clock = _clock;
+        escrowClock = _clock;
 
         if (_startPaused) _pause();
 
-        maxTime = IClock(clock).epochDuration() * CurveConstantLib.MAX_EPOCHS;
+        maxTime = IClock(escrowClock).epochDuration() * CurveConstantLib.MAX_EPOCHS;
     }
 
     function pause() external auth(DELEGATION_ADMIN_ROLE) {
@@ -450,7 +449,7 @@ contract EscrowIVotesAdapter is
         uint256 expectedWrittenTs;
 
         {
-            uint256 checkpointInterval = IClock(clock).checkpointInterval();
+            uint256 checkpointInterval = IClock(escrowClock).checkpointInterval();
             uint256 lastPointCheckpoint = lastPoint.writtenTs;
             uint256 t_i = (lastPointCheckpoint / checkpointInterval) * checkpointInterval;
 
@@ -583,7 +582,7 @@ contract EscrowIVotesAdapter is
 
         mapping(uint256 => int256) storage slopeChanges_ = slopeChanges[_delegatee];
 
-        uint256 checkpointInterval = IClock(clock).checkpointInterval();
+        uint256 checkpointInterval = IClock(escrowClock).checkpointInterval();
 
         uint256 t_i = (ts / checkpointInterval) * checkpointInterval;
 
