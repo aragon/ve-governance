@@ -121,7 +121,6 @@ contract VoterSetupTest is GaugeVotingBase {
         string memory veTokenName = "veTokenNameeeeee";
         string memory veTokenSymbol = "veTokenSymbollllll";
         address token = address(new MockERC20());
-        uint48 warmup = 5 days;
         uint48 cooldown = 7 days;
         uint256 feePercent = 0.05e18;
         uint48 minLock = 2 weeks;
@@ -132,7 +131,6 @@ contract VoterSetupTest is GaugeVotingBase {
             token: token,
             veTokenName: veTokenName,
             veTokenSymbol: veTokenSymbol,
-            warmup: warmup,
             cooldown: cooldown,
             feePercent: feePercent,
             minLock: minLock,
@@ -148,7 +146,6 @@ contract VoterSetupTest is GaugeVotingBase {
             veTokenSymbol,
             token,
             cooldown,
-            warmup,
             feePercent,
             minLock,
             minDeposit

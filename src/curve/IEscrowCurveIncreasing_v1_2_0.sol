@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "./IEscrowCurveIncreasing.sol";
+import "../IDeprecated.sol";
 
 /*///////////////////////////////////////////////////////////////
                         Global Curve
@@ -70,8 +71,8 @@ interface IEscrowCurveIncreasingV1_2_0 is
     IEscrowCurveMath,
     IEscrowCurveTokenV1_2_0,
     IEscrowCurveMaxTime,
-    IWarmup,
-    IEscrowCurveGlobal
+    IEscrowCurveGlobal,
+    IDeprecated
 {}
 
 interface IEscrowCurveIncreasingV1_2_0_NoSupply is
@@ -79,5 +80,5 @@ interface IEscrowCurveIncreasingV1_2_0_NoSupply is
     IEscrowCurveMath,
     IEscrowCurveTokenV1_2_0,
     IEscrowCurveMaxTime,
-    IWarmup
+    IDeprecated
 {}

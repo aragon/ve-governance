@@ -609,14 +609,18 @@ contract TestE2EV1_3_0 is
             );
 
             assertTrue(curve.isWarm(1), "Alice should be warm");
-            assertFalse(curve.isWarm(2), "Bob should not be warm");
+            assertTrue(curve.isWarm(2), "Bob should not be warm");
 
             assertEq(
                 escrow.votingPower(1),
                 bias(depositAlice0, block.timestamp - tp1_1.checkpointTs),
                 "Alice should have correct voting power"
             );
-            assertEq(escrow.votingPower(2), 0, "Bob should have no voting power");
+            assertEq(
+                escrow.votingPower(2),
+                bias(depositAliceBob, block.timestamp - tp2_1.checkpointTs),
+                "Bob should have correct voting power"
+            );
 
             assertEq(
                 escrow.locked(1).start,
@@ -674,13 +678,12 @@ contract TestE2EV1_3_0 is
                 "Alice point should have the correct written timestamp"
             );
 
-            // check the voting power is unchanged (my boi aint warm)
             assertEq(
                 escrow.votingPower(3),
-                0,
-                "Alice should have no voting power on the second lock"
+                bias(depositAlice1, block.timestamp - tp1_2.checkpointTs),
+                "Alice should have correct voting power on the second lock"
             );
-            assertFalse(curve.isWarm(3), "Alice should not be warm on the second lock");
+            assertTrue(curve.isWarm(3), "Alice should be warm on the second lock");
 
             // check the total voting power on the escrow
             assertEq(
@@ -693,10 +696,14 @@ contract TestE2EV1_3_0 is
             uint timeElapsedSinceFirstLock = block.timestamp -
                 curve.tokenPointHistory(1, 1).checkpointTs;
 
+            uint timeElapsedSinceSecondLock = block.timestamp -
+                curve.tokenPointHistory(3, 1).checkpointTs;
+
             assertEq(
                 escrow.votingPowerForAccount(alice),
-                curve.getBias(timeElapsedSinceFirstLock, depositAlice0),
-                "Alice should only have the first lock active"
+                curve.getBias(timeElapsedSinceFirstLock, depositAlice0) +
+                    curve.getBias(timeElapsedSinceSecondLock, depositAlice1),
+                "Alice should have the both locks active"
             );
         }
         // we then fast forward 1 week and check that his voting power has increased as expected with the new lock
@@ -1042,13 +1049,8 @@ contract TestE2EV1_3_0 is
 
         // governance changes some params: warmup is now one day, cooldown is a week
         {
-            IDAO.Action[] memory actions = new IDAO.Action[](2);
+            IDAO.Action[] memory actions = new IDAO.Action[](1);
             actions[0] = IDAO.Action({
-                to: address(curve),
-                value: 0,
-                data: abi.encodeWithSelector(curve.setWarmupPeriod.selector, 1 days)
-            });
-            actions[1] = IDAO.Action({
                 to: address(queue),
                 value: 0,
                 data: abi.encodeWithSelector(queue.setCooldown.selector, 1 weeks)
@@ -1057,7 +1059,6 @@ contract TestE2EV1_3_0 is
             _buildSignProposal(actions);
 
             // check the new params
-            assertEq(curve.warmupPeriod(), 1 days, "Curve should have the correct warmup period");
             assertEq(queue.cooldown(), 1 weeks, "Queue should have the correct cooldown period");
         }
 
@@ -1074,11 +1075,11 @@ contract TestE2EV1_3_0 is
 
             // nope
             goToEpochStartPlus(10 weeks + 12 hours);
-            assertFalse(curve.isWarm(5), "Alice should not be warm");
+            assertTrue(curve.isWarm(5), "Alice should be warm");
 
             // nope
             goToEpochStartPlus(10 weeks + 1 days);
-            assertFalse(curve.isWarm(5), "Alice should not be warm");
+            assertTrue(curve.isWarm(5), "Alice should be warm");
 
             // +1s
             goToEpochStartPlus(10 weeks + 1 days + 1 hours);

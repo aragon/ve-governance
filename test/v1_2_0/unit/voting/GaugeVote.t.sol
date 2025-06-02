@@ -35,16 +35,13 @@ contract TestGaugeVote is GaugeVotingBase {
     function setUp() public override {
         super.setUp();
 
-        // reset clock. Start from 1 to avoid creating lock 
+        // reset clock. Start from 1 to avoid creating lock
         // at week boundary(0 would be a week boundary).
-        // This is to ensure that checkpoint doesn't 
+        // This is to ensure that checkpoint doesn't
         // revert because of this.
         vm.warp(1);
 
         time = block.timestamp;
-
-        // means we have voting power
-        curve.setWarmupPeriod(0);
 
         // mint underlying and stake
         token.mint(owner, lockDeposit);
@@ -110,19 +107,10 @@ contract TestGaugeVote is GaugeVotingBase {
     // can't vote if you have zero voting power
     function testCannotVoteIfYouHaveZeroVotingPower() public {
         address person = address(0x69);
-        curve.setWarmupPeriod(1000 weeks);
 
-        // create a second lock
-        token.mint(person, lockDeposit);
-        vm.startPrank(person);
-        {
-            token.approve(address(escrow), lockDeposit);
-            uint256 newTokenId = escrow.createLock(lockDeposit);
-            assertEq(escrow.votingPower(newTokenId), 0);
-            vm.expectRevert(NoVotingPower.selector);
-            voter.vote(votes);
-        }
-        vm.stopPrank();
+        vm.prank(person);
+        vm.expectRevert(NoVotingPower.selector);
+        voter.vote(votes);
     }
 
     function testCannotVoteWithNoVotes() public {

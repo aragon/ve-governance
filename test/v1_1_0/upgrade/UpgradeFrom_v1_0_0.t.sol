@@ -39,8 +39,10 @@ import {SimpleGaugeVoter as SimpleGaugeVoterV1_1_0} from "test/v1_1_0/versions.s
 
 import {Upgrades} from "@foundry-upgrades/LegacyUpgrades.sol";
 import {Options} from "@foundry-upgrades/Options.sol";
+import {FixedPointBase} from "../base/FixedPointBase.sol";
+import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 
-contract RegressionV1_0_0__to__V1_1_0 is Test, IGaugeVote {
+contract RegressionV1_0_0__to__V1_1_0 is Test, IGaugeVote, FixedPointBase {
     GaugesDaoFactoryV1_0_0 factory;
 
     VotingEscrow escrow;
@@ -82,6 +84,11 @@ contract RegressionV1_0_0__to__V1_1_0 is Test, IGaugeVote {
         dao = DAO(deployment.dao);
         multisig = Multisig(deployment.multisigPlugin);
         token = MockERC20(escrow.token());
+
+        FixedPointBase.initialize(
+            clock.epochDuration() * CurveConstantLib.MAX_EPOCHS,
+            clock.checkpointInterval()
+        );
 
         // setup gauge and unpause the voter
         vm.startPrank(address(dao));
@@ -145,7 +152,7 @@ contract RegressionV1_0_0__to__V1_1_0 is Test, IGaugeVote {
     function testInitialState() public view {
         // alice is locked and has voting power
         assertEq(escrow.locked(aliceToken).amount, 1_000 ether);
-        assertGt(escrow.votingPower(aliceToken), 1_000 ether);
+        assertVp(aliceToken, 1_000 ether);
 
         // bob is locked and is currently voting
         assertEq(escrow.locked(bobToken).amount, 1_000 ether);
@@ -217,7 +224,7 @@ contract RegressionV1_0_0__to__V1_1_0 is Test, IGaugeVote {
         // validate the new state
         // alice2 is locked and has voting power
         assertEq(escrow.locked(aliceSecondToken).amount, 1_000 ether);
-        assertGt(escrow.votingPower(aliceSecondToken), 1_000 ether);
+        assertVp(aliceSecondToken, 1_000 ether);
 
         // alice1 is locked and is currently voting
         assertEq(escrow.locked(aliceToken).amount, 1_000 ether);
@@ -344,5 +351,14 @@ contract RegressionV1_0_0__to__V1_1_0 is Test, IGaugeVote {
 
         vm.roll(block.number + 1); // mint one block
         return _factory;
+    }
+
+    function assertVp(uint256 _tokenId, uint256 _amount) private view {
+        // if maxTime is 0, then vp is always constant.
+        if (maxTime == 0) {
+            assertEq(escrow.votingPower(_tokenId), _amount);
+        } else {
+            assertGt(escrow.votingPower(_tokenId), _amount);
+        }
     }
 }

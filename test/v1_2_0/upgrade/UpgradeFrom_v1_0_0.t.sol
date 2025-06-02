@@ -196,7 +196,7 @@ contract RegressionV1_0_0__to__V1_2_0 is Test, IGaugeVote, FixedPointBase {
     function testInitialState() public view {
         // alice is locked and has voting power
         assertEq(escrow.locked(aliceToken).amount, 1_000 ether);
-        assertGt(escrow.votingPower(aliceToken), 1_000 ether);
+        assertVp(aliceToken, 1_000 ether);
 
         // bob is locked and is currently voting
         assertEq(escrow.locked(bobToken).amount, 1_000 ether);
@@ -266,7 +266,7 @@ contract RegressionV1_0_0__to__V1_2_0 is Test, IGaugeVote, FixedPointBase {
         // validate the new state
         // alice2 is locked and has voting power
         assertEq(escrow.locked(aliceSecondToken).amount, 1_000 ether);
-        assertGt(escrow.votingPower(aliceSecondToken), 1_000 ether);
+        assertVp(aliceSecondToken, 1_000 ether);
 
         // alice1 is locked and is currently voting
         assertEq(escrow.locked(aliceToken).amount, 1_000 ether);
@@ -559,5 +559,14 @@ contract RegressionV1_0_0__to__V1_2_0 is Test, IGaugeVote, FixedPointBase {
             abi.encodeWithSelector(lock.isApprovedOrOwner.selector, _who, _tokenId),
             abi.encode(true)
         );
+    }
+
+    function assertVp(uint256 _tokenId, uint256 _amount) private view {
+        // if maxTime is 0, then vp is always constant.
+        if (maxTime == 0) {
+            assertEq(escrow.votingPower(_tokenId), _amount);
+        } else {
+            assertGt(escrow.votingPower(_tokenId), _amount);
+        }
     }
 }

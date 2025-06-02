@@ -5,7 +5,8 @@ import {
     Curve,
     ILockedBalanceIncreasing,
     IVotingEscrowIncreasing as IVotingEscrow,
-    IEscrowCurveIncreasing as IEscrowCurve
+    IEscrowCurveIncreasing as IEscrowCurve,
+    IDeprecated
 } from "../../../versions.sol";
 import {CurveBase} from "./CurveBase.t.sol";
 
@@ -52,7 +53,7 @@ contract TestIncreasingCurveLogic is CurveBase {
         vm.warp(2 weeks + 1 hours);
 
         LockedBalance memory first = LockedBalance({amount: 100, start: 2 weeks});
-        LockedBalance memory second = LockedBalance({amount: 200, start: 2 weeks + 1});
+        LockedBalance memory second = LockedBalance({amount: 200, start: 2 weeks + 1 hours});
 
         vm.expectRevert(abi.encodeWithSelector(InvalidLocks.selector, 1, first, second));
         escrow.checkpoint(1, first, second);
@@ -89,5 +90,11 @@ contract TestIncreasingCurveLogic is CurveBase {
     // on those amounts later on will be valid.
     function testFuzz_previewMaxBias(uint192 _amount) public view {
         assertEq(curve.previewMaxBias(_amount), bias(_amount, maxTime));
+    }
+
+    function testWarmupDeprecated() public {
+        assertEq(curve.warmupPeriod(), 0);
+        vm.expectRevert(IDeprecated.Deprecated.selector);
+        curve.setWarmupPeriod(1 weeks);
     }
 }

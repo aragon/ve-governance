@@ -99,7 +99,6 @@ contract GetFactoryValuesV1_2_0 is Script {
             );
         }
         console.log("  - FeePercent: %d", factory.getDeploymentParameters().feePercent);
-        console.log("  - WarmupPeriod: %d", factory.getDeploymentParameters().warmupPeriod);
         console.log("  - CooldownPeriod: %d", factory.getDeploymentParameters().cooldownPeriod);
         console.log("  - MinLockDuration: %d", factory.getDeploymentParameters().minLockDuration);
         console.log("  - VotingPaused: %d", factory.getDeploymentParameters().votingPaused);

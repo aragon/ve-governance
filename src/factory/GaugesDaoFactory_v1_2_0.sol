@@ -36,7 +36,6 @@ import {EscrowIVotesAdapter} from "@delegation/EscrowIVotesAdapter.sol";
 /// @param multisigMembers The list of addresses to be defined as the initial multisig signers
 /// @param tokenParameters A list with the tokens and metadata for which a plugin and a VE should be deployed
 /// @param feePercent The fee taken on withdrawals (1 ether = 100%)
-/// @param warmupPeriod Delay in seconds after depositing before voting becomes possible
 /// @param cooldownPeriod Delay seconds after queuing an exit before withdrawing becomes possible
 /// @param minLockDuration Min seconds a user must have locked in escrow before they can queue an exit
 /// @param votingPaused Prevent voting until manually activated by the multisig
@@ -55,7 +54,6 @@ struct DeploymentParameters {
     // Gauge Voter
     TokenParameters[] tokenParameters;
     uint16 feePercent;
-    uint48 warmupPeriod;
     uint48 cooldownPeriod;
     uint48 minLockDuration;
     bool votingPaused;
@@ -127,7 +125,6 @@ contract GaugesDaoFactoryV1_2_0 {
 
         parameters.minDeposit = _parameters.minDeposit;
         parameters.feePercent = _parameters.feePercent;
-        parameters.warmupPeriod = _parameters.warmupPeriod;
         parameters.cooldownPeriod = _parameters.cooldownPeriod;
         parameters.minLockDuration = _parameters.minLockDuration;
         parameters.votingPaused = _parameters.votingPaused;
@@ -312,7 +309,6 @@ contract GaugesDaoFactoryV1_2_0 {
                 veTokenName: tokenParameters.veTokenName,
                 veTokenSymbol: tokenParameters.veTokenSymbol,
                 feePercent: parameters.feePercent,
-                warmup: parameters.warmupPeriod,
                 cooldown: parameters.cooldownPeriod,
                 minLock: parameters.minLockDuration,
                 minDeposit: parameters.minDeposit

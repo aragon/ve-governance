@@ -26,7 +26,6 @@ import {EscrowIVotesAdapter} from "@delegation/EscrowIVotesAdapter.sol";
 /// @param veTokenSymbol The symbol of the voting escrow token
 /// @param token The underlying token for the escrow
 /// @param cooldown The cooldown period for the exit queue
-/// @param warmup The warmup period for the escrow curve
 struct IGaugeVoterSetupParams {
     // voter
     bool isPaused;
@@ -40,8 +39,6 @@ struct IGaugeVoterSetupParams {
     uint256 feePercent;
     uint48 cooldown;
     uint48 minLock;
-    // curve
-    uint48 warmup;
 }
 
 contract GaugeVoterSetupV1_2_0 is PluginSetup {
@@ -148,7 +145,7 @@ contract GaugeVoterSetupV1_2_0 is PluginSetup {
 
         // deploy the curve
         deps.curve = curveBase.deployUUPSProxy(
-            abi.encodeCall(Curve.initialize, (deps.escrow, _dao, params.warmup, deps.clock))
+            abi.encodeCall(Curve.initialize, (deps.escrow, _dao, deps.clock))
         );
 
         // deploy the exit queue
@@ -347,7 +344,6 @@ contract GaugeVoterSetupV1_2_0 is PluginSetup {
         string calldata veTokenSymbol,
         address token,
         uint48 cooldown,
-        uint48 warmup,
         uint256 feePercent,
         uint48 minLock,
         uint256 minDeposit
@@ -359,7 +355,6 @@ contract GaugeVoterSetupV1_2_0 is PluginSetup {
                     token: token,
                     veTokenName: veTokenName,
                     veTokenSymbol: veTokenSymbol,
-                    warmup: warmup,
                     cooldown: cooldown,
                     feePercent: feePercent,
                     minLock: minLock,
