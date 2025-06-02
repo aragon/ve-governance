@@ -8,7 +8,7 @@ import {
 import {ILockedBalanceIncreasing} from "@escrow/IVotingEscrowIncreasing.sol";
 
 interface IEscrowIVotesAdapterErrorsAndEvents {
-    event AutoDelegationSet(address indexed delegate, bool enabled);
+    event AutoDelegationDisabledSet(address indexed delegate, bool enabled);
     event TokensDelegated(address indexed sender, address indexed delegatee, uint256[] tokenIds);
     event TokensUndelegated(address indexed sender, address indexed delegatee, uint256[] tokenIds);
 

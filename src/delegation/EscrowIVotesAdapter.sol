@@ -100,7 +100,7 @@ contract EscrowIVotesAdapter is
         address sender = _msgSender();
 
         autoDelegationDisabled_[sender] = _disabled;
-        emit AutoDelegationSet(sender, _disabled);
+        emit AutoDelegationDisabledSet(sender, _disabled);
     }
 
     /// @dev Internal helper function to set token delegated to true by using bitmap operations.
