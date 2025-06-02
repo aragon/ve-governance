@@ -49,7 +49,6 @@ contract TestSplit_WarmUpAndVotingPower is
         assertTrue(curve.isWarm(from));
         assertTrue(curve.isWarm(tokenId1));
 
-
         assertEq(escrow.votingPower(from), bias(Lock_1_Amount - value, block.timestamp - weekStart));
         assertEq(escrow.votingPower(tokenId1), bias(value, block.timestamp - weekStart));
         assertTrue(curve.isWarm(from));

@@ -499,6 +499,8 @@ contract EscrowIVotesAdapter is
         pointHistory[_delegatee][latestPointIndex_] = lastPoint;
     }
 
+    /// @notice Proxies a call to the ERC721 contract
+    /// @dev Useful for calling contracts looking to validate if the contract is token-like
     function balanceOf(address _account) public view virtual returns (uint256) {
         address lockNFT = IVotingEscrow(escrow).lockNFT();
         if (lockNFT == address(0)) return 0;

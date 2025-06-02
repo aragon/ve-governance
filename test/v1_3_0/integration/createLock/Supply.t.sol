@@ -44,8 +44,8 @@ contract TestCreateLock_Supply is IEscrowCurveTokenStorage, IEscrowCurveGlobalSt
         uint256 tokenId = escrow.createLock(Lock_1_Amount);
 
         uint256 weekStartTs = weekStartTs(block.timestamp);
-        uint256 endTs = weekStartTs + maxTime;
         uint256 currentTs = block.timestamp;
+        uint256 endTs = getEndTimestamp(weekStartTs, currentTs);
 
         // 1, 2, 3
         assertTotalSupply(currentTs, biasFP(Lock_1_Amount, currentTs - weekStartTs));
@@ -67,7 +67,7 @@ contract TestCreateLock_Supply is IEscrowCurveTokenStorage, IEscrowCurveGlobalSt
         uint256 totalLockAmount = Lock_1_Amount + Lock_2_Amount;
 
         uint256 weekStartTs = weekStartTs(block.timestamp);
-        uint256 endTs = weekStartTs + maxTime;
+        uint256 endTs = getEndTimestamp(weekStartTs, block.timestamp, 0);
         uint256 currentTs = block.timestamp;
 
         // 1, 2, 3
@@ -97,22 +97,30 @@ contract TestCreateLock_Supply is IEscrowCurveTokenStorage, IEscrowCurveGlobalSt
         assertTotalSupply(currentTs, currentTotalBiasFP);
         assertTotalSupply(currentTs - 1, biasFP(Lock_1_Amount, currentTs - 1 - Lock_1_start));
 
-        uint256 Lock_1_end = Lock_1_start + maxTime;
-        uint256 Lock_2_end = weekStartTs + maxTime;
+        uint256 Lock_1_end = getEndTimestamp(Lock_1_start, Lock_1_ts);
+        uint256 Lock_2_end = getEndTimestamp(weekStartTs, currentTs);
 
         int256 Lock_1_MAX = biasFP(Lock_1_Amount, Lock_1_end - Lock_1_start);
         int256 LOCK_2_MAX = biasFP(Lock_2_Amount, Lock_2_end - weekStartTs);
 
         // 3
-        assertTotalSupply(Lock_1_end, Lock_1_MAX + biasFP(Lock_2_Amount, Lock_1_end - weekStartTs));
-        assertTotalSupply(
-            Lock_1_end + 10,
-            Lock_1_MAX + biasFP(Lock_2_Amount, Lock_1_end + 10 - weekStartTs)
-        );
+        if (Lock_1_end < weekStartTs) {
+            assertTotalSupply(Lock_1_end, Lock_1_MAX);
+            assertTotalSupply(Lock_1_end + 10, Lock_1_MAX);
+        } else {
+            assertTotalSupply(
+                Lock_1_end,
+                Lock_1_MAX + biasFP(Lock_2_Amount, Lock_1_end - weekStartTs)
+            );
+            assertTotalSupply(
+                Lock_1_end + 10,
+                Lock_1_MAX + biasFP(Lock_2_Amount, Lock_1_end + 10 - weekStartTs)
+            );
+        }
 
         // 4
         assertTotalSupply(Lock_2_end, Lock_1_MAX + LOCK_2_MAX);
-        assertTotalSupply(Lock_2_end + 10, Lock_1_MAX + LOCK_2_MAX);
+        assertTotalSupply(Lock_2_end, Lock_1_MAX + LOCK_2_MAX);
     }
 
     function test_whenCreatingNewLock_existingLock_ended() public givenExistingLock {
@@ -129,8 +137,8 @@ contract TestCreateLock_Supply is IEscrowCurveTokenStorage, IEscrowCurveGlobalSt
         uint256 weekStartTs = weekStartTs(block.timestamp);
         uint256 currentTs = block.timestamp;
 
-        uint256 Lock_1_end = Lock_1_start + maxTime;
-        uint256 Lock_2_end = weekStartTs + maxTime;
+        uint256 Lock_1_end = getEndTimestamp(Lock_1_start, Lock_1_ts);
+        uint256 Lock_2_end = getEndTimestamp(weekStartTs, currentTs);
 
         int256 Lock_1_MAX = biasFP(Lock_1_Amount, Lock_1_end - Lock_1_start);
         int256 Lock_2_MAX = biasFP(Lock_2_Amount, Lock_2_end - weekStartTs);
