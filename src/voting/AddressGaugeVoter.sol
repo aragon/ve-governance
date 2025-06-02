@@ -174,14 +174,15 @@ contract AddressGaugeVoter is
         uint256 votesForGauge = _normalizedWeight(_currentVote.weight, _totalWeights);
         if (votesForGauge == 0) revert NoVotes();
 
-        return _castVote(_currentVote, _epoch, _account, _votingPower, votesForGauge, _voteData);
+        return
+            _castVote(_currentVote.gauge, _epoch, _account, _votingPower, votesForGauge, _voteData);
     }
 
     /// @notice Cast the vote of an tokenId to a specific gauge
     /// @dev This function doesn't do any safety checks and it's up to caller to do validations.
     ///      If you wish to have validations, see `_safeCastVote`.
     function _castVote(
-        GaugeVote memory _currentVote,
+        address _gauge,
         uint256 _epoch,
         address _account,
         uint256 _votingPower,
@@ -191,20 +192,20 @@ contract AddressGaugeVoter is
         uint256 _votes = _votesForGauge(_voteWeight, _votingPower);
 
         // record the vote for the token
-        _voteData.gaugesVotedFor.push(_currentVote.gauge);
-        _voteData.voteWeights[_currentVote.gauge] += _voteWeight;
+        _voteData.gaugesVotedFor.push(_gauge);
+        _voteData.voteWeights[_gauge] += _voteWeight;
 
         // update the total weights accruing to this gauge
-        epochGaugeVotes[_epoch][_currentVote.gauge] += _votes;
+        epochGaugeVotes[_epoch][_gauge] += _votes;
         epochTotalVotingPowerCast[_epoch] += _votes;
         _voteData.usedVotingPower += _votes;
 
         emit Voted({
             voter: _account,
-            gauge: _currentVote.gauge,
+            gauge: _gauge,
             epoch: epochId(),
             votingPowerCastForGauge: _votes,
-            totalVotingPowerInGauge: epochGaugeVotes[_epoch][_currentVote.gauge],
+            totalVotingPowerInGauge: epochGaugeVotes[_epoch][_gauge],
             totalVotingPowerInContract: epochTotalVotingPowerCast[_epoch],
             timestamp: block.timestamp
         });
@@ -276,8 +277,9 @@ contract AddressGaugeVoter is
         // cast new votes again.
         for (uint256 i = 0; i < pastVotes.length; i++) {
             address gauge = pastVotes[i];
-            uint256 _votes = voteData.voteWeights[gauge];
-            newVoteData[i] = GaugeVote(_votes, gauge);
+            // voteWeights are stored as scaled up by 10e32. Since we call
+            // `_normalizedWeight` below again, we first scale down.
+            newVoteData[i] = GaugeVote(voteData.voteWeights[gauge] / 10e32, gauge);
         }
 
         // Note that even if votingPower is 0, this still records.
@@ -289,7 +291,7 @@ contract AddressGaugeVoter is
         // Re-cast the votes with the new voting power.
         for (uint256 i = 0; i < newVoteData.length; i++) {
             _castVote(
-                newVoteData[i],
+                newVoteData[i].gauge,
                 epoch,
                 _account,
                 votingPower,
