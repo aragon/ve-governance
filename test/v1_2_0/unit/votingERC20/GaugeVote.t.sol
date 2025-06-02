@@ -39,9 +39,6 @@ contract TestGaugeVoteWithERC20 is GaugeVotingBase {
         vm.warp(0);
         time = block.timestamp;
 
-        // means we have voting power
-        curve.setWarmupPeriod(0);
-
         // mint underlying
         votingToken.mint(owner, lockDeposit);
 
@@ -103,7 +100,6 @@ contract TestGaugeVoteWithERC20 is GaugeVotingBase {
     // can't vote if you have zero voting power
     function testCannotVoteIfYouHaveZeroVotingPower() public {
         address person = address(0x69);
-        curve.setWarmupPeriod(1000 weeks);
 
         vm.startPrank(person);
         {

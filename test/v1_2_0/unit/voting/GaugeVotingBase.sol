@@ -139,13 +139,13 @@ contract GaugeVotingBase is
                 token: address(token),
                 veTokenName: "VE Token",
                 veTokenSymbol: "VE",
-                warmup: 3 days,
                 cooldown: 3 days,
                 feePercent: 0,
                 minLock: 1,
                 minDeposit: 1 wei
             })
         );
+
         (address pluginAddress, IPluginSetup.PreparedSetupData memory preparedSetupData) = psp
             .prepareInstallation(address(dao), _mockPrepareInstallationParams(data));
 

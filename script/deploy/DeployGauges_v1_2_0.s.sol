@@ -80,7 +80,6 @@ contract DeployGaugesV1_2_0 is Script {
             // Gauge Voter
             tokenParameters: tokenParameters,
             feePercent: vm.envUint("FEE_PERCENT").toUint16(),
-            warmupPeriod: vm.envUint("WARMUP_PERIOD").toUint48(),
             cooldownPeriod: vm.envUint("COOLDOWN_PERIOD").toUint48(),
             minLockDuration: vm.envUint("MIN_LOCK_DURATION").toUint48(),
             votingPaused: vm.envBool("VOTING_PAUSED"),

@@ -59,7 +59,7 @@ contract CurveBase is TestHelpers, FixedPointBase, ILockedBalanceIncreasing {
 
         bytes memory initCalldata = abi.encodeCall(
             Curve.initialize,
-            (address(escrow), address(dao), 3 days, address(clock))
+            (address(escrow), address(dao), address(clock))
         );
 
         curve = Curve(impl.deployUUPSProxy(initCalldata));

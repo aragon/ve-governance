@@ -162,17 +162,17 @@ contract TestVPAndCheckpoints is Base {
     /*//////////////////////////////////////////////////////////////
                      Transition Checkpoints
     //////////////////////////////////////////////////////////////*/
-    
+
     function test_shouldRevertIfPaused() public {
         dg.pause();
-        
+
         vm.expectRevert("Pausable: paused");
-        
+
         // transition checkpoints
         dg.checkpointTransition(alice, 3);
     }
 
-    function test_TransitionCheckpoints() public {
+    function test_transitionLessThanCurrentTimestamp() public {
         dg.delegate(alice);
 
         uint256 amount = 10;
@@ -181,7 +181,9 @@ contract TestVPAndCheckpoints is Base {
         _mockLocked(singleId[0], amount, start);
         dg.delegate(singleId);
 
-        vm.warp(block.timestamp + maxTime + 1 weeks);
+        uint256 delegateTs = block.timestamp;
+
+        vm.warp(delegateTs + maxTime + 4 weeks);
 
         // transition checkpoints
         dg.checkpointTransition(alice, 3);
@@ -195,5 +197,29 @@ contract TestVPAndCheckpoints is Base {
             slopeFP(amount),
             expectedTs
         );
+    }
+
+    function test_transitionBiggerThanCurrentTimestamp() public {
+        dg.delegate(alice);
+
+        uint256 amount = 10;
+        uint256 start = weekStartTs(block.timestamp);
+
+        _mockLocked(singleId[0], amount, start);
+        dg.delegate(singleId);
+
+        uint256 delegateTs = block.timestamp;
+
+        vm.warp(delegateTs + maxTime + 4 weeks);
+
+        // transition checkpoints
+        dg.checkpointTransition(
+            alice,
+            (block.timestamp - delegateTs + 3 weeks) / checkpointInterval
+        );
+
+        uint256 expectedTs = block.timestamp;
+
+        assertGlobalPoint(alice, 2, biasFP(amount, maxTime), 0, expectedTs);
     }
 }

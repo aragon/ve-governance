@@ -41,8 +41,6 @@ contract TestCreateLock_DelegationAndVoter is
 
         address gauge = address(0x777);
 
-        curve.setWarmupPeriod(0);
-
         // activate cp & warp to an active window
         vm.warp(2 weeks + 1 hours + 1);
         voter.createGauge(gauge, "metadata");
@@ -70,7 +68,7 @@ contract TestCreateLock_DelegationAndVoter is
         assertTrue(ivotesAdapter.tokenIsDelegated(1));
         assertEq(ivotesAdapter.numberOfDelegatedTokens(alice), 1);
 
-        // alice creates second lock which should 
+        // alice creates second lock which should
         // automatically increase her delegation power.
         {
             vm.startPrank(alice);

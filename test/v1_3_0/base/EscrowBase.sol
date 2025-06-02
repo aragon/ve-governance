@@ -97,10 +97,8 @@ contract EscrowBase is
         token = new MockERC20();
         clock = _deployClock(address(dao));
 
-        warmupPeriod = 3 days;
-
         escrow = _deployEscrow(address(token), address(dao), address(clock), 1);
-        curve = _deployCurve(address(escrow), address(dao), warmupPeriod, address(clock));
+        curve = _deployCurve(address(escrow), address(dao), address(clock));
         nftLock = _deployLock(address(escrow), name, symbol, address(dao));
         ivotesAdapter = _deployEscrowIVotesAdapter(address(dao), address(escrow), address(clock));
 
@@ -230,17 +228,17 @@ contract EscrowBase is
     }
 
     // Useful to bound the times of when locks get created.
-    // We use 254 weeks as a maximum duration between the previous 
-    // lock created and current one. See `LinearIncreasingCurve`'s 
+    // We use 254 weeks as a maximum duration between the previous
+    // lock created and current one. See `LinearIncreasingCurve`'s
     // `_checkpoint` for more details(loop).
-    // NOTE that we use +1 seconds to ensure that time never gets 
-    // to be exact checkpoint interval as it reverts if so. 
+    // NOTE that we use +1 seconds to ensure that time never gets
+    // to be exact checkpoint interval as it reverts if so.
     // See `_checkpoint` in curve.
     function boundLockCreationFuzzTimes(
         uint256 _t1,
         uint256 _t2,
         uint256 _t3
-    ) internal view returns(uint48, uint48, uint48) {
+    ) internal view returns (uint48, uint48, uint48) {
         _t1 = avoidWeekBoundary(bound(_t1, 1, 254 weeks + 1 seconds));
         _t2 = avoidWeekBoundary(bound(_t2, _t1, _t1 + 254 weeks + 1 seconds));
         _t3 = avoidWeekBoundary(bound(_t3, _t2, _t2 + 254 weeks + 1 seconds));
@@ -249,23 +247,23 @@ contract EscrowBase is
     }
 
     // Useful to bound the times of when locks get created.
-    // We use 254 weeks as a maximum duration between the previous 
-    // lock created and current one. See `LinearIncreasingCurve`'s 
+    // We use 254 weeks as a maximum duration between the previous
+    // lock created and current one. See `LinearIncreasingCurve`'s
     // `_checkpoint` for more details(loop).
-    // NOTE that we use +1 seconds to ensure that time never gets 
-    // to be exact checkpoint interval as it reverts if so. 
+    // NOTE that we use +1 seconds to ensure that time never gets
+    // to be exact checkpoint interval as it reverts if so.
     // See `_checkpoint` in curve.
     function boundLockCreationFuzzTimes(
         uint256 _t1,
         uint256 _t2
-    ) internal view returns(uint48, uint48) {
+    ) internal view returns (uint48, uint48) {
         _t1 = avoidWeekBoundary(bound(_t1, 1, 254 weeks + 1 seconds));
         _t2 = avoidWeekBoundary(bound(_t2, _t1, _t1 + 254 weeks + 1 seconds));
 
         return (uint48(_t1), uint48(_t2));
     }
 
-    // Helper function to count how many records 
+    // Helper function to count how many records
     // would be stored when 3 locks get created.
     function expectedIndex(
         uint256 _firstLockTime,
@@ -282,13 +280,13 @@ contract EscrowBase is
         // How many weeks between the first lock and the last lock.
         uint256 count = (_mergeTime - fromLockWeekStartTs) / 1 weeks;
 
-        // If merge time is not exactly matching the week start time, 
+        // If merge time is not exactly matching the week start time,
         // it wouldn't be included in week count above.
         if (_mergeTime != mergeWeekStartTs) {
             count++;
         }
 
-        // Add one more for the first lock, as it also 
+        // Add one more for the first lock, as it also
         // wouldn't be included in week counts.
         count++;
 
@@ -383,14 +381,13 @@ contract EscrowBase is
     function _deployCurve(
         address _escrow,
         address _dao,
-        uint48 _warmup,
         address _clock
     ) public returns (LinearIncreasingCurve) {
         LinearIncreasingCurve impl = new LinearIncreasingCurve();
 
         bytes memory initCalldata = abi.encodeCall(
             LinearIncreasingCurve.initialize,
-            (_escrow, _dao, _warmup, _clock)
+            (_escrow, _dao, _clock)
         );
         return LinearIncreasingCurve(address(impl).deployUUPSProxy(initCalldata));
     }
