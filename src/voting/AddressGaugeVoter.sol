@@ -273,9 +273,8 @@ contract AddressGaugeVoter is
         // cast new votes again.
         for (uint256 i = 0; i < pastVotes.length; i++) {
             address gauge = pastVotes[i];
-            // voteWeights are stored as scaled up by 10e32. Since we call
-            // `_normalizedWeight` below again, we first scale down.
-            newVoteData[i] = GaugeVote(voteData.voteWeights[gauge] / 10e32, gauge);
+            uint256 _votes = voteData.voteWeights[gauge];
+            newVoteData[i] = GaugeVote(_votes, gauge);
         }
 
         // Note that even if votingPower is 0, this still records.
