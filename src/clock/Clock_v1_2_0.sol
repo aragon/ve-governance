@@ -236,7 +236,7 @@ contract ClockV1_2_0 is IClockV1_2_0, DaoAuthorizable, UUPSUpgradeable {
     /// @notice Timestamp of the prev deposit interval (absolute)
     function resolveEpochPrevCheckpointTs(uint256 timestamp) public pure returns (uint256) {
         unchecked {
-            return timestamp + resolveEpochNextCheckpointIn(timestamp) - CHECKPOINT_INTERVAL;
+            return timestamp - resolveEpochPrevCheckpointElapsed(timestamp);
         }
     }
 
