@@ -84,10 +84,6 @@ contract AddressGaugeVoter is
         if (_startPaused) _pause();
     }
 
-    function initializeFrom(address _ivotesAdapter) public {
-        ivotesAdapter = _ivotesAdapter;
-    }
-
     /*///////////////////////////////////////////////////////////////
                             Modifiers
     //////////////////////////////////////////////////////////////*/
