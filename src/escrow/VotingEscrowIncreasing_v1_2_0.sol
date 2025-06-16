@@ -389,17 +389,17 @@ contract VotingEscrowV1_2_0 is
             revert CannotMerge(_from, _to);
         }
 
-        // We only allow merge when both tokens have the same owner. 
+        // We only allow merge when both tokens have the same owner.
         // After the merge, owner still should have the same voting power
-        // as one token gets merged into another. For this reason, 
-        // We call `_moveDelegateVotes` with empty locked, so it doesn't 
-        // reduce/increase the same voting power for gas efficiency. 
-        // Note that we still decrease owner's delegated token count 
+        // as one token gets merged into another. For this reason,
+        // We call `_moveDelegateVotes` with empty locked, so it doesn't
+        // reduce/increase the same voting power for gas efficiency.
+        // Note that we still decrease owner's delegated token count
         // as `_from` token is destroyed.
         _moveDelegateVotes(ownerFrom, address(0), _from, LockedBalance(0, 0));
 
         // Update for `_from`.
-        // Note that on the checkpoint, we still don't 
+        // Note that on the checkpoint, we still don't
         // remove `start` for historical reasons.
         IERC721EMB(lockNFT).burn(_from);
         _locked[_from] = LockedBalance(0, 0);
@@ -407,11 +407,7 @@ contract VotingEscrowV1_2_0 is
 
         // update for `_to`.
         uint208 newLockedAmount = oldLockedFrom.amount + oldLockedTo.amount;
-        _checkpoint(
-            _to,
-            oldLockedTo,
-            LockedBalance(newLockedAmount, oldLockedTo.start)
-        );
+        _checkpoint(_to, oldLockedTo, LockedBalance(newLockedAmount, oldLockedTo.start));
         _locked[_to] = LockedBalance(newLockedAmount, oldLockedTo.start);
 
         emit Merged(sender, _from, _to, oldLockedFrom.amount, oldLockedTo.amount, newLockedAmount);
@@ -440,18 +436,18 @@ contract VotingEscrowV1_2_0 is
 
     /// @inheritdoc ISplit
     function split(uint256 _from, uint256 _value) public whenNotPaused returns (uint256) {
-        if(_value == 0) revert ZeroAmount();
+        if (_value == 0) revert ZeroAmount();
 
         address sender = _msgSender();
 
-        // For some erc721, `ownerOf` reverts and for some, 
-        // it returns address(0). For safety, if it doesn't revert, 
+        // For some erc721, `ownerOf` reverts and for some,
+        // it returns address(0). For safety, if it doesn't revert,
         // we also check if it's not address(0).
-        address owner = IERC721EMB(lockNFT).ownerOf(_from); 
-        if(owner == address(0)) revert NoOwner();
+        address owner = IERC721EMB(lockNFT).ownerOf(_from);
+        if (owner == address(0)) revert NoOwner();
 
         if (!canSplit(owner)) revert SplitNotWhitelisted();
-    
+
         // Sender must either be approved or the owner.
         if (!isApprovedOrOwner(sender, _from)) revert NotApprovedOrOwner();
 
@@ -473,10 +469,10 @@ contract VotingEscrowV1_2_0 is
         locked_.amount = amount2;
         uint256 newTokenId = _createSplitNFT(owner, locked_);
 
-        // owner gets minted a new tokenId. Since `split` function 
-        // just splits the same amount into two tokenIds, there's no need 
+        // owner gets minted a new tokenId. Since `split` function
+        // just splits the same amount into two tokenIds, there's no need
         // to update voting power on ivotesAdapter, as total doesn't change.
-        // We still call `_moveDelegateVotes` with zero LockedBalance to 
+        // We still call `_moveDelegateVotes` with zero LockedBalance to
         // make sure we update delegatee's token count due to newtokenId.
         _moveDelegateVotes(address(0), owner, newTokenId, LockedBalance(0, 0));
 
@@ -541,6 +537,13 @@ contract VotingEscrowV1_2_0 is
     function beginWithdrawal(uint256 _tokenId) public nonReentrant whenNotPaused {
         // in the event of an increasing curve, 0 voting power means voting isn't active
         if (votingPower(_tokenId) == 0) revert CannotExit();
+
+        // Make sure creating lock and begin withdrawal
+        // doesn't occur in the same tx.
+        IEscrowCurve.TokenPoint memory point = IEscrowCurve(curve).tokenPointHistory(_tokenId, 1);
+        if (block.timestamp == point.writtenTs) {
+            revert CannotWithdrawInSameBlock();
+        }
 
         address owner = IERC721EMB(lockNFT).ownerOf(_tokenId);
 

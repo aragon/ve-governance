@@ -18,8 +18,15 @@ contract TestDelegate is Base {
     /*//////////////////////////////////////////////////////////////
                       IVotes Delegate
     //////////////////////////////////////////////////////////////*/
+    function test_shouldRevertIfPaused_IVotesDelegate() public {
+        dg.pause();
 
-    function test_Sets_Delegatee_Without_Delegating_Tokens() public {
+        vm.expectRevert("Pausable: paused");
+        dg.delegate(address(1));
+    }
+
+    function test_Sets_DelegateeForFirstTime() public {
+        _mockOwnedTokens(address(this), new uint256[](0));
         vm.expectEmit();
         emit DelegateChanged(sender, address(0), alice);
 
@@ -29,42 +36,70 @@ contract TestDelegate is Base {
         assertEq(dg.numberOfDelegatedTokens(sender), 0);
     }
 
-    function test_Delegates_owned_tokens_automatically() public AutoDelegationEnabled {
-        _mockOwnedTokens(sender, singleId);
-        _mockLocked(singleId[0], 100, weekStartTs(block.timestamp));
-
-        dg.delegate(alice);
-
-        assertEq(dg.numberOfDelegatedTokens(sender), 1);
-    }
-
-    function testRevert_CanNotDelegateToAnotherAddressIfTokenAlreadyDelegated() public {
-        dg.delegate(alice);
-
-        _mockLocked(singleId[0], 100, weekStartTs(block.timestamp));
-        dg.delegate(singleId);
-
-        vm.expectRevert(DelegationNotAllowed.selector);
-        dg.delegate(bob);
-    }
-
     function test_Updates_Delegatee() public {
+        _mockOwnedTokens(address(this), new uint256[](0));
         dg.delegate(alice);
-
-        assertEq(dg.delegates(sender), alice);
 
         vm.expectEmit();
         emit DelegateChanged(sender, alice, bob);
+
         dg.delegate(bob);
 
         assertEq(dg.delegates(sender), bob);
+        assertEq(dg.numberOfDelegatedTokens(sender), 0);
+    }
+
+    function test_UndelegatesAndDelegatesToNewAddress() public {
+        // Mock tokenIds 1|2|3 with their voting power 
+        // and locked amounts  and attach to `sender`.
+        address sender = address(this);
+
+        uint256[] memory ownedTokens = new uint256[](3);
+        ownedTokens[0] = 1;
+        ownedTokens[1] = 2;
+        ownedTokens[2] = 3;
+
+        _mockOwnedTokens(sender, ownedTokens);
+        _mockLocked(ownedTokens[0], 101, weekStartTs(block.timestamp));
+        _mockLocked(ownedTokens[1], 102, weekStartTs(block.timestamp));
+        _mockLocked(ownedTokens[2], 103, weekStartTs(block.timestamp));
+        _mockVotingPower(ownedTokens[0], 1);
+        _mockVotingPower(ownedTokens[1], 1);
+        _mockVotingPower(ownedTokens[2], 1);
+
+        uint256[] memory delegatedIds = new uint256[](2);
+        delegatedIds[0] = 2;
+        delegatedIds[1] = 3;
+
+        // only delegate 2 and 3 tokenIds to alice.
+        dg.setAutoDelegationDisabled(true);
+        dg.delegate(alice);
+        dg.delegate(delegatedIds);
+        assertEq(dg.numberOfDelegatedTokens(sender), 2);
+
+        // turn on auto delegation, so when delegate is called,
+        // it should undelegate 2 and 3 tokenIds from alice and
+        // delegate all ownedTokens(1, 2, 3) to Bob.
+        dg.setAutoDelegationDisabled(false);
+        dg.delegate(bob);
+
+        assertEq(dg.delegates(sender), bob);
+        assertEq(dg.numberOfDelegatedTokens(sender), 3);
+
+        assertEq(dg.getVotes(alice), 0);
+
+        uint256 expectedVPBob = bias(101, block.timestamp - weekStartTs(block.timestamp)) +
+            bias(102, block.timestamp - weekStartTs(block.timestamp)) +
+            bias(103, block.timestamp - weekStartTs(block.timestamp));
+
+        assertEq(dg.getVotes(bob), expectedVPBob);
     }
 
     /*//////////////////////////////////////////////////////////////
                     Delegate(uint256[] tokenIds)
     //////////////////////////////////////////////////////////////*/
     function test_shouldRevertIfPaused() public {
-        dg.delegate(alice);
+        dg.setDelegateAddress(alice);
 
         dg.pause();
         
@@ -79,14 +114,14 @@ contract TestDelegate is Base {
     }
 
     function testRevert_IfTokenListEmpty() public {
-        dg.delegate(alice);
+        dg.setDelegateAddress(alice);
 
         vm.expectRevert(TokenListEmpty.selector);
         dg.delegate(new uint256[](0));
     }
 
     function testRevert_IfVotingPowerZeroAtLeastForOneToken() public {
-        dg.delegate(alice);
+        dg.setDelegateAddress(alice);
 
         _mockLocked(multiIds[0], 10, weekStartTs(block.timestamp));
         _mockLocked(multiIds[1], 10, weekStartTs(block.timestamp));
@@ -99,7 +134,7 @@ contract TestDelegate is Base {
     }
 
     function testRevert_IfNotApprovedOrOwner() public {
-        dg.delegate(alice);
+        dg.setDelegateAddress(alice);
 
         _mockApprovedOwner(false);
 
@@ -108,7 +143,7 @@ contract TestDelegate is Base {
     }
 
     function testRevert_IfTokenAlreadyDelegated() public {
-        dg.delegate(alice);
+        dg.setDelegateAddress(alice);
 
         _mockLocked(singleId[0], 10, weekStartTs(block.timestamp));
         dg.delegate(singleId);
@@ -119,7 +154,7 @@ contract TestDelegate is Base {
     }
 
     function test_EmitsTheEvents() public {
-        dg.delegate(alice);
+        dg.setDelegateAddress(alice);
 
         _mockLocked(multiIds[0], 10, weekStartTs(block.timestamp));
         _mockLocked(multiIds[1], 10, weekStartTs(block.timestamp));
@@ -131,7 +166,7 @@ contract TestDelegate is Base {
     }
 
     function test_CorrectlySetsDelegatedTokenCount() public {
-        dg.delegate(alice);
+        dg.setDelegateAddress(alice);
         uint256 start = weekStartTs((block.timestamp));
 
         _mockLocked(multiIds[0], 10, start);
@@ -149,7 +184,7 @@ contract TestDelegate is Base {
     }
 
     function test_SetsDelegatedTokenToTrue() public {
-        dg.delegate(alice);
+        dg.setDelegateAddress(alice);
         _mockLocked(1, 10, weekStartTs((block.timestamp)));
         dg.delegate(getIds(1));
 

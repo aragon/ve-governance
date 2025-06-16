@@ -92,6 +92,7 @@ interface IVotingEscrowCore is
 interface IWithdrawalQueueErrors {
     error NotTicketHolder();
     error CannotExit();
+    error CannotWithdrawInSameBlock();
 }
 
 interface IWithdrawalQueueEvents {}
