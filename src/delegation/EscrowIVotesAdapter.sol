@@ -128,10 +128,12 @@ contract EscrowIVotesAdapter is
     //////////////////////////////////////////////////////////////*/
 
     /// @param _delegatee The new delegatee address.
-    /// @dev If auto delegation is not disabled, it will delegate all token ids
-    ///      that sender currently has. Note that sender must first undelegate
-    ///      all token ids before calling this function.
-    function delegate(address _delegatee) public whenNotPaused {
+    /// @dev Allows to change a delegatee address. This is useful 
+    ///      for cases when delegator has huge number of tokens in 
+    ///      which case  `delegate(address)` would go out of gas. 
+    ///      In rare cases, Caller first has to undelegate all tokens, 
+    ///      then call this function and then call `delegate(tokenIds)`.
+    function setDelegateAddress(address _delegatee) public whenNotPaused {
         address sender = _msgSender();
 
         if (numberOfDelegatedTokens[sender] != 0) {
@@ -140,13 +142,6 @@ contract EscrowIVotesAdapter is
 
         address currentDelegatee = delegates(sender);
         delegatees_[sender] = _delegatee;
-
-        if (!autoDelegationDisabled(sender) && _delegatee != address(0)) {
-            uint256[] memory tokenIds = VotingEscrow(escrow).ownedTokens(sender);
-            if (tokenIds.length != 0) {
-                _delegate(sender, _delegatee, tokenIds, false);
-            }
-        }
 
         emit DelegateChanged(sender, currentDelegatee, _delegatee);
     }
@@ -171,7 +166,7 @@ contract EscrowIVotesAdapter is
     /// @dev Undelegates currently delegated tokens from the current delegatee
     ///      and delegates all owned tokens by the sender to the new delegatee.
     /// @param _delegatee The new delegatee address.
-    function redelegate(address _delegatee) public virtual whenNotPaused {
+    function delegate(address _delegatee) public virtual whenNotPaused {
         address sender = _msgSender();
         address currentDelegatee = delegates(sender);
 

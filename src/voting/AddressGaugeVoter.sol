@@ -46,7 +46,7 @@ contract AddressGaugeVoter is
     mapping(uint256 => mapping(address => uint256)) public epochGaugeVotes;
 
     /// @dev epoch => address => AddressVoteData
-    mapping(uint256 => mapping(address => AddressVoteData)) internal epochTokenVoteData;
+    mapping(uint256 => mapping(address => AddressVoteData)) internal epochVoteData;
 
     /// @notice Delegation mapper contract
     address public ivotesAdapter;
@@ -133,7 +133,7 @@ contract AddressGaugeVoter is
         // this means you can revote later in the epoch to increase votes.
         // while not a huge problem, it's worth noting that when rewards are fully
         // on chain, this could be a vector for gaming.
-        AddressVoteData storage voteData = epochTokenVoteData[epoch][_account];
+        AddressVoteData storage voteData = epochVoteData[epoch][_account];
         uint256 totalWeight = _getTotalWeight(_votes);
 
         // this is technically redundant as checks below will revert div by zero
@@ -217,7 +217,7 @@ contract AddressGaugeVoter is
     function _reset(address _account) internal {
         // get what we need
         uint256 epoch = getWriteEpochId();
-        AddressVoteData storage voteData = epochTokenVoteData[epoch][_account];
+        AddressVoteData storage voteData = epochVoteData[epoch][_account];
         address[] storage pastVotes = voteData.gaugesVotedFor;
 
         // iterate over all the gauges voted for and reset the votes
@@ -255,7 +255,7 @@ contract AddressGaugeVoter is
         if (!isVoting(_account)) return;
 
         uint256 epoch = getWriteEpochId();
-        AddressVoteData storage voteData = epochTokenVoteData[epoch][_account];
+        AddressVoteData storage voteData = epochVoteData[epoch][_account];
 
         // In case no pastVotes exist for an account,
         // skip as there's nothing to update.
@@ -264,8 +264,13 @@ contract AddressGaugeVoter is
 
         uint256 votingPower = IVotes(ivotesAdapter).getVotes(_account);
 
-        // If the new voting power is less than the used voting power
-        // then we can re-cast the votes otherwise we skip.
+        // After the voting window closes, votes shouldn't be auto-recast via _updateVotingPower.
+        // But if a user loses voting power (e.g., had 100, now 0), 
+        // gauges must reflect this drop to avoid overstated voting power.
+        // If a user's voting power increases (e.g., 100 → 150), 
+        // we *don't* auto-recast—doing so would inflate gauge power post-window.
+        // So: decrease → auto-adjust gauges; increase → ignored 
+        // unless user manually votes when window reopens.
         if (voteData.usedVotingPower < votingPower) return;
 
         GaugeVote[] memory newVoteData = new GaugeVote[](pastVotes.length);
@@ -453,26 +458,26 @@ contract AddressGaugeVoter is
 
     function isVoting(address _address) public view returns (bool) {
         uint256 epoch = getWriteEpochId();
-        return epochTokenVoteData[epoch][_address].lastVoted > 0;
+        return epochVoteData[epoch][_address].lastVoted > 0;
     }
 
     function votes(address _address, address _gauge) external view returns (uint256) {
         uint256 epoch = getWriteEpochId();
         return
             _votesForGauge(
-                epochTokenVoteData[epoch][_address].voteWeights[_gauge],
-                epochTokenVoteData[epoch][_address].usedVotingPower
+                epochVoteData[epoch][_address].voteWeights[_gauge],
+                epochVoteData[epoch][_address].usedVotingPower
             );
     }
 
     function gaugesVotedFor(address _address) external view returns (address[] memory) {
         uint256 epoch = getWriteEpochId();
-        return epochTokenVoteData[epoch][_address].gaugesVotedFor;
+        return epochVoteData[epoch][_address].gaugesVotedFor;
     }
 
     function usedVotingPower(address _address) external view returns (uint256) {
         uint256 epoch = getWriteEpochId();
-        return epochTokenVoteData[epoch][_address].usedVotingPower;
+        return epochVoteData[epoch][_address].usedVotingPower;
     }
 
     function totalVotingPowerCast() public view returns (uint256) {

@@ -14,7 +14,7 @@ contract TestVPAndCheckpoints is Base {
     //////////////////////////////////////////////////////////////*/
 
     function test_DelegateSingleToken() public {
-        dg.delegate(alice);
+        dg.setDelegateAddress(alice);
 
         uint256 start = weekStartTs(block.timestamp);
         uint256 amount = 10;
@@ -33,7 +33,7 @@ contract TestVPAndCheckpoints is Base {
     }
 
     function test_DelegateMultipleTokens() public {
-        dg.delegate(alice);
+        dg.setDelegateAddress(alice);
 
         uint256 amount1 = 10;
         uint256 amount2 = 25;
@@ -55,7 +55,7 @@ contract TestVPAndCheckpoints is Base {
     }
 
     function test_DelegateSecondTokenAtLaterTimestamp() public {
-        dg.delegate(alice);
+        dg.setDelegateAddress(alice);
 
         // Delegate first token
         uint256 amount1 = 10;
@@ -98,7 +98,7 @@ contract TestVPAndCheckpoints is Base {
     }
 
     function test_UndelegateShouldDecreaseSlopeAndBias() public {
-        dg.delegate(alice);
+        dg.setDelegateAddress(alice);
 
         uint256 amount1 = 10;
         uint256 start1 = weekStartTs(block.timestamp);
@@ -117,7 +117,7 @@ contract TestVPAndCheckpoints is Base {
     //////////////////////////////////////////////////////////////*/
 
     function test_VotingPowersSingleToken() public {
-        dg.delegate(alice);
+        dg.setDelegateAddress(alice);
 
         uint256 amount = 10;
         _mockLocked(singleId[0], 10, weekStartTs(block.timestamp));
@@ -137,7 +137,7 @@ contract TestVPAndCheckpoints is Base {
     }
 
     function test_VotingPowersMultipleTokens() public {
-        dg.delegate(alice);
+        dg.setDelegateAddress(alice);
 
         uint256 amount1 = 10;
         uint256 amount2 = 25;
@@ -174,7 +174,7 @@ contract TestVPAndCheckpoints is Base {
     }
 
     function test_transitionLessThanCurrentTimestamp() public {
-        dg.delegate(alice);
+        dg.setDelegateAddress(alice);
 
         uint256 amount = 10;
         uint256 start = weekStartTs(block.timestamp);
@@ -202,7 +202,7 @@ contract TestVPAndCheckpoints is Base {
     }
 
     function test_transitionBiggerThanCurrentTimestamp() public {
-        dg.delegate(alice);
+        dg.setDelegateAddress(alice);
 
         uint256 amount = 10;
         uint256 start = weekStartTs(block.timestamp);

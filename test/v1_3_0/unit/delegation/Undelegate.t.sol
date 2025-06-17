@@ -9,7 +9,7 @@ contract TestUndelegate is Base {
     }
 
     modifier givenDelegatedTokens() {
-        dg.delegate(alice);
+        dg.setDelegateAddress(alice);
 
         _mockLocked(multiIds[0], 10, weekStartTs((block.timestamp)));
         _mockLocked(multiIds[1], 25, weekStartTs((block.timestamp)));
@@ -19,7 +19,7 @@ contract TestUndelegate is Base {
     }
 
     function test_shouldRevertIfPaused() public {
-        dg.delegate(alice);
+        dg.setDelegateAddress(alice);
 
         dg.pause();
 
@@ -41,7 +41,7 @@ contract TestUndelegate is Base {
     }
 
     function testRevert_IfTokenListEmpty() public {
-        dg.delegate(alice);
+        dg.setDelegateAddress(alice);
 
         vm.expectRevert(TokenListEmpty.selector);
         dg.undelegate(new uint256[](0));

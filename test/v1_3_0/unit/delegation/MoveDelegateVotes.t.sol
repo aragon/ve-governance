@@ -61,7 +61,7 @@ contract TestMoveDelegateVotes is Base {
 
         vm.startPrank(tokenReceiver);
         dg.setAutoDelegationDisabled(true);
-        dg.delegate(bob);
+        dg.setDelegateAddress(bob);
         vm.stopPrank();
 
         _mockLocked(1, 10, weekStartTs((block.timestamp)));
@@ -104,7 +104,7 @@ contract TestMoveDelegateVotes is Base {
             // make Bob delegatee
             vm.startPrank(tokenReceiver);
             dg.setAutoDelegationDisabled(true);
-            dg.delegate(bob);
+            dg.setDelegateAddress(bob);
             vm.stopPrank();
         }
 
