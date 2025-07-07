@@ -38,3 +38,6 @@ lcov*
 # multisig addresses
 script/multisig-*.json
 ^script/multisig-members.json
+
+# llm
+*.prompt
