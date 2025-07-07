@@ -1,15 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-interface IExitQueueCoreErrorsAndEvents {
-    error OnlyEscrow();
-    error AlreadyQueued();
-    error ZeroAddress();
-    error CannotExit();
-    error NoLockBalance();
-    event ExitQueued(uint256 indexed tokenId, address indexed holder, uint256 exitDate);
-    event Exit(uint256 indexed tokenId, uint256 fee);
-}
+import {
+    IExitQueueMinLock,
+    IExitMinLockCooldownErrorsAndEvents,
+    IExitQueueCoreErrorsAndEvents
+} from "./IExitQueue.sol";
 
 interface ITicketV2 {
     struct TicketV2 {
@@ -23,59 +19,13 @@ interface ITicketV2 {
                         Fee Collection
 //////////////////////////////////////////////////////////////*/
 
-interface IExitQueueFeeErrorsAndEvents {
-    error FeeTooHigh(uint256 maxFee);
-
+interface IExitFeeWithdrawErrorsAndEvents {
     event Withdraw(address indexed to, uint256 amount);
-    event FeePercentSet(uint256 feePercent);
 }
 
-interface IExitQueueFee is IExitQueueFeeErrorsAndEvents {
-    /// @notice optional fee charged for exiting the queue
-    function feePercent() external view returns (uint256);
-
-    /// @notice The exit queue manager can set the fee
-    function setFeePercent(uint256 _fee) external;
-
+interface IExitFeeWithdraw is IExitFeeWithdrawErrorsAndEvents {
     /// @notice withdraw accumulated fees
     function withdraw(uint256 _amount) external;
-}
-
-/*///////////////////////////////////////////////////////////////
-                        Cooldown
-//////////////////////////////////////////////////////////////*/
-
-interface IExitQueueCooldownErrorsAndEvents {
-    error CooldownTooHigh();
-
-    event CooldownSet(uint48 cooldown);
-}
-
-interface IExitQueueCooldown is IExitQueueCooldownErrorsAndEvents {
-    /// @notice time in seconds between exit and withdrawal
-    function cooldown() external view returns (uint48);
-
-    /// @notice The exit queue manager can set the cooldown period
-    /// @param _cooldown time in seconds between exit and withdrawal
-    function setCooldown(uint48 _cooldown) external;
-}
-
-/*///////////////////////////////////////////////////////////////
-                        Min Lock
-//////////////////////////////////////////////////////////////*/
-
-interface IExitMinLockCooldownErrorsAndEvents {
-    event MinLockSet(uint48 minLock);
-    error MinLockOutOfBounds();
-    error MinLockNotReached(uint256 tokenId, uint48 minLock, uint48 earliestExitDate);
-}
-
-interface IExitQueueMinLock is IExitMinLockCooldownErrorsAndEvents {
-    /// @notice minimum time from the original lock date before one can enter the queue
-    function minLock() external view returns (uint48);
-
-    /// @notice The exit queue manager can set the minimum lock time
-    function setMinLock(uint48 _cooldown) external;
 }
 
 /*///////////////////////////////////////////////////////////////
@@ -104,7 +54,7 @@ interface IEarlyExitQueue is IEarlyExitQueueEventsAndErrors {
     /// @notice Calculate the absolute fee amount for exiting a specific token
     /// @param tokenId The token ID to calculate fee for
     /// @return Fee amount in underlying token units
-    function getFee(uint256 tokenId) external view returns (uint256);
+    function calculateFee(uint256 tokenId) external view returns (uint256);
 
     /// @notice Check if a token has completed its full cooldown period (minimum fee applies)
     /// @param tokenId The token ID to check
@@ -168,8 +118,6 @@ interface IEarlyExitQueue is IEarlyExitQueueEventsAndErrors {
 
 interface IExitQueueErrorsAndEvents is
     IExitQueueCoreErrorsAndEvents,
-    IExitQueueFeeErrorsAndEvents,
-    IExitQueueCooldownErrorsAndEvents,
     IExitMinLockCooldownErrorsAndEvents,
     IEarlyExitQueueEventsAndErrors
 {}
@@ -177,8 +125,6 @@ interface IExitQueueErrorsAndEvents is
 interface IDynamicExitQueue is
     IExitQueueErrorsAndEvents,
     ITicketV2,
-    IExitQueueFee,
-    IExitQueueCooldown,
     IExitQueueMinLock,
     IEarlyExitQueue
 {
