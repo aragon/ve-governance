@@ -51,6 +51,10 @@ contract DynamicExitQueue is IDynamicExitQueue, IClockUser, DaoAuthorizable, UUP
     /// @notice tokenId => TicketV2
     mapping(uint256 => TicketV2) internal _queue;
 
+    /*//////////////////////////////////////////////////////////////
+			  Dynamic Fee Params
+    //////////////////////////////////////////////////////////////*/
+
     /// @notice Maximum fee percent charged immediately after minCooldown expires
     uint256 public maxFeePercent;
 
@@ -101,18 +105,24 @@ contract DynamicExitQueue is IDynamicExitQueue, IClockUser, DaoAuthorizable, UUP
     }
 
     /*//////////////////////////////////////////////////////////////
-                              Legacy Admin Functions - DEPRECATED
+                  Legacy Admin Functions - DEPRECATED
     //////////////////////////////////////////////////////////////*/
 
     /// @notice DEPRECATED - use setFixedExitFeePercent instead
-    function setCooldown(uint48 _cooldown) external auth(QUEUE_ADMIN_ROLE) {
+    /// TODO: consider removing
+    function setCooldown(uint48) external pure {
         revert LegacyFunctionDeprecated();
     }
 
     /// @notice DEPRECATED - use appropriate fee setting function instead
-    function setFeePercent(uint256 _feePercent) external auth(QUEUE_ADMIN_ROLE) {
+    /// TODO: consider removing
+    function setFeePercent(uint256) external pure {
         revert LegacyFunctionDeprecated();
     }
+
+    /*//////////////////////////////////////////////////////////////
+			      Admin Functions
+    //////////////////////////////////////////////////////////////*/
 
     /// @notice The exit queue manager can set the minimum lock time
     function setMinLock(uint48 _minLock) external auth(QUEUE_ADMIN_ROLE) {
@@ -125,10 +135,6 @@ contract DynamicExitQueue is IDynamicExitQueue, IClockUser, DaoAuthorizable, UUP
         emit MinLockSet(_minLock);
     }
 
-    /*//////////////////////////////////////////////////////////////
-                              New Admin Functions
-    //////////////////////////////////////////////////////////////*/
-
     /// @notice Configure linear fee decay system where fees decrease continuously over time
     function setDynamicExitFeePercent(
         uint256 _minFeePercent,
@@ -137,9 +143,11 @@ contract DynamicExitQueue is IDynamicExitQueue, IClockUser, DaoAuthorizable, UUP
         uint48 _minCooldown
     ) external auth(QUEUE_ADMIN_ROLE) {
         if (_minFeePercent > MAX_FEE_PERCENT || _maxFeePercent > MAX_FEE_PERCENT) {
+            // TODO: why did we change this from FeeTooHigh
             revert FeePercentTooHigh(MAX_FEE_PERCENT);
         }
         if (_maxFeePercent <= _minFeePercent) revert InvalidFeeParameters();
+        // setting cooldown == minCooldown would imply a vertical slope
         if (_cooldown <= _minCooldown) revert CooldownTooShort();
 
         _setDynamicExitFeePercent(_minFeePercent, _maxFeePercent, _cooldown, _minCooldown);
@@ -155,8 +163,9 @@ contract DynamicExitQueue is IDynamicExitQueue, IClockUser, DaoAuthorizable, UUP
         if (_baseFeePercent > MAX_FEE_PERCENT || _earlyFeePercent > MAX_FEE_PERCENT) {
             revert FeePercentTooHigh(MAX_FEE_PERCENT);
         }
-        if (_earlyFeePercent < _baseFeePercent) revert InvalidFeeParameters();
-        if (_minCooldown >= _cooldown) revert CooldownTooShort();
+        // TODO: dont think there's a legit use for base==early - that's just fixed
+        if (_earlyFeePercent <= _baseFeePercent) revert InvalidFeeParameters();
+        if (_cooldown <= _minCooldown) revert CooldownTooShort();
 
         _setTieredExitFeePercent(_baseFeePercent, _earlyFeePercent, _cooldown, _minCooldown);
     }
@@ -184,12 +193,22 @@ contract DynamicExitQueue is IDynamicExitQueue, IClockUser, DaoAuthorizable, UUP
         minCooldown = _minCooldown;
         feePercent = _minFeePercent; // Legacy compatibility
 
-        // Calculate slope - safe from division by zero due to validation
-        slope = (_maxFeePercent - _minFeePercent) / (_cooldown - _minCooldown);
+        slope = computeSlope(_minFeePercent, _maxFeePercent, _cooldown, _minCooldown);
 
-        emit CooldownSet(_cooldown);
-        emit FeePercentSet(_minFeePercent);
         emit ExitFeePercentAdjusted(_maxFeePercent, _minFeePercent, slope, _minCooldown);
+    }
+
+    function computeSlope(
+        uint256 _minFeePercent,
+        uint256 _maxFeePercent,
+        uint48 _cooldown,
+        uint48 _minCooldown
+    ) public pure returns (uint256) {
+        // Calculate slope - safe from division by zero due to validation
+        // TODO: is this extra precision needed?
+        uint256 numerator = (_maxFeePercent - _minFeePercent) * MAX_FEE_PERCENT;
+        uint unadjusted_slope = numerator / (_cooldown - _minCooldown);
+        return unadjusted_slope / MAX_FEE_PERCENT;
     }
 
     function _setTieredExitFeePercent(
@@ -205,8 +224,6 @@ contract DynamicExitQueue is IDynamicExitQueue, IClockUser, DaoAuthorizable, UUP
         feePercent = _baseFeePercent; // Legacy compatibility
         slope = 0; // No decay in tiered system
 
-        emit CooldownSet(_cooldown);
-        emit FeePercentSet(_baseFeePercent);
         emit ExitFeePercentAdjusted(_earlyFeePercent, _baseFeePercent, 0, _minCooldown);
     }
 
@@ -227,8 +244,6 @@ contract DynamicExitQueue is IDynamicExitQueue, IClockUser, DaoAuthorizable, UUP
             minCooldown = _cooldown; // No early exit
         }
 
-        emit CooldownSet(_cooldown);
-        emit FeePercentSet(_feePercent);
         emit ExitFeePercentAdjusted(_feePercent, _feePercent, 0, minCooldown);
     }
 
@@ -241,7 +256,6 @@ contract DynamicExitQueue is IDynamicExitQueue, IClockUser, DaoAuthorizable, UUP
     function withdraw(uint256 _amount) external auth(WITHDRAW_ROLE) {
         IERC20 underlying = IERC20(IVotingEscrow(escrow).token());
         underlying.transfer(msg.sender, _amount);
-        emit Withdraw(msg.sender, _amount);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -270,6 +284,7 @@ contract DynamicExitQueue is IDynamicExitQueue, IClockUser, DaoAuthorizable, UUP
             originalExitDate: uint48(exitDate)
         });
 
+        // TODO: do we need to update the exit queue event?
         emit ExitQueued(_tokenId, _ticketHolder, exitDate);
     }
 
@@ -288,7 +303,7 @@ contract DynamicExitQueue is IDynamicExitQueue, IClockUser, DaoAuthorizable, UUP
         fee = getFee(_tokenId);
 
         // reset the ticket for that tokenId
-        _queue[_tokenId] = TicketV2({holder: address(0), queuedAt: 0, originalExitDate: 0});
+        _queue[_tokenId] = TicketV2(address(0), 0, 0);
 
         emit Exit(_tokenId, fee);
     }
@@ -296,6 +311,7 @@ contract DynamicExitQueue is IDynamicExitQueue, IClockUser, DaoAuthorizable, UUP
     /// @notice Calculate the absolute fee amount for exiting a specific token
     /// @param _tokenId The token ID to calculate fee for
     /// @return Fee amount in underlying token units
+    /// TODO: keep this as cacluate fee
     function getFee(uint256 _tokenId) public view returns (uint256) {
         TicketV2 memory ticket = _queue[_tokenId];
         if (ticket.holder == address(0)) return 0;
@@ -313,32 +329,29 @@ contract DynamicExitQueue is IDynamicExitQueue, IClockUser, DaoAuthorizable, UUP
     /// @param timeElapsed Time elapsed since ticket was queued
     /// @return Fee percent in basis points
     function _calculateFeePercent(uint256 timeElapsed) internal view returns (uint256) {
-        // Phase 1: Before minCooldown - should not be callable
-        if (timeElapsed < minCooldown) {
-            return maxFeePercent; // This case should be prevented by canExit
-        }
+        // min = max means we are in a flat fee system
+        if (minFeePercent == maxFeePercent) return maxFeePercent;
 
-        // Phase 3: After full cooldown - minimum fee
-        if (timeElapsed >= cooldown) {
-            return minFeePercent;
-        }
-
-        // Phase 2: During decay period - linear interpolation
+        // if not, check the slope.
         if (slope == 0) {
-            // Tiered system - return max fee during early exit period
-            return maxFeePercent;
+            // we are in a tiered system
+            // the max fee is for all values up to the cooldown
+            // the minCooldown is irrelevant for the fee calc
+            if (timeElapsed <= cooldown) return maxFeePercent;
+            else return minFeePercent;
         }
 
         // Dynamic system - linear decay
-        uint256 decayTime = timeElapsed - minCooldown;
+        // there is no decay from cooldown to minCooldown
+        // so remove that from the decayTime
+        // TODO: in this implementation we don't check the minCooldown has passed - should we?
+        uint256 decayTime = timeElapsed < minCooldown ? 0 : timeElapsed - minCooldown;
         uint256 feeReduction = slope * decayTime;
+        uint maxFeeReduction = maxFeePercent - minFeePercent;
 
-        // Ensure we don't go below minimum
-        if (feeReduction >= (maxFeePercent - minFeePercent)) {
-            return minFeePercent;
-        }
-
-        return maxFeePercent - feeReduction;
+        // bound the result
+        if (feeReduction > maxFeeReduction) return minFeePercent;
+        else return maxFeePercent - feeReduction;
     }
 
     /// @notice Calculate the exit fee for a given tokenId (legacy compatibility)
@@ -358,7 +371,7 @@ contract DynamicExitQueue is IDynamicExitQueue, IClockUser, DaoAuthorizable, UUP
         if (ticket.holder == address(0)) return false;
 
         uint256 timeElapsed = block.timestamp - ticket.queuedAt;
-        return timeElapsed >= cooldown;
+        return timeElapsed > cooldown;
     }
 
     /// @return true if the tokenId corresponds to a valid ticket and the minimum cooldown period has passed
@@ -367,7 +380,7 @@ contract DynamicExitQueue is IDynamicExitQueue, IClockUser, DaoAuthorizable, UUP
         if (ticket.holder == address(0)) return false;
 
         uint256 timeElapsed = block.timestamp - ticket.queuedAt;
-        return timeElapsed >= minCooldown;
+        return timeElapsed > minCooldown;
     }
 
     /// @return holder of a ticket for a given tokenId
