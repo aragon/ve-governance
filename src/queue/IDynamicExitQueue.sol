@@ -11,8 +11,9 @@ interface ITicketV2 {
     struct TicketV2 {
         address holder;
         uint48 queuedAt;
-        uint48 originalExitDate;
     }
+
+    event ExitQueuedV2(uint256 indexed tokenId, address indexed holder, uint48 queuedAt);
 }
 
 /*///////////////////////////////////////////////////////////////
@@ -32,13 +33,20 @@ interface IExitFeeWithdraw is IExitFeeWithdrawErrorsAndEvents {
                         Early Exit Queue
 //////////////////////////////////////////////////////////////*/
 
-interface IEarlyExitQueueEventsAndErrors {
+interface IDynamicExitQueueEventsAndErrors {
+    enum ExitFeeType {
+        Fixed,
+        Tiered,
+        Dynamic
+    }
+
     // Events
     event ExitFeePercentAdjusted(
         uint256 maxFeePercent,
         uint256 minFeePercent,
         uint256 slope,
-        uint48 minCooldown
+        uint48 minCooldown,
+        ExitFeeType feeType
     );
 
     // Errors
@@ -50,7 +58,7 @@ interface IEarlyExitQueueEventsAndErrors {
     error LegacyFunctionDeprecated();
 }
 
-interface IEarlyExitQueue is IEarlyExitQueueEventsAndErrors {
+interface IDynamicExitQueueFee is IDynamicExitQueueEventsAndErrors {
     /// @notice Calculate the absolute fee amount for exiting a specific token
     /// @param tokenId The token ID to calculate fee for
     /// @return Fee amount in underlying token units
@@ -95,10 +103,6 @@ interface IEarlyExitQueue is IEarlyExitQueueEventsAndErrors {
         bool _allowEarlyExit
     ) external;
 
-    /// @notice Maximum fee percent charged during early exit period
-    /// @return Fee percent in basis points (0-10000)
-    function maxFeePercent() external view returns (uint256);
-
     /// @notice Minimum fee percent charged after full cooldown
     /// @return Fee percent in basis points (0-10000)
     function minFeePercent() external view returns (uint256);
@@ -116,17 +120,17 @@ interface IEarlyExitQueue is IEarlyExitQueueEventsAndErrors {
                         Exit Queue
 //////////////////////////////////////////////////////////////*/
 
-interface IExitQueueErrorsAndEvents is
+interface IDynamicExitQueueErrorsAndEvents is
     IExitQueueCoreErrorsAndEvents,
     IExitMinLockCooldownErrorsAndEvents,
-    IEarlyExitQueueEventsAndErrors
+    IDynamicExitQueueEventsAndErrors
 {}
 
 interface IDynamicExitQueue is
-    IExitQueueErrorsAndEvents,
+    IDynamicExitQueueErrorsAndEvents,
     ITicketV2,
     IExitQueueMinLock,
-    IEarlyExitQueue
+    IDynamicExitQueueFee
 {
     /// @notice tokenId => TicketV2
     function queue(uint256 _tokenId) external view returns (TicketV2 memory);

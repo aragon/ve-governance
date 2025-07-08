@@ -106,32 +106,39 @@ All fee calculations are based on `timeElapsed = block.timestamp - ticket.queued
 ## State Variables
 
 ```solidity
-/// @notice Maximum fee percent charged immediately after minCooldown expires
-uint256 public maxFeePercent;
+
+// cooldown & fee percent inherited from base contract
 
 /// @notice Minimum fee percent charged after full cooldown period
 uint256 public minFeePercent;
 
-/// @notice Fee decrease per second (basis points/second) during decay period
-/// @dev Set to 0 when minCooldown == cooldown to prevent division by zero
-uint256 public slope;
-
 /// @notice Minimum wait time before any exit is possible
 uint48 public minCooldown;
 
-// cooldown inherited from base contract
+/// @notice Fee decrease per second (basis points/second) during decay period
+/// @dev Set to 0 when minCooldown == cooldown to prevent division by zero
+uint256 private _slope;
+
+
 ```
 
 ## Interface Specification
 
 ```solidity
 interface IEarlyExitQueueEventsAndErrors {
+  enum ExitFeeType {
+    Fixed,
+    Tiered,
+    Dynamic
+  }
+
   // Events
   event ExitFeePercentAdjusted(
     uint256 maxFeePercent,
     uint256 minFeePercent,
     uint256 slope,
-    uint48 minCooldown
+    uint48 minCooldown,
+    ExitFeeType feeType
   );
 
   // Errors
@@ -144,11 +151,6 @@ interface IEarlyExitQueueEventsAndErrors {
 }
 
 interface IEarlyExitQueue is IEarlyExitQueueEventsAndErrors {
-  /// @notice Calculate the absolute fee amount for exiting a specific token
-  /// @param tokenId The token ID to calculate fee for
-  /// @return Fee amount in underlying token units
-  function getFee(uint256 tokenId) external view returns (uint256);
-
   /// @notice Check if a token has completed its full cooldown period (minimum fee applies)
   /// @param tokenId The token ID to check
   /// @return True if full cooldown elapsed, false otherwise
@@ -188,9 +190,8 @@ interface IEarlyExitQueue is IEarlyExitQueueEventsAndErrors {
     bool _allowEarlyExit
   ) external;
 
-  /// @notice Maximum fee percent charged during early exit period
   /// @return Fee percent in basis points (0-10000)
-  function maxFeePercent() external view returns (uint256);
+  function feePercent() external view returns (uint256);
 
   /// @notice Minimum fee percent charged after full cooldown
   /// @return Fee percent in basis points (0-10000)
@@ -200,13 +201,12 @@ interface IEarlyExitQueue is IEarlyExitQueueEventsAndErrors {
   /// @return Slope in basis points per second
   function slope() external view returns (uint256);
 
+  /// @notice Minimum wait time before cheapest exit is possible
+  function cooldown() external view returns (uint48);
+
   /// @notice Minimum wait time before any exit is possible
   /// @return Time in seconds
   function minCooldown() external view returns (uint48);
-
-  /// @notice Legacy compatibility - returns minFeePercent
-  /// @return Fee percent in basis points (0-10000)
-  function feePercent() external view returns (uint256);
 }
 ```
 
@@ -285,8 +285,6 @@ The current `Ticket` struct in ExitQueue stores only the exit date (`exitDate`) 
 struct TicketV2 {
   address holder; // 160 bits - ticket holder address
   uint48 queuedAt; // 48 bits - when ticket was queued (timestamp)
-  uint48 originalExitDate; // 48 bits - original calculated exit date (for reference)
-  // Total: 256 bits - fits in single storage slot
 }
 ```
 
@@ -294,7 +292,6 @@ struct TicketV2 {
 
 - **`holder`**: Unchanged functionality - who owns the ticket
 - **`queuedAt`**: **New** - enables dynamic fee calculations based on elapsed time
-- **`originalExitDate`**: **New** - preserved for reference and potential future use, but not used in current implementation
 - **Gas Efficiency**: Packed into single 256-bit storage slot for optimal gas usage
 
 ### Rationale for Breaking Change
@@ -303,9 +300,8 @@ Rather than maintaining backwards compatibility with a dual-system approach, we'
 
 1. **Complexity Reduction**: Backwards compatibility would require branching logic in every fee calculation function
 2. **Limited Impact**: Current usage is limited and no explicit backwards compatibility requests exist
-3. **Future-Proof Design**: The new ticket structure is extensible for future enhancements
-4. **Performance**: Single code path without conditional logic overhead
-5. **Clarity**: Clear cutoff between old and new behavior
+3. **Performance**: Single code path without conditional logic overhead
+4. **Clarity**: Clear cutoff between old and new behavior
 
 ### Required Contract Changes
 
@@ -316,12 +312,11 @@ interface IExitQueue {
   struct TicketV2 {
     address holder;
     uint48 queuedAt;
-    uint48 originalExitDate;
   }
 
   /// @notice Get ticket information for a token ID
   /// @param _tokenId The token ID to query
-  /// @return ticket The TicketV2 struct containing holder, queuedAt, and originalExitDate
+  /// @return ticket The TicketV2 struct containing holder, queuedAt
   function queue(
     uint256 _tokenId
   ) external view returns (TicketV2 memory ticket);
@@ -344,8 +339,7 @@ mapping(uint256 => TicketV2) internal _queue;
 **`queueExit(uint256 _tokenId, address _ticketHolder)`**
 
 - Store `queuedAt = block.timestamp` for dynamic fee calculations
-- Calculate and store `originalExitDate = nextExitDate()` for reference
-- Create `TicketV2` struct: `_queue[_tokenId] = TicketV2(_ticketHolder, block.timestamp, exitDate)`
+- Create `TicketV2` struct: `_queue[_tokenId] = TicketV2(_ticketHolder, block.timestamp)`
 
 **`canExit(uint256 _tokenId)` & `calculateFee(uint256 _tokenId)`**
 
@@ -360,13 +354,11 @@ This version removes the legacy requirement for `nextExitDate()` to align with w
 
 ### `setFeePercent(uint256 _feePercent)`
 
-**Status**: Deprecated - reverts with `LegacyFunctionDeprecated`
 **Reason**: Incomplete parameter specification in dynamic fee system
 **Migration**: Use `setFixedExitFeePercent()` for equivalent functionality
 
 ### `setCooldown(uint48 _cooldown)`
 
-**Status**: Deprecated - reverts with `LegacyFunctionDeprecated`
 **Reason**: Cooldown changes affect slope calculations and require fee parameter review
 **Migration**: Use appropriate fee setting function that includes cooldown parameter
 
@@ -390,7 +382,6 @@ All major fee configuration patterns are covered through the three setter functi
 Rather than maintaining dual systems, we're implementing a clean architectural break that:
 
 - Eliminates technical debt from backwards compatibility
-- Provides a solid foundation for future enhancements
 - Reduces complexity for developers and auditors
 - Optimizes for the primary use case (dynamic fees)
 
@@ -405,5 +396,5 @@ All three configuration approaches manipulate the same underlying state variable
 ### Clear Conceptual Separation
 
 - **Dynamic**: Linear decay over time
-- **Tiered**: Binary early/normal fee structure  
+- **Tiered**: Binary early/normal fee structure
 - **Fixed**: Single fee rate with early exit control
