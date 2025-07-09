@@ -44,7 +44,6 @@ interface IDynamicExitQueueEventsAndErrors {
     event ExitFeePercentAdjusted(
         uint256 maxFeePercent,
         uint256 minFeePercent,
-        uint256 slope,
         uint48 minCooldown,
         ExitFeeType feeType
     );

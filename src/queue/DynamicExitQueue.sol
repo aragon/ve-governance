@@ -33,6 +33,9 @@ contract DynamicExitQueue is IDynamicExitQueue, IClockUser, DaoAuthorizable, UUP
     /// @dev 10_000 = 100%
     uint16 private constant MAX_FEE_PERCENT = 10_000;
 
+    /// @dev 1e18 is used for internal precision in fee calculations
+    uint256 private constant INTERNAL_PRECISION = 1e18;
+
     /// @notice the highest fee someone will pay on exit
     uint256 public feePercent;
 
@@ -176,7 +179,6 @@ contract DynamicExitQueue is IDynamicExitQueue, IClockUser, DaoAuthorizable, UUP
         emit ExitFeePercentAdjusted(
             _maxFeePercent,
             _minFeePercent,
-            _slope,
             _minCooldown,
             ExitFeeType.Dynamic
         );
@@ -197,7 +199,6 @@ contract DynamicExitQueue is IDynamicExitQueue, IClockUser, DaoAuthorizable, UUP
         emit ExitFeePercentAdjusted(
             _earlyFeePercent,
             _baseFeePercent,
-            0,
             _minCooldown,
             ExitFeeType.Tiered
         );
@@ -217,7 +218,7 @@ contract DynamicExitQueue is IDynamicExitQueue, IClockUser, DaoAuthorizable, UUP
         if (_allowEarlyExit) minCooldown = 0;
         else minCooldown = _cooldown;
 
-        emit ExitFeePercentAdjusted(_feePercent, _feePercent, 0, minCooldown, ExitFeeType.Fixed);
+        emit ExitFeePercentAdjusted(_feePercent, _feePercent, minCooldown, ExitFeeType.Fixed);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -227,7 +228,7 @@ contract DynamicExitQueue is IDynamicExitQueue, IClockUser, DaoAuthorizable, UUP
     /// @notice Get the rate of fee decrease per second during the decay period
     /// @dev will return 0 if the fee system is not dynamic
     function slope() external view returns (uint256) {
-        return _slope / MAX_FEE_PERCENT;
+        return (_slope * MAX_FEE_PERCENT) / INTERNAL_PRECISION;
     }
 
     function _computeSlope(
@@ -236,9 +237,12 @@ contract DynamicExitQueue is IDynamicExitQueue, IClockUser, DaoAuthorizable, UUP
         uint48 _cooldown,
         uint48 _minCooldown
     ) internal pure returns (uint256) {
-        // Calculate slope - safe from division by zero due to validation
-        uint256 numerator = (_maxFeePercent - _minFeePercent) * MAX_FEE_PERCENT;
-        return numerator / (_cooldown - _minCooldown);
+        // Calculate slope in 1e18 scale for maximum precision
+        uint256 scaledMaxFee = (_maxFeePercent * INTERNAL_PRECISION) / MAX_FEE_PERCENT;
+        uint256 scaledMinFee = (_minFeePercent * INTERNAL_PRECISION) / MAX_FEE_PERCENT;
+        uint256 scaledFeeRange = scaledMaxFee - scaledMinFee;
+        uint256 timeRange = _cooldown - _minCooldown;
+        return scaledFeeRange / timeRange;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -268,7 +272,9 @@ contract DynamicExitQueue is IDynamicExitQueue, IClockUser, DaoAuthorizable, UUP
 
         // get time to min lock and revert if it hasn't been reached
         uint48 minLockTime = timeToMinLock(_tokenId);
-        if (minLockTime > block.timestamp) revert MinLockNotReached(_tokenId, minLock, minLockTime);
+        if (minLockTime >= block.timestamp) {
+            revert MinLockNotReached(_tokenId, minLock, minLockTime);
+        }
 
         uint48 queuedAt = uint48(block.timestamp);
         _queue[_tokenId] = TicketV2(_ticketHolder, queuedAt);
@@ -301,33 +307,47 @@ contract DynamicExitQueue is IDynamicExitQueue, IClockUser, DaoAuthorizable, UUP
         if (underlyingBalance == 0) revert NoLockBalance();
 
         uint256 timeElapsed = block.timestamp - ticket.queuedAt;
-        uint256 feePercentToApply = getTimeBasedFee(timeElapsed);
+        uint256 scaledFeePercent = _getScaledTimeBasedFee(timeElapsed);
+        return (underlyingBalance * scaledFeePercent) / INTERNAL_PRECISION;
+    }
 
-        return (underlyingBalance * feePercentToApply) / MAX_FEE_PERCENT;
+    /// @notice Internal function to get time-based fee in 1e18 scale
+    /// @param timeElapsed Time elapsed since ticket was queued
+    /// @return Fee percent in 1e18 scale (0 = 0%, 1e18 = 100%)
+    function _getScaledTimeBasedFee(uint256 timeElapsed) internal view returns (uint256) {
+        uint256 scaledMaxFee = (feePercent * INTERNAL_PRECISION) / MAX_FEE_PERCENT;
+        uint256 scaledMinFee = (minFeePercent * INTERNAL_PRECISION) / MAX_FEE_PERCENT;
+
+        // Fixed fee system (no decay, no tiers)
+        if (minFeePercent == feePercent) return scaledMaxFee;
+
+        // Tiered system (no slope) or fixed system
+        if (_slope == 0) {
+            return timeElapsed <= cooldown ? scaledMaxFee : scaledMinFee;
+        }
+
+        // Dynamic system (linear decay using stored slope)
+        if (timeElapsed <= minCooldown) return scaledMaxFee;
+        if (timeElapsed >= cooldown) return scaledMinFee;
+
+        // Calculate fee reduction using high-precision slope
+        uint256 timeInDecay = timeElapsed - minCooldown;
+        uint256 feeReduction = _slope * timeInDecay;
+
+        // Ensure we don't go below minimum fee
+        if (feeReduction >= (scaledMaxFee - scaledMinFee)) {
+            return scaledMinFee;
+        }
+
+        return scaledMaxFee - feeReduction;
     }
 
     /// @notice Calculate the exit fee percent for a given time elapsed
     /// @param timeElapsed Time elapsed since ticket was queued
     /// @return Fee percent in basis points
     function getTimeBasedFee(uint256 timeElapsed) public view returns (uint256) {
-        // Fixed fee system (no decay, no tiers)
-        if (minFeePercent == feePercent) return feePercent;
-
-        // Tiered system w. no slope
-        // Early exit period: feePercent, after cooldown: minFeePercent
-        if (_slope == 0) {
-            return timeElapsed <= cooldown ? feePercent : minFeePercent;
-        }
-
-        // Dynamic system (linear decay)
-        if (timeElapsed <= minCooldown) return feePercent;
-        else if (timeElapsed > cooldown) return minFeePercent;
-
-        // we only start decaying after minCooldown
-        uint256 feeReduction = (_slope * (timeElapsed - minCooldown)) / MAX_FEE_PERCENT;
-
-        if (feeReduction >= (feePercent - minFeePercent)) return minFeePercent;
-        else return feePercent - feeReduction;
+        uint256 scaledFee = _getScaledTimeBasedFee(timeElapsed);
+        return (scaledFee * MAX_FEE_PERCENT) / INTERNAL_PRECISION;
     }
 
     /*//////////////////////////////////////////////////////////////

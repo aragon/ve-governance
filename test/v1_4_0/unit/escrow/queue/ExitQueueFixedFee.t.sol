@@ -5,7 +5,7 @@ import {ExitQueueBase, DaoUnauthorized} from "./ExitQueueBase.sol";
 contract DynamicExitQueueFixedFeeTest is ExitQueueBase {
     function setUp() public override {
         super.setUp();
-        vm.warp(1);
+        vm.warp(2);
         queue.setMinLock(1);
     }
 
@@ -61,7 +61,7 @@ contract DynamicExitQueueFixedFeeTest is ExitQueueBase {
 
         // Expect event emission
         vm.expectEmit(true, true, true, true);
-        emit ExitFeePercentAdjusted(feePercent, feePercent, 0, 0, ExitFeeType.Fixed);
+        emit ExitFeePercentAdjusted(feePercent, feePercent, 0, ExitFeeType.Fixed);
 
         queue.setFixedExitFeePercent(feePercent, cooldown, true);
     }
@@ -73,7 +73,7 @@ contract DynamicExitQueueFixedFeeTest is ExitQueueBase {
 
         // Expect event emission
         vm.expectEmit(true, true, true, true);
-        emit ExitFeePercentAdjusted(feePercent, feePercent, 0, cooldown, ExitFeeType.Fixed);
+        emit ExitFeePercentAdjusted(feePercent, feePercent, cooldown, ExitFeeType.Fixed);
 
         queue.setFixedExitFeePercent(feePercent, cooldown, false);
     }
@@ -102,7 +102,7 @@ contract DynamicExitQueueFixedFeeTest is ExitQueueBase {
         queue.setFixedExitFeePercent(feePercent, cooldown, true);
 
         // Mock escrow setup
-        escrow.setMockLockedBalance(100e18, block.timestamp - 1);
+        escrow.setMockLockedBalance(100e18, block.timestamp - 2);
 
         // Queue exit (should succeed immediately since minCooldown = 0)
         vm.prank(address(escrow));
@@ -129,7 +129,7 @@ contract DynamicExitQueueFixedFeeTest is ExitQueueBase {
         queue.setFixedExitFeePercent(feePercent, cooldown, false);
 
         // Mock escrow setup
-        uint lockTime = block.timestamp - 1;
+        uint lockTime = block.timestamp - 2;
         escrow.setMockLockedBalance(100e18, lockTime);
 
         // Queue exit
@@ -160,7 +160,7 @@ contract DynamicExitQueueFixedFeeTest is ExitQueueBase {
         queue.setFixedExitFeePercent(0, cooldown, true);
 
         // Mock escrow setup
-        escrow.setMockLockedBalance(100e18, block.timestamp - 1);
+        escrow.setMockLockedBalance(100e18, block.timestamp - 2);
 
         // Queue exit
         vm.prank(address(escrow));
@@ -180,7 +180,7 @@ contract DynamicExitQueueFixedFeeTest is ExitQueueBase {
         queue.setFixedExitFeePercent(10000, cooldown, true);
 
         // Mock escrow setup
-        escrow.setMockLockedBalance(100e18, block.timestamp - 1);
+        escrow.setMockLockedBalance(100e18, block.timestamp - 2);
 
         // Queue exit
         vm.prank(address(escrow));
@@ -218,7 +218,7 @@ contract DynamicExitQueueFixedFeeTest is ExitQueueBase {
         queue.setFixedExitFeePercent(feePercent, cooldown, true);
 
         // Mock escrow setup
-        escrow.setMockLockedBalance(100e18, block.timestamp - 1);
+        escrow.setMockLockedBalance(100e18, block.timestamp - 2);
 
         uint queueTime = block.timestamp;
         // Queue exit

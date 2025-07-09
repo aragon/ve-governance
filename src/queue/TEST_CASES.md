@@ -5,16 +5,19 @@
 ### Constructor and Initialization
 
 #### Test: Cannot initialize twice
+
 - Call initialize() twice on same contract
 - Assert: Second call reverts with Initializable error
 
 #### Test: Initialization sets all parameters correctly
+
 - Initialize with valid parameters (escrow, cooldown, dao, feePercent, clock, minLock)
 - Assert: All state variables match input parameters
 - Assert: Fixed fee system is configured (minFeePercent == feePercent, slope == 0)
 - Assert: minCooldown == 0 (allowEarlyExit = true by default)
 
 #### Test: Initialization parameter validation
+
 - Test with zero addresses for escrow, dao, clock
 - Test with minLock = 0
 - Test with feePercent > 10000
@@ -23,27 +26,32 @@
 ### State Variable Getters
 
 #### Test: Slope getter returns correct scaled value
+
 - Set dynamic fee with known parameters
 - Calculate expected slope manually
 - Assert: slope() returns expectedSlope / MAX_FEE_PERCENT
 
 #### Test: All getters return correct values after fee system changes
+
 - Test after each fee system type is configured
 - Assert: feePercent, minFeePercent, cooldown, minCooldown match expected values
 
 ### Fee Setter Functions - Authorization
 
 #### Test: All fee setters require QUEUE_ADMIN_ROLE
+
 - Call setDynamicExitFeePercent, setTieredExitFeePercent, setFixedExitFeePercent without role
 - Assert: All revert with authorization error
 
 #### Test: setMinLock requires QUEUE_ADMIN_ROLE
+
 - Call setMinLock without role
 - Assert: Reverts with authorization error
 
 ### Dynamic Fee System Configuration
 
 #### Test: Valid dynamic fee configuration
+
 - Fuzz inputs within bounds: minFeePercent (0-9999), maxFeePercent (minFeePercent+1 to 10000), cooldown (minCooldown+1 to type(uint48).max), minCooldown (0 to cooldown-1)
 - Call setDynamicExitFeePercent with fuzzy inputs
 - Assert: feePercent == maxFeePercent
@@ -54,28 +62,33 @@
 - Assert: ExitFeePercentAdjusted event emitted with correct parameters and ExitFeeType.Dynamic
 
 #### Test: Dynamic fee validation - fee bounds
+
 - Test minFeePercent = 10001
 - Test maxFeePercent = 10001
 - Test both fees > 10000
 - Assert: Reverts with FeePercentTooHigh(10000)
 
 #### Test: Dynamic fee validation - fee relationship
+
 - Test maxFeePercent == minFeePercent
 - Test maxFeePercent < minFeePercent
 - Assert: Reverts with InvalidFeeParameters
 
 #### Test: Dynamic fee validation - cooldown relationship
+
 - Test cooldown == minCooldown
 - Test cooldown < minCooldown
 - Assert: Reverts with CooldownTooShort
 
 #### Test: Dynamic fee edge cases
+
 - Test minCooldown = 0, cooldown = 1 (1 second decay)
 - Test very long decay periods (years)
 - Assert: Slope calculation handles precision correctly
 - Assert: No overflow in slope calculation
 
 #### Test: Hardcoded dynamic fee scenario 1
+
 - Configure: minFeePercent = 0, maxFeePercent = 10000, cooldown = 4 weeks, minCooldown = 2 weeks
 - Test timeElapsed = 0: Assert returns 10000 (100%)
 - Test timeElapsed = 2 weeks: Assert returns 10000 (100%)
@@ -85,6 +98,7 @@
 - Test timeElapsed > 4 weeks: Assert returns 0 (0%)
 
 #### Test: Hardcoded dynamic fee scenario 2
+
 - Configure: minFeePercent = 1000, maxFeePercent = 2000, cooldown = 1 year, minCooldown = 0
 - Test timeElapsed = 0: Assert returns 2000 (20%)
 - Test timeElapsed = 1 second: Assert returns < 2000 (accounting for rounding)
@@ -96,6 +110,7 @@
 ### Tiered Fee System Configuration
 
 #### Test: Valid tiered fee configuration
+
 - Fuzz inputs within bounds: baseFeePercent (0-9999), earlyFeePercent (baseFeePercent+1 to 10000), cooldown (minCooldown+1 to type(uint48).max), minCooldown (0 to cooldown-1)
 - Call setTieredExitFeePercent with fuzzy inputs
 - Assert: feePercent == earlyFeePercent
@@ -106,16 +121,19 @@
 - Assert: ExitFeePercentAdjusted event emitted with correct parameters and ExitFeeType.Tiered
 
 #### Test: Tiered fee validation - fee bounds
+
 - Test baseFeePercent = 10001
 - Test earlyFeePercent = 10001
 - Assert: Reverts with FeePercentTooHigh(10000)
 
 #### Test: Tiered fee validation - fee relationship
+
 - Test earlyFeePercent == baseFeePercent
 - Test earlyFeePercent < baseFeePercent
 - Assert: Reverts with InvalidFeeParameters
 
 #### Test: Tiered fee validation - cooldown relationship
+
 - Test cooldown == minCooldown
 - Test cooldown < minCooldown
 - Assert: Reverts with CooldownTooShort
@@ -123,6 +141,7 @@
 ### Fixed Fee System Configuration
 
 #### Test: Valid fixed fee configuration with early exit allowed
+
 - Fuzz inputs within bounds: feePercent (0-10000), cooldown (0 to type(uint48).max)
 - Call setFixedExitFeePercent with fuzzy inputs and allowEarlyExit = true
 - Assert: feePercent == input feePercent
@@ -133,6 +152,7 @@
 - Assert: ExitFeePercentAdjusted event emitted with correct parameters and ExitFeeType.Fixed
 
 #### Test: Valid fixed fee configuration with early exit disabled
+
 - Fuzz inputs within bounds: feePercent (0-10000), cooldown (0 to type(uint48).max)
 - Call setFixedExitFeePercent with fuzzy inputs and allowEarlyExit = false
 - Assert: feePercent == input feePercent
@@ -143,29 +163,34 @@
 - Assert: ExitFeePercentAdjusted event emitted with correct parameters and ExitFeeType.Fixed
 
 #### Test: Fixed fee validation - fee bounds
+
 - Test feePercent = 10001
 - Assert: Reverts with FeePercentTooHigh(10000)
 
 ### MinLock Configuration
 
 #### Test: Valid minLock configuration
+
 - Fuzz input within bounds: minLock (1 to type(uint48).max)
 - Call setMinLock with fuzzy input
 - Assert: minLock == input
 - Assert: MinLockSet event emitted
 
 #### Test: MinLock validation
+
 - Test minLock = 0
 - Assert: Reverts with MinLockOutOfBounds
 
 ### Time-Based Fee Calculations
 
 #### Test: getTimeBasedFee for fixed fee system
+
 - Configure fixed fee system with 2000 basis points
 - Test with various timeElapsed values (0, minCooldown, cooldown, beyond cooldown)
 - Assert: Always returns 2000 regardless of time
 
 #### Test: getTimeBasedFee for tiered fee system
+
 - Configure tiered system: baseFee = 1000, earlyFee = 3000, cooldown = 604800 (7 days), minCooldown = 86400 (1 day)
 - Test timeElapsed = 0: Assert returns 3000
 - Test timeElapsed = 86400: Assert returns 3000
@@ -174,6 +199,7 @@
 - Test timeElapsed = 1000000: Assert returns 1000
 
 #### Test: getTimeBasedFee for dynamic fee system
+
 - Configure dynamic system: minFee = 1000, maxFee = 5000, cooldown = 518400 (6 days), minCooldown = 172800 (2 days)
 - Test timeElapsed = 0: Assert returns 5000
 - Test timeElapsed = 172800: Assert returns 5000
@@ -184,12 +210,14 @@
 - Test timeElapsed = 1000000: Assert returns 1000
 
 #### Test: getTimeBasedFee boundary conditions
+
 - Test exactly at minCooldown timestamp
 - Test exactly at cooldown timestamp
 - Test one second before and after boundaries
 - Assert: Correct fee transitions at boundaries
 
 #### Test: getTimeBasedFee precision handling
+
 - Configure system with maximum fee difference and minimum time difference
 - Test fee reduction calculation doesn't overflow
 - Test fee reduction doesn't exceed maximum possible reduction
@@ -198,30 +226,36 @@
 ### Queue Exit Function
 
 #### Test: Successful queue exit
+
 - Mock valid escrow call with valid tokenId and ticketHolder
 - Call queueExit from escrow address
 - Assert: Ticket created with correct holder and queuedAt timestamp
 - Assert: ExitQueuedV2 event emitted with correct parameters
 
 #### Test: Queue exit authorization
+
 - Call queueExit from non-escrow address
 - Assert: Reverts with OnlyEscrow error
 
 #### Test: Queue exit validation - zero address
+
 - Call queueExit with ticketHolder = address(0)
 - Assert: Reverts with ZeroAddress error
 
 #### Test: Queue exit validation - already queued
+
 - Queue exit for tokenId once
 - Attempt to queue exit for same tokenId again
 - Assert: Second call reverts with AlreadyQueued error
 
 #### Test: Queue exit validation - minLock not reached
+
 - Mock escrow to return lock start time such that minLock period hasn't elapsed
 - Call queueExit
 - Assert: Reverts with MinLockNotReached error
 
 #### Test: Queue exit validation - minLock boundary
+
 - Mock escrow to return lock start time exactly at minLock boundary
 - Call queueExit exactly at minLock expiration
 - Assert: Succeeds and creates ticket
@@ -229,6 +263,7 @@
 ### Exit Function
 
 #### Test: Successful exit
+
 - Queue exit for tokenId
 - Fast forward past minCooldown
 - Mock escrow to return positive locked amount
@@ -238,15 +273,18 @@
 - Assert: Exit event emitted with correct tokenId and fee
 
 #### Test: Exit authorization
+
 - Call exit from non-escrow address
 - Assert: Reverts with OnlyEscrow error
 
 #### Test: Exit validation - cannot exit
+
 - Queue exit for tokenId
 - Call exit before minCooldown elapsed
 - Assert: Reverts with CannotExit error
 
 #### Test: Exit fee calculation consistency
+
 - Queue exit for tokenId
 - Fast forward to various time points
 - Mock escrow to return known locked amount
@@ -256,35 +294,41 @@
 ### Calculate Fee Function
 
 #### Test: Calculate fee with no ticket
+
 - Call calculateFee for non-existent tokenId
 - Assert: Returns 0
 
 #### Test: Calculate fee with zero balance
+
 - Queue exit for tokenId
 - Mock escrow to return 0 locked amount
 - Call calculateFee
 - Assert: Reverts with NoLockBalance error
 
 #### Test: Calculate fee with valid conditions
+
 - Queue exit for tokenId
 - Mock escrow to return known locked amount (e.g., 1000000)
 - Fast forward to various time points
 - Call calculateFee
-- Assert: Returns (lockedAmount * expectedFeePercent) / 10000
+- Assert: Returns (lockedAmount \* expectedFeePercent) / 10000
 
 #### Test: Calculate fee precision and rounding
+
 - Test with very small locked amounts (1, 2, 99)
 - Test with very large locked amounts (type(uint256).max / 10000)
 - Test fee calculations that result in fractional amounts
 - Assert: Proper rounding behavior and no overflow
 
 #### Test: Calculate fee with different fee systems
+
 - Test same tokenId and locked amount across all three fee system types
 - Assert: Returns appropriate fees based on configured system
 
 ### View Functions
 
 #### Test: isCool function
+
 - Queue exit for tokenId
 - Test at various time points relative to cooldown
 - Assert: Returns false before cooldown elapsed
@@ -292,6 +336,7 @@
 - Assert: Returns false for non-existent tickets
 
 #### Test: canExit function
+
 - Queue exit for tokenId
 - Test at various time points relative to minCooldown
 - Assert: Returns false before minCooldown elapsed
@@ -299,6 +344,7 @@
 - Assert: Returns false for non-existent tickets
 
 #### Test: ticketHolder function
+
 - Queue exit for tokenId with specific holder
 - Assert: Returns correct holder address
 - Assert: Returns address(0) for non-existent tickets
@@ -306,12 +352,14 @@
 - Assert: Returns address(0) after exit
 
 #### Test: queue function
+
 - Queue exit for tokenId
 - Call queue function
 - Assert: Returns TicketV2 with correct holder and queuedAt
 - Assert: Returns empty TicketV2 for non-existent tickets
 
 #### Test: timeToMinLock function
+
 - Mock escrow to return various lock start times
 - Call timeToMinLock for tokenId
 - Assert: Returns lockStart + minLock
@@ -319,16 +367,19 @@
 ### Withdraw Function
 
 #### Test: Successful withdraw
+
 - Add tokens to contract balance
 - Call withdraw with valid amount and WITHDRAW_ROLE
 - Assert: Tokens transferred to caller
 - Assert: Contract balance reduced
 
 #### Test: Withdraw authorization
+
 - Call withdraw without WITHDRAW_ROLE
 - Assert: Reverts with authorization error
 
 #### Test: Withdraw with insufficient balance
+
 - Call withdraw with amount exceeding contract balance
 - Assert: Reverts with ERC20 transfer error
 
@@ -337,6 +388,7 @@
 ### Fee System Transitions
 
 #### Test: Dynamic to tiered transition
+
 - Configure dynamic fee system
 - Queue exit for tokenId
 - Change to tiered fee system
@@ -344,6 +396,7 @@
 - Assert: Existing ticket uses new fee calculation logic
 
 #### Test: Tiered to fixed transition
+
 - Configure tiered fee system
 - Queue exit for tokenId
 - Change to fixed fee system
@@ -351,6 +404,7 @@
 - Assert: Existing ticket uses new fee calculation logic
 
 #### Test: Fixed to dynamic transition
+
 - Configure fixed fee system
 - Queue exit for tokenId
 - Change to dynamic fee system
@@ -358,6 +412,7 @@
 - Assert: Existing ticket uses new fee calculation logic
 
 #### Test: Multiple transitions with active tickets
+
 - Configure initial fee system
 - Queue exits for multiple tokenIds at different times
 - Transition through all fee system types
@@ -367,6 +422,7 @@
 ### Time-Based Behavior
 
 #### Test: Long-term stability
+
 - Configure dynamic fee system with long cooldown periods
 - Queue exit for tokenId
 - Fast forward through entire decay period in steps
@@ -375,11 +431,13 @@
 - Assert: No unexpected jumps or reversals
 
 #### Test: Boundary precision
+
 - Configure system with parameters that create precision challenges
 - Test fee calculations exactly at boundary timestamps
 - Assert: Correct fee transitions without precision errors
 
 #### Test: Multiple active tickets
+
 - Queue exits for multiple tokenIds at staggered times
 - Test fee calculations for all tickets at various future timestamps
 - Assert: Each ticket calculates fees based on its own queuedAt time
@@ -387,6 +445,7 @@
 ### Administrative Workflows
 
 #### Test: Fee system reconfiguration workflow
+
 - Start with one fee system configuration
 - Have multiple active tickets
 - Reconfigure to different fee system
@@ -394,12 +453,14 @@
 - Verify new tickets use new configuration
 
 #### Test: MinLock adjustment workflow
+
 - Queue exit for tokenId with current minLock
 - Increase minLock
 - Attempt to queue exit for new tokenId before new minLock
 - Assert: New queuing fails with MinLockNotReached
 
 #### Test: Emergency parameter adjustment
+
 - Configure system with problematic parameters
 - Have active tickets
 - Adjust parameters to fix issues
@@ -408,21 +469,25 @@
 ### Edge Case Scenarios
 
 #### Test: Maximum fee scenario
+
 - Configure system with 100% fee (10000 basis points)
 - Queue exit and perform exit
 - Assert: Entire locked amount is collected as fee
 
 #### Test: Zero fee scenario
+
 - Configure system with 0% fee
 - Queue exit and perform exit
 - Assert: No fee is collected
 
 #### Test: Minimum time granularity
+
 - Configure system with 1-second differences between time boundaries
 - Test fee calculations at exact boundaries
 - Assert: Correct fee transitions at 1-second precision
 
 #### Test: Maximum time periods
+
 - Configure system with maximum uint48 values for cooldown periods
 - Test fee calculations over long periods
 - Assert: No overflow or underflow in calculations
@@ -430,10 +495,12 @@
 ### Error Handling
 
 #### Test: Cascading error conditions
+
 - Test combinations of error conditions (e.g., no ticket AND zero balance)
 - Assert: Appropriate error is returned in correct order of precedence
 
 #### Test: State consistency after errors
+
 - Trigger various error conditions during operations
 - Assert: Contract state remains consistent
 - Assert: No partial state updates occur
@@ -441,17 +508,173 @@
 ### Precision and Mathematical Accuracy
 
 #### Test: Slope calculation precision
+
 - Configure dynamic systems with parameters that challenge precision
 - Test fee calculations across decay period
 - Assert: Monotonic decrease in fees
 - Assert: Reaches exactly minFeePercent at cooldown
 
 #### Test: Fee calculation accuracy
+
 - Test fee calculations with various locked amounts and fee percentages
 - Assert: Mathematical accuracy within acceptable precision bounds
 - Assert: No unexpected rounding errors
 
 #### Test: Boundary condition mathematical accuracy
+
 - Test fee calculations exactly at time boundaries
 - Assert: Exact fee values at boundaries match expectations
 - Assert: No precision errors cause incorrect fee jumps
+  Based on my analysis of the provided test files, here's a comprehensive checklist of test case coverage:
+  Based on my analysis of the provided test files, here's a comprehensive checklist of test case coverage:
+Based on my analysis of the provided test files, here's a comprehensive checklist of test case coverage:
+
+## Test Coverage Checklist
+
+### Constructor and Initialization
+- ✅ Cannot initialize twice
+- ✅ Initialization sets all parameters correctly
+- ✅ Initialization parameter validation (feePercent > 10000)
+- 🟡 Initialization with zero addresses (partial - not all addresses tested)
+- 🟡 Initialization with minLock = 0 (validation exists but not explicit test)
+- ✅ Initialization emits events correctly
+
+### State Variable Getters
+- ✅ Slope getter returns correct scaled value
+- ✅ All getters return correct values after fee system changes
+- ✅ State consistency after multiple reconfigurations
+
+### Fee Setter Functions - Authorization
+- ✅ All fee setters require QUEUE_ADMIN_ROLE
+- ✅ setMinLock requires QUEUE_ADMIN_ROLE
+
+### Dynamic Fee System Configuration
+- ✅ Valid dynamic fee configuration (fuzz testing)
+- ✅ Dynamic fee validation - fee bounds
+- ✅ Dynamic fee validation - fee relationship
+- ✅ Dynamic fee validation - cooldown relationship
+- ✅ Dynamic fee edge cases
+- ✅ ExitFeePercentAdjusted event emission
+- ✅ Hardcoded dynamic fee scenarios (multiple)
+- ✅ Dynamic fee system state consistency
+
+### Tiered Fee System Configuration
+- ✅ Valid tiered fee configuration (fuzz testing)
+- ✅ Tiered fee validation - fee bounds
+- ✅ Tiered fee validation - fee relationship
+- ✅ Tiered fee validation - cooldown relationship
+- ✅ ExitFeePercentAdjusted event emission
+- ✅ Tiered fee system state consistency
+
+### Fixed Fee System Configuration
+- ✅ Valid fixed fee configuration with early exit allowed
+- ✅ Valid fixed fee configuration with early exit disabled
+- ✅ Fixed fee validation - fee bounds
+- ✅ ExitFeePercentAdjusted event emission
+- ✅ Fixed fee system state consistency
+
+### MinLock Configuration
+- ✅ Valid minLock configuration
+- ✅ MinLock validation (minLock = 0)
+- ✅ MinLock event emission
+
+### Time-Based Fee Calculations
+- ✅ getTimeBasedFee for fixed fee system
+- ✅ getTimeBasedFee for tiered fee system
+- ✅ getTimeBasedFee for dynamic fee system
+- ✅ getTimeBasedFee boundary conditions
+- ✅ getTimeBasedFee precision handling
+- ✅ getTimeBasedFee during decay period (dynamic)
+
+### Queue Exit Function
+- ✅ Successful queue exit
+- ✅ Queue exit authorization
+- ✅ Queue exit validation - zero address
+- ✅ Queue exit validation - already queued
+- ✅ Queue exit validation - minLock not reached
+- ✅ Queue exit validation - minLock boundary
+- ✅ Queue exit timing precision
+- ✅ Multiple queue exits for different tokens
+- ✅ Queue exit with different ticket holders (fuzz)
+- ✅ Queue exit with different token IDs (fuzz)
+- ✅ Queue exit with various minLock periods (fuzz)
+
+### Exit Function
+- ✅ Successful exit
+- ✅ Exit authorization
+- ✅ Exit validation - cannot exit
+- ✅ Exit fee calculation consistency (fuzz testing)
+
+### Calculate Fee Function
+- ✅ Calculate fee with no ticket
+- ✅ Calculate fee with zero balance
+- ✅ Calculate fee with valid conditions
+- ✅ Calculate fee precision and rounding
+- ✅ Calculate fee with different fee systems
+- ✅ Calculate fee with fractional amounts
+- ✅ Calculate fee during decay period
+- ✅ Calculate fee with no overflow
+
+### View Functions
+- ✅ isCool function (all fee systems)
+- ✅ canExit function (implied through exit validation)
+- ✅ ticketHolder function (implied through queue tests)
+- ✅ queue function (implied through queue tests)
+- 🟡 timeToMinLock function (exists in withdrawal tests but not comprehensive)
+
+### Withdraw Function
+- ✅ Successful withdraw
+- ✅ Withdraw authorization
+- 🟡 Withdraw with insufficient balance (not explicitly tested)
+
+## Functional Tests
+
+### Fee System Transitions
+- 🔴 Dynamic to tiered transition
+- 🔴 Tiered to fixed transition
+- 🔴 Fixed to dynamic transition
+- 🔴 Multiple transitions with active tickets
+
+### Time-Based Behavior
+- ✅ Long-term stability (through dynamic fee decay tests)
+- ✅ Boundary precision (through boundary condition tests)
+- ✅ Multiple active tickets (through multiple queue tests)
+
+### Administrative Workflows
+- 🟡 Fee system reconfiguration workflow (partial - state consistency tested)
+- 🟡 MinLock adjustment workflow (partial - boundary tests exist)
+- 🔴 Emergency parameter adjustment
+
+### Edge Case Scenarios
+- ✅ Maximum fee scenario (through maximum fee difference tests)
+- ✅ Zero fee scenario (through zero fee tests)
+- ✅ Minimum time granularity (through 1-second precision tests)
+- ✅ Maximum time periods (through very long decay periods)
+
+### Error Handling
+- 🔴 Cascading error conditions
+- 🔴 State consistency after errors
+
+### Precision and Mathematical Accuracy
+- ✅ Slope calculation precision
+- ✅ Fee calculation accuracy
+- ✅ Boundary condition mathematical accuracy
+
+## Missing Test Cases Summary
+
+### 🔴 Critical Missing Tests:
+1. **Fee System Transitions** - No tests for switching between fee systems with active tickets
+2. **Cascading Error Conditions** - No tests for multiple error conditions
+3. **State Consistency After Errors** - No verification of state after error conditions
+4. **Emergency Parameter Adjustment** - No tests for parameter changes during active operations
+
+### 🟡 Partially Covered Tests:
+1. **Initialization with Zero Addresses** - Only some addresses tested
+2. **timeToMinLock Function** - Exists but not comprehensive
+3. **Withdraw with Insufficient Balance** - Not explicitly tested
+4. **Fee System Reconfiguration Workflow** - State consistency tested but not full workflow
+5. **MinLock Adjustment Workflow** - Boundary tests exist but not full workflow
+
+### Overall Coverage: ~85% ✅
+
+The test suite is quite comprehensive with excellent coverage of core functionality, edge cases, and mathematical accuracy. The main gaps are in system-level workflow testing and error handling scenarios.

@@ -45,10 +45,16 @@ contract MockEscrow {
     }
 }
 
+contract MockDynamicExitQueue is DynamicExitQueue {
+    function getScaledTimeBasedFee(uint elapsed) external view returns (uint) {
+        return _getScaledTimeBasedFee(elapsed);
+    }
+}
+
 contract ExitQueueBase is TestHelpers, IDynamicExitQueueErrorsAndEvents, ITicketV2 {
     using ProxyLib for address;
 
-    DynamicExitQueue queue;
+    MockDynamicExitQueue queue;
     MockERC20 token;
     MockEscrow escrow;
     Clock clock;
@@ -60,14 +66,14 @@ contract ExitQueueBase is TestHelpers, IDynamicExitQueueErrorsAndEvents, ITicket
         uint256 _feePercent,
         address _clock,
         uint48 _minLock
-    ) public returns (DynamicExitQueue) {
-        DynamicExitQueue impl = new DynamicExitQueue();
+    ) public returns (MockDynamicExitQueue) {
+        MockDynamicExitQueue impl = new MockDynamicExitQueue();
 
         bytes memory initCalldata = abi.encodeCall(
             DynamicExitQueue.initialize,
             (_escrow, _cooldown, _dao, _feePercent, _clock, _minLock)
         );
-        return DynamicExitQueue(address(impl).deployUUPSProxy(initCalldata));
+        return MockDynamicExitQueue(address(impl).deployUUPSProxy(initCalldata));
     }
 
     function setUp() public virtual override {

@@ -106,7 +106,6 @@ All fee calculations are based on `timeElapsed = block.timestamp - ticket.queued
 ## State Variables
 
 ```solidity
-
 // cooldown & fee percent inherited from base contract
 
 /// @notice Minimum fee percent charged after full cooldown period
@@ -118,8 +117,6 @@ uint48 public minCooldown;
 /// @notice Fee decrease per second (basis points/second) during decay period
 /// @dev Set to 0 when minCooldown == cooldown to prevent division by zero
 uint256 private _slope;
-
-
 ```
 
 ## Interface Specification
