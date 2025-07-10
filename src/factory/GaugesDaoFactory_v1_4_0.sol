@@ -12,9 +12,9 @@ import {
     Curve,
     ExitQueue,
     GaugeVoter,
-    GaugeVoterSetupV1_3_0 as GaugeVoterSetup,
+    GaugeVoterSetupV1_4_0 as GaugeVoterSetup,
     IGaugeVoterSetupParams
-} from "@setup/GaugeVoterSetup_v1_3_0.sol";
+} from "@setup/GaugeVoterSetup_v1_4_0.sol";
 import {PluginSetupProcessor} from "@aragon/osx/framework/plugin/setup/PluginSetupProcessor.sol";
 import {
     hashHelpers,
@@ -98,7 +98,7 @@ struct Deployment {
 }
 
 /// @notice A singleton contract designed to run the deployment once and become a read-only store of the contracts deployed
-contract GaugesDaoFactoryV1_3_0 {
+contract GaugesDaoFactoryV1_4_0 {
     function version() external pure returns (string memory) {
         return "1.3.0";
     }

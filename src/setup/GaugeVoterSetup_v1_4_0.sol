@@ -15,7 +15,7 @@ import {PluginSetup} from "@aragon/osx/framework/plugin/setup/PluginSetup.sol";
 
 import {AddressGaugeVoter as GaugeVoter} from "@voting/AddressGaugeVoter.sol";
 import {VotingEscrowV1_2_0 as VotingEscrow} from "@escrow/VotingEscrowIncreasing_v1_2_0.sol";
-import {ExitQueue} from "@queue/ExitQueue.sol";
+import {DynamicExitQueue as ExitQueue} from "@queue/DynamicExitQueue.sol";
 import {LinearIncreasingCurve as Curve} from "@curve/LinearIncreasingCurve.sol";
 import {ClockV1_2_0 as Clock} from "@clock/Clock_v1_2_0.sol";
 import {LockV1_2_0 as Lock} from "@lock/Lock_v1_2_0.sol";
@@ -41,7 +41,7 @@ struct IGaugeVoterSetupParams {
     uint48 minLock;
 }
 
-contract GaugeVoterSetupV1_3_0 is PluginSetup {
+contract GaugeVoterSetupV1_4_0 is PluginSetup {
     using Address for address;
     using Clones for address;
     using ERC165Checker for address;

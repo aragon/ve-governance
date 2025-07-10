@@ -4,11 +4,11 @@ pragma solidity ^0.8.17;
 import {Script, console} from "forge-std/Script.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {
-    GaugesDaoFactoryV1_3_0 as GaugesDaoFactory,
+    GaugesDaoFactoryV1_4_0 as GaugesDaoFactory,
     DeploymentParameters,
     Deployment,
     TokenParameters
-} from "@factory/GaugesDaoFactory_v1_3_0.sol";
+} from "@factory/GaugesDaoFactory_v1_4_0.sol";
 import {
     VotingEscrow,
     Clock,
@@ -17,9 +17,9 @@ import {
     ExitQueue,
     EscrowIVotesAdapter,
     GaugeVoter,
-    GaugeVoterSetupV1_3_0 as GaugeVoterSetup,
+    GaugeVoterSetupV1_4_0 as GaugeVoterSetup,
     IGaugeVoterSetupParams
-} from "@setup/GaugeVoterSetup_v1_3_0.sol";
+} from "@setup/GaugeVoterSetup_v1_4_0.sol";
 import {
     MultisigSetup as MultisigPluginSetup
 } from "@aragon/osx/plugins/governance/multisig/MultisigSetup.sol";
@@ -30,7 +30,7 @@ import {PluginSetupProcessor} from "@aragon/osx/framework/plugin/setup/PluginSet
 import {MockERC20} from "@mocks/MockERC20.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
-contract DeployGaugesV1_3_0 is Script {
+contract DeployGaugesV1_4_0 is Script {
     using SafeCast for uint256;
 
     GaugeVoterSetup simpleGaugeVoterSetup;

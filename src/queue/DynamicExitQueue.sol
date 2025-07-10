@@ -91,9 +91,9 @@ contract DynamicExitQueue is IDynamicExitQueue, IClockUser, DaoAuthorizable, UUP
         clock = _clock;
         _setMinLock(_minLock);
 
-        // Initialize with fixed fee system
+        // Initialize with fixed fee system, no early exits
         if (_feePercent > MAX_FEE_PERCENT) revert FeePercentTooHigh(MAX_FEE_PERCENT);
-        _setFixedExitFeePercent(_feePercent, _cooldown, true);
+        _setFixedExitFeePercent(_feePercent, _cooldown, false);
     }
 
     /*//////////////////////////////////////////////////////////////
