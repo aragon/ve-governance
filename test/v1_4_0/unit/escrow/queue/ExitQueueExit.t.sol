@@ -6,7 +6,7 @@ import {ExitQueueBase, DaoUnauthorized} from "./ExitQueueBase.sol";
 contract DynamicExitQueueExitTest is ExitQueueBase {
     function setUp() public override {
         super.setUp();
-        vm.warp(2);
+        vm.warp(1);
         queue.setMinLock(1);
         queue.setFixedExitFeePercent(1000, 86400, true); // 10% fee, 1 day cooldown, early exit allowed
     }
@@ -17,7 +17,7 @@ contract DynamicExitQueueExitTest is ExitQueueBase {
         uint256 tokenId = 1;
 
         // Mock escrow setup - need to be past minLock (strictly greater than)
-        escrow.setMockLockedBalance(100e18, block.timestamp - 2);
+        escrow.setMockLockedBalance(100e18, block.timestamp - 1);
 
         // Expect event emission
         vm.expectEmit(true, true, true, true);
@@ -40,7 +40,7 @@ contract DynamicExitQueueExitTest is ExitQueueBase {
         uint256 tokenId = 1;
 
         // Mock escrow setup - need to be past minLock (strictly greater than)
-        escrow.setMockLockedBalance(100e18, block.timestamp - 2);
+        escrow.setMockLockedBalance(100e18, block.timestamp - 1);
 
         // Attempt to queue exit from non-escrow address
         vm.expectRevert(OnlyEscrow.selector);
@@ -52,7 +52,7 @@ contract DynamicExitQueueExitTest is ExitQueueBase {
         uint256 tokenId = 1;
 
         // Mock escrow setup - need to be past minLock (strictly greater than)
-        escrow.setMockLockedBalance(100e18, block.timestamp - 2);
+        escrow.setMockLockedBalance(100e18, block.timestamp - 1);
 
         // Attempt to queue exit with zero address
         vm.prank(address(escrow));
@@ -66,7 +66,7 @@ contract DynamicExitQueueExitTest is ExitQueueBase {
         uint256 tokenId = 1;
 
         // Mock escrow setup - need to be past minLock (strictly greater than)
-        escrow.setMockLockedBalance(100e18, block.timestamp - 2);
+        escrow.setMockLockedBalance(100e18, block.timestamp - 1);
 
         // Queue exit first time
         vm.prank(address(escrow));
@@ -91,7 +91,7 @@ contract DynamicExitQueueExitTest is ExitQueueBase {
 
         // Mock escrow to return lock start time such that minLock period hasn't elapsed
         // Now need to be 1 second more than minLock to pass, so test with exactly minLock
-        uint48 lockStart = uint48(block.timestamp - minLock);
+        uint48 lockStart = uint48(block.timestamp - minLock + 1);
         escrow.setMockLockedBalance(100e18, lockStart);
 
         // Calculate expected minLockTime
@@ -146,8 +146,8 @@ contract DynamicExitQueueExitTest is ExitQueueBase {
         // Set minLock
         queue.setMinLock(minLock);
 
-        // Mock escrow to return lock start time exactly at minLock boundary
-        uint48 lockStart = uint48(block.timestamp - minLock);
+        // Mock escrow to return lock start time 1s before minLock boundary
+        uint48 lockStart = uint48(block.timestamp - minLock + 1);
         escrow.setMockLockedBalance(100e18, lockStart);
 
         // Should fail at exactly minLock boundary
@@ -170,14 +170,11 @@ contract DynamicExitQueueExitTest is ExitQueueBase {
         uint256 lockedAmount = 100e18;
 
         // Mock escrow setup - need to be past minLock (strictly greater than)
-        escrow.setMockLockedBalance(lockedAmount, block.timestamp - 2);
+        escrow.setMockLockedBalance(lockedAmount, block.timestamp - 1);
 
         // Queue exit
         vm.prank(address(escrow));
         queue.queueExit(tokenId, ticketHolder);
-
-        // Fast forward past minCooldown
-        vm.warp(block.timestamp + 1);
 
         // Calculate expected fee
         uint256 expectedFee = queue.calculateFee(tokenId);
@@ -205,35 +202,14 @@ contract DynamicExitQueueExitTest is ExitQueueBase {
         uint256 tokenId = 1;
 
         // Mock escrow setup - need to be past minLock (strictly greater than)
-        escrow.setMockLockedBalance(100e18, block.timestamp - 2);
+        escrow.setMockLockedBalance(100e18, block.timestamp - 1);
 
         // Queue exit
         vm.prank(address(escrow));
         queue.queueExit(tokenId, ticketHolder);
-
-        // Fast forward past minCooldown
-        vm.warp(block.timestamp + 1);
 
         // Attempt to exit from non-escrow address
         vm.expectRevert(OnlyEscrow.selector);
-        queue.exit(tokenId);
-    }
-
-    /// @notice Test exit validation - cannot exit
-    function test_ExitValidation_CannotExit() public {
-        address ticketHolder = makeAddr("ticketHolder");
-        uint256 tokenId = 1;
-
-        // Mock escrow setup - need to be past minLock (strictly greater than)
-        escrow.setMockLockedBalance(100e18, block.timestamp - 2);
-
-        // Queue exit
-        vm.prank(address(escrow));
-        queue.queueExit(tokenId, ticketHolder);
-
-        // Attempt to exit immediately (before minCooldown)
-        vm.prank(address(escrow));
-        vm.expectRevert(CannotExit.selector);
         queue.exit(tokenId);
     }
 
@@ -248,7 +224,7 @@ contract DynamicExitQueueExitTest is ExitQueueBase {
         queue.setDynamicExitFeePercent(500, 3000, 172800, 86400); // 5% to 30%, 2 day cooldown, 1 day minCooldown
 
         // Mock escrow setup - need to be past minLock (strictly greater than)
-        escrow.setMockLockedBalance(lockedAmount, block.timestamp - 2);
+        escrow.setMockLockedBalance(lockedAmount, block.timestamp - 1);
 
         // Queue exit
         uint256 queueTime = block.timestamp;
@@ -278,7 +254,7 @@ contract DynamicExitQueueExitTest is ExitQueueBase {
 contract DynamicExitQueueQueueExitTest is ExitQueueBase {
     function setUp() public override {
         super.setUp();
-        vm.warp(2);
+        vm.warp(1);
         queue.setMinLock(1);
         queue.setFixedExitFeePercent(1000, 86400, true);
     }
@@ -289,7 +265,7 @@ contract DynamicExitQueueQueueExitTest is ExitQueueBase {
         uint256 tokenId = 1;
 
         // Mock escrow setup - need to be past minLock (strictly greater than)
-        escrow.setMockLockedBalance(100e18, block.timestamp - 2);
+        escrow.setMockLockedBalance(100e18, block.timestamp - 1);
 
         // Queue exit
         vm.prank(address(escrow));
@@ -307,7 +283,7 @@ contract DynamicExitQueueQueueExitTest is ExitQueueBase {
         address ticketHolder = makeAddr("ticketHolder");
 
         // Mock escrow setup - need to be past minLock (strictly greater than)
-        escrow.setMockLockedBalance(100e18, block.timestamp - 2);
+        escrow.setMockLockedBalance(100e18, block.timestamp - 1);
 
         // Queue exit
         vm.prank(address(escrow));
@@ -325,7 +301,7 @@ contract DynamicExitQueueQueueExitTest is ExitQueueBase {
         uint256 tokenId = 1;
 
         // Mock escrow setup - need to be past minLock (strictly greater than)
-        escrow.setMockLockedBalance(100e18, block.timestamp - 2);
+        escrow.setMockLockedBalance(100e18, block.timestamp - 1);
 
         uint256 queueTime = block.timestamp;
 
@@ -344,7 +320,7 @@ contract DynamicExitQueueQueueExitTest is ExitQueueBase {
         address ticketHolder2 = makeAddr("ticketHolder2");
 
         // Mock escrow setup - need to be past minLock (strictly greater than)
-        escrow.setMockLockedBalance(100e18, block.timestamp - 2);
+        escrow.setMockLockedBalance(100e18, block.timestamp - 1);
 
         uint256 queueTime = block.timestamp;
 
@@ -370,34 +346,31 @@ contract DynamicExitQueueQueueExitTest is ExitQueueBase {
     }
 
     function testFuzz_QueueExitWithVariousMinLockPeriods(uint48 minLock) public {
-        minLock = uint48(bound(minLock, 1, type(uint48).max - 2));
+        minLock = uint48(bound(minLock, 1, type(uint48).max - 1));
         address ticketHolder = makeAddr("ticketHolder");
         uint256 tokenId = 1;
-        vm.warp(minLock + 2); // Start at a time that allows for proper testing
 
         queue.setMinLock(minLock);
 
-        uint48 lockStart = uint48(block.timestamp - minLock - 2); // Set lock start appropriately
+        uint48 lockStart = uint48(block.timestamp);
         escrow.setMockLockedBalance(100e18, lockStart);
 
         uint48 minLockEnd = lockStart + minLock;
 
-        // Test at exactly minLock boundary (should fail)
-        vm.warp(minLockEnd);
+        // Test before minLock boundary (should fail)
+        vm.warp(minLockEnd - 1);
         vm.expectRevert(
             abi.encodeWithSelector(MinLockNotReached.selector, tokenId, minLock, minLockEnd)
         );
         vm.prank(address(escrow));
         queue.queueExit(tokenId, ticketHolder);
 
-        // Test at 1 second past minLock boundary (should succeed)
-        vm.warp(minLockEnd + 1);
+        vm.warp(minLockEnd);
         vm.prank(address(escrow));
         queue.queueExit(tokenId, ticketHolder);
 
         TicketV2 memory ticket = queue.queue(tokenId);
         assertEq(ticket.holder, ticketHolder);
-        assertEq(ticket.queuedAt, minLockEnd + 1);
+        assertEq(ticket.queuedAt, minLockEnd);
     }
 }
-

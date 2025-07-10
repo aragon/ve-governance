@@ -6,7 +6,7 @@ import {ExitQueueBase, DaoUnauthorized} from "./ExitQueueBase.sol";
 contract DynamicExitQueueDynamicFeeTest is ExitQueueBase {
     function setUp() public override {
         super.setUp();
-        vm.warp(2);
+        vm.warp(1);
         queue.setMinLock(1);
     }
 
@@ -263,7 +263,7 @@ contract DynamicExitQueueDynamicFeeTest is ExitQueueBase {
         queue.setDynamicExitFeePercent(minFeePercent, maxFeePercent, cooldown, minCooldown);
 
         // Mock escrow setup
-        escrow.setMockLockedBalance(100e18, block.timestamp - 2);
+        escrow.setMockLockedBalance(100e18, block.timestamp - 1);
 
         uint queueTime = block.timestamp;
         // Queue exit
@@ -275,7 +275,7 @@ contract DynamicExitQueueDynamicFeeTest is ExitQueueBase {
 
         // Should pay max fee at minCooldown
         vm.warp(queueTime + minCooldown);
-        assertFalse(queue.canExit(1));
+        assertTrue(queue.canExit(1));
         assertEq(
             queue.calculateFee(1),
             (100e18 * maxFeePercent) / 10000,
@@ -283,7 +283,6 @@ contract DynamicExitQueueDynamicFeeTest is ExitQueueBase {
         );
 
         vm.warp(queueTime + minCooldown + 1);
-        assertTrue(queue.canExit(1), "Should be able to exit after minCooldown");
         assertLt(
             queue.calculateFee(1),
             (100e18 * maxFeePercent) / 10000,
@@ -323,7 +322,7 @@ contract DynamicExitQueueDynamicFeeTest is ExitQueueBase {
         queue.setDynamicExitFeePercent(minFeePercent, maxFeePercent, cooldown, minCooldown);
 
         // Mock escrow setup
-        escrow.setMockLockedBalance(100e18, block.timestamp - 2);
+        escrow.setMockLockedBalance(100e18, block.timestamp - 1);
 
         uint queueTime = block.timestamp;
         // Queue exit
@@ -351,7 +350,7 @@ contract DynamicExitQueueDynamicFeeTest is ExitQueueBase {
         queue.setDynamicExitFeePercent(minFeePercent, maxFeePercent, cooldown, minCooldown);
 
         // Mock escrow setup
-        escrow.setMockLockedBalance(100e18, block.timestamp - 2);
+        escrow.setMockLockedBalance(100e18, block.timestamp - 1);
 
         uint queueTime = block.timestamp;
         // Queue exit
@@ -380,7 +379,7 @@ contract DynamicExitQueueDynamicFeeTest is ExitQueueBase {
         queue.setDynamicExitFeePercent(minFeePercent, maxFeePercent, cooldown, minCooldown);
 
         // Mock escrow setup
-        escrow.setMockLockedBalance(100e18, block.timestamp - 2);
+        escrow.setMockLockedBalance(100e18, block.timestamp - 1);
 
         uint queueTime = block.timestamp;
         // Queue exit
@@ -392,11 +391,11 @@ contract DynamicExitQueueDynamicFeeTest is ExitQueueBase {
         assertFalse(queue.isCool(1));
 
         // Should not be cool at cooldown boundary
-        vm.warp(queueTime + cooldown);
+        vm.warp(queueTime + cooldown - 1);
         assertFalse(queue.isCool(1));
 
         // Should be cool after cooldown
-        vm.warp(queueTime + cooldown + 1);
+        vm.warp(queueTime + cooldown);
         assertTrue(queue.isCool(1));
     }
 
@@ -425,5 +424,37 @@ contract DynamicExitQueueDynamicFeeTest is ExitQueueBase {
         assertEq(queue.cooldown(), 604800);
         assertEq(queue.minCooldown(), 0);
         assertEq(queue.slope(), (10000 - 0) / uint(604800 - 0));
+    }
+
+    function testFeeReductionScalesToMinFee() public {
+        // Setup: minFee=100 (1%), maxFee=1000 (10%), minCooldown=60, cooldown=300
+        queue.setDynamicExitFeePercent(100, 1000, 300, 60);
+
+        uint256 tokenId = 1;
+        uint256 lockAmount = 1000e18; // 1000 tokens
+        uint lockStart = block.timestamp;
+
+        escrow.setMockLockedBalance(lockAmount, lockStart);
+
+        // Queue exit
+        vm.warp(lockStart + 1);
+        vm.prank(address(escrow));
+        queue.queueExit(tokenId, address(1));
+
+        // Test fee reduction caps at minimum fee
+        vm.warp(block.timestamp + 500); // Way past cooldown (300s) - should trigger the >= condition
+
+        // Verify fee percent is minimum (100 basis points = 1%)
+        uint256 feePercent = queue.getTimeBasedFee(500);
+        assertEq(feePercent, 100, "Fee should be capped at minimum");
+
+        // Verify absolute fee amount is minimum fee applied to lock amount
+        uint256 actualFee = queue.calculateFee(tokenId);
+        uint256 expectedFee = 10e18; // 1% of 1000 tokens = 10 tokens
+        assertEq(
+            actualFee,
+            expectedFee,
+            "Absolute fee should be minimum fee applied to lock amount"
+        );
     }
 }

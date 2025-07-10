@@ -5,7 +5,7 @@ import {ExitQueueBase, DaoUnauthorized} from "./ExitQueueBase.sol";
 contract DynamicExitQueueFixedFeeTest is ExitQueueBase {
     function setUp() public override {
         super.setUp();
-        vm.warp(2);
+        vm.warp(1);
         queue.setMinLock(1);
     }
 
@@ -102,7 +102,7 @@ contract DynamicExitQueueFixedFeeTest is ExitQueueBase {
         queue.setFixedExitFeePercent(feePercent, cooldown, true);
 
         // Mock escrow setup
-        escrow.setMockLockedBalance(100e18, block.timestamp - 2);
+        escrow.setMockLockedBalance(100e18, block.timestamp - 1);
 
         // Queue exit (should succeed immediately since minCooldown = 0)
         vm.prank(address(escrow));
@@ -129,7 +129,7 @@ contract DynamicExitQueueFixedFeeTest is ExitQueueBase {
         queue.setFixedExitFeePercent(feePercent, cooldown, false);
 
         // Mock escrow setup
-        uint lockTime = block.timestamp - 2;
+        uint lockTime = block.timestamp - 1;
         escrow.setMockLockedBalance(100e18, lockTime);
 
         // Queue exit
@@ -140,11 +140,9 @@ contract DynamicExitQueueFixedFeeTest is ExitQueueBase {
         // Should not be able to exit immediately
         assertFalse(queue.canExit(1), "immediate exit should not be allowed");
 
-        // Should not be able to exit before cooldown ends
-        vm.warp(queueTime + cooldown);
+        vm.warp(queueTime + cooldown - 1);
         assertFalse(queue.canExit(1), "exit should not be allowed before cooldown ends");
 
-        // Should be able to exit exactly after cooldown
         vm.warp(block.timestamp + 1);
         assertTrue(queue.canExit(1), "exit should be allowed after cooldown ends");
 
@@ -160,7 +158,7 @@ contract DynamicExitQueueFixedFeeTest is ExitQueueBase {
         queue.setFixedExitFeePercent(0, cooldown, true);
 
         // Mock escrow setup
-        escrow.setMockLockedBalance(100e18, block.timestamp - 2);
+        escrow.setMockLockedBalance(100e18, block.timestamp - 1);
 
         // Queue exit
         vm.prank(address(escrow));
@@ -180,7 +178,7 @@ contract DynamicExitQueueFixedFeeTest is ExitQueueBase {
         queue.setFixedExitFeePercent(10000, cooldown, true);
 
         // Mock escrow setup
-        escrow.setMockLockedBalance(100e18, block.timestamp - 2);
+        escrow.setMockLockedBalance(100e18, block.timestamp - 1);
 
         // Queue exit
         vm.prank(address(escrow));
@@ -218,7 +216,7 @@ contract DynamicExitQueueFixedFeeTest is ExitQueueBase {
         queue.setFixedExitFeePercent(feePercent, cooldown, true);
 
         // Mock escrow setup
-        escrow.setMockLockedBalance(100e18, block.timestamp - 2);
+        escrow.setMockLockedBalance(100e18, block.timestamp - 1);
 
         uint queueTime = block.timestamp;
         // Queue exit
@@ -228,8 +226,7 @@ contract DynamicExitQueueFixedFeeTest is ExitQueueBase {
         // Should not be cool initially
         assertFalse(queue.isCool(1), "should not be cool before cooldown");
 
-        // Should not be cool before or at cooldown
-        vm.warp(queueTime + cooldown);
+        vm.warp(queueTime + cooldown - 1);
         assertFalse(queue.isCool(1), "should not be cool before cooldown ends");
 
         // Should be cool after cooldown

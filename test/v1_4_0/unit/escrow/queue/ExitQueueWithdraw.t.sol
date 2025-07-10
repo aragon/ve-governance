@@ -67,7 +67,7 @@ contract TestExitQueueWithdrawals is ExitQueueBase {
         {
             if (minLockThreshold > 0) {
                 // warp to one second before the min lock + start
-                vm.warp(minLockThreshold);
+                vm.warp(minLockThreshold - 1);
 
                 bytes memory err = abi.encodeWithSelector(
                     MinLockNotReached.selector,
@@ -81,7 +81,7 @@ contract TestExitQueueWithdrawals is ExitQueueBase {
             }
 
             // warp to the min lock + start - expect success
-            vm.warp(minLockThreshold + 1);
+            vm.warp(minLockThreshold);
             queue.queueExit(1, address(this));
         }
         vm.stopPrank();

@@ -1,6 +1,6 @@
 pragma solidity ^0.8.17;
 
-import {ProxyLib, ExitQueueBase, DynamicExitQueue} from "./ExitQueueBase.sol";
+import {ProxyLib, ExitQueueBase, DynamicExitQueue, DaoUnauthorized} from "./ExitQueueBase.sol";
 
 contract InitTest is ExitQueueBase {
     using ProxyLib for address;
@@ -73,5 +73,24 @@ contract InitTest is ExitQueueBase {
     function test_init_sets_correct_roles() public {
         assertEq(queue.QUEUE_ADMIN_ROLE(), keccak256("QUEUE_ADMIN"));
         assertEq(queue.WITHDRAW_ROLE(), keccak256("WITHDRAW_ROLE"));
+    }
+
+    // allow only the withdrawer to withdraw
+    function testOnlyUpgraderCanUpgrade(address _notRegistered) public {
+        address oldImpl = queue.implementation();
+
+        vm.assume(_notRegistered != address(this));
+        bytes memory data = abi.encodeWithSelector(
+            DaoUnauthorized.selector,
+            address(dao),
+            address(queue),
+            _notRegistered,
+            queue.QUEUE_ADMIN_ROLE()
+        );
+        vm.expectRevert(data);
+        vm.prank(_notRegistered);
+        queue.upgradeTo(address(123));
+
+        assertEq(queue.implementation(), oldImpl, "Implementation should not change");
     }
 }

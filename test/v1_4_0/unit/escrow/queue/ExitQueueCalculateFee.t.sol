@@ -6,7 +6,7 @@ import {ExitQueueBase, DaoUnauthorized} from "./ExitQueueBase.sol";
 contract DynamicExitQueueCalculateFeeTest is ExitQueueBase {
     function setUp() public override {
         super.setUp();
-        vm.warp(2);
+        vm.warp(1);
         queue.setMinLock(1);
     }
 
@@ -20,7 +20,7 @@ contract DynamicExitQueueCalculateFeeTest is ExitQueueBase {
     function test_CalculateFeeWithZeroBalance() public {
         queue.setDynamicExitFeePercent(1000, 5000, 86400, 43200);
 
-        escrow.setMockLockedBalance(0, block.timestamp - 2);
+        escrow.setMockLockedBalance(0, block.timestamp - 1);
 
         vm.prank(address(escrow));
         queue.queueExit(1, address(this));
@@ -34,7 +34,7 @@ contract DynamicExitQueueCalculateFeeTest is ExitQueueBase {
         queue.setDynamicExitFeePercent(1000, 5000, 86400, 43200);
 
         uint256 lockedAmount = 1000000;
-        escrow.setMockLockedBalance(lockedAmount, block.timestamp - 2);
+        escrow.setMockLockedBalance(lockedAmount, block.timestamp - 1);
 
         uint256 queueTime = block.timestamp;
         vm.prank(address(escrow));
@@ -61,7 +61,7 @@ contract DynamicExitQueueCalculateFeeTest is ExitQueueBase {
         queue.setDynamicExitFeePercent(1000, 5000, 86400, 43200);
 
         // Test with very small locked amounts
-        escrow.setMockLockedBalance(1, block.timestamp - 2);
+        escrow.setMockLockedBalance(1, block.timestamp - 1);
 
         uint256 queueTime = block.timestamp;
         vm.prank(address(escrow));
@@ -72,14 +72,14 @@ contract DynamicExitQueueCalculateFeeTest is ExitQueueBase {
         assertEq(fee, uint(1 * 5000) / 10000);
 
         // Test with locked amount = 2
-        escrow.setMockLockedBalance(2, block.timestamp - 2);
+        escrow.setMockLockedBalance(2, block.timestamp - 1);
 
         vm.warp(queueTime + 43200);
         fee = queue.calculateFee(1);
         assertEq(fee, uint(2 * 5000) / 10000);
 
         // Test with locked amount = 99
-        escrow.setMockLockedBalance(99, block.timestamp - 2);
+        escrow.setMockLockedBalance(99, block.timestamp - 1);
 
         vm.warp(queueTime + 43200);
         fee = queue.calculateFee(1);
@@ -87,7 +87,7 @@ contract DynamicExitQueueCalculateFeeTest is ExitQueueBase {
 
         // Test with very large locked amount
         uint256 largeAmount = type(uint208).max / 10000;
-        escrow.setMockLockedBalance(largeAmount, block.timestamp - 2);
+        escrow.setMockLockedBalance(largeAmount, block.timestamp - 1);
 
         vm.warp(queueTime + 43200);
         fee = queue.calculateFee(1);
@@ -97,7 +97,7 @@ contract DynamicExitQueueCalculateFeeTest is ExitQueueBase {
     /// @notice Test calculate fee with different fee systems
     function test_CalculateFeeWithDifferentFeeSystems() public {
         uint256 lockedAmount = 1000000;
-        escrow.setMockLockedBalance(lockedAmount, block.timestamp - 2);
+        escrow.setMockLockedBalance(lockedAmount, block.timestamp - 1);
 
         uint256 queueTime = block.timestamp;
 
@@ -135,7 +135,7 @@ contract DynamicExitQueueCalculateFeeTest is ExitQueueBase {
         queue.setDynamicExitFeePercent(3333, 6666, 86400, 43200);
 
         uint256 lockedAmount = 1000007;
-        escrow.setMockLockedBalance(lockedAmount, block.timestamp - 2);
+        escrow.setMockLockedBalance(lockedAmount, block.timestamp - 1);
 
         uint256 queueTime = block.timestamp;
         vm.prank(address(escrow));
@@ -152,7 +152,7 @@ contract DynamicExitQueueCalculateFeeTest is ExitQueueBase {
         queue.setDynamicExitFeePercent(1000, 5000, 86400, 43200);
 
         uint256 lockedAmount = 1000000;
-        escrow.setMockLockedBalance(lockedAmount, block.timestamp - 2);
+        escrow.setMockLockedBalance(lockedAmount, block.timestamp - 1);
 
         uint256 queueTime = block.timestamp;
         vm.prank(address(escrow));
@@ -179,7 +179,7 @@ contract DynamicExitQueueCalculateFeeTest is ExitQueueBase {
         queue.setDynamicExitFeePercent(0, 10000, 86400, 43200);
 
         uint256 maxSafeAmount = type(uint208).max / 10000;
-        escrow.setMockLockedBalance(maxSafeAmount, block.timestamp - 2);
+        escrow.setMockLockedBalance(maxSafeAmount, block.timestamp - 1);
 
         uint256 queueTime = block.timestamp;
         vm.prank(address(escrow));

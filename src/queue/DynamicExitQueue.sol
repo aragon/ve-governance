@@ -272,7 +272,7 @@ contract DynamicExitQueue is IDynamicExitQueue, IClockUser, DaoAuthorizable, UUP
 
         // get time to min lock and revert if it hasn't been reached
         uint48 minLockTime = timeToMinLock(_tokenId);
-        if (minLockTime >= block.timestamp) {
+        if (minLockTime > block.timestamp) {
             revert MinLockNotReached(_tokenId, minLock, minLockTime);
         }
 
@@ -360,14 +360,14 @@ contract DynamicExitQueue is IDynamicExitQueue, IClockUser, DaoAuthorizable, UUP
     function isCool(uint256 _tokenId) public view returns (bool) {
         TicketV2 memory ticket = _queue[_tokenId];
         if (ticket.holder == address(0)) return false;
-        return block.timestamp - ticket.queuedAt > cooldown;
+        return block.timestamp - ticket.queuedAt >= cooldown;
     }
 
     /// @return true if the tokenId corresponds to a valid ticket and the minimum cooldown period has passed
     function canExit(uint256 _tokenId) public view returns (bool) {
         TicketV2 memory ticket = _queue[_tokenId];
         if (ticket.holder == address(0)) return false;
-        return block.timestamp - ticket.queuedAt > minCooldown;
+        return block.timestamp - ticket.queuedAt >= minCooldown;
     }
 
     /// @return holder of a ticket for a given tokenId
