@@ -28,8 +28,6 @@
 #### Test: Slope getter returns correct scaled value
 
 - Set dynamic fee with known parameters
-- Calculate expected slope manually
-- Assert: slope() returns expectedSlope / MAX_FEE_PERCENT
 
 #### Test: All getters return correct values after fee system changes
 
@@ -528,235 +526,299 @@
   Based on my analysis of the provided test files, here's a comprehensive checklist of test case coverage:
   Based on my analysis of the provided test files, here's a comprehensive checklist of test case coverage:
   Based on my analysis of the provided test files, here's a comprehensive checklist of test case coverage:
+
 # Test Coverage Checklist for DynamicExitQueue
 
 ## Constructor and Initialization
 
 ✅ **Test: Cannot initialize twice**
+
 - ✅ Covered in `InitTest.test_init_cannot_be_called_twice()`
 
 ✅ **Test: Initialization sets all parameters correctly**
+
 - ✅ Covered in `InitTest.test_init_sets_values()` and `InitTest.test_init_sets_dynamic_fee_params()`
 
 ✅ **Test: Initialization parameter validation**
+
 - ✅ Covered in `InitTest.test_init_reverts_if_fee_percent_too_high()`
 
 ## State Variable Getters
 
 🟡 **Test: Slope getter returns correct scaled value**
+
 - 🟡 Partially covered - slope is tested in various fee system tests but not explicitly as a getter test
 
 ✅ **Test: All getters return correct values after fee system changes**
+
 - ✅ Covered across multiple test files with state assertions
 
 ## Fee Setter Functions - Authorization
 
 ✅ **Test: All fee setters require QUEUE_ADMIN_ROLE**
+
 - ✅ Covered in `TestExitQueueWithdrawals.testOnlyWithdrawerCanWithdraw()` and init tests
 
 ✅ **Test: setMinLock requires QUEUE_ADMIN_ROLE**
+
 - ✅ Covered in authorization tests
 
 ## Dynamic Fee System Configuration
 
 ✅ **Test: Valid dynamic fee configuration**
+
 - ✅ Covered in `DynamicExitQueueDynamicFeeTest.testFuzz_ValidDynamicFeeConfiguration()`
 
 ✅ **Test: Dynamic fee validation - fee bounds**
+
 - ✅ Covered in `DynamicExitQueueDynamicFeeTest.test_DynamicFeeValidation_FeeBounds()`
 
 ✅ **Test: Dynamic fee validation - fee relationship**
+
 - ✅ Covered in `DynamicExitQueueDynamicFeeTest.test_DynamicFeeValidation_FeeRelationship()`
 
 ✅ **Test: Dynamic fee validation - cooldown relationship**
+
 - ✅ Covered in `DynamicExitQueueDynamicFeeTest.test_DynamicFeeValidation_CooldownRelationship()`
 
 ✅ **Test: Dynamic fee edge cases**
+
 - ✅ Covered in `DynamicExitQueueDynamicFeeTest.test_DynamicFeeEdgeCases()`
 
 ✅ **Test: Hardcoded dynamic fee scenarios**
+
 - ✅ Covered in `DynamicExitQueueDynamicFeeTest.test_HardcodedDynamicFeeScenario1()` and `test_HardcodedDynamicFeeScenario2()`
 
 ## Tiered Fee System Configuration
 
 ✅ **Test: Valid tiered fee configuration**
+
 - ✅ Covered in `DynamicExitQueueTieredFeeTest.testFuzz_ValidTieredFeeConfiguration()`
 
 ✅ **Test: Tiered fee validation - fee bounds**
+
 - ✅ Covered in `DynamicExitQueueTieredFeeTest.test_TieredFeeValidation_FeeBounds()`
 
 ✅ **Test: Tiered fee validation - fee relationship**
+
 - ✅ Covered in `DynamicExitQueueTieredFeeTest.test_TieredFeeValidation_FeeRelationship()`
 
 ✅ **Test: Tiered fee validation - cooldown relationship**
+
 - ✅ Covered in `DynamicExitQueueTieredFeeTest.test_TieredFeeValidation_CooldownRelationship()`
 
 ## Fixed Fee System Configuration
 
 ✅ **Test: Valid fixed fee configuration with early exit allowed**
+
 - ✅ Covered in `DynamicExitQueueFixedFeeTest.testFuzz_ValidFixedFeeConfigurationWithEarlyExitAllowed()`
 
 ✅ **Test: Valid fixed fee configuration with early exit disabled**
+
 - ✅ Covered in `DynamicExitQueueFixedFeeTest.testFuzz_ValidFixedFeeConfigurationWithEarlyExitDisabled()`
 
 ✅ **Test: Fixed fee validation - fee bounds**
+
 - ✅ Covered in `DynamicExitQueueFixedFeeTest.test_FixedFeeValidation_FeeBounds()`
 
 ## MinLock Configuration
 
 🟡 **Test: Valid minLock configuration**
+
 - 🟡 Partially covered - minLock is tested in various scenarios but not as a dedicated configuration test
 
 🔴 **Test: MinLock validation**
+
 - 🔴 Missing - no test for minLock = 0 validation
 
 ## Time-Based Fee Calculations
 
 ✅ **Test: getTimeBasedFee for fixed fee system**
+
 - ✅ Covered in `DynamicExitQueueFixedFeeTest.test_GetTimeBasedFeeForFixedFeeSystem()`
 
 ✅ **Test: getTimeBasedFee for tiered fee system**
+
 - ✅ Covered in `DynamicExitQueueTieredFeeTest.test_GetTimeBasedFeeForTieredFeeSystem()`
 
 ✅ **Test: getTimeBasedFee for dynamic fee system**
+
 - ✅ Covered in `DynamicExitQueueDynamicFeeTest.test_GetTimeBasedFeeForDynamicFeeSystem()`
 
 ✅ **Test: getTimeBasedFee boundary conditions**
+
 - ✅ Covered in multiple boundary condition tests across fee system tests
 
 🟡 **Test: getTimeBasedFee precision handling**
+
 - 🟡 Partially covered - some precision tests exist but not comprehensive
 
 ## Queue Exit Function
 
 ✅ **Test: Successful queue exit**
+
 - ✅ Covered in `DynamicExitQueueExitTest.test_SuccessfulQueueExit()`
 
 ✅ **Test: Queue exit authorization**
+
 - ✅ Covered in `DynamicExitQueueExitTest.test_QueueExitAuthorization()`
 
 ✅ **Test: Queue exit validation - zero address**
+
 - ✅ Covered in `DynamicExitQueueExitTest.test_QueueExitValidation_ZeroAddress()`
 
 ✅ **Test: Queue exit validation - already queued**
+
 - ✅ Covered in `DynamicExitQueueExitTest.test_QueueExitValidation_AlreadyQueued()`
 
 ✅ **Test: Queue exit validation - minLock not reached**
+
 - ✅ Covered in `DynamicExitQueueExitTest.test_QueueExitValidation_MinLockNotReached()`
 
 ✅ **Test: Queue exit validation - minLock boundary**
+
 - ✅ Covered in `DynamicExitQueueExitTest.test_QueueExitValidation_MinLockBoundary()`
 
 ## Exit Function
 
 ✅ **Test: Successful exit**
+
 - ✅ Covered in `DynamicExitQueueExitTest.test_SuccessfulExit()`
 
 ✅ **Test: Exit authorization**
+
 - ✅ Covered in `DynamicExitQueueExitTest.test_ExitAuthorization()`
 
 🔴 **Test: Exit validation - cannot exit**
+
 - 🔴 Missing - no explicit test for CannotExit error
 
 ✅ **Test: Exit fee calculation consistency**
+
 - ✅ Covered in `DynamicExitQueueExitTest.test_ExitFeeCalculationConsistency()`
 
 ## Calculate Fee Function
 
 ✅ **Test: Calculate fee with no ticket**
+
 - ✅ Covered in `DynamicExitQueueCalculateFeeTest.test_CalculateFeeWithNoTicket()`
 
 ✅ **Test: Calculate fee with zero balance**
+
 - ✅ Covered in `DynamicExitQueueCalculateFeeTest.test_CalculateFeeWithZeroBalance()`
 
 ✅ **Test: Calculate fee with valid conditions**
+
 - ✅ Covered in `DynamicExitQueueCalculateFeeTest.test_CalculateFeeWithValidConditions()`
 
 ✅ **Test: Calculate fee precision and rounding**
+
 - ✅ Covered in `DynamicExitQueueCalculateFeeTest.test_CalculateFeePrecisionAndRounding()`
 
 ✅ **Test: Calculate fee with different fee systems**
+
 - ✅ Covered in `DynamicExitQueueCalculateFeeTest.test_CalculateFeeWithDifferentFeeSystems()`
 
 ## View Functions
 
 ✅ **Test: isCool function**
+
 - ✅ Covered in multiple test files with `queue.isCool()` calls
 
 🟡 **Test: canExit function**
+
 - 🟡 Partially covered - used in tests but not comprehensively tested
 
 ✅ **Test: ticketHolder function**
+
 - ✅ Covered in queue exit tests
 
 ✅ **Test: queue function**
+
 - ✅ Covered in multiple test files
 
 🔴 **Test: timeToMinLock function**
+
 - 🔴 Missing - only covered in `TestExitQueueWithdrawals.testFuzz_CannotQueueWithIfBeforeMinLock()`
 
 ## Withdraw Function
 
 ✅ **Test: Successful withdraw**
+
 - ✅ Covered in `TestExitQueueWithdrawals.testWithdraw()`
 
 ✅ **Test: Withdraw authorization**
+
 - ✅ Covered in `TestExitQueueWithdrawals.testOnlyWithdrawerCanWithdraw()`
 
 🔴 **Test: Withdraw with insufficient balance**
+
 - 🔴 Missing - no test for insufficient balance scenario
 
 ## Functional Tests
 
 🔴 **Test: Fee system transitions**
+
 - 🔴 Missing - no tests for transitioning between fee systems with active tickets
 
 🔴 **Test: Long-term stability**
+
 - 🔴 Missing - no tests for long-term behavior over extended periods
 
 🔴 **Test: Multiple active tickets**
+
 - 🔴 Missing - limited coverage of multiple simultaneous tickets
 
 🔴 **Test: Administrative workflows**
+
 - 🔴 Missing - no tests for admin workflow scenarios
 
 ## Edge Case Scenarios
 
 🟡 **Test: Maximum fee scenario**
+
 - 🟡 Partially covered - some 100% fee tests exist
 
 🟡 **Test: Zero fee scenario**
+
 - 🟡 Partially covered - some zero fee tests exist
 
 🟡 **Test: Minimum time granularity**
+
 - 🟡 Partially covered - some boundary tests exist
 
 🔴 **Test: Maximum time periods**
+
 - 🔴 Missing - no tests with maximum uint48 values
 
 ## Error Handling
 
 🔴 **Test: Cascading error conditions**
+
 - 🔴 Missing - no tests for combinations of error conditions
 
 🔴 **Test: State consistency after errors**
+
 - 🔴 Missing - no tests for state consistency after errors
 
 ## Precision and Mathematical Accuracy
 
 🟡 **Test: Slope calculation precision**
+
 - 🟡 Partially covered - some precision challenges tested
 
 🟡 **Test: Fee calculation accuracy**
+
 - 🟡 Partially covered - some accuracy tests exist
 
 🟡 **Test: Boundary condition mathematical accuracy**
+
 - 🟡 Partially covered - some boundary tests exist but not comprehensive
 
 ## Summary
 
 - ✅ **Well Covered (Green)**: 32 test categories
-- 🟡 **Partially Covered (Yellow)**: 11 test categories  
+- 🟡 **Partially Covered (Yellow)**: 11 test categories
 - 🔴 **Missing (Red)**: 12 test categories
 
 The test suite has good coverage of the basic functionality and individual components, but is missing comprehensive functional tests, edge cases, and error handling scenarios.

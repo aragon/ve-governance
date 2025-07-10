@@ -49,6 +49,10 @@ contract MockDynamicExitQueue is DynamicExitQueue {
     function getScaledTimeBasedFee(uint elapsed) external view returns (uint) {
         return _getScaledTimeBasedFee(elapsed);
     }
+
+    function slope() external view returns (uint) {
+        return _slope;
+    }
 }
 
 contract ExitQueueBase is TestHelpers, IDynamicExitQueueErrorsAndEvents, ITicketV2 {

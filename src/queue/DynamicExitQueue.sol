@@ -66,7 +66,7 @@ contract DynamicExitQueue is IDynamicExitQueue, IClockUser, DaoAuthorizable, UUP
 
     /// @notice Fee decrease per second (basis points/second) during decay period
     /// @dev Set to 0 when minCooldown == cooldown to prevent division by zero
-    uint256 private _slope;
+    uint256 internal _slope;
 
     /*//////////////////////////////////////////////////////////////
                               Constructor
@@ -224,12 +224,6 @@ contract DynamicExitQueue is IDynamicExitQueue, IClockUser, DaoAuthorizable, UUP
     /*//////////////////////////////////////////////////////////////
                               SLOPE
     //////////////////////////////////////////////////////////////*/
-
-    /// @notice Get the rate of fee decrease per second during the decay period
-    /// @dev will return 0 if the fee system is not dynamic
-    function slope() external view returns (uint256) {
-        return (_slope * MAX_FEE_PERCENT) / INTERNAL_PRECISION;
-    }
 
     function _computeSlope(
         uint256 _minFeePercent,

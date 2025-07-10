@@ -106,10 +106,6 @@ interface IDynamicExitQueueFee is IDynamicExitQueueEventsAndErrors {
     /// @return Fee percent in basis points (0-10000)
     function minFeePercent() external view returns (uint256);
 
-    /// @notice Rate of fee decrease per second during decay period
-    /// @return Slope in basis points per second
-    function slope() external view returns (uint256);
-
     /// @notice Minimum wait time before any exit is possible
     /// @return Time in seconds
     function minCooldown() external view returns (uint48);

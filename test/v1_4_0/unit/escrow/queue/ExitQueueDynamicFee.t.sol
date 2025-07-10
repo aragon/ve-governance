@@ -31,10 +31,6 @@ contract DynamicExitQueueDynamicFeeTest is ExitQueueBase {
         assertEq(queue.minFeePercent(), _minFeePercent);
         assertEq(queue.cooldown(), _cooldown);
         assertEq(queue.minCooldown(), _minCooldown);
-
-        // Calculate expected slope
-        uint256 expectedSlope = (_maxFeePercent - _minFeePercent) / (_cooldown - _minCooldown);
-        assertEq(queue.slope(), expectedSlope);
     }
 
     /// @notice Test dynamic fee validation - fee bounds
@@ -78,11 +74,11 @@ contract DynamicExitQueueDynamicFeeTest is ExitQueueBase {
     function test_DynamicFeeEdgeCases() public {
         // Test minCooldown = 0, cooldown = 1 (1 second decay)
         queue.setDynamicExitFeePercent(0, 10000, 1, 0);
-        assertEq(queue.slope(), 10000);
+        assertEq(queue.slope(), (10000 * 1e18) / 10_000);
 
         // Test very long decay periods
         queue.setDynamicExitFeePercent(1000, 5000, 365 days, 0);
-        uint256 expectedSlope = uint(5000 - 1000) / uint(365 days);
+        uint256 expectedSlope = ((uint(5000 - 1000) * 1e18) / uint(365 days)) / 10_000;
         assertEq(queue.slope(), expectedSlope);
     }
 
@@ -399,6 +395,15 @@ contract DynamicExitQueueDynamicFeeTest is ExitQueueBase {
         assertTrue(queue.isCool(1));
     }
 
+    function expSlope(
+        uint256 minFeePercent,
+        uint256 maxFeePercent,
+        uint48 cooldown,
+        uint48 minCooldown
+    ) internal pure returns (uint256) {
+        return (((maxFeePercent - minFeePercent) * 1e18) / (cooldown - minCooldown)) / 10_000;
+    }
+
     /// @notice Test dynamic fee system state consistency after multiple reconfigurations
     function test_DynamicFeeSystemStateConsistencyAfterReconfigurations() public {
         // Initial configuration
@@ -407,7 +412,7 @@ contract DynamicExitQueueDynamicFeeTest is ExitQueueBase {
         assertEq(queue.minFeePercent(), 1000);
         assertEq(queue.cooldown(), 86400);
         assertEq(queue.minCooldown(), 43200);
-        assertEq(queue.slope(), (5000 - 1000) / uint(86400 - 43200));
+        assertEq(queue.slope(), expSlope(1000, 5000, 86400, 43200));
 
         // Reconfigure with different parameters
         queue.setDynamicExitFeePercent(500, 3000, 172800, 86400);
@@ -415,7 +420,7 @@ contract DynamicExitQueueDynamicFeeTest is ExitQueueBase {
         assertEq(queue.minFeePercent(), 500);
         assertEq(queue.cooldown(), 172800);
         assertEq(queue.minCooldown(), 86400);
-        assertEq(queue.slope(), (3000 - 500) / uint(172800 - 86400));
+        assertEq(queue.slope(), expSlope(500, 3000, 172800, 86400));
 
         // Reconfigure with edge case parameters
         queue.setDynamicExitFeePercent(0, 10000, 604800, 0);
@@ -423,7 +428,7 @@ contract DynamicExitQueueDynamicFeeTest is ExitQueueBase {
         assertEq(queue.minFeePercent(), 0);
         assertEq(queue.cooldown(), 604800);
         assertEq(queue.minCooldown(), 0);
-        assertEq(queue.slope(), (10000 - 0) / uint(604800 - 0));
+        assertEq(queue.slope(), expSlope(0, 10000, 604800, 0));
     }
 
     function testFeeReductionScalesToMinFee() public {

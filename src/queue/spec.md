@@ -133,7 +133,6 @@ interface IEarlyExitQueueEventsAndErrors {
   event ExitFeePercentAdjusted(
     uint256 maxFeePercent,
     uint256 minFeePercent,
-    uint256 slope,
     uint48 minCooldown,
     ExitFeeType feeType
   );
@@ -193,10 +192,6 @@ interface IEarlyExitQueue is IEarlyExitQueueEventsAndErrors {
   /// @notice Minimum fee percent charged after full cooldown
   /// @return Fee percent in basis points (0-10000)
   function minFeePercent() external view returns (uint256);
-
-  /// @notice Rate of fee decrease per second during decay period
-  /// @return Slope in basis points per second
-  function slope() external view returns (uint256);
 
   /// @notice Minimum wait time before cheapest exit is possible
   function cooldown() external view returns (uint48);
