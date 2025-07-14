@@ -247,7 +247,7 @@ contract DynamicExitQueue is IDynamicExitQueue, IClockUser, DaoAuthorizable, UUP
     /// @dev The caller must be authorized to withdraw by the DAO
     function withdraw(uint256 _amount) external auth(WITHDRAW_ROLE) {
         IERC20 underlying = IERC20(IVotingEscrow(escrow).token());
-        underlying.transfer(msg.sender, _amount);
+        underlying.safeTransfer(msg.sender, _amount);
     }
 
     /*//////////////////////////////////////////////////////////////
