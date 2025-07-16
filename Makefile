@@ -195,3 +195,18 @@ deploy-ethereum-sepolia :; forge script DeployGauges \
 get-deployment-values-sepolia-1-2 :; forge script script/utils/GetDeploymentValues_v1_2_0.sol:GetFactoryValuesV1_2_0 \
 	--rpc-url $(RPC_URL) \
 	-vvvvv
+
+#### Base Mainnet Deployments ####
+
+deploy-preview-base-mainnet :; forge script script/deploy/DeployGauges_v1_3_0.s.sol:DeployGaugesV1_3_0 \
+	--rpc-url $(PRODNET_RPC_URL) \
+	-vvvvv
+
+deploy-base-mainnet :; forge script script/deploy/DeployGauges_v1_3_0.s.sol:DeployGaugesV1_3_0 \
+	--rpc-url $(PRODNET_RPC_URL) \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	--broadcast \
+	--verify \
+	--slow \
+	--etherscan-api-key $(ETHERSCAN_API_KEY) \
+	-vvvvv
