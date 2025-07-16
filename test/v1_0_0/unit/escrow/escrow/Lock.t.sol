@@ -5,11 +5,30 @@ import {EscrowBase} from "./EscrowBase.sol";
 import {console2 as console} from "forge-std/console2.sol";
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
+import {DaoUnauthorized} from "@aragon/osx/core/utils/auth.sol";
 import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
+
+import {
+    IERC721EnumerableUpgradeable as IERC721Enumerable
+} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/IERC721EnumerableUpgradeable.sol";
+import {
+    IERC721MetadataUpgradeable as IERC721Metadata
+} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/IERC721MetadataUpgradeable.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
-import {Lock, Clock, VotingEscrow, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, IEscrowCurveTokenStorage, IGaugeVote, ILock} from "../../../versions.sol";
+import {
+    Lock,
+    Clock,
+    VotingEscrow,
+    QuadraticIncreasingEscrow,
+    ExitQueue,
+    SimpleGaugeVoter,
+    SimpleGaugeVoterSetup,
+    IEscrowCurveTokenStorage,
+    IGaugeVote,
+    ILock
+} from "../../../versions.sol";
 
 contract TestLockMintBurn is EscrowBase, IEscrowCurveTokenStorage, IGaugeVote {
     function testDeploy(
@@ -31,6 +50,8 @@ contract TestLockMintBurn is EscrowBase, IEscrowCurveTokenStorage, IGaugeVote {
     function testSupportsInterface() public view {
         assertTrue(nftLock.supportsInterface(type(ILock).interfaceId));
         assertFalse(nftLock.supportsInterface(0xffffffff));
+        assertTrue(nftLock.supportsInterface(type(IERC721Metadata).interfaceId));
+        assertTrue(nftLock.supportsInterface(type(IERC721Enumerable).interfaceId));
     }
 
     function testFuzz_OnlyEscrowCanMint(address _notEscrow) public {

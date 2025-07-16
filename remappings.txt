@@ -7,16 +7,20 @@ utils/=test/utils/
 @aragon/multisig/=lib/osx/packages/contracts/src/plugins/governance/multisig/
 
 @interfaces/=src/interfaces/
-@mocks/=test/mocks/
 @libs/=src/libs/
-@escrow/=src/escrow/increasing/
+@escrow/=src/escrow/
+@clock/=src/clock/
+@lock/=src/lock/
+@queue/=src/queue/
+@curve/=src/curve/
+@delegation/=src/delegation/
 @escrow-interfaces/=src/escrow/increasing/interfaces/
 @voting/=src/voting/
-@execution-chain/=src/execution-chain/
+@setup/=src/setup/
 @utils/=src/utils/
 @helpers/=test/helpers/
-@clock/=src/clock/
 @factory/=src/factory/
+@mocks/=test/mocks/
   
 @ensdomains/ens-contracts/=lib/ens-contracts/
 ens-contracts/=lib/ens-contracts/contracts/

@@ -6,9 +6,17 @@ import {DaoUnauthorized} from "@aragon/osx/core/utils/auth.sol";
 
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {DAO, createTestDAO} from "@mocks/MockDAO.sol";
-import {Clock, QuadraticIncreasingEscrow, ILockedBalanceIncreasing, IVotingEscrowIncreasing as IVotingEscrow, IEscrowCurveIncreasing as IEscrowCurve} from "../../../versions.sol";
+import {
+    Clock,
+    QuadraticIncreasingEscrow,
+    ILockedBalanceIncreasing,
+    IVotingEscrowIncreasing as IVotingEscrow,
+    IEscrowCurveIncreasing as IEscrowCurve
+} from "../../../versions.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
+import {FixedPointBase} from "../../../base/FixedPointBase.sol";
+import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 
 contract MockEscrow {
     address public token;
@@ -27,14 +35,19 @@ contract MockEscrow {
     }
 }
 
-contract QuadraticCurveBase is TestHelpers, ILockedBalanceIncreasing {
+contract QuadraticCurveBase is TestHelpers, ILockedBalanceIncreasing, FixedPointBase {
     using ProxyLib for address;
     QuadraticIncreasingEscrow internal curve;
+    Clock internal clock;
     MockEscrow internal escrow;
 
     function setUp() public virtual override {
         super.setUp();
         escrow = new MockEscrow();
+
+        address clockImpl = address(new Clock());
+        bytes memory initClockCalldata = abi.encodeWithSelector(Clock.initialize.selector, dao);
+        clock = Clock(clockImpl.deployUUPSProxy(initClockCalldata));
 
         address impl = address(new QuadraticIncreasingEscrow());
 
@@ -53,5 +66,10 @@ contract QuadraticCurveBase is TestHelpers, ILockedBalanceIncreasing {
         });
 
         escrow.setCurve(curve);
+
+        FixedPointBase.initialize(
+            clock.epochDuration() * CurveConstantLib.MAX_EPOCHS,
+            clock.checkpointInterval()
+        );
     }
 }

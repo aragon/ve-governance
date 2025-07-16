@@ -1,3 +1,5 @@
+.DS_Store
+
 .env*
 !.env.example
 !.env.test.example
@@ -8,6 +10,7 @@
 # Foundry
 cache/
 out/
+ref_builds/
 broadcast/
 
 # JS

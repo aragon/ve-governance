@@ -16,4 +16,16 @@ contract MockERC20Votes is ERC20Votes {
     function mint(address to, uint256 amount) external {
         _mint(to, amount);
     }
+    
+
+    function clock() public view virtual override returns (uint48) {
+        return SafeCast.toUint48(block.timestamp);
+    }
+
+    // The following functions are 
+    function CLOCK_MODE() public view virtual override returns (string memory) {
+        // Check that the clock was not modified
+        require(clock() == block.timestamp, "ERC20Votes: broken clock mode");
+        return "mode=timestamp&from=default";
+    }
 }

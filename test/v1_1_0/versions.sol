@@ -4,16 +4,51 @@ pragma solidity ^0.8.17;
 // import files here in your tests instead of from src
 
 // contracts
-import {QuadraticIncreasingEscrow, Clock, Lock, ExitQueue, VotingEscrow, SimpleGaugeVoter, SimpleGaugeVoterSetupV1_1_0 as SimpleGaugeVoterSetup} from "@voting/SimpleGaugeVoterSetup_v1_1_0.sol";
-import {GaugesDaoFactoryV1_1_0 as GaugesDaoFactory, Deployment, DeploymentParameters, TokenParameters, GaugePluginSet} from "@factory/GaugesDaoFactory_v1_1_0.sol";
+import {
+    Curve,
+    Clock,
+    Lock,
+    ExitQueue,
+    VotingEscrow,
+    GaugeVoter,
+    GaugeVoterSetupV1_1_0 as GaugeVoterSetup
+} from "@setup/GaugeVoterSetup_v1_1_0.sol";
+import {
+    GaugesDaoFactoryV1_1_0 as GaugesDaoFactory,
+    Deployment,
+    DeploymentParameters,
+    TokenParameters,
+    GaugePluginSet
+} from "@factory/GaugesDaoFactory_v1_1_0.sol";
 
 // interfaces
-import {ISimpleGaugeVoterSetupParams} from "@voting/SimpleGaugeVoterSetup_v1_1_0.sol";
-import {IEscrowCurveIncreasing, IEscrowCurveTokenStorage} from "@escrow-interfaces/IEscrowCurveIncreasing.sol";
-import {IExitQueue, ITicket, IExitQueueErrorsAndEvents} from "@escrow-interfaces/IExitQueue.sol";
-import {ILock, IWhitelistErrors, IWhitelistEvents} from "@escrow-interfaces/ILock.sol";
-import {IVotingEscrowIncreasing, IWithdrawalQueueErrors, ILockedBalanceIncreasing, IVotingEscrowEventsStorageErrorsEvents} from "@escrow-interfaces/IVotingEscrowIncreasing.sol";
-import {IGaugeVote, ISimpleGaugeVoterStorageEventsErrors} from "@voting/ISimpleGaugeVoter.sol";
+import {IGaugeVoterSetupParams} from "@setup/GaugeVoterSetup_v1_1_0.sol";
+import {IEscrowCurveIncreasing, IEscrowCurveTokenStorage} from "@curve/IEscrowCurveIncreasing.sol";
+import {IExitQueue, ITicket, IExitQueueErrorsAndEvents} from "@queue/IExitQueue.sol";
+import {ILock, IWhitelistErrors, IWhitelistEvents} from "@lock/ILock.sol";
+import {
+    IVotingEscrowIncreasing,
+    IWithdrawalQueueErrors,
+    ILockedBalanceIncreasing,
+    IVotingEscrowEventsStorageErrorsEvents
+} from "@escrow/IVotingEscrowIncreasing.sol";
+import {
+    ITokenGaugeVote as IGaugeVote,
+    ITokenGaugeVoterStorageEventsErrors as IGaugeVoterStorageEventsErrors
+} from "@voting/ITokenGaugeVoter.sol";
 
 // other
-import {DeployGaugesV1_1_0 as DeployGauges} from "script/DeployGauges_v1_1_0.s.sol";
+import {DeployGaugesV1_1_0 as DeployGauges} from "script/deploy/DeployGauges_v1_1_0.s.sol";
+
+// deprecated but to avoid rewriting all tests
+// housekeeping: remove these as we go
+import {
+    Curve as QuadraticIncreasingEscrow,
+    GaugeVoter as SimpleGaugeVoter,
+    GaugeVoterSetupV1_1_0 as SimpleGaugeVoterSetup,
+    IGaugeVoterSetupParams as ISimpleGaugeVoterSetupParams
+} from "@setup/GaugeVoterSetup_v1_1_0.sol";
+
+import {
+    ITokenGaugeVoterStorageEventsErrors as ISimpleGaugeVoterStorageEventsErrors
+} from "@voting/ITokenGaugeVoter.sol";

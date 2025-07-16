@@ -1,0 +1,182 @@
+pragma solidity ^0.8.17;
+
+import {EscrowBase} from "../../../base/EscrowBase.sol";
+
+import {console2 as console} from "forge-std/console2.sol";
+import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
+import {DAO} from "@aragon/osx/core/dao/DAO.sol";
+import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
+import {MockERC20} from "@mocks/MockERC20.sol";
+
+import {ProxyLib} from "@libs/ProxyLib.sol";
+
+import {
+    Clock,
+    IClock,
+    Lock,
+    VotingEscrow,
+    IVotingEscrowIncreasing,
+    IEscrowCurveIncreasing,
+    IVotingEscrowIncreasing,
+    IVotingEscrowCoreErrors,
+    IMerge,
+    ISplit,
+    ILockedBalanceIncreasing,
+    IEscrowCurveGlobalStorage,
+    IEscrowCurveTokenStorage,
+    ISplitEventsAndErrors
+} from "../../../versions.sol";
+
+contract TestEscrowSplit is EscrowBase {
+    function setUp() public override {
+        super.setUp();
+
+        super.mintAndApproveEscrow();
+
+        escrow.setEnableSplit(address(this), true);
+    }
+
+    function test_shouldRevertIfEscrowPaused() public {
+        uint256 from = escrow.createLock(Lock_1_Amount);
+        
+        escrow.pause();
+        
+        vm.expectRevert("Pausable: paused");
+        escrow.split(from, 10);
+    }
+
+    function test_shouldRevert_ifNotWhitelisted() public {
+        // owner is address(this)
+        uint256 from = escrow.createLock(Lock_1_Amount);
+
+        escrow.setEnableSplit(address(this), false);
+        
+        // approve so address(123) can also call split
+        // It still should fail as owner itself is not whitelisted.
+        nftLock.approve(address(123), from);
+
+        vm.expectRevert(SplitNotWhitelisted.selector);
+        vm.prank(address(123));
+        escrow.split(from, 10);
+    }
+
+    function test_shouldRevert_IfSenderIsNotApprovedOrOwner() public {
+        uint256 from = escrow.createLock(Lock_1_Amount);
+
+        address sender = address(999);
+        escrow.setEnableSplit(sender, true);
+
+        vm.startPrank(sender);
+        vm.expectRevert(IVotingEscrowCoreErrors.NotApprovedOrOwner.selector);
+        escrow.split(from, 10);
+    }
+
+    function test_shouldRevert_IfTokenHasNoOwner() public {
+        vm.expectRevert("ERC721: invalid token ID");
+        escrow.split(15, 10);
+    }
+
+    function test_shouldRevert_IfNewAmountsLessThanMinDeposit() public {
+        escrow.setMinDeposit(50);
+        uint256 from = escrow.createLock(70);
+
+        vm.expectRevert(IVotingEscrowCoreErrors.AmountTooSmall.selector);
+        escrow.split(from, 40);
+    }
+
+    function test_shouldRevert_ifAmountZero() public {
+        uint256 from = escrow.createLock(Lock_1_Amount);
+
+        vm.expectRevert(IVotingEscrowCoreErrors.ZeroAmount.selector);
+        escrow.split(from, 0);
+    }
+
+    function test_shouldRevert_ifAmountTooBig() public {
+        uint256 from = escrow.createLock(Lock_1_Amount);
+
+        vm.expectRevert(SplitAmountTooBig.selector);
+        escrow.split(from, Lock_1_Amount);
+    }
+
+    function test_shouldSucceed_IfAnyAddrWhitelisted() public {
+        escrow.setEnableSplit(address(this), false);
+
+        escrow.enableSplit();
+
+        uint256 from = escrow.createLock(Lock_1_Amount);
+        escrow.split(from, Lock_1_Amount - 10);
+    }
+
+    function test_shouldSucceed_ifSenderApproved() public {
+        address sender = address(123);
+        escrow.enableSplit();
+        
+        uint256 from = escrow.createLock(Lock_1_Amount);
+        uint256 splitValue = 10e18;
+
+        vm.expectRevert();
+        vm.prank(sender);
+        escrow.split(from, splitValue);
+
+        nftLock.approve(sender, from);
+        vm.prank(sender);
+        escrow.split(from, splitValue);
+    }
+
+    function test_fromTokenIsCorrectlyBurnt() public {
+        vm.warp(checkpointInterval + 1 hours);
+
+        uint256 from = escrow.createLock(Lock_1_Amount);
+
+        escrow.split(from, 10e18);
+
+        LockedBalance memory lockedFrom = escrow.locked(from);
+
+        // check that `from` token object doesn't exist anymore
+        assertEq(lockedFrom.start, weekStartTs(block.timestamp));
+        assertEq(lockedFrom.amount, Lock_1_Amount - 10e18);
+
+        assertEq(nftLock.ownerOf(from), address(this));
+    }
+
+    function test_CreatesTwoNewTokensAndWithSameStartDate() public {
+        vm.warp(checkpointInterval + 1 hours);
+
+        uint256 originalTokenStartTs = weekStartTs(block.timestamp);
+
+        uint256 splitVal = 1200;
+
+        uint256 token1Value = Lock_1_Amount - splitVal;
+        uint256 token2Value = splitVal;
+
+        uint256 from = escrow.createLock(Lock_1_Amount);
+
+        // warp so even though the start should give different week,
+        // the new tokens stills should use original token's start.
+        vm.warp(block.timestamp + checkpointInterval + 1 hours);
+        escrow.split(from, splitVal);
+
+        LockedBalance memory token1 = escrow.locked(from);
+        LockedBalance memory token2 = escrow.locked(from + 1);
+
+        assertEq(token1.amount, token1Value);
+        assertEq(token1.start, originalTokenStartTs);
+
+        assertEq(token2.amount, token2Value);
+        assertEq(token2.start, originalTokenStartTs);
+    }
+
+    function test_SplitEventIsEmitted() public {
+        uint256 splitVal = 20;
+        uint256 from = escrow.createLock(Lock_1_Amount);
+        vm.expectEmit();
+        emit Split(
+            from,
+            from + 1,
+            address(this),
+            uint208(Lock_1_Amount - splitVal),
+            uint208(splitVal)
+        );
+        escrow.split(from, splitVal);
+    }
+}

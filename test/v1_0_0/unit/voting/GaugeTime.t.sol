@@ -14,7 +14,15 @@ import {MockERC20} from "@mocks/MockERC20.sol";
 
 import "@helpers/OSxHelpers.sol";
 
-import {GaugeVotingBase, VotingEscrow, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams} from "./GaugeVotingBase.sol";
+import {
+    GaugeVotingBase,
+    VotingEscrow,
+    QuadraticIncreasingEscrow,
+    ExitQueue,
+    SimpleGaugeVoter,
+    SimpleGaugeVoterSetup,
+    ISimpleGaugeVoterSetupParams
+} from "./GaugeVotingBase.sol";
 
 contract TestGaugeTime is GaugeVotingBase {
     function setUp() public override {
@@ -26,7 +34,7 @@ contract TestGaugeTime is GaugeVotingBase {
         return clock.epochNextCheckpointTs();
     }
 
-    function testEpochTimess() public {
+    function testEpochTimes() public {
         for (uint i = 0; i < 10; ++i) {
             uint start = block.timestamp;
 

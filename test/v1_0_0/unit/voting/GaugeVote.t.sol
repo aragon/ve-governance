@@ -103,6 +103,7 @@ contract TestGaugeVote is GaugeVotingBase {
         }
         vm.stopPrank();
     }
+
     // can't vote if you don't own the token
     function testCannotVoteIfYouDontOwnTheToken() public {
         // try to vote as this address (not the holder)

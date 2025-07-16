@@ -16,7 +16,19 @@ import {ProxyLib} from "@libs/ProxyLib.sol";
 
 import "@helpers/OSxHelpers.sol";
 
-import {Clock, VotingEscrow, Lock, QuadraticIncreasingEscrow, ExitQueue, SimpleGaugeVoter, SimpleGaugeVoterSetup, ISimpleGaugeVoterSetupParams, IGaugeVote, IEscrowCurveTokenStorage, ISimpleGaugeVoterStorageEventsErrors} from "../../versions.sol";
+import {
+    Clock,
+    VotingEscrow,
+    Lock,
+    QuadraticIncreasingEscrow,
+    ExitQueue,
+    SimpleGaugeVoter,
+    SimpleGaugeVoterSetup,
+    ISimpleGaugeVoterSetupParams,
+    IGaugeVote,
+    IEscrowCurveTokenStorage,
+    ISimpleGaugeVoterStorageEventsErrors
+} from "../../versions.sol";
 
 contract GaugeVotingBase is
     Test,

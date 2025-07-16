@@ -1,4 +1,6 @@
 {
+  "name": "ve-governance",
+  "version": "1.0.0",
   "devDependencies": {
     "@aragon/osx-commons-configs": "^0.8.0",
     "lodash.startcase": "^4.4.0",

@@ -1,0 +1,76 @@
+pragma solidity ^0.8.17;
+
+// imports file allows for copying test suite independently for different modules of ve
+// import files here in your tests instead of from src
+
+// contracts
+import {
+    Clock,
+    Lock,
+    Curve,
+    ExitQueue,
+    VotingEscrow,
+    EscrowIVotesAdapter,
+    GaugeVoter,
+    GaugeVoterSetupV1_2_0 as GaugeVoterSetup
+} from "@setup/GaugeVoterSetup_v1_2_0.sol";
+import {
+    GaugesDaoFactoryV1_2_0 as GaugesDaoFactory,
+    Deployment,
+    DeploymentParameters,
+    TokenParameters,
+    GaugePluginSet
+} from "@factory/GaugesDaoFactory_v1_2_0.sol";
+
+// interfaces
+import {IClockV1_2_0 as IClock} from "@clock/IClock_v1_2_0.sol";
+import {IGaugeVoterSetupParams} from "@setup/GaugeVoterSetup_v1_2_0.sol";
+import {
+    IEscrowCurveGlobalStorage,
+    IEscrowCurveIncreasingV1_2_0 as IEscrowCurveIncreasing,
+    IEscrowCurveTokenStorage,
+    IDeprecated,
+    IEscrowCurveGlobalStorage
+} from "@curve/IEscrowCurveIncreasing_v1_2_0.sol";
+import {
+    IExitQueue,
+    ITicket,
+    IExitQueueErrorsAndEvents,
+    IExitMinLockCooldownErrorsAndEvents
+} from "@queue/IExitQueue.sol";
+import {ILock, IWhitelistErrors, IWhitelistEvents} from "@lock/ILock.sol";
+import {
+    IMerge,
+    ISplit,
+    IVotingEscrowIncreasing,
+    IWithdrawalQueueErrors,
+    ILockedBalanceIncreasing,
+    IVotingEscrowEventsStorageErrorsEvents,
+    IVotingEscrowCoreErrors,
+    IMergeEventsAndErrors,
+    ISplitEventsAndErrors,
+    IVotingEscrowCore
+} from "@escrow/IVotingEscrowIncreasing_v1_2_0.sol";
+import {
+    IAddressGaugeVote as IGaugeVote,
+    IAddressGaugeVoterStorageEventsErrors as IGaugeVoterStorageEventsErrors
+} from "@voting/IAddressGaugeVoter.sol";
+import {
+    IEscrowIVotesAdapterStorage,
+    IEscrowIVotesAdapterErrorsAndEvents
+} from "@delegation/IEscrowIVotesAdapter.sol";
+
+// other
+import {DeployGaugesV1_2_0 as DeployGauges} from "script/deploy/DeployGauges_v1_2_0.s.sol";
+
+// deprecated but to avoid rewriting all tests
+// housekeeping: remove these as we go
+import {
+    GaugeVoter as SimpleGaugeVoter,
+    GaugeVoterSetupV1_2_0 as SimpleGaugeVoterSetup,
+    IGaugeVoterSetupParams as ISimpleGaugeVoterSetupParams
+} from "@setup/GaugeVoterSetup_v1_2_0.sol";
+
+import {
+    IAddressGaugeVoterStorageEventsErrors as ISimpleGaugeVoterStorageEventsErrors
+} from "@voting/IAddressGaugeVoter.sol";

@@ -13,55 +13,25 @@ To get started, ensure that [Foundry](https://getfoundry.sh/) is installed on yo
   # debian
   sudo apt install build-essential
 
-  # arch
-  sudo pacman -S base-devel
+# arch
 
-  # nix
-  nix-env -iA nixpkgs.gnumake
+sudo pacman -S base-devel
 
-  # macOS
-  brew install make
-  ```
+# nix
+
+nix-env -iA nixpkgs.gnumake
+
+# macOS
+
+brew install make
+
+```
 
 </details>
 
 ### Using the Makefile
 
 The `Makefile` as the target launcher of the project. It's the recommended way to work with it. It manages the env variables of common tasks and executes only the steps that require being run.
-
-```
-$ make 
-Available targets:
-
-- make init    Check the required tools and dependencies
-- make clean   Clean the build artifacts
-
-- make test            Run unit tests, locally
-- make test-coverage   Generate an HTML coverage report under ./report
-
-- make test-fork-mint-testnet   Clean fork test, minting test tokens (testnet)
-- make test-fork-mint-prodnet   Clean fork test, minting test tokens (production network)
-
-- make test-fork-testnet   Fork test using the existing token(s), new factory (testnet)
-- make test-fork-prodnet   Fork test using the existing token(s), new factory (production network)
-
-- make test-fork-factory-testnet   Fork test using an existing factory (testnet)
-- make test-fork-factory-prodnet   Fork test using an existing factory (production network)
-
-- make pre-deploy-mint-testnet   Simulate a deployment to the testnet, minting test token(s)
-- make pre-deploy-testnet        Simulate a deployment to the testnet
-- make pre-deploy-prodnet        Simulate a deployment to the production network
-
-- make deploy-testnet        Deploy to the testnet and verify
-- make deploy-prodnet        Deploy to the production network and verify
-```
-
-Run `make init`:
-- It ensures that Foundry is installed
-- It runs a first compilation of the project
-- It copies `.env.example` into `.env` and `.env.test.example` into `.env.test`
-
-Next, customize the values of `.env` and optionally `.env.test`.
 
 ### Understanding `.env.example`
 
@@ -91,13 +61,16 @@ Deployments are done using the deployment factory. This is a singleton contract 
 Check the available make targets to simulate and deploy the smart contracts:
 
 ```
-- make pre-deploy-testnet    Simulate a deployment to the defined testnet
-- make pre-deploy-prodnet    Simulate a deployment to the defined production network
-- make deploy-testnet        Deploy to the defined testnet network and verify
-- make deploy-prodnet        Deploy to the production network and verify
-```
+
+- make pre-deploy-testnet Simulate a deployment to the defined testnet
+- make pre-deploy-prodnet Simulate a deployment to the defined production network
+- make deploy-testnet Deploy to the defined testnet network and verify
+- make deploy-prodnet Deploy to the production network and verify
+
+````
 
 ### Deployment Checklist
+
 
 - [ ] I have cloned the official repository on my computer and I have checked out the corresponding branch
 - [ ] I am using the latest official docker engine, running a Debian Linux (stable) image
@@ -189,7 +162,7 @@ You can of course run all commands from the command line:
 ```sh
 # Load the env vars
 source .env
-```
+````
 
 ```sh
 # run unit tests
@@ -228,32 +201,64 @@ forge script --chain "$NETWORK" script/DeployGauges.s.sol:Deploy --rpc-url "$RPC
 The primary contracts in the governance hub are found in the `src` directory. The key contracts include
 
 - `VotingEscrowIncreasing.sol`: ERC721 veNFT designed to be used with escrow systems that reward users for longer lock times.
-- `SimpleGaugeVoter.sol`: allows split voting across arbitrary options. Votes are simply registered in the gauge voter, they do not perform any onchain actions
+- `GaugeVoter.sol`: allows split voting across arbitrary options. Votes are simply registered in the gauge voter, they do not perform any onchain actions
 
-The main workflow in the Mode Governance build is as follows:
+The main workflow in the Aragon VE Governance build is as follows:
 
 ## Escrow
 
 - Users lock a whitelisted token into the Escrow Contract.
-- The user is minted a veNFT which stores:
+- The user is minted a veNFT (ERC721Enumerable) which stores:
   - The amount they locked
-  - The start of their lock - users begin their locks starting from the next deposit interval
-    - In the base case, this means a user will start their lock from the start of the upcoming week
+  - The start of their lock - users begin their locks starting from the current deposit interval
+    - In the base case, this means a user will start their lock from the start of the current week (Thursday 00:00 UTC)
+- veNFT transfers are disabled by default, but can be enabled by governance.
 - The user's voting power increases over time, starting from a baseline of the locked amount, up to a maximum voting power
 - The user is unable to vote during an initial "warmup period".
+
+## Withdrawing
+
 - The user can exit their position at any time. In this case, they are entered into an "Exit Queue", whereupon their NFT is held in the queue for a "cooldown" period of X Days. After the period ends, they can burn the NFT to receieve their underlying balance back.
-- It's possible to add a `minLock` period whereby a user is prevented from entering the exit queue before a certain time. This means they have their NFT available to vote but can't enter the exit process.
+  - It's possible to add a `minLock` period whereby a user is prevented from entering the exit queue before a certain time. This means they have their NFT available to vote but can't enter the exit process.
   - Voting power is removed from the NFT at this time
-- The exit queue can optionally set an exit fee that will be charged on exit.
+  - The exit queue can optionally set an exit fee that will be charged on exit.
+
+## Merging and Splitting
+
+- veNFTs can be consolidated into a single veNFT via _merging_ or multiple sub-veNFTs can be created via _splitting_.
+- Splitting can be done at any time, provided it has been enabled by the DAO
+- Merging can only be done provided the veNFTs have the same start date or have reached maturity.
+
+## Delegation
+
+- Delegation is an option that can be enabled.
+- Users can self delegate, or delegate to another address. Users can only delegate tokenIds to one address but not all tokenIDs need to be delegated.
+- Delegation is exposed behind the `EscrowIVotesAdapter` which exposes an IVotes-compatible interface, this allows the escrow to be used in standard governance
+- Delegation dynamically adjusts with voting power, once a user delegates, the delegates total voting power will keep increasing until the user's veNFT reaches maturity.
+- Delegation is updated on transfer, mint and burn.
 
 ## Voting
 
-- Administrators setup voting options on the `SimpleGaugeVoter.sol`, we call these `gauges`.
-- Administrators can activate voting at which point a timestamp is recorded. `EpochDurationbLib` tracks 2 week epochs in single week blocks:
+- Administrators setup voting options on the GaugeVoter, we call these `gauges`.
+- Administrators can activate voting at which point a timestamp is recorded. By default there are 2 phases to a voting epoch:
   - A Voting phase (default is 1 week), where votes are accepted.
   - A distribution phase of (default is 1 week), where votes are not accepted (this is done in order to allow governance to compute and allocate rewards).
-- Users can vote as much as they want during the voting period.
+- Users can vote as often as they want during the voting period, voting multiple times will calculate the latest voting power so it may be preferential to wait later in the period to maximise voting power.
+
+- Voting can be done using TokenIDs - see the `TokenGaugeVoter.sol` - or using Addresses - see the `AddressGaugeVoter.sol`
+
+### Token Gauge Voter
+
+- Users vote by tokenID, votes by tokenId are tracked independently.
 - Users' NFTs are locked unless they `reset` their votes and remove their voting power.
+
+### Address Gauge Voter
+
+- The address gauge voter requires an IVotes compatible voting token
+- Users must self delegate to vote on the voter
+- Delegates can vote on the user's behalf without recieving approval to transfer the token
+- The address voter exposes a hook that can be called to update voting power when delegate balances change.
+  - In our VE implementation, this automatically adjusts gauge votes when delegation changes
 
 ## Parameterization
 
@@ -269,18 +274,31 @@ The main workflow in the Mode Governance build is as follows:
 ## Rewards
 
 - The current versions of the contracts assume an offchain rewards distribution mechanism.
+- Rewards are typically allocated in proportion to the voting power cast in the gauge.
 
 ## Caveats
 
 - This version of the repository defines user-based logic and initial framework for:
-  - Voting Escrow Lockers w. veNFT functionality
-  - Voting Escrow Curves
-  - Exit Queues
 - Rewards and emissions are assumed to be offchain
-- veNFT transfers are disabled by default in the current implementation, but can be enabled. Fully supporting transfers would require support for allowing for custom transfer logic (resetting voting power) which is as yet not implemented.
-- Delegation checkpointing is not yet implemented.
-- Total supply is not yet implemented due to complexities in scheduling slope changes for higher order polynomials. We have setup a user-point system where this can be added in the future: please see the linked research below for details.
+- delegateBySig is as-yet unsupported and will revert
+- Only time-based clocks are supported in this version, support for block-based clocks (i.e. ERC20Votes w. block.number) is currently unsupported
 
 ## Curve design
 
-To build a flexible approach to curve design, we reviewed implementations such as seen in Curve and Aerodrome and attempted to generalise to higher order polynomials [Details on the curve design research can be found here](https://github.com/jordaniza/ve-explainer/blob/main/README.md)
+To build a flexible approach to curve design, we reviewed implementations such as seen in Curve and Aerodrome and attempted to generalise [Details on the curve design research can be found here](https://github.com/jordaniza/ve-explainer/blob/main/README.md)
+
+# Important note on upgrades and warmups
+
+If upgrading from 1-0-0 or 1-1-0 to 1-2-0+, please note the behaviour changes with regards to _new_ locks:
+
+- Locks created pre upgrade will have start dates recorded at the _end_ of the current weekly interval
+- Locks created post upgrade will have start dates recorded at the _start_ of the current weekly interval
+
+The main risk vector here is the potential underflow concerns for 1-2-0+ contracts assuming lock.start >= block.timestamp.
+
+While the contracts have been tested for this, we still recommend the following precautions:
+
+1. Set warmup periods to zero at least 1 deposit interval before the upgrade.
+2. Pause the contracts between the upgrade and the next deposit interval.
+
+This ensures that all stakers who would be placed into a warmup period pre-upgrade have consistent behaviour post upgrade. This also ensures all stakers post upgrade have active locks - consistent with the expectations of the 1-2-0 contracts.

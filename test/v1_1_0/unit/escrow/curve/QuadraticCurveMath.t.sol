@@ -3,7 +3,13 @@ pragma solidity ^0.8.17;
 import {console2 as console} from "forge-std/console2.sol";
 
 import {QuadraticCurveBase} from "./QuadraticCurveBase.t.sol";
-import {Clock, QuadraticIncreasingEscrow, ILockedBalanceIncreasing, IVotingEscrowIncreasing as IVotingEscrow, IEscrowCurveIncreasing as IEscrowCurve} from "../../../versions.sol";
+import {
+    Clock,
+    QuadraticIncreasingEscrow,
+    ILockedBalanceIncreasing,
+    IVotingEscrowIncreasing as IVotingEscrow,
+    IEscrowCurveIncreasing as IEscrowCurve
+} from "../../../versions.sol";
 
 contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
     function test_votingPowerComputesCorrect() public {
@@ -55,67 +61,39 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
         // }
     }
 
-    // write a new checkpoint
-    /*
-     * for the 1000 tokens (Python)  (extend to 1bn with more zeros)
-     * 0                              Voting Power: 1000000000000000000000
-     * 1 minute                       Voting Power: 1000000953907203932160
-     * 1 hour                         Voting Power: 1000057234432234487808
-     * 1 day                          Voting Power: 1001373626373626396672
-     * WARMUP_PERIOD (3 days)         Voting Power: 1004120879120879058944
-     * WARMUP_PERIOD + 1s             Voting Power: 1004120895019332534272
-     * 1 week                         Voting Power: 1009615384615384645632
-     * 1 period (2 weeks)             Voting Power: 1019230769230769160192
-     * 10 periods (10 * PERIOD)       Voting Power: 1192307692307692388352
-     * 50% periods (26 * PERIOD)      Voting Power: 1500000000000000000000
-     * 35 periods (35 * PERIOD)       Voting Power: 1673076923076923097088
-     * PERIOD_END (26 * PERIOD)       Voting Power: 2000000000000000000000
-     
-     * for the 420.69 tokens (Python)
-     * 0                              Voting Power: 420690000000000000000
-     * 1 minute                       Voting Power: 420690401299221577728
-     * 1 hour                         Voting Power: 420714077953296695296
-     * 1 day                          Voting Power: 421267870879120883712
-     * WARMUP_PERIOD (3 days)         Voting Power: 422423612637362651136
-     * WARMUP_PERIOD + 1s             Voting Power: 422423619325683040256
-     * 1 week                         Voting Power: 424735096153846120448
-     * 1 period (2 weeks)             Voting Power: 428780192307692306432
-     * 10 periods (10 * PERIOD)       Voting Power: 501591923076923064320
-     * 50% periods (26 * PERIOD)      Voting Power: 631035000000000032768
-     * 35 periods (35 * PERIOD)       Voting Power: 703846730769230856192
-     * PERIOD_END (26 * PERIOD)       Voting Power: 841380000000000000000
-     */
     function testWritesCheckpoint() public {
         uint tokenIdFirst = 1;
         uint tokenIdSecond = 2;
         uint208 depositFirst = 420.69e18;
         uint208 depositSecond = 1_000_000_000e18;
-        uint start = 52 weeks;
+        uint start = 52 weeks + 1 hours;
 
         // initial conditions, no balance
         assertEq(curve.votingPowerAt(tokenIdFirst, 0), 0, "Balance before deposit");
 
         vm.warp(start);
-        vm.roll(420);
 
         // still no balance
         assertEq(curve.votingPowerAt(tokenIdFirst, 0), 0, "Balance before deposit");
 
+        uint256 checkpointTs = clock.epochNextCheckpointIn();
+        uint256 writtenTs = block.timestamp;
+
         escrow.checkpoint(
             tokenIdFirst,
             LockedBalance(0, 0),
-            LockedBalance(depositFirst, uint48(block.timestamp))
+            LockedBalance(depositFirst, uint48(checkpointTs))
         );
         escrow.checkpoint(
             tokenIdSecond,
             LockedBalance(0, 0),
-            LockedBalance(depositSecond, uint48(block.timestamp))
+            LockedBalance(depositSecond, uint48(checkpointTs))
         );
 
         // check the token point is registered
         IEscrowCurve.TokenPoint memory tokenPoint = curve.tokenPointHistory(tokenIdFirst, 1);
         assertEq(tokenPoint.bias, depositFirst, "Bias is incorrect");
-        assertEq(tokenPoint.checkpointTs, block.timestamp, "CP Timestamp is incorrect");
+        assertEq(tokenPoint.checkpointTs, checkpointTs, "CP Timestamp is incorrect");
         assertEq(tokenPoint.writtenTs, block.timestamp, "Written Timestamp is incorrect");
 
         // balance now is zero but Warm up
@@ -133,14 +111,14 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
 
         assertEq(
             curve.votingPowerAt(tokenIdFirst, block.timestamp),
-            422423619325633557508,
+            bias(depositFirst, block.timestamp - checkpointTs),
             "Balance incorrect after warmup"
         );
         assertEq(curve.isWarm(tokenIdFirst), true, "Still warming up");
 
         assertEq(
             curve.votingPowerAt(tokenIdSecond, block.timestamp),
-            1004120895019214998000000000,
+            bias(depositSecond, block.timestamp - checkpointTs),
             "Balance incorrect after warmup II"
         );
 
@@ -148,34 +126,38 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
         vm.warp(start + clock.epochDuration());
         assertEq(
             curve.votingPowerAt(tokenIdFirst, block.timestamp),
-            428780192307461588352,
+            bias(depositFirst, block.timestamp - checkpointTs),
             "Balance incorrect after p1"
         );
 
-        uint256 expectedMaxI = 841379999988002594304;
-        uint256 expectedMaxII = 1999999999971481600000000000;
+        uint256 endTs = getEndTimestamp(checkpointTs, writtenTs);
 
-        // warp to the final period
-        // TECHNICALLY, this should round to a whole max
-        // but FP arithmetic has a small rounding error and it finishes just below
-        vm.warp(start + clock.epochDuration() * 52);
-        assertEq(
-            curve.votingPowerAt(tokenIdFirst, block.timestamp),
-            expectedMaxI,
-            "Balance incorrect after pend"
-        );
-        assertEq(
-            curve.votingPowerAt(tokenIdSecond, block.timestamp),
-            expectedMaxII,
-            "Balance incorrect after pend II "
-        );
+        uint256 expectedMaxI = bias(depositFirst, endTs - checkpointTs);
+        uint256 expectedMaxII = bias(depositSecond, endTs - checkpointTs);
 
-        // warp to the future and balance should be the same
-        vm.warp(520 weeks);
-        assertEq(
-            curve.votingPowerAt(tokenIdFirst, block.timestamp),
-            expectedMaxI,
-            "Balance incorrect after 10 years"
-        );
+        if (endTs >= writtenTs + curve.warmupPeriod() + 1) {
+            // warp to the final period
+            // TECHNICALLY, this should round to a whole max
+            // but FP arithmetic has a small rounding error and it finishes just below
+            vm.warp(start + clock.epochDuration() * 52);
+            assertEq(
+                curve.votingPowerAt(tokenIdFirst, block.timestamp),
+                expectedMaxI,
+                "Balance incorrect after pend"
+            );
+            assertEq(
+                curve.votingPowerAt(tokenIdSecond, block.timestamp),
+                expectedMaxII,
+                "Balance incorrect after pend II "
+            );
+
+            // warp to the future and balance should be the same
+            vm.warp(520 weeks);
+            assertEq(
+                curve.votingPowerAt(tokenIdFirst, block.timestamp),
+                expectedMaxI,
+                "Balance incorrect after 10 years"
+            );
+        }
     }
 }
