@@ -49,7 +49,7 @@ import {
 import {
     IDelegateUpdateVotingPower,
     IEscrowIVotesAdapter
-} from "../delegation/IEscrowIVotesAdapter.sol";
+} from "@delegation/IEscrowIVotesAdapter.sol";
 
 contract VotingEscrowV1_2_0 is
     IVotingEscrow,

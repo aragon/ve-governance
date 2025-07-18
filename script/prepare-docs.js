@@ -59,8 +59,9 @@ const compile = async (filePaths) => {
   const compilerInput = {
     language: "Solidity",
     sources: filePaths.reduce((input, fileName) => {
+      const relativePath = path.relative(path.resolve(ROOT_DIR, "src"), fileName);
       const source = fs.readFileSync(fileName, "utf8");
-      return { ...input, [fileName]: { content: source } };
+      return { ...input, [relativePath]: { content: source } };
     }, {}),
     settings: { outputSelection: { "*": { "*": ["*"], "": ["ast"] } } },
   };
@@ -93,6 +94,8 @@ async function main() {
   // overwrite the functions.
   helpers.version = () => `${version}`;
   helpers.githubURI = () => repository.url;
+
+  console.log(output)
 
   const config = {
     outputDir: `${apiPath}/pages`,

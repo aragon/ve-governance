@@ -25,8 +25,8 @@ import {
 } from "@setup/GaugeVoterSetup.sol";
 import {TokenGaugeVoterV1_1_0 as GaugeVoterV1_1_0} from "@voting/TokenGaugeVoter_v1_1_0.sol";
 
-import {Upgrades} from "@foundry-upgrades/LegacyUpgrades.sol";
-import {Options} from "@foundry-upgrades/Options.sol";
+import {Upgrades} from "@foundry-upgrades/src/LegacyUpgrades.sol";
+import {Options} from "@foundry-upgrades/src/Options.sol";
 
 contract UpgradeModeTo110 is Script, Test {
     /////////////////////////////////////////////

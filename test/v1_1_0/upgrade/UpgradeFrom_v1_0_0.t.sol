@@ -37,8 +37,9 @@ import {
 } from "test/v1_0_0/versions.sol";
 import {SimpleGaugeVoter as SimpleGaugeVoterV1_1_0} from "test/v1_1_0/versions.sol";
 
-import {Upgrades} from "@foundry-upgrades/LegacyUpgrades.sol";
-import {Options} from "@foundry-upgrades/Options.sol";
+import {Upgrades} from "@foundry-upgrades/src/LegacyUpgrades.sol";
+import {Options} from "@foundry-upgrades/src/Options.sol";
+
 import {FixedPointBase} from "../base/FixedPointBase.sol";
 import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 
