@@ -590,7 +590,7 @@ contract EscrowIVotesAdapter is
             if (t_i > _timestamp) {
                 t_i = _timestamp;
             } else {
-                dSlope = slopeChanges_[t_i];
+                dSlope = slopeChanges_[t_i];                
             }
             bias += slope * int256(t_i - ts);
 
@@ -631,7 +631,7 @@ contract EscrowIVotesAdapter is
 
         if (elapsed < maxTime) {
             slope = op(slope);
-            slopeChanges[_delegatee][_locked.start + maxTime] += op(slope);
+            slopeChanges[_delegatee][_locked.start + maxTime] += slope;
         } else {
             slope = 0;
         }

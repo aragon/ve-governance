@@ -354,12 +354,12 @@ contract VotingEscrowV1_2_0 is
         if (IERC20(token).balanceOf(address(this)) != balanceBefore + _value)
             revert TransferBalanceIncorrect();
 
-        // mint the NFT before and emit the event to complete the lock
-        IERC721EMB(lockNFT).mint(_to, newTokenId);
-
         // Update `_to`'s delegate power.
         _moveDelegateVotes(address(0), _to, newTokenId, lock);
 
+        // mint the NFT before and emit the event to complete the lock
+        IERC721EMB(lockNFT).mint(_to, newTokenId);
+    
         emit Deposit(_to, newTokenId, startTime, _value, totalLocked);
 
         return newTokenId;
@@ -465,16 +465,17 @@ contract VotingEscrowV1_2_0 is
         _checkpoint(_from, locked_, LockedBalance(amount1, locked_.start));
         _locked[_from] = LockedBalance(amount1, locked_.start);
 
-        // update for `newTokenId`.
-        locked_.amount = amount2;
-        uint256 newTokenId = _createSplitNFT(owner, locked_);
-
+        uint256 newTokenId = ++lastLockId;
         // owner gets minted a new tokenId. Since `split` function
         // just splits the same amount into two tokenIds, there's no need
         // to update voting power on ivotesAdapter, as total doesn't change.
         // We still call `_moveDelegateVotes` with zero LockedBalance to
         // make sure we update delegatee's token count due to newtokenId.
         _moveDelegateVotes(address(0), owner, newTokenId, LockedBalance(0, 0));
+
+        // update for `newTokenId`.
+        locked_.amount = amount2;
+        _createSplitNFT(owner, newTokenId, locked_);
 
         emit Split(_from, newTokenId, sender, amount1, amount2);
 
@@ -483,13 +484,13 @@ contract VotingEscrowV1_2_0 is
 
     /// @notice creates a new token in checkpoint and mint.
     /// @param _to The address to which new token id will be minted
+    /// @param _tokenId The id of the token that will be minted.
     /// @param _newLocked New locked amount / start lock time for the new token
-    /// @return _tokenId The id of the newly created token.
     function _createSplitNFT(
         address _to,
+        uint256 _tokenId,
         LockedBalance memory _newLocked
-    ) private returns (uint256 _tokenId) {
-        _tokenId = ++lastLockId;
+    ) private {
         _locked[_tokenId] = _newLocked;
         _checkpoint(_tokenId, LockedBalance(0, 0), _newLocked);
         IERC721EMB(lockNFT).mint(_to, _tokenId);

@@ -17,6 +17,7 @@ import {
     IEscrowCurveGlobalStorage,
     IEscrowCurveTokenStorage,
     IEscrowCurveGlobalStorage,
+    EscrowIVotesAdapter,
     IEscrowIVotesAdapterErrorsAndEvents
 } from "../../versions.sol";
 
@@ -70,8 +71,8 @@ contract TestSplit_DelegationAndVoter is
         vm.prank(alice);
         escrow.split(1, 5e18);
 
-        // Even though tokenId was destroyed, split produced
-        // 2 new tokenIds of which's power sum must be the same.
+        // // Even though tokenId was destroyed, split produced
+        // // 2 new tokenIds of which's power sum must be the same.
         assertEq(ivotesAdapter.getVotes(alice), bias(aliceAmount, block.timestamp - checkpointTs));
         assertEq(ivotesAdapter.tokenIsDelegated(1), true);
         assertEq(ivotesAdapter.tokenIsDelegated(2), true);
@@ -84,11 +85,11 @@ contract TestSplit_DelegationAndVoter is
         assertEq(voter.votes(alice, gauge), bias(aliceAmount, block.timestamp - checkpointTs));
     }
 
-    // Ensures that even if `.mint` call on the new tokenId
+    // Ensures that even if `.mint` call on the new tokenId 
     // calls back `delegate([tokenIds])` by ERC721Received function,
     // It will revert. Otherwise, it would cause voting power on Alice
     // to increase more than original token's voting power even though
-    // split must not cause any such anomaly.
+    // split must not cause any such anomaly. 
     function testRevert_IfDelegateTokenIsCalledFromTokenMint() public {
         escrow.enableSplit();
 
@@ -101,26 +102,27 @@ contract TestSplit_DelegationAndVoter is
         ivotesAdapter.setDelegateAddress(alice);
 
         // tokenId gets created by `c` address.
-        // This should automatically assign voting power
+        // This should automatically assign voting power 
         // of this tokenId to alice, because `c` set its own
         // delegate as Alice.
         uint256 tokenId = escrow.createLockFor(10e18, c);
         uint256 splitTokenId = tokenId + 1;
-
+        
         {
+            
             uint256[] memory ids = new uint256[](1);
             ids[0] = splitTokenId;
             ReentrancyDelegate(c).setParams(abi.encodeWithSignature("delegate(uint256[])", ids));
             ReentrancyDelegate(c).enableExploit(true);
         }
-
+        
         // Split calls token.mint which calls `delegate([newTokenId])` on escrowAdapter.
-        // This must revert as before `token.mint` is called, `_moveDelegateVotes` already
+        // This must revert as before `token.mint` is called, `_moveDelegateVotes` already 
         // makes this new token as "delegated: true`.
         vm.prank(c);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IEscrowIVotesAdapterErrorsAndEvents.TokenAlreadyDelegated.selector,
+                IEscrowIVotesAdapterErrorsAndEvents.TokenAlreadyDelegated.selector, 
                 splitTokenId
             )
         );
@@ -139,21 +141,22 @@ contract TestSplit_DelegationAndVoter is
         ivotesAdapter.setDelegateAddress(alice);
 
         // tokenId gets created by `c` address.
-        // This should automatically assign voting power
+        // This should automatically assign voting power 
         // of this tokenId to alice, because `c` set its own
         // delegate as Alice.
         uint256 tokenId = escrow.createLockFor(10e18, c);
         uint256 splitTokenId = tokenId + 1;
-
+        
         {
+            
             ReentrancyDelegate(c).setParams(abi.encodeWithSignature("delegate(address)", alice));
             ReentrancyDelegate(c).enableExploit(true);
         }
 
         uint256 vpBefore = ivotesAdapter.getVotes(alice);
-
+        
         // Split calls token.mint which calls `delegate([newTokenId])` on escrowAdapter.
-        // This must revert as before `token.mint` is called, `_moveDelegateVotes` already
+        // This must revert as before `token.mint` is called, `_moveDelegateVotes` already 
         // makes this new token as "delegated: true`.
         vm.prank(c);
         escrow.split(tokenId, 3e18);

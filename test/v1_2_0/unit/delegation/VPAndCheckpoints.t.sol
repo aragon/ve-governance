@@ -16,7 +16,7 @@ contract TestVPAndCheckpoints is Base {
         dg.setDelegateAddress(alice);
 
         uint256 start = weekStartTs(block.timestamp);
-        uint256 amount = 10;
+        uint256 amount = 10e18;
 
         _mockLocked(singleId[0], amount, start);
         dg.delegate(singleId);
@@ -34,8 +34,8 @@ contract TestVPAndCheckpoints is Base {
     function test_DelegateMultipleTokens() public {
         dg.setDelegateAddress(alice);
 
-        uint256 amount1 = 10;
-        uint256 amount2 = 25;
+        uint256 amount1 = 10e18;
+        uint256 amount2 = 25e18;
         uint256 start = weekStartTs(block.timestamp);
 
         _mockLocked(multiIds[0], amount1, start);
@@ -57,7 +57,7 @@ contract TestVPAndCheckpoints is Base {
         dg.setDelegateAddress(alice);
 
         // Delegate first token
-        uint256 amount1 = 10;
+        uint256 amount1 = 10e18;
         uint256 start1 = weekStartTs(block.timestamp);
         uint256 start1Ts = block.timestamp;
         _mockLocked(singleId[0], amount1, start1);
@@ -69,7 +69,7 @@ contract TestVPAndCheckpoints is Base {
         vm.warp(block.timestamp + 3 weeks);
 
         // Delegate second token
-        uint256 amount2 = 25;
+        uint256 amount2 = 25e18;
         uint256 start2 = weekStartTs(block.timestamp);
         singleId[0] = 2;
         _mockLocked(singleId[0], uint208(amount2), start2);
@@ -99,16 +99,67 @@ contract TestVPAndCheckpoints is Base {
     function test_UndelegateShouldDecreaseSlopeAndBias() public {
         dg.setDelegateAddress(alice);
 
-        uint256 amount1 = 10;
-        uint256 start1 = weekStartTs(block.timestamp);
-        _mockLocked(singleId[0], amount1, start1);
+        uint256 amount = 10e18;
+        uint256 start = weekStartTs(block.timestamp);
+        _mockLocked(singleId[0], amount, start);
 
         dg.delegate(singleId);
 
         dg.undelegate(singleId);
 
-        // asserts latest global point.
-        assertGlobalPoint(alice, 2, 0, 0, block.timestamp);
+        // slope must reflect the change as alice was undelegated.
+        assertSlopeChange(alice, start + maxTime, 0);
+    }
+
+    function test_SlopeChange_WhenDelegationUndelegationOccurs() public {
+        address bob = address(123);
+        address carol = address(456);
+        address alice = address(789);
+
+        uint256 bobAmount = 10e18;
+        uint256 carolAmount = 50e18;
+        uint256 bobDelegateStart = weekStartTs(block.timestamp);
+
+        // bob delegates to alice amount = 10 and immediatelly undelegates.
+        // This should still register slopeChange as 0 on bobDelegateStart + maxTime
+        {
+            uint256[] memory ids = new uint256[](1);
+            ids[0] = 1;
+            vm.startPrank(bob);
+            _mockLocked(ids[0], bobAmount, bobDelegateStart);
+            dg.setDelegateAddress(alice);
+            dg.delegate(ids);
+            dg.undelegate(ids);
+            vm.stopPrank();
+        }
+
+        vm.warp(block.timestamp + 1 weeks + 1 hours);
+        uint256 carolDelegateStart = weekStartTs(block.timestamp);
+
+        // carol delegates to alice amount = 20 which should register slopeChange
+        // on carolDelegateStart + maxTime.
+        {
+            uint256[] memory ids = new uint256[](1);
+            ids[0] = 2;
+            vm.startPrank(carol);
+            _mockLocked(ids[0], carolAmount, carolDelegateStart);
+            dg.setDelegateAddress(alice);
+            dg.delegate(ids);
+            vm.stopPrank();
+        }
+
+        assertEq(dg.getVotes(alice), bias(carolAmount, block.timestamp - carolDelegateStart));
+
+        vm.warp(block.timestamp + 100);
+        assertEq(dg.getVotes(alice), bias(carolAmount, block.timestamp - carolDelegateStart));
+
+        // We warp after bob's maxTime. SlopeChange
+        // must not include bob's slope as he undelegated it.
+        vm.warp(bobDelegateStart + maxTime + 40 minutes);
+
+        if(maxTime != 0) {  
+            assertEq(dg.getVotes(alice), bias(carolAmount, block.timestamp - carolDelegateStart));
+        }
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -118,8 +169,8 @@ contract TestVPAndCheckpoints is Base {
     function test_VotingPowersSingleToken() public {
         dg.setDelegateAddress(alice);
 
-        uint256 amount = 10;
-        _mockLocked(singleId[0], 10, weekStartTs(block.timestamp));
+        uint256 amount = 10e18;
+        _mockLocked(singleId[0], amount, weekStartTs(block.timestamp));
         dg.delegate(singleId);
 
         uint256 expectedVP = bias(amount, block.timestamp - weekStartTs(block.timestamp));
@@ -138,8 +189,8 @@ contract TestVPAndCheckpoints is Base {
     function test_VotingPowersMultipleTokens() public {
         dg.setDelegateAddress(alice);
 
-        uint256 amount1 = 10;
-        uint256 amount2 = 25;
+        uint256 amount1 = 10e18;
+        uint256 amount2 = 25e18;
         uint256 start = weekStartTs(block.timestamp);
         _mockLocked(multiIds[0], amount1, start);
         _mockLocked(multiIds[1], amount2, start);
@@ -175,7 +226,7 @@ contract TestVPAndCheckpoints is Base {
     function test_transitionLessThanCurrentTimestamp() public {
         dg.setDelegateAddress(alice);
 
-        uint256 amount = 10;
+        uint256 amount = 10e18;
         uint256 start = weekStartTs(block.timestamp);
 
         _mockLocked(singleId[0], amount, start);
@@ -202,7 +253,7 @@ contract TestVPAndCheckpoints is Base {
     function test_transitionBiggerThanCurrentTimestamp() public {
         dg.setDelegateAddress(alice);
 
-        uint256 amount = 10;
+        uint256 amount = 10e18;
         uint256 start = weekStartTs(block.timestamp);
 
         _mockLocked(singleId[0], amount, start);
