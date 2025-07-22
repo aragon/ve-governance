@@ -85,6 +85,7 @@ contract EscrowBase is
     uint256 internal Lock_2_start;
 
     error OnlyEscrow();
+    error DelegationNotAllowed();
 
     function setUp() public virtual {
         // _deployOSX();

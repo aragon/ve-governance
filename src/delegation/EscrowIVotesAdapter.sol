@@ -379,11 +379,14 @@ contract EscrowIVotesAdapter is
                 _checkpoint(bias, slope, fromDelegatee);
             }
 
-            numberOfDelegatedTokens[_from]--;
+            if (tokenIsDelegated(_tokenId)) {
+                numberOfDelegatedTokens[_from]--;
 
-            emit TokensUndelegated(_from, fromDelegatee, tokenIds);
+                emit TokensUndelegated(_from, fromDelegatee, tokenIds);
+            }
         }
 
+        // 4 is merged into 5.
         if (toDelegatee != address(0)) {
             // can be skipped if there are no updates
             if (_locked.amount != 0) {

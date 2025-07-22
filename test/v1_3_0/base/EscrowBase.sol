@@ -88,6 +88,7 @@ contract EscrowBase is
     uint48 public warmupPeriod;
 
     error OnlyEscrow();
+    error DelegationNotAllowed();
 
     function setUp() public virtual {
         // _deployOSX();
