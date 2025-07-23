@@ -115,6 +115,22 @@ contract AddressGaugeVoter is
         _vote(account, _votes);
     }
 
+    /**
+    * When `enableUpdateVotingPowerHook` is true, the `ivotesAdapter` **must** call `updateVotingPower` on every token transfer.
+    * 
+    * In this case, we safely use `getVotes` at the time of `_vote` to retrieve the up-to-date voting power of `_account`. 
+    * Even if `_account` transfers tokens and receiver votes, any change in voting power will be properly reflected via 
+    * the `updateVotingPower` hook, preventing double counting.
+    * 
+    * If `enableUpdateVotingPowerHook` is false, it indicates that `ivotesAdapter` cannot or does not call `updateVotingPower`
+    * during token transfers. In such case, voting power might change silently, which could enable vote manipulation.
+    * To prevent this, we rely on `getPastVotes` for a specific epoch snapshot to ensure consistency and prevent double spending.
+    * 
+    * NOTE Admins must guarantee that if `enableUpdateVotingPowerHook` is enabled, the `ivotesAdapter` must also be set up
+    * and actively call `updateVotingPower` for delegatees on transfers. If the hook is enabled, but `ivotesAdapter` never
+    * calls `updateVotingPower`, this can cause double spending as `_vote` will use `getVotes` all the time and after token transfer,
+    * receiver will vote again with the same tokens of sender.
+    */
     function _vote(address _account, GaugeVote[] memory _votes) internal {
         uint256 votingPower = enableUpdateVotingPowerHook
             ? IVotes(ivotesAdapter).getVotes(_account)

@@ -151,13 +151,42 @@ contract TestGaugeVoteWithERC20 is GaugeVotingBase {
         voter.vote(votes);
     }
 
-    function cannotDoubleVote() public {
+    function testCannotDoubleVote() public {
         // create the vote
         votes.push(GaugeVote(lockDeposit, gauge));
         votes.push(GaugeVote(lockDeposit, gauge));
 
         vm.expectRevert(DoubleVote.selector);
         voter.vote(votes);
+    }
+
+    function testCannotDoubleSpendAfterTokenTransfer() public {
+        votes.push(GaugeVote(10, gauge));
+
+        // owner votes
+        vm.prank(owner);
+        voter.vote(votes);
+
+        // 1. owner transfers his tokens to alice. 
+        // 2. alice delegates to herself.
+        address alice = address(128);
+        uint256 currentBalance = votingToken.balanceOf(owner);
+        vm.prank(owner);
+        votingToken.transfer(alice, currentBalance);
+
+        vm.prank(alice);
+        votingToken.delegate(alice);
+
+        // 3. alice tries to vote which should cause `NoVotingPower` 
+        // message as the contract is using `getPastVotes` to grab 
+        // voting power. This is because enableVotingPowerHook is 
+        // set to false in these tests.
+        vm.prank(alice);
+        vm.expectRevert(NoVotingPower.selector);
+        voter.vote(votes);
+
+        // Note that alice has vp at current time, but not at `currentEpochStart`.
+        assertEq(votingToken.getVotes(alice), currentBalance);
     }
 
     function testSingleVote(uint128 _weight) public {
