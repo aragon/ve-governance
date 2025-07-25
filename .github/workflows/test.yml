@@ -17,8 +17,10 @@ jobs:
   build-and-test:
     uses: aragon/github-templates/.github/workflows/sc-analyzer/security-analysis.yml@feat/sc-analysis
     with:
-      slither: ${{ inputs.slither}}
-      slither-config: ${{ inputs.slither-config}}
+      #slither: ${{ inputs.slither}}
+      #slither-config: ${{ inputs.slither-config}}
+      slither: true
+      slither-config: "./security-configs/slither.conf"
 #  notify:
 #    needs: [build-and-test, deploy]
 #    if: always()
