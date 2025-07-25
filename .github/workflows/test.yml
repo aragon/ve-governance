@@ -15,7 +15,7 @@ on:
 
 jobs:
   build-and-test:
-    uses: aragon/github-templates/.github/workflows/sc-analyzer/security-analysis.yml@feat/sc-analysis
+    uses: aragon/github-templates/.github/workflows/sc-security-analysis.yml@feat/sc-analysis
     with:
       #slither: ${{ inputs.slither}}
       #slither-config: ${{ inputs.slither-config}}
