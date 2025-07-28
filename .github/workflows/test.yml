@@ -16,7 +16,7 @@ on:
 
 jobs:
   build-and-test:
-    uses: "aragon/github-templates/.github/workflows/sc-security-analysis.yml@${{ inputs.template-ref }}"
+    uses: "aragon/github-templates/.github/workflows/sc-security-analysis.yml@${{ github.event.inputs.template-ref }}"
     with:
       slither: ${{ inputs.slither}}
       template-ref: ${{ inputs.template-ref }}
