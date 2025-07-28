@@ -12,11 +12,11 @@ on:
         required: false
         type: string
         default: "feat/sc-analysis"
-        description: "template branch ref"
+        description: "template branch ref (branch, tag, or commit SHA)"
 
 jobs:
   build-and-test:
-    uses: aragon/github-templates/.github/workflows/sc-security-analysis.yml@${{inputs.template-ref}}
+    uses: "aragon/github-templates/.github/workflows/sc-security-analysis.yml@${{ inputs.template-ref }}"
     with:
       slither: ${{ inputs.slither}}
       template-ref: ${{ inputs.template-ref }}
