@@ -8,12 +8,19 @@ on:
         description: "Enable Slither analysis"
         type: boolean
         default: true
+      template-ref:
+        required: false
+        type: string
+        default: "feat/sc-analysis"
+        description: "template branch ref"
 
 jobs:
   build-and-test:
-    uses: aragon/github-templates/.github/workflows/sc-security-analysis.yml@feat/sc-analysis
+    uses: aragon/github-templates/.github/workflows/sc-security-analysis.yml@${{ inputs.template-ref }}
     with:
       slither: ${{ inputs.slither}}
+      template-ref: ${{ inputs.template-ref }}
+
 
       #  notify:
 #    needs: [build-and-test, deploy]
