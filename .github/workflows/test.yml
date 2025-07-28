@@ -20,7 +20,11 @@ jobs:
     with:
       slither: ${{ inputs.slither}}
       template-ref: ${{ inputs.template-ref }}
-
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+      id-token: write
 
       #  notify:
 #    needs: [build-and-test, deploy]
