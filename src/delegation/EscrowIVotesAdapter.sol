@@ -22,6 +22,7 @@ import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {
     DaoAuthorizableUpgradeable as DaoAuthorizable
 } from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
+import {console2 as console} from "forge-std/console2.sol";
 
 import {
     IVotingEscrowIncreasingV1_2_0 as IVotingEscrow
@@ -379,22 +380,44 @@ contract EscrowIVotesAdapter is
                 _checkpoint(bias, slope, fromDelegatee);
             }
 
-            numberOfDelegatedTokens[_from]--;
+            // TODO: GIORGI remove...
+            if(tokenIsDelegated(_tokenId)) {
+                numberOfDelegatedTokens[_from]--;
+            }
 
             emit TokensUndelegated(_from, fromDelegatee, tokenIds);
+
         }
 
         if (toDelegatee != address(0)) {
-            // can be skipped if there are no updates
-            if (_locked.amount != 0) {
-                (int256 bias, int256 slope) = _getBiasAndSlope(toDelegatee, _locked, _positive);
-                _checkpoint(bias, slope, toDelegatee);
+            if(!tokenIsDelegated(_tokenId)) {
+                if(_locked.amount != 0) {
+                    (int256 bias, int256 slope) = _getBiasAndSlope(toDelegatee, _locked, _positive);
+                    _checkpoint(bias, slope, toDelegatee);
+                }
+                numberOfDelegatedTokens[_to]++;
+                _setDelegated(_tokenId, true);
+                emit TokensDelegated(_to, toDelegatee, tokenIds);
             }
 
-            numberOfDelegatedTokens[_to]++;
-            _setDelegated(_tokenId, true);
+            //  alice delegates to bob
+            //  alice creates lock
+            //  alice splits 
 
-            emit TokensDelegated(_to, toDelegatee, tokenIds);
+            // If the split is occuring and original token was not delegated, then we shouldn't delegate new one.
+            // How too know if split is occuring and how to get original token id ?
+            // Problem is that _tokenId - 1 might not correspond to the user's previous token from which split occured.
+
+//          alice creates lock (i.e tokenId = 1)
+//          alice sets delegate to bob
+//          alice delegates tokenId = 1 to bob 
+
+//          alice(0x000000000000000000000000000000000000000C) has numberOfDelegatedTokens = 1
+
+//          bob creates lock tokenId = 2
+//          alice splits tokenId = 1. moveDelegateVotes will receive tokenId = 3 and 3 - 1 = 2, which doesn't get us tokenId from which split occured.
+  
+           
         } else {
             // else this is new delegate voting power being burned
             _setDelegated(_tokenId, false);
@@ -514,7 +537,10 @@ contract EscrowIVotesAdapter is
     function getPastVotes(address _account, uint256 _timestamp) external view returns (uint256) {
         return _delegateBalanceAt(_account, _timestamp);
     }
-
+    
+    // TODO: Giorgi is this correct ? I mean there could be 10000 locks(tokens created), but assume none of them are delegated.
+    // then supply must be 0 from the perspective of delegation total supply. it's like ERC20 where supply is x, but if no one delegated, 
+    // getPastVotes is still 0.
     function getPastTotalSupply(uint256 _timestamp) external view returns (uint256) {
         return IVotingEscrow(escrow).totalVotingPowerAt(_timestamp);
     }

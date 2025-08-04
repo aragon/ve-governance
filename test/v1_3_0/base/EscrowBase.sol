@@ -40,8 +40,10 @@ import {
 
 import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 import {FixedPointBase} from "./FixedPointBase.sol";
+import {StdInvariant} from "forge-std/StdInvariant.sol";
 
 contract EscrowBase is
+    StdInvariant,
     Test,
     FixedPointBase,
     IVotingEscrowEventsStorageErrorsEvents,

@@ -25,3 +25,4 @@ library CurveConstantLib {
     /// 26 epochs in a year, 2 years = 52 epochs
     uint256 internal constant MAX_EPOCHS = 52;
 }
+

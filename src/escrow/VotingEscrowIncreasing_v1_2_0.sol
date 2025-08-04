@@ -389,6 +389,10 @@ contract VotingEscrowV1_2_0 is
             revert CannotMerge(_from, _to);
         }
 
+        // Bug 2... 
+
+       
+
         // We only allow merge when both tokens have the same owner.
         // After the merge, owner still should have the same voting power
         // as one token gets merged into another. For this reason,
@@ -396,6 +400,7 @@ contract VotingEscrowV1_2_0 is
         // reduce/increase the same voting power for gas efficiency.
         // Note that we still decrease owner's delegated token count
         // as `_from` token is destroyed.
+        _moveDelegateVotes(address(0), ownerFrom, _from, LockedBalance(oldLockedFrom.amount, oldLockedFrom.start));
         _moveDelegateVotes(ownerFrom, address(0), _from, LockedBalance(0, 0));
 
         // Update for `_from`.
@@ -474,6 +479,7 @@ contract VotingEscrowV1_2_0 is
         // to update voting power on ivotesAdapter, as total doesn't change.
         // We still call `_moveDelegateVotes` with zero LockedBalance to
         // make sure we update delegatee's token count due to newtokenId.
+        _moveDelegateVotes(address(0), owner, _from, LockedBalance(amount1 + amount2, locked_.start));
         _moveDelegateVotes(address(0), owner, newTokenId, LockedBalance(0, 0));
 
         emit Split(_from, newTokenId, sender, amount1, amount2);
