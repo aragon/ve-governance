@@ -28,8 +28,8 @@ fuzz = { runs = 128 }
 
 [profile.default.invariant]
 fail_on_revert = true
-runs = 256
-depth = 15
+runs = 2000
+depth = 128
 
 [rpc_endpoints]
 arbitrum_one = "https://arbitrum-mainnet.infura.io/v3/${API_KEY_INFURA}"

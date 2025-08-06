@@ -28,8 +28,22 @@ interface IEscrowIVotesAdapterErrorsAndEvents {
 }
 
 interface IDelegateMoveVoteRecipient {
+
+    struct Blax {
+        address account;
+        uint256 tokenId;
+        ILockedBalanceIncreasing.LockedBalance locked;
+    }
+
+    /// @notice The hook function that is called upon `split`. 
+    function splitDelegateVotes(Blax calldata _from, Blax calldata _to) external;
+
+    /// @notice The hook function that is called upon `merge`.
+    function mergeDelegateVotes(Blax calldata _from, Blax calldata _to) external;
+
+
     /// @notice After a token transfer, decreases `_from`'s voting power and increases `_to`'s voting power.
-    /// @dev Called upon a token transfer.
+    /// @dev Called upon a token transfer or create lock.
     /// @param _from The current delegatee of `_tokenId`.
     /// @param _to The new delegatee of `_tokenId`
     /// @param _tokenId The token id that is being transferred.
@@ -74,4 +88,7 @@ interface IEscrowIVotesAdapter is
 
     /// @notice Check if the token is currently delegated or not.
     function tokenIsDelegated(uint256 _tokenId) external view returns (bool);
+
+    /// @notice Returns the current delegatee of `_account`.
+    function delegates(address _account) external view returns (address);
 }
