@@ -24,7 +24,8 @@ import {
     IEscrowCurveIncreasing,
     IEscrowCurveTokenStorage,
     EscrowIVotesAdapter,
-    VotingEscrow
+    VotingEscrow,
+    Curve
 } from "../../versions.sol";
 import {IERC721EnumerableMintableBurnable as IERC721EMB} from "@lock/IERC721EMB.sol";
 
@@ -39,6 +40,8 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
     IERC721EMB private lockNft;
     VotingEscrow private escrow;
     EscrowIVotesAdapter private ivotesAdapter;
+    Curve private curve;
+    ExitQueue private queue;
 
     MockERC20 private token;
     uint256 private maxTime;
@@ -48,7 +51,7 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
     address[] public actors;
 
     // This gives a list of tokens that user owns.
-    mapping(address => uint256[]) public ownedTokens;
+    mapping(address => EnumerableSet.UintSet) internal ownedTokens;
 
     // This gives us a list of addresses that have tokens.
 
@@ -65,15 +68,19 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
 
     constructor(
         address _escrow,
+        address _curve,
         address _lockNft,
         address _ivotesAdapter,
+        address _queue,
         uint256 _maxTime,
         uint256 _checkpointInterval
     ) {
         escrow = VotingEscrow(_escrow);
+        curve = Curve(_curve);
         lockNft = IERC721EMB(_lockNft);
         token = MockERC20(escrow.token());
         ivotesAdapter = EscrowIVotesAdapter(_ivotesAdapter);
+        queue = ExitQueue(_queue);
 
         maxTime = _maxTime;
         checkpointInterval = _checkpointInterval;
@@ -96,21 +103,24 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
         ivotesAdapter.setDelegateAddress(delegatee);
     }
 
-    function delegate(uint256 _seedAddr, uint256 _numToDelegateSeed) public {
+    function delegate(
+        uint256 _jumpSeed,
+        uint256 _seedAddr,
+        uint256 _numToDelegateSeed
+    ) public adjustTimestamp(_jumpSeed) {
         address msgSender = _getSender(_seedAddr);
         address delegatee = ivotesAdapter.delegates(msgSender);
-        
-        // TODO: it might be a good option to ensure that the return here doesn't occur - i.e when delegate is called in a sequence, it always is called
+
+        // TODO: it might be a good option to ensure that the return here doesn't occur - i.e 
+        // when delegate is called in a sequence, it always is called
         // with someone that already has a delegatee and has tokens undelegated that he can delegate.
         // This way, delegate calls will not be wasted by those that don't have delegatee set or tokens = 0.
         // To do this, ` address msgSender = _getSender(_seedAddr);` is incorrect, we probably need
         // to track the users in separate structure which holds only those that have delegates set and tokens !=0.
         // then _seedAddr will get it from that list/structure.
 
-        // TODO 2: add beginWithdrawal as well or think about if it makes sense to add it here..
-
         // TODO 3: Echidna....
-        if (ownedTokens[msgSender].length == 0 || delegatee == address(0)) {
+        if (ownedTokens[msgSender].length() == 0 || delegatee == address(0)) {
             return;
         }
 
@@ -134,11 +144,15 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
         }
     }
 
-    function undelegate(uint256 _seedAddr, uint256 _numToUndelegateSeed) public {
+    function undelegate(
+        uint256 _jumpSeed,
+        uint256 _seedAddr,
+        uint256 _numToUndelegateSeed
+    ) public adjustTimestamp(_jumpSeed) {
         address msgSender = _getSender(_seedAddr);
         address delegatee = ivotesAdapter.delegates(msgSender);
 
-        if (ownedTokens[msgSender].length == 0 || delegatee == address(0)) {
+        if (ownedTokens[msgSender].length() == 0 || delegatee == address(0)) {
             return;
         }
 
@@ -181,9 +195,10 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
         uint256 tokenId = escrow.createLock(_value);
         vm.stopPrank();
 
+        // Ghost state variables
         totalLocked += _value;
         activeTokenIds.add(tokenId);
-        ownedTokens[msgSender].push(tokenId);
+        ownedTokens[msgSender].add(tokenId);
 
         // If sender has a delegatee already set,
         // tokenId automatically gets delegated.
@@ -206,15 +221,15 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
 
         // If the user doesn't own at least 2 tokens,
         // return early as there's nothing to merge.
-        uint256 len = ownedTokens[msgSender].length;
+        uint256 len = ownedTokens[msgSender].length();
         if (len < 2) return;
 
         _from = _bound(_from, 0, len - 1);
         _to = _bound(_to, 0, len - 1);
         _to = _from == _to ? (_to + 1) % len : _to;
 
-        uint256 fromId = ownedTokens[msgSender][_from];
-        uint256 toId = ownedTokens[msgSender][_to];
+        uint256 fromId = ownedTokens[msgSender].at(_from);
+        uint256 toId = ownedTokens[msgSender].at(_to);
 
         {
             ILockedBalanceIncreasing.LockedBalance memory fromLocked = escrow.locked(fromId);
@@ -241,11 +256,8 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
         vm.prank(msgSender);
         escrow.merge(fromId, toId);
 
-        // delete `from` element as `from` is destroyed.
-        ownedTokens[msgSender][_from] = ownedTokens[msgSender][len - 1];
-        ownedTokens[msgSender].pop();
-
-        // delete _from from `activeTokenIds`
+        // Ghost state variables
+        ownedTokens[msgSender].remove(fromId);
         activeTokenIds.remove(fromId);
 
         if (delegatee != address(0)) {
@@ -272,11 +284,11 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
 
         _transitionIfTooOld(delegatee);
 
-        if (ownedTokens[msgSender].length == 0) return;
+        if (ownedTokens[msgSender].length() == 0) return;
 
-        _from = _bound(_from, 0, ownedTokens[msgSender].length - 1);
+        _from = _bound(_from, 0, ownedTokens[msgSender].length() - 1);
 
-        uint256 fromId = ownedTokens[msgSender][_from];
+        uint256 fromId = ownedTokens[msgSender].at(_from);
 
         uint256 currentAmount = escrow.locked(fromId).amount;
         uint256 minDeposit = escrow.minDeposit();
@@ -291,7 +303,8 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
         vm.prank(msgSender);
         uint256 newTokenId = escrow.split(fromId, _value);
 
-        ownedTokens[msgSender].push(newTokenId);
+        // Ghost state variables
+        ownedTokens[msgSender].add(newTokenId);
         activeTokenIds.add(newTokenId);
 
         // When `from` is split, new token id is minted. We only
@@ -305,15 +318,51 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
         }
     }
 
+    function withdraw(uint256 _jumpSeed, uint256 _tokenIdSeed) public adjustTimestamp(_jumpSeed) {
+        if (activeTokenIds.length() == 0) return;
+
+        _tokenIdSeed = _bound(_tokenIdSeed, 0, activeTokenIds.length() - 1);
+
+        uint256 tokenId = activeTokenIds.at(_tokenIdSeed);
+        address owner = lockNft.ownerOf(tokenId);
+
+        if (block.timestamp == curve.tokenPointHistory(tokenId, 1).writtenTs) {
+            vm.warp(block.timestamp + 1);
+        }
+
+        address delegatee = ivotesAdapter.delegates(owner);
+        uint256 amount = escrow.locked(tokenId).amount;
+
+        _transitionIfTooOld(delegatee);
+        vm.startPrank(owner);
+        lockNft.approve(address(escrow), tokenId);
+        escrow.beginWithdrawal(tokenId);
+
+        vm.warp(queue.queue(tokenId).exitDate + 1);
+        escrow.withdraw(tokenId);
+        vm.stopPrank();
+
+        // Ghost state variables
+        totalLocked -= amount;
+        activeTokenIds.remove(tokenId);
+        ownedTokens[owner].remove(tokenId);
+
+        if (delegatee != address(0)) {
+            incomingTokens[delegatee].remove(tokenId);
+            outgoingTokens[owner].remove(tokenId);
+        }
+    }
+
     // ======================== Helper Functions ===================
 
+    // The list of addresses that participate in testing.
     function getActors() public view returns (address[] memory) {
         return actors;
     }
 
     // The list of token ids that `_account` has not delegated yet.
     function getNonDelegatedTokens(address _account) public view returns (uint256[] memory) {
-        uint256[] memory tokens = ownedTokens[_account];
+        uint256[] memory tokens = _fromSetToArray(ownedTokens[_account]);
         uint256[] memory temp = new uint256[](tokens.length);
         uint256 count = 0;
 
@@ -361,10 +410,12 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
         return _fromSetToArray(outgoingTokens[_account]);
     }
 
+    // The list of token ids that haven't been destroyed(with merge or withdraw)
     function getActiveTokenIds() public view returns (uint256[] memory) {
         return _fromSetToArray(activeTokenIds);
     }
 
+    // Helper function to convert set into an array.
     function _fromSetToArray(
         EnumerableSet.UintSet storage _set
     ) private view returns (uint256[] memory) {
@@ -378,8 +429,10 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
         return ids;
     }
 
+    // Adjust timestamps so that each function call
+    // doesn't get called in the same block.timestamp.
     modifier adjustTimestamp(uint256 timeJumpSeed) {
-        uint256 timeJump = _bound(timeJumpSeed, 2 minutes, 40 days);
+        uint256 timeJump = _bound(timeJumpSeed, 0, 40 days);
         uint256 warpTo = block.timestamp + timeJump;
 
         // We don't allow createLock/merge/split

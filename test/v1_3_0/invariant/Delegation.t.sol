@@ -43,8 +43,10 @@ contract TestDelegationInvariant is IEscrowCurveTokenStorage, EscrowBase {
 
         h = new DelegationHandler(
             address(escrow),
+            address(curve),
             address(nftLock),
             address(ivotesAdapter),
+            address(queue),
             curve.maxTime(),
             clock.checkpointInterval()
         );
@@ -52,13 +54,14 @@ contract TestDelegationInvariant is IEscrowCurveTokenStorage, EscrowBase {
         targetContract(address(h));
 
         {
-            bytes4[] memory selectors = new bytes4[](6);
+            bytes4[] memory selectors = new bytes4[](7);
             selectors[0] = DelegationHandler.createLock.selector;
             selectors[1] = DelegationHandler.merge.selector;
             selectors[2] = DelegationHandler.split.selector;
             selectors[3] = DelegationHandler.setDelegateAddress.selector;
             selectors[4] = DelegationHandler.delegate.selector;
             selectors[5] = DelegationHandler.undelegate.selector;
+            selectors[6] = DelegationHandler.withdraw.selector;
             FuzzSelector memory a = FuzzSelector(address(h), selectors);
 
             targetSelector(a);
@@ -111,8 +114,6 @@ contract TestDelegationInvariant is IEscrowCurveTokenStorage, EscrowBase {
 
             for(uint256 j = 0; j < userIncomingTokens.length; j++) {
                 assertTrue(ivotesAdapter.tokenIsDelegated(userIncomingTokens[j]));
-
-                // 
                 userVp += escrow.votingPower(userIncomingTokens[j]);
             }
 

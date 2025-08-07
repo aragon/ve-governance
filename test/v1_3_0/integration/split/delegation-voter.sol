@@ -123,7 +123,7 @@ contract TestSplit_DelegationAndVoter is
         assertEq(ivotesAdapter.numberOfDelegatedTokens(alice), 2);
         vm.stopPrank();
     }
-    
+
     function _approve(uint256 _amount, uint256 _minDeposit) private {
         vm.assume(_amount >= _minDeposit);
         token.transfer(alice, _amount);
