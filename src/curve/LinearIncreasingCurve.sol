@@ -71,15 +71,10 @@ contract LinearIncreasingCurve is
     //////////////////////////////////////////////////////////////*/
 
     /// @dev precomputed coefficients of the quadratic curve
-    int256 private constant SHARED_QUADRATIC_COEFFICIENT =
-        CurveConstantLib.SHARED_QUADRATIC_COEFFICIENT;
-
-    int256 private constant SHARED_LINEAR_COEFFICIENT = CurveConstantLib.SHARED_LINEAR_COEFFICIENT;
-
-    int256 private constant SHARED_CONSTANT_COEFFICIENT =
-        CurveConstantLib.SHARED_CONSTANT_COEFFICIENT;
-
-    uint256 private constant MAX_EPOCHS = CurveConstantLib.MAX_EPOCHS;
+    int256 private immutable SHARED_QUADRATIC_COEFFICIENT;
+    int256 private immutable SHARED_LINEAR_COEFFICIENT;
+    int256 private immutable SHARED_CONSTANT_COEFFICIENT;
+    uint256 private immutable MAX_EPOCHS;
 
     /*//////////////////////////////////////////////////////////////
                             ADDED: TOTAL SUPPLY(1.2.0)
@@ -101,7 +96,13 @@ contract LinearIncreasingCurve is
     //////////////////////////////////////////////////////////////*/
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
+    constructor(int256[3] memory _coefficients, uint256 _maxEpochs) {
+        SHARED_CONSTANT_COEFFICIENT = _coefficients[0];
+        SHARED_LINEAR_COEFFICIENT = _coefficients[1];
+        SHARED_QUADRATIC_COEFFICIENT = _coefficients[2];
+
+        MAX_EPOCHS = _maxEpochs;
+
         _disableInitializers();
     }
 
@@ -121,26 +122,26 @@ contract LinearIncreasingCurve is
     //////////////////////////////////////////////////////////////*/
 
     /// @return The coefficient for the curve's linear term, for the given amount
-    function _getLinearCoeff(uint256 amount) internal pure virtual returns (int256) {
+    function _getLinearCoeff(uint256 amount) internal view virtual returns (int256) {
         return amount.toInt256() * SHARED_LINEAR_COEFFICIENT;
     }
 
     /// @return The constant coefficient of the increasing curve, for the given amount
     /// @dev In this case, the constant term is 1 so we just case the amount
-    function _getConstantCoeff(uint256 amount) internal pure virtual returns (int256) {
+    function _getConstantCoeff(uint256 amount) internal view virtual returns (int256) {
         return amount.toInt256() * SHARED_CONSTANT_COEFFICIENT;
     }
 
     /// @return The coefficients of the quadratic curve, for the given amount
     /// @dev The coefficients are returned in the order [constant, linear, quadratic]
-    function _getCoefficients(uint256 amount) internal pure virtual returns (int256[3] memory) {
+    function _getCoefficients(uint256 amount) internal view virtual returns (int256[3] memory) {
         return [_getConstantCoeff(amount), _getLinearCoeff(amount), 0];
     }
 
     /// @return The coefficients of the quadratic curve, for the given amount
     /// @dev The coefficients are returned in the order [constant, linear, quadratic]
     /// and are converted to regular 256-bit signed integers instead of their fixed-point representation
-    function getCoefficients(uint256 amount) public pure virtual returns (int256[3] memory) {
+    function getCoefficients(uint256 amount) public view virtual returns (int256[3] memory) {
         int256[3] memory coefficients = _getCoefficients(amount);
 
         return [

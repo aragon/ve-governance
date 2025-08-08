@@ -408,7 +408,8 @@ contract EscrowBase is
         address _dao,
         address _clock
     ) public returns (LinearIncreasingCurve) {
-        LinearIncreasingCurve impl = new LinearIncreasingCurve();
+        (int256[3] memory coefficients, uint256 maxEpoch) = CurveConstantLib.getCoefficients();
+        LinearIncreasingCurve impl = new LinearIncreasingCurve(coefficients, maxEpoch);
 
         bytes memory initCalldata = abi.encodeCall(
             LinearIncreasingCurve.initialize,

@@ -29,6 +29,7 @@ import {PluginRepoFactory} from "@aragon/osx/framework/plugin/repo/PluginRepoFac
 import {PluginSetupProcessor} from "@aragon/osx/framework/plugin/setup/PluginSetupProcessor.sol";
 import {MockERC20} from "@mocks/MockERC20.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 
 contract DeployGaugesV1_2_0 is Script {
     using SafeCast for uint256;
@@ -113,9 +114,10 @@ contract DeployGaugesV1_2_0 is Script {
     }
 
     function deployGaugeVoterPluginSetup() internal returns (GaugeVoterSetup result) {
+        (int256[3] memory coefficients, uint256 maxEpoch) = CurveConstantLib.getCoefficients();
         result = new GaugeVoterSetup(
             address(new GaugeVoter()),
-            address(new Curve()),
+            address(new Curve(coefficients, maxEpoch)),
             address(new ExitQueue()),
             address(new VotingEscrow()),
             address(new Clock()),
