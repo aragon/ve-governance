@@ -115,10 +115,36 @@ contract AddressGaugeVoter is
         _vote(account, _votes);
     }
 
+    /**
+    * @dev If `enableUpdateVotingPowerHook` is false, It's assumed that token contract does/can NOT call 
+    * `updateVotingPower` during transfers This can happen if the token is already deployed and non-upgradeable, 
+    * or for other design limitations. In such cases, relying on `getVotes(_account)` (which reflects live balance) 
+    * instead of `getPastVotes(...)` (which snapshots voting power at a fixed time) can lead 
+    * to critical vulnerabilities, including double voting.
+    * 
+    * Example of the issue:
+    * - Ts 100: Epoch begins, voting window opens.
+    * - Ts 110: Alice has 1000 votes.
+    * - Ts 120: Alice votes for Gauge A with all 1000.
+    * - Ts 130: Alice transfers tokens to Bob, but `updateVotingPower` is NOT triggered.
+    * - Ts 140: Bob now votes for Gauge B using the same 1000 tokens.
+    * 
+    * Result: The same 1000 tokens were used to vote for *two* gauges in the same epoch — a double spend.
+    * 
+    * To prevent this, we use `getPastVotes(_account, currentEpochStart())`, which ensures voting power is fixed at epoch start.
+    * Even if a transfer happens mid-epoch, the recipient (e.g., Bob) cannot vote in that epoch because their `getPastVotes(...)` 
+    * will return 0.
+    * 
+    * Note: Once a new epoch starts, Bob *can* vote with the transferred tokens, but this is safe.
+    * Since gauge vote tracking is scoped per-epoch, votes from Alice in epoch 11 and from Bob in epoch 12 are kept separate.
+    * Querying Gauge A’s votes in epoch 12 will correctly return 1000, not 2000 — avoiding any vote inflation.
+    */
     function _vote(address _account, GaugeVote[] memory _votes) internal {
+        // TODO: GIORGI we need to add a function gaugeVotes that also expects epochId...
         uint256 votingPower = enableUpdateVotingPowerHook
             ? IVotes(ivotesAdapter).getVotes(_account)
             : IVotes(ivotesAdapter).getPastVotes(_account, currentEpochStart());
+
         if (votingPower == 0) revert NoVotingPower();
 
         uint256 numVotes = _votes.length;
@@ -146,6 +172,7 @@ contract AddressGaugeVoter is
             _safeCastVote(currentVote, epoch, _account, votingPower, totalWeight, voteData);
         }
 
+        voteData.usedVotingPower = votingPower;
         // setting the last voted also has the second-order effect of indicating the user has voted
         voteData.lastVoted = block.timestamp;
     }
@@ -168,6 +195,7 @@ contract AddressGaugeVoter is
 
         // calculate the weight for this gauge
         uint256 votesForGauge = _normalizedWeight(_currentVote.weight, _totalWeights);
+
         if (votesForGauge == 0) revert NoVotes();
 
         return
@@ -194,7 +222,6 @@ contract AddressGaugeVoter is
         // update the total weights accruing to this gauge
         epochGaugeVotes[_epoch][_gauge] += _votes;
         epochTotalVotingPowerCast[_epoch] += _votes;
-        _voteData.usedVotingPower += _votes;
 
         emit Voted({
             voter: _account,
@@ -215,7 +242,6 @@ contract AddressGaugeVoter is
     }
 
     function _reset(address _account) internal {
-        // get what we need
         uint256 epoch = getWriteEpochId();
         AddressVoteData storage voteData = epochVoteData[epoch][_account];
         address[] storage pastVotes = voteData.gaugesVotedFor;
@@ -265,11 +291,11 @@ contract AddressGaugeVoter is
         uint256 votingPower = IVotes(ivotesAdapter).getVotes(_account);
 
         // After the voting window closes, votes shouldn't be auto-recast via _updateVotingPower.
-        // But if a user loses voting power (e.g., had 100, now 0), 
+        // But if a user loses voting power (e.g., had 100, now 0),
         // gauges must reflect this drop to avoid overstated voting power.
-        // If a user's voting power increases (e.g., 100 → 150), 
+        // If a user's voting power increases (e.g., 100 → 150),
         // we *don't* auto-recast—doing so would inflate gauge power post-window.
-        // So: decrease → auto-adjust gauges; increase → ignored 
+        // So: decrease → auto-adjust gauges; increase → ignored
         // unless user manually votes when window reopens.
         if (voteData.usedVotingPower < votingPower) return;
 
@@ -300,6 +326,7 @@ contract AddressGaugeVoter is
             );
         }
 
+        voteData.usedVotingPower = votingPower;
         voteData.lastVoted = block.timestamp;
     }
 

@@ -95,18 +95,10 @@ abstract contract DelegationHelper is IEscrowIVotesAdapter, Pausable, UUPSUpgrad
             revert IncorrectTokenIds();
         }
 
-        
-
         bool isFromTokenDelegated = tokenIsDelegated(_from.tokenId);
         bool isToTokenDelegated = tokenIsDelegated(_to.tokenId);
 
         address fromDelegatee = delegates(_from.account);
-
-        if(_from.tokenId == 6) {
-            console.log("omg ggg", fromDelegatee);
-            console.log(_from.tokenId, isFromTokenDelegated);
-            console.log(_to.tokenId, isToTokenDelegated);
-        }
 
         if (!isFromTokenDelegated) {
             // from is not delegated and to is delegated.

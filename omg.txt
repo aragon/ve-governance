@@ -1,29 +1,86 @@
-No files changed, compilation skipped
+Compiling 11 files with Solc 0.8.17
+Solc 0.8.17 finished in 14.09s
+Compiler run successful with warnings:
+Warning (2519): This declaration shadows an existing declaration.
+   --> src/escrow/VotingEscrowIncreasing_v1_2_0.sol:648:9:
+    |
+648 |         LockedBalance memory _locked
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+  --> src/escrow/VotingEscrowIncreasing_v1_2_0.sol:95:5:
+   |
+95 |     mapping(uint256 => LockedBalance) private _locked;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> test/v1_3_0/integration/split/delegation-voter.sol:144:9:
+    |
+144 |         address alice = address(0x000000000000000000000000000000000000000d);
+    |         ^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+  --> test/v1_3_0/integration/split/delegation-voter.sol:30:5:
+   |
+30 |     address alice = address(0x123);
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> test/v1_3_0/integration/split/delegation-voter.sol:145:9:
+    |
+145 |         address bob = address(0x000000000000000000000000000000000000000F);
+    |         ^^^^^^^^^^^
+Note: The shadowed declaration is here:
+  --> test/v1_3_0/integration/split/delegation-voter.sol:31:5:
+   |
+31 |     address bob = address(0x192);
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (2072): Unused local variable.
+  --> src/delegation/DelegationHelper.sol:74:9:
+   |
+74 |         bool isToTokenDelegated = tokenIsDelegated(_to.tokenId);
+   |         ^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (2018): Function state mutability can be restricted to pure
+   --> src/curve/LinearIncreasingCurve.sol:600:5:
+    |
+600 |     function setWarmupPeriod(uint48) external {
+    |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2018): Function state mutability can be restricted to pure
+   --> src/delegation/EscrowIVotesAdapter.sol:328:5:
+    |
+328 |     function CLOCK_MODE() external view returns (string memory) {
+    |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2018): Function state mutability can be restricted to pure
+   --> src/curve/LinearIncreasingCurveNoSupply.sol:417:5:
+    |
+417 |     function setWarmupPeriod(uint48) external {
+    |     ^ (Relevant source part starts here and spans across multiple lines).
+
 
 Ran 1 test for test/v1_3_0/integration/split/delegation-voter.sol:TestSplit_DelegationAndVoter
-[PASS] test_sequence() (gas: 11452624)
+[PASS] test_fuck() (gas: 1590720)
 Logs:
-  createLock 0x000000000000000000000000000000000000000A
-  createLock 0x000000000000000000000000000000000000000b
-  createLock 0x000000000000000000000000000000000000000d
-  withdraw 0x000000000000000000000000000000000000000b
-  createLock 0x000000000000000000000000000000000000000A
-  split 0x000000000000000000000000000000000000000d
-  withdraw 0x000000000000000000000000000000000000000A
-  createLock 0x000000000000000000000000000000000000000d
-  delegator/delegatee 0x000000000000000000000000000000000000000A 0x000000000000000000000000000000000000000F
-  check ==== 0
-  withdraw 0x000000000000000000000000000000000000000d
-  check ==== 0
-  omg ggg 0x0000000000000000000000000000000000000000
-  6 false
-  3 false
-  merge 0x000000000000000000000000000000000000000d
-  check ==== 0
-  jesus baby 0x0000000000000000000000000000000000000000
+  casting vote III 4293386613 54187055384017 79232698352767939063239375289
+  casting vote III 79199004075486703379647873114 999574742776887156241704300967682 79232698352767939063239375289
+  casting vote III 33694275343384598531003113 425257198655124592496247438085 79232698352767939063239375289
+  casting vote III 1937851080767112447 24457719111612396210215 79232698352767939063239375289
+  123123124dkkdaks 999 79232698352767939063239375287
+  final 284174721 79232698352767939063239375289 0
+  Resetting vote Blax blux 4293386613 54187055384017 79232698352767939063239375289
+  Resetting vote Blax blux 79199004075486703379647873114 999574742776887156241704300967682 79232698352767939063239375289
+  Resetting vote Blax blux 33694275343384598531003113 425257198655124592496247438085 79232698352767939063239375289
+  Resetting vote Blax blux 1937851080767112447 24457719111612396210215 79232698352767939063239375289
+  after reset 0
+  casting vote III 0 54187055384017 0
+  casting vote III 0 999574742776887156241704300967682 0
+  casting vote III 0 425257198655124592496247438085 0
+  casting vote III 0 24457719111612396210215 0
+  123123124dkkdaks 777 0
 
 Traces:
-  [30461015] TestSplit_DelegationAndVoter::setUp()
+  [27376774] TestSplit_DelegationAndVoter::setUp()
     ├─ [3233930] → new DAO@0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f
     │   ├─ emit Initialized(version: 255)
     │   └─ ← [Return] 16034 bytes of code
@@ -81,9 +138,9 @@ Traces:
     │   │   ├─ emit Initialized(version: 1)
     │   │   └─ ← [Stop]
     │   └─ ← [Return] 792 bytes of code
-    ├─ [3517084] → new EscrowIVotesAdapter@0x212224D2F2d262cd093eE13240ca4873fcCBbA3C
+    ├─ [3369898] → new EscrowIVotesAdapter@0x212224D2F2d262cd093eE13240ca4873fcCBbA3C
     │   ├─ emit Initialized(version: 255)
-    │   └─ ← [Return] 17448 bytes of code
+    │   └─ ← [Return] 16713 bytes of code
     ├─ [321505] → new ERC1967Proxy@0x2a07706473244BC757E10F2a9E86fB532828afe3
     │   ├─ emit Upgraded(implementation: EscrowIVotesAdapter: [0x212224D2F2d262cd093eE13240ca4873fcCBbA3C])
     │   ├─ [137147] EscrowIVotesAdapter::initialize(ERC1967Proxy: [0x2e234DAe75C793f67A35089C9d99245E1C58470b], ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], ERC1967Proxy: [0xc7183455a4C133Ae270771860664b6B7ec320bB1], false) [delegatecall]
@@ -106,9 +163,9 @@ Traces:
     │   ├─ [272] ClockV1_2_0::checkpointInterval() [delegatecall]
     │   │   └─ ← [Return] 604800 [6.048e5]
     │   └─ ← [Return] 604800 [6.048e5]
-    ├─ [3326135] → new AddressGaugeVoter@0x3D7Ebc40AF7092E3F1C81F2e996cbA5Cae2090d7
+    ├─ [3478128] → new AddressGaugeVoter@0x3D7Ebc40AF7092E3F1C81F2e996cbA5Cae2090d7
     │   ├─ emit Initialized(version: 255)
-    │   └─ ← [Return] 16493 bytes of code
+    │   └─ ← [Return] 17252 bytes of code
     ├─ [323361] → new ERC1967Proxy@0xD16d567549A2a2a2005aEACf7fB193851603dd70
     │   ├─ emit Upgraded(implementation: AddressGaugeVoter: [0x3D7Ebc40AF7092E3F1C81F2e996cbA5Cae2090d7])
     │   ├─ [138710] AddressGaugeVoter::initialize(ERC1967Proxy: [0x2e234DAe75C793f67A35089C9d99245E1C58470b], ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], false, ERC1967Proxy: [0xc7183455a4C133Ae270771860664b6B7ec320bB1], ERC1967Proxy: [0x2a07706473244BC757E10F2a9E86fB532828afe3], true) [delegatecall]
@@ -221,1138 +278,279 @@ Traces:
     │   │   │   └─ ← [Return] true
     │   │   └─ ← [Stop]
     │   └─ ← [Return]
-    ├─ [27164] ERC1967Proxy::fallback()
-    │   ├─ [26784] VotingEscrowV1_2_0::enableSplit() [delegatecall]
-    │   │   ├─ [2081] ERC1967Proxy::fallback(ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], TestSplit_DelegationAndVoter: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], 0x5153bc4ddea3acc82e49822cf2356cf42e16e0ba80c942840692ca4dd7db5995, 0x75ee5515) [staticcall]
-    │   │   │   ├─ [1668] DAO::hasPermission(ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], TestSplit_DelegationAndVoter: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], 0x5153bc4ddea3acc82e49822cf2356cf42e16e0ba80c942840692ca4dd7db5995, 0x75ee5515) [delegatecall]
-    │   │   │   │   └─ ← [Return] true
-    │   │   │   └─ ← [Return] true
-    │   │   ├─ emit SplitWhitelistSet(account: 0x89203EDb30c2eCF12612E709afB87C85a170dA0a, status: true)
+    ├─ [0] VM::warp(1213201 [1.213e6])
+    │   └─ ← [Return]
+    └─ ← [Stop]
+
+  [1993665] TestSplit_DelegationAndVoter::test_fuck()
+    ├─ [0] VM::prank(0x000000000000000000000000000000000000000d)
+    │   └─ ← [Return]
+    ├─ [33740] ERC1967Proxy::fallback(0x000000000000000000000000000000000000000F)
+    │   ├─ [28857] EscrowIVotesAdapter::setDelegateAddress(0x000000000000000000000000000000000000000F) [delegatecall]
+    │   │   ├─ emit DelegateChanged(delegator: 0x000000000000000000000000000000000000000d, fromDelegate: 0x0000000000000000000000000000000000000000, toDelegate: 0x000000000000000000000000000000000000000F)
     │   │   └─ ← [Stop]
     │   └─ ← [Return]
-    ├─ [1883] ERC1967Proxy::fallback() [staticcall]
-    │   ├─ [1500] LinearIncreasingCurve::maxTime() [delegatecall]
-    │   │   ├─ [632] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   ├─ [249] ClockV1_2_0::epochDuration() [delegatecall]
+    ├─ [46592] MockERC20::mint(0x000000000000000000000000000000000000000d, 79228162514264337593543950333 [7.922e28])
+    │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000000, to: 0x000000000000000000000000000000000000000d, value: 79228162514264337593543950333 [7.922e28])
+    │   └─ ← [Stop]
+    ├─ [0] VM::startPrank(0x000000000000000000000000000000000000000d)
+    │   └─ ← [Return]
+    ├─ [24603] MockERC20::approve(ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], 79228162514264337593543950333 [7.922e28])
+    │   ├─ emit Approval(owner: 0x000000000000000000000000000000000000000d, spender: ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], value: 79228162514264337593543950333 [7.922e28])
+    │   └─ ← [Return] true
+    ├─ [695174] ERC1967Proxy::fallback(79228162514264337593543950333 [7.922e28])
+    │   ├─ [690288] VotingEscrowV1_2_0::createLock(79228162514264337593543950333 [7.922e28]) [delegatecall]
+    │   │   ├─ [5294] ERC1967Proxy::fallback() [staticcall]
+    │   │   │   ├─ [411] ClockV1_2_0::epochPrevCheckpointTs() [delegatecall]
     │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
     │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   └─ ← [Return] 62899200 [6.289e7]
-    │   └─ ← [Return] 62899200 [6.289e7]
-    ├─ [655] ERC1967Proxy::fallback() [staticcall]
-    │   ├─ [272] ClockV1_2_0::checkpointInterval() [delegatecall]
-    │   │   └─ ← [Return] 604800 [6.048e5]
-    │   └─ ← [Return] 604800 [6.048e5]
-    ├─ [3003663] → new DelegationHandler@0xDB25A7b768311dE128BBDa7B8426c3f9C74f3240
-    │   ├─ [852] ERC1967Proxy::fallback() [staticcall]
-    │   │   ├─ [469] VotingEscrowV1_2_0::token() [delegatecall]
-    │   │   │   └─ ← [Return] MockERC20: [0xF62849F9A0B5Bf2913b396098F7c7019b51A820a]
-    │   │   └─ ← [Return] MockERC20: [0xF62849F9A0B5Bf2913b396098F7c7019b51A820a]
-    │   └─ ← [Return] 13324 bytes of code
-    └─ ← [Stop]
-
-  [12838524] TestSplit_DelegationAndVoter::test_sequence()
-    ├─ [16411] DelegationHandler::getActors() [staticcall]
-    │   └─ ← [Return] [0x000000000000000000000000000000000000000A, 0x000000000000000000000000000000000000000b, 0x000000000000000000000000000000000000000C, 0x000000000000000000000000000000000000000d, 0x000000000000000000000000000000000000000E, 0x000000000000000000000000000000000000000F]
-    ├─ [0] console::log("createLock", PointEvaluation: [0x000000000000000000000000000000000000000A]) [staticcall]
-    │   └─ ← [Stop]
-    ├─ [782031] DelegationHandler::createLock(10457422669520565649664410439877595810221763180319451259 [1.045e55], 115792089237316195423570985008687907853269984665640564039457584007913129639933 [1.157e77], 0)
-    │   ├─ [0] VM::warp(3025249 [3.025e6])
-    │   │   └─ ← [Return]
-    │   ├─ [7269] ERC1967Proxy::fallback() [staticcall]
-    │   │   ├─ [2386] VotingEscrowV1_2_0::minDeposit() [delegatecall]
-    │   │   │   └─ ← [Return] 1
-    │   │   └─ ← [Return] 1
-    │   ├─ [7514] ERC1967Proxy::fallback(PointEvaluation: [0x000000000000000000000000000000000000000A]) [staticcall]
-    │   │   ├─ [2628] EscrowIVotesAdapter::delegates(PointEvaluation: [0x000000000000000000000000000000000000000A]) [delegatecall]
-    │   │   │   └─ ← [Return] 0x0000000000000000000000000000000000000000
-    │   │   └─ ← [Return] 0x0000000000000000000000000000000000000000
-    │   ├─ [3010] ERC1967Proxy::fallback(0x0000000000000000000000000000000000000000) [staticcall]
-    │   │   ├─ [2624] EscrowIVotesAdapter::latestPointIndex(0x0000000000000000000000000000000000000000) [delegatecall]
-    │   │   │   └─ ← [Return] 0
-    │   │   └─ ← [Return] 0
-    │   ├─ [7401] ERC1967Proxy::fallback(0x0000000000000000000000000000000000000000, 0) [staticcall]
-    │   │   ├─ [7006] EscrowIVotesAdapter::pointHistory(0x0000000000000000000000000000000000000000, 0) [delegatecall]
-    │   │   │   └─ ← [Return] 0, 0, 0
-    │   │   └─ ← [Return] 0, 0, 0
-    │   ├─ [46592] MockERC20::mint(PointEvaluation: [0x000000000000000000000000000000000000000A], 79228162514264337593543950333 [7.922e28])
-    │   │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000000, to: PointEvaluation: [0x000000000000000000000000000000000000000A], value: 79228162514264337593543950333 [7.922e28])
-    │   │   └─ ← [Stop]
-    │   ├─ [0] VM::startPrank(PointEvaluation: [0x000000000000000000000000000000000000000A])
-    │   │   └─ ← [Return]
-    │   ├─ [24603] MockERC20::approve(ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], 79228162514264337593543950333 [7.922e28])
-    │   │   ├─ emit Approval(owner: PointEvaluation: [0x000000000000000000000000000000000000000A], spender: ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], value: 79228162514264337593543950333 [7.922e28])
-    │   │   └─ ← [Return] true
-    │   ├─ [503721] ERC1967Proxy::fallback(79228162514264337593543950333 [7.922e28])
-    │   │   ├─ [503335] VotingEscrowV1_2_0::createLock(79228162514264337593543950333 [7.922e28]) [delegatecall]
-    │   │   │   ├─ [5300] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   ├─ [417] ClockV1_2_0::epochPrevCheckpointTs() [delegatecall]
-    │   │   │   │   │   └─ ← [Return] 3024000 [3.024e6]
-    │   │   │   │   └─ ← [Return] 3024000 [3.024e6]
-    │   │   │   ├─ [227622] ERC1967Proxy::fallback(1, LockedBalance({ amount: 0, start: 0 }), LockedBalance({ amount: 79228162514264337593543950333 [7.922e28], start: 3024000 [3.024e6] }))
-    │   │   │   │   ├─ [222718] LinearIncreasingCurve::checkpoint(1, LockedBalance({ amount: 0, start: 0 }), LockedBalance({ amount: 79228162514264337593543950333 [7.922e28], start: 3024000 [3.024e6] })) [delegatecall]
-    │   │   │   │   │   ├─ [632] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [249] ClockV1_2_0::epochDuration() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
+    │   │   ├─ [227622] ERC1967Proxy::fallback(1, LockedBalance({ amount: 0, start: 0 }), LockedBalance({ amount: 79228162514264337593543950333 [7.922e28], start: 1209600 [1.209e6] }))
+    │   │   │   ├─ [222718] LinearIncreasingCurve::checkpoint(1, LockedBalance({ amount: 0, start: 0 }), LockedBalance({ amount: 79228162514264337593543950333 [7.922e28], start: 1209600 [1.209e6] })) [delegatecall]
+    │   │   │   │   ├─ [632] ERC1967Proxy::fallback() [staticcall]
+    │   │   │   │   │   ├─ [249] ClockV1_2_0::epochDuration() [delegatecall]
     │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   ├─ [655] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [272] ClockV1_2_0::checkpointInterval() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 604800 [6.048e5]
+    │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
+    │   │   │   │   ├─ [655] ERC1967Proxy::fallback() [staticcall]
+    │   │   │   │   │   ├─ [272] ClockV1_2_0::checkpointInterval() [delegatecall]
     │   │   │   │   │   │   └─ ← [Return] 604800 [6.048e5]
-    │   │   │   │   │   ├─ [632] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [249] ClockV1_2_0::epochDuration() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
+    │   │   │   │   │   └─ ← [Return] 604800 [6.048e5]
+    │   │   │   │   ├─ [632] ERC1967Proxy::fallback() [staticcall]
+    │   │   │   │   │   ├─ [249] ClockV1_2_0::epochDuration() [delegatecall]
     │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   └─ ← [Stop]
-    │   │   │   │   └─ ← [Return]
-    │   │   │   ├─ [2561] MockERC20::balanceOf(ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211]) [staticcall]
-    │   │   │   │   └─ ← [Return] 0
-    │   │   │   ├─ [25508] MockERC20::transferFrom(PointEvaluation: [0x000000000000000000000000000000000000000A], ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], 79228162514264337593543950333 [7.922e28])
-    │   │   │   │   ├─ emit Approval(owner: PointEvaluation: [0x000000000000000000000000000000000000000A], spender: ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], value: 0)
-    │   │   │   │   ├─ emit Transfer(from: PointEvaluation: [0x000000000000000000000000000000000000000A], to: ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], value: 79228162514264337593543950333 [7.922e28])
-    │   │   │   │   └─ ← [Return] true
-    │   │   │   ├─ [561] MockERC20::balanceOf(ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211]) [staticcall]
-    │   │   │   │   └─ ← [Return] 79228162514264337593543950333 [7.922e28]
-    │   │   │   ├─ [133793] ERC1967Proxy::fallback(PointEvaluation: [0x000000000000000000000000000000000000000A], 1)
-    │   │   │   │   ├─ [128907] LockV1_2_0::mint(PointEvaluation: [0x000000000000000000000000000000000000000A], 1) [delegatecall]
-    │   │   │   │   │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000000, to: PointEvaluation: [0x000000000000000000000000000000000000000A], tokenId: 1)
-    │   │   │   │   │   └─ ← [Stop]
-    │   │   │   │   └─ ← [Return]
-    │   │   │   ├─ [7983] ERC1967Proxy::fallback(0x0000000000000000000000000000000000000000, PointEvaluation: [0x000000000000000000000000000000000000000A], 1, LockedBalance({ amount: 79228162514264337593543950333 [7.922e28], start: 3024000 [3.024e6] }))
-    │   │   │   │   ├─ [7579] EscrowIVotesAdapter::moveDelegateVotes(0x0000000000000000000000000000000000000000, PointEvaluation: [0x000000000000000000000000000000000000000A], 1, LockedBalance({ amount: 79228162514264337593543950333 [7.922e28], start: 3024000 [3.024e6] })) [delegatecall]
-    │   │   │   │   │   └─ ← [Stop]
-    │   │   │   │   └─ ← [Return]
-    │   │   │   ├─ emit Deposit(depositor: PointEvaluation: [0x000000000000000000000000000000000000000A], tokenId: 1, startTs: 3024000 [3.024e6], value: 79228162514264337593543950333 [7.922e28], newTotalLocked: 79228162514264337593543950333 [7.922e28])
-    │   │   │   └─ ← [Return] 1
+    │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
+    │   │   │   │   └─ ← [Stop]
+    │   │   │   └─ ← [Return]
+    │   │   ├─ [2561] MockERC20::balanceOf(ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211]) [staticcall]
+    │   │   │   └─ ← [Return] 0
+    │   │   ├─ [25508] MockERC20::transferFrom(0x000000000000000000000000000000000000000d, ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], 79228162514264337593543950333 [7.922e28])
+    │   │   │   ├─ emit Approval(owner: 0x000000000000000000000000000000000000000d, spender: ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], value: 0)
+    │   │   │   ├─ emit Transfer(from: 0x000000000000000000000000000000000000000d, to: ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], value: 79228162514264337593543950333 [7.922e28])
+    │   │   │   └─ ← [Return] true
+    │   │   ├─ [561] MockERC20::balanceOf(ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211]) [staticcall]
+    │   │   │   └─ ← [Return] 79228162514264337593543950333 [7.922e28]
+    │   │   ├─ [133793] ERC1967Proxy::fallback(0x000000000000000000000000000000000000000d, 1)
+    │   │   │   ├─ [128907] LockV1_2_0::mint(0x000000000000000000000000000000000000000d, 1) [delegatecall]
+    │   │   │   │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000000, to: 0x000000000000000000000000000000000000000d, tokenId: 1)
+    │   │   │   │   └─ ← [Stop]
+    │   │   │   └─ ← [Return]
+    │   │   ├─ [192942] ERC1967Proxy::fallback(0x0000000000000000000000000000000000000000, 0x000000000000000000000000000000000000000d, 1, LockedBalance({ amount: 79228162514264337593543950333 [7.922e28], start: 1209600 [1.209e6] }))
+    │   │   │   ├─ [192538] EscrowIVotesAdapter::moveDelegateVotes(0x0000000000000000000000000000000000000000, 0x000000000000000000000000000000000000000d, 1, LockedBalance({ amount: 79228162514264337593543950333 [7.922e28], start: 1209600 [1.209e6] })) [delegatecall]
+    │   │   │   │   ├─ [655] ERC1967Proxy::fallback() [staticcall]
+    │   │   │   │   │   ├─ [272] ClockV1_2_0::checkpointInterval() [delegatecall]
+    │   │   │   │   │   │   └─ ← [Return] 604800 [6.048e5]
+    │   │   │   │   │   └─ ← [Return] 604800 [6.048e5]
+    │   │   │   │   ├─ emit TokensDelegated(sender: 0x000000000000000000000000000000000000000d, delegatee: 0x000000000000000000000000000000000000000F, tokenIds: [1])
+    │   │   │   │   ├─ [21052] ERC1967Proxy::fallback(0x0000000000000000000000000000000000000000, 0x000000000000000000000000000000000000000F)
+    │   │   │   │   │   ├─ [20666] VotingEscrowV1_2_0::updateVotingPower(0x0000000000000000000000000000000000000000, 0x000000000000000000000000000000000000000F) [delegatecall]
+    │   │   │   │   │   │   ├─ [14906] ERC1967Proxy::fallback(0x0000000000000000000000000000000000000000, 0x000000000000000000000000000000000000000F)
+    │   │   │   │   │   │   │   ├─ [10020] AddressGaugeVoter::updateVotingPower(0x0000000000000000000000000000000000000000, 0x000000000000000000000000000000000000000F) [delegatecall]
+    │   │   │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   │   │   └─ ← [Return]
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   └─ ← [Return]
+    │   │   │   │   └─ ← [Stop]
+    │   │   │   └─ ← [Return]
+    │   │   ├─ emit Deposit(depositor: 0x000000000000000000000000000000000000000d, tokenId: 1, startTs: 1209600 [1.209e6], value: 79228162514264337593543950333 [7.922e28], newTotalLocked: 79228162514264337593543950333 [7.922e28])
     │   │   └─ ← [Return] 1
-    │   ├─ [0] VM::stopPrank()
-    │   │   └─ ← [Return]
     │   └─ ← [Return] 1
-    ├─ [2411] DelegationHandler::getActors() [staticcall]
-    │   └─ ← [Return] [0x000000000000000000000000000000000000000A, 0x000000000000000000000000000000000000000b, 0x000000000000000000000000000000000000000C, 0x000000000000000000000000000000000000000d, 0x000000000000000000000000000000000000000E, 0x000000000000000000000000000000000000000F]
-    ├─ [0] console::log("createLock", 0x000000000000000000000000000000000000000b) [staticcall]
-    │   └─ ← [Stop]
-    ├─ [517718] DelegationHandler::createLock(10616647610661292306005203957180730070438105554044857562793979554 [1.061e64], 106829728599179196366523037 [1.068e26], 8714448578159375057676002119 [8.714e27])
-    │   ├─ [0] VM::warp(3479196 [3.479e6])
-    │   │   └─ ← [Return]
-    │   ├─ [769] ERC1967Proxy::fallback() [staticcall]
-    │   │   ├─ [386] VotingEscrowV1_2_0::minDeposit() [delegatecall]
-    │   │   │   └─ ← [Return] 1
-    │   │   └─ ← [Return] 1
-    │   ├─ [3014] ERC1967Proxy::fallback(0x000000000000000000000000000000000000000b) [staticcall]
-    │   │   ├─ [2628] EscrowIVotesAdapter::delegates(0x000000000000000000000000000000000000000b) [delegatecall]
-    │   │   │   └─ ← [Return] 0x0000000000000000000000000000000000000000
-    │   │   └─ ← [Return] 0x0000000000000000000000000000000000000000
-    │   ├─ [1010] ERC1967Proxy::fallback(0x0000000000000000000000000000000000000000) [staticcall]
-    │   │   ├─ [624] EscrowIVotesAdapter::latestPointIndex(0x0000000000000000000000000000000000000000) [delegatecall]
-    │   │   │   └─ ← [Return] 0
-    │   │   └─ ← [Return] 0
-    │   ├─ [1401] ERC1967Proxy::fallback(0x0000000000000000000000000000000000000000, 0) [staticcall]
-    │   │   ├─ [1006] EscrowIVotesAdapter::pointHistory(0x0000000000000000000000000000000000000000, 0) [delegatecall]
-    │   │   │   └─ ← [Return] 0, 0, 0
-    │   │   └─ ← [Return] 0, 0, 0
-    │   ├─ [24692] MockERC20::mint(0x000000000000000000000000000000000000000b, 106829728599179196366523037 [1.068e26])
-    │   │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000000, to: 0x000000000000000000000000000000000000000b, value: 106829728599179196366523037 [1.068e26])
-    │   │   └─ ← [Stop]
-    │   ├─ [0] VM::startPrank(0x000000000000000000000000000000000000000b)
-    │   │   └─ ← [Return]
-    │   ├─ [24603] MockERC20::approve(ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], 106829728599179196366523037 [1.068e26])
-    │   │   ├─ emit Approval(owner: 0x000000000000000000000000000000000000000b, spender: ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], value: 106829728599179196366523037 [1.068e26])
-    │   │   └─ ← [Return] true
-    │   ├─ [341984] ERC1967Proxy::fallback(106829728599179196366523037 [1.068e26])
-    │   │   ├─ [341598] VotingEscrowV1_2_0::createLock(106829728599179196366523037 [1.068e26]) [delegatecall]
-    │   │   │   ├─ [800] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   ├─ [417] ClockV1_2_0::epochPrevCheckpointTs() [delegatecall]
-    │   │   │   │   │   └─ ← [Return] 3024000 [3.024e6]
-    │   │   │   │   └─ ← [Return] 3024000 [3.024e6]
-    │   │   │   ├─ [174085] ERC1967Proxy::fallback(2, LockedBalance({ amount: 0, start: 0 }), LockedBalance({ amount: 106829728599179196366523037 [1.068e26], start: 3024000 [3.024e6] }))
-    │   │   │   │   ├─ [173681] LinearIncreasingCurve::checkpoint(2, LockedBalance({ amount: 0, start: 0 }), LockedBalance({ amount: 106829728599179196366523037 [1.068e26], start: 3024000 [3.024e6] })) [delegatecall]
-    │   │   │   │   │   ├─ [632] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [249] ClockV1_2_0::epochDuration() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   ├─ [655] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [272] ClockV1_2_0::checkpointInterval() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 604800 [6.048e5]
-    │   │   │   │   │   │   └─ ← [Return] 604800 [6.048e5]
-    │   │   │   │   │   ├─ [632] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [249] ClockV1_2_0::epochDuration() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   └─ ← [Stop]
-    │   │   │   │   └─ ← [Return]
-    │   │   │   ├─ [561] MockERC20::balanceOf(ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211]) [staticcall]
-    │   │   │   │   └─ ← [Return] 79228162514264337593543950333 [7.922e28]
-    │   │   │   ├─ [5608] MockERC20::transferFrom(0x000000000000000000000000000000000000000b, ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], 106829728599179196366523037 [1.068e26])
-    │   │   │   │   ├─ emit Approval(owner: 0x000000000000000000000000000000000000000b, spender: ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], value: 0)
-    │   │   │   │   ├─ emit Transfer(from: 0x000000000000000000000000000000000000000b, to: ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], value: 106829728599179196366523037 [1.068e26])
-    │   │   │   │   └─ ← [Return] true
-    │   │   │   ├─ [561] MockERC20::balanceOf(ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211]) [staticcall]
-    │   │   │   │   └─ ← [Return] 79334992242863516789910473370 [7.933e28]
-    │   │   │   ├─ [123293] ERC1967Proxy::fallback(0x000000000000000000000000000000000000000b, 2)
-    │   │   │   │   ├─ [122907] LockV1_2_0::mint(0x000000000000000000000000000000000000000b, 2) [delegatecall]
-    │   │   │   │   │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000000, to: 0x000000000000000000000000000000000000000b, tokenId: 2)
-    │   │   │   │   │   └─ ← [Stop]
-    │   │   │   │   └─ ← [Return]
-    │   │   │   ├─ [1983] ERC1967Proxy::fallback(0x0000000000000000000000000000000000000000, 0x000000000000000000000000000000000000000b, 2, LockedBalance({ amount: 106829728599179196366523037 [1.068e26], start: 3024000 [3.024e6] }))
-    │   │   │   │   ├─ [1579] EscrowIVotesAdapter::moveDelegateVotes(0x0000000000000000000000000000000000000000, 0x000000000000000000000000000000000000000b, 2, LockedBalance({ amount: 106829728599179196366523037 [1.068e26], start: 3024000 [3.024e6] })) [delegatecall]
-    │   │   │   │   │   └─ ← [Stop]
-    │   │   │   │   └─ ← [Return]
-    │   │   │   ├─ emit Deposit(depositor: 0x000000000000000000000000000000000000000b, tokenId: 2, startTs: 3024000 [3.024e6], value: 106829728599179196366523037 [1.068e26], newTotalLocked: 79334992242863516789910473370 [7.933e28])
-    │   │   │   └─ ← [Return] 2
-    │   │   └─ ← [Return] 2
-    │   ├─ [0] VM::stopPrank()
-    │   │   └─ ← [Return]
-    │   └─ ← [Return] 2
-    ├─ [2411] DelegationHandler::getActors() [staticcall]
-    │   └─ ← [Return] [0x000000000000000000000000000000000000000A, 0x000000000000000000000000000000000000000b, 0x000000000000000000000000000000000000000C, 0x000000000000000000000000000000000000000d, 0x000000000000000000000000000000000000000E, 0x000000000000000000000000000000000000000F]
-    ├─ [0] console::log("createLock", 0x000000000000000000000000000000000000000d) [staticcall]
-    │   └─ ← [Stop]
-    ├─ [518405] DelegationHandler::createLock(4486468718341357625770712545241522531407056138651731127 [4.486e54], 2081818529745371452580084865741621355142970197424269079143526461 [2.081e63], 2432343929780434168782249683148174978402076929 [2.432e45])
-    │   ├─ [0] VM::warp(3531617 [3.531e6])
-    │   │   └─ ← [Return]
-    │   ├─ [769] ERC1967Proxy::fallback() [staticcall]
-    │   │   ├─ [386] VotingEscrowV1_2_0::minDeposit() [delegatecall]
-    │   │   │   └─ ← [Return] 1
-    │   │   └─ ← [Return] 1
-    │   ├─ [3014] ERC1967Proxy::fallback(0x000000000000000000000000000000000000000d) [staticcall]
-    │   │   ├─ [2628] EscrowIVotesAdapter::delegates(0x000000000000000000000000000000000000000d) [delegatecall]
-    │   │   │   └─ ← [Return] 0x0000000000000000000000000000000000000000
-    │   │   └─ ← [Return] 0x0000000000000000000000000000000000000000
-    │   ├─ [1010] ERC1967Proxy::fallback(0x0000000000000000000000000000000000000000) [staticcall]
-    │   │   ├─ [624] EscrowIVotesAdapter::latestPointIndex(0x0000000000000000000000000000000000000000) [delegatecall]
-    │   │   │   └─ ← [Return] 0
-    │   │   └─ ← [Return] 0
-    │   ├─ [1401] ERC1967Proxy::fallback(0x0000000000000000000000000000000000000000, 0) [staticcall]
-    │   │   ├─ [1006] EscrowIVotesAdapter::pointHistory(0x0000000000000000000000000000000000000000, 0) [delegatecall]
-    │   │   │   └─ ← [Return] 0, 0, 0
-    │   │   └─ ← [Return] 0, 0, 0
-    │   ├─ [24692] MockERC20::mint(0x000000000000000000000000000000000000000d, 31305350968420144662338977931 [3.13e28])
-    │   │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000000, to: 0x000000000000000000000000000000000000000d, value: 31305350968420144662338977931 [3.13e28])
-    │   │   └─ ← [Stop]
-    │   ├─ [0] VM::startPrank(0x000000000000000000000000000000000000000d)
-    │   │   └─ ← [Return]
-    │   ├─ [24603] MockERC20::approve(ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], 31305350968420144662338977931 [3.13e28])
-    │   │   ├─ emit Approval(owner: 0x000000000000000000000000000000000000000d, spender: ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], value: 31305350968420144662338977931 [3.13e28])
-    │   │   └─ ← [Return] true
-    │   ├─ [341984] ERC1967Proxy::fallback(31305350968420144662338977931 [3.13e28])
-    │   │   ├─ [341598] VotingEscrowV1_2_0::createLock(31305350968420144662338977931 [3.13e28]) [delegatecall]
-    │   │   │   ├─ [800] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   ├─ [417] ClockV1_2_0::epochPrevCheckpointTs() [delegatecall]
-    │   │   │   │   │   └─ ← [Return] 3024000 [3.024e6]
-    │   │   │   │   └─ ← [Return] 3024000 [3.024e6]
-    │   │   │   ├─ [174085] ERC1967Proxy::fallback(3, LockedBalance({ amount: 0, start: 0 }), LockedBalance({ amount: 31305350968420144662338977931 [3.13e28], start: 3024000 [3.024e6] }))
-    │   │   │   │   ├─ [173681] LinearIncreasingCurve::checkpoint(3, LockedBalance({ amount: 0, start: 0 }), LockedBalance({ amount: 31305350968420144662338977931 [3.13e28], start: 3024000 [3.024e6] })) [delegatecall]
-    │   │   │   │   │   ├─ [632] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [249] ClockV1_2_0::epochDuration() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   ├─ [655] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [272] ClockV1_2_0::checkpointInterval() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 604800 [6.048e5]
-    │   │   │   │   │   │   └─ ← [Return] 604800 [6.048e5]
-    │   │   │   │   │   ├─ [632] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [249] ClockV1_2_0::epochDuration() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   └─ ← [Stop]
-    │   │   │   │   └─ ← [Return]
-    │   │   │   ├─ [561] MockERC20::balanceOf(ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211]) [staticcall]
-    │   │   │   │   └─ ← [Return] 79334992242863516789910473370 [7.933e28]
-    │   │   │   ├─ [5608] MockERC20::transferFrom(0x000000000000000000000000000000000000000d, ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], 31305350968420144662338977931 [3.13e28])
-    │   │   │   │   ├─ emit Approval(owner: 0x000000000000000000000000000000000000000d, spender: ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], value: 0)
-    │   │   │   │   ├─ emit Transfer(from: 0x000000000000000000000000000000000000000d, to: ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], value: 31305350968420144662338977931 [3.13e28])
-    │   │   │   │   └─ ← [Return] true
-    │   │   │   ├─ [561] MockERC20::balanceOf(ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211]) [staticcall]
-    │   │   │   │   └─ ← [Return] 110640343211283661452249451301 [1.106e29]
-    │   │   │   ├─ [123293] ERC1967Proxy::fallback(0x000000000000000000000000000000000000000d, 3)
-    │   │   │   │   ├─ [122907] LockV1_2_0::mint(0x000000000000000000000000000000000000000d, 3) [delegatecall]
-    │   │   │   │   │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000000, to: 0x000000000000000000000000000000000000000d, tokenId: 3)
-    │   │   │   │   │   └─ ← [Stop]
-    │   │   │   │   └─ ← [Return]
-    │   │   │   ├─ [1983] ERC1967Proxy::fallback(0x0000000000000000000000000000000000000000, 0x000000000000000000000000000000000000000d, 3, LockedBalance({ amount: 31305350968420144662338977931 [3.13e28], start: 3024000 [3.024e6] }))
-    │   │   │   │   ├─ [1579] EscrowIVotesAdapter::moveDelegateVotes(0x0000000000000000000000000000000000000000, 0x000000000000000000000000000000000000000d, 3, LockedBalance({ amount: 31305350968420144662338977931 [3.13e28], start: 3024000 [3.024e6] })) [delegatecall]
-    │   │   │   │   │   └─ ← [Stop]
-    │   │   │   │   └─ ← [Return]
-    │   │   │   ├─ emit Deposit(depositor: 0x000000000000000000000000000000000000000d, tokenId: 3, startTs: 3024000 [3.024e6], value: 31305350968420144662338977931 [3.13e28], newTotalLocked: 110640343211283661452249451301 [1.106e29])
-    │   │   │   └─ ← [Return] 3
-    │   │   └─ ← [Return] 3
-    │   ├─ [0] VM::stopPrank()
-    │   │   └─ ← [Return]
-    │   └─ ← [Return] 3
-    ├─ [2731] DelegationHandler::getActiveTokenIds() [staticcall]
-    │   └─ ← [Return] [1, 2, 3]
-    ├─ [944] ERC1967Proxy::fallback(2) [staticcall]
-    │   ├─ [558] LockV1_2_0::ownerOf(2) [delegatecall]
-    │   │   └─ ← [Return] 0x000000000000000000000000000000000000000b
-    │   └─ ← [Return] 0x000000000000000000000000000000000000000b
-    ├─ [0] console::log("withdraw", 0x000000000000000000000000000000000000000b) [staticcall]
-    │   └─ ← [Stop]
-    ├─ [439665] DelegationHandler::withdraw(53571849861701115946963119615308896352949158302289151393 [5.357e55], 315020828796873203010392971432 [3.15e29])
-    │   ├─ [0] VM::warp(3670216 [3.67e6])
-    │   │   └─ ← [Return]
-    │   ├─ [944] ERC1967Proxy::fallback(2) [staticcall]
-    │   │   ├─ [558] LockV1_2_0::ownerOf(2) [delegatecall]
-    │   │   │   └─ ← [Return] 0x000000000000000000000000000000000000000b
-    │   │   └─ ← [Return] 0x000000000000000000000000000000000000000b
-    │   ├─ [2586] ERC1967Proxy::fallback(2, 1) [staticcall]
-    │   │   ├─ [2173] LinearIncreasingCurve::tokenPointHistory(2, 1) [delegatecall]
-    │   │   │   └─ ← [Return] TokenPoint({ bias: 107602845986014723168915173 [1.076e26], checkpointTs: 3024000 [3.024e6], writtenTs: 3479196 [3.479e6], coefficients: [107602845986014723168915173045578741459556296 [1.076e44], 1698427461655038274484257431037929726 [1.698e36], 0] })
-    │   │   └─ ← [Return] TokenPoint({ bias: 107602845986014723168915173 [1.076e26], checkpointTs: 3024000 [3.024e6], writtenTs: 3479196 [3.479e6], coefficients: [107602845986014723168915173045578741459556296 [1.076e44], 1698427461655038274484257431037929726 [1.698e36], 0] })
-    │   ├─ [1014] ERC1967Proxy::fallback(0x000000000000000000000000000000000000000b) [staticcall]
-    │   │   ├─ [628] EscrowIVotesAdapter::delegates(0x000000000000000000000000000000000000000b) [delegatecall]
-    │   │   │   └─ ← [Return] 0x0000000000000000000000000000000000000000
-    │   │   └─ ← [Return] 0x0000000000000000000000000000000000000000
-    │   ├─ [1127] ERC1967Proxy::fallback(2) [staticcall]
-    │   │   ├─ [738] VotingEscrowV1_2_0::locked(2) [delegatecall]
-    │   │   │   └─ ← [Return] LockedBalance({ amount: 106829728599179196366523037 [1.068e26], start: 3024000 [3.024e6] })
-    │   │   └─ ← [Return] LockedBalance({ amount: 106829728599179196366523037 [1.068e26], start: 3024000 [3.024e6] })
-    │   ├─ [1010] ERC1967Proxy::fallback(0x0000000000000000000000000000000000000000) [staticcall]
-    │   │   ├─ [624] EscrowIVotesAdapter::latestPointIndex(0x0000000000000000000000000000000000000000) [delegatecall]
-    │   │   │   └─ ← [Return] 0
-    │   │   └─ ← [Return] 0
-    │   ├─ [1401] ERC1967Proxy::fallback(0x0000000000000000000000000000000000000000, 0) [staticcall]
-    │   │   ├─ [1006] EscrowIVotesAdapter::pointHistory(0x0000000000000000000000000000000000000000, 0) [delegatecall]
-    │   │   │   └─ ← [Return] 0, 0, 0
-    │   │   └─ ← [Return] 0, 0, 0
-    │   ├─ [0] VM::startPrank(0x000000000000000000000000000000000000000b)
-    │   │   └─ ← [Return]
-    │   ├─ [25563] ERC1967Proxy::fallback(ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], 2)
-    │   │   ├─ [25177] LockV1_2_0::approve(ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], 2) [delegatecall]
-    │   │   │   ├─ emit Approval(owner: 0x000000000000000000000000000000000000000b, approved: ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], tokenId: 2)
-    │   │   │   └─ ← [Stop]
-    │   │   └─ ← [Return]
-    │   ├─ [332098] ERC1967Proxy::fallback(2)
-    │   │   ├─ [331715] VotingEscrowV1_2_0::beginWithdrawal(2) [delegatecall]
-    │   │   │   ├─ [5558] ERC1967Proxy::fallback(2, 3670216 [3.67e6]) [staticcall]
-    │   │   │   │   ├─ [5169] LinearIncreasingCurve::votingPowerAt(2, 3670216 [3.67e6]) [delegatecall]
-    │   │   │   │   │   ├─ [632] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [249] ClockV1_2_0::epochDuration() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   └─ ← [Return] 107927279599740068580107155 [1.079e26]
-    │   │   │   │   └─ ← [Return] 107927279599740068580107155 [1.079e26]
-    │   │   │   ├─ [2586] ERC1967Proxy::fallback(2, 1) [staticcall]
-    │   │   │   │   ├─ [2173] LinearIncreasingCurve::tokenPointHistory(2, 1) [delegatecall]
-    │   │   │   │   │   └─ ← [Return] TokenPoint({ bias: 107602845986014723168915173 [1.076e26], checkpointTs: 3024000 [3.024e6], writtenTs: 3479196 [3.479e6], coefficients: [107602845986014723168915173045578741459556296 [1.076e44], 1698427461655038274484257431037929726 [1.698e36], 0] })
-    │   │   │   │   └─ ← [Return] TokenPoint({ bias: 107602845986014723168915173 [1.076e26], checkpointTs: 3024000 [3.024e6], writtenTs: 3479196 [3.479e6], coefficients: [107602845986014723168915173045578741459556296 [1.076e44], 1698427461655038274484257431037929726 [1.698e36], 0] })
-    │   │   │   ├─ [944] ERC1967Proxy::fallback(2) [staticcall]
-    │   │   │   │   ├─ [558] LockV1_2_0::ownerOf(2) [delegatecall]
-    │   │   │   │   │   └─ ← [Return] 0x000000000000000000000000000000000000000b
-    │   │   │   │   └─ ← [Return] 0x000000000000000000000000000000000000000b
-    │   │   │   ├─ [185492] ERC1967Proxy::fallback(2, LockedBalance({ amount: 106829728599179196366523037 [1.068e26], start: 3024000 [3.024e6] }), LockedBalance({ amount: 0, start: 3024000 [3.024e6] }))
-    │   │   │   │   ├─ [185088] LinearIncreasingCurve::checkpoint(2, LockedBalance({ amount: 106829728599179196366523037 [1.068e26], start: 3024000 [3.024e6] }), LockedBalance({ amount: 0, start: 3024000 [3.024e6] })) [delegatecall]
-    │   │   │   │   │   ├─ [632] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [249] ClockV1_2_0::epochDuration() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   ├─ [655] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [272] ClockV1_2_0::checkpointInterval() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 604800 [6.048e5]
-    │   │   │   │   │   │   └─ ← [Return] 604800 [6.048e5]
-    │   │   │   │   │   ├─ [632] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [249] ClockV1_2_0::epochDuration() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   ├─ [632] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [249] ClockV1_2_0::epochDuration() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   └─ ← [Stop]
-    │   │   │   │   └─ ← [Return]
-    │   │   │   ├─ [64892] ERC1967Proxy::fallback(0x000000000000000000000000000000000000000b, ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], 2)
-    │   │   │   │   ├─ [64500] LockV1_2_0::transferFrom(0x000000000000000000000000000000000000000b, ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], 2) [delegatecall]
-    │   │   │   │   │   ├─ emit Transfer(from: 0x000000000000000000000000000000000000000b, to: ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], tokenId: 2)
-    │   │   │   │   │   ├─ [6158] ERC1967Proxy::fallback(0x000000000000000000000000000000000000000b, ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], 2)
-    │   │   │   │   │   │   ├─ [5766] VotingEscrowV1_2_0::moveDelegateVotes(0x000000000000000000000000000000000000000b, ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], 2) [delegatecall]
-    │   │   │   │   │   │   │   ├─ [3983] ERC1967Proxy::fallback(0x000000000000000000000000000000000000000b, ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], 2, LockedBalance({ amount: 106829728599179196366523037 [1.068e26], start: 3024000 [3.024e6] }))
-    │   │   │   │   │   │   │   │   ├─ [3579] EscrowIVotesAdapter::moveDelegateVotes(0x000000000000000000000000000000000000000b, ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], 2, LockedBalance({ amount: 106829728599179196366523037 [1.068e26], start: 3024000 [3.024e6] })) [delegatecall]
-    │   │   │   │   │   │   │   │   │   └─ ← [Stop]
-    │   │   │   │   │   │   │   │   └─ ← [Return]
-    │   │   │   │   │   │   │   └─ ← [Stop]
-    │   │   │   │   │   │   └─ ← [Return]
-    │   │   │   │   │   └─ ← [Stop]
-    │   │   │   │   └─ ← [Return]
-    │   │   │   ├─ [59610] ERC1967Proxy::fallback(2, 0x000000000000000000000000000000000000000b)
-    │   │   │   │   ├─ [54724] ExitQueue::queueExit(2, 0x000000000000000000000000000000000000000b) [delegatecall]
-    │   │   │   │   │   ├─ [1127] ERC1967Proxy::fallback(2) [staticcall]
-    │   │   │   │   │   │   ├─ [738] VotingEscrowV1_2_0::locked(2) [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] LockedBalance({ amount: 106829728599179196366523037 [1.068e26], start: 3024000 [3.024e6] })
-    │   │   │   │   │   │   └─ ← [Return] LockedBalance({ amount: 106829728599179196366523037 [1.068e26], start: 3024000 [3.024e6] })
-    │   │   │   │   │   ├─ [799] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [416] ClockV1_2_0::epochNextCheckpointTs() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 4233600 [4.233e6]
-    │   │   │   │   │   │   └─ ← [Return] 4233600 [4.233e6]
-    │   │   │   │   │   ├─ emit ExitQueued(tokenId: 2, holder: 0x000000000000000000000000000000000000000b, exitDate: 4233600 [4.233e6])
-    │   │   │   │   │   └─ ← [Stop]
-    │   │   │   │   └─ ← [Return]
-    │   │   │   └─ ← [Stop]
-    │   │   └─ ← [Return]
-    │   ├─ [1177] ERC1967Proxy::fallback(2) [staticcall]
-    │   │   ├─ [788] ExitQueue::queue(2) [delegatecall]
-    │   │   │   └─ ← [Return] Ticket({ holder: 0x000000000000000000000000000000000000000b, exitDate: 4233600 [4.233e6] })
-    │   │   └─ ← [Return] Ticket({ holder: 0x000000000000000000000000000000000000000b, exitDate: 4233600 [4.233e6] })
-    │   ├─ [0] VM::warp(4233601 [4.233e6])
-    │   │   └─ ← [Return]
-    │   ├─ [51914] ERC1967Proxy::fallback(2)
-    │   │   ├─ [51531] VotingEscrowV1_2_0::withdraw(2) [delegatecall]
-    │   │   │   ├─ [908] ERC1967Proxy::fallback(2) [staticcall]
-    │   │   │   │   ├─ [522] ExitQueue::ticketHolder(2) [delegatecall]
-    │   │   │   │   │   └─ ← [Return] 0x000000000000000000000000000000000000000b
-    │   │   │   │   └─ ← [Return] 0x000000000000000000000000000000000000000b
-    │   │   │   ├─ [1171] ERC1967Proxy::fallback(2) [staticcall]
-    │   │   │   │   ├─ [785] ExitQueue::canExit(2) [delegatecall]
-    │   │   │   │   │   └─ ← [Return] true
-    │   │   │   │   └─ ← [Return] true
-    │   │   │   ├─ [5458] ERC1967Proxy::fallback(2)
-    │   │   │   │   ├─ [5072] ExitQueue::exit(2) [delegatecall]
-    │   │   │   │   │   ├─ emit Exit(tokenId: 2, fee: 0)
-    │   │   │   │   │   └─ ← [Return] 0
-    │   │   │   │   └─ ← [Return] 0
-    │   │   │   ├─ [10242] ERC1967Proxy::fallback(2)
-    │   │   │   │   ├─ [9859] LockV1_2_0::burn(2) [delegatecall]
-    │   │   │   │   │   ├─ emit Transfer(from: ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], to: 0x0000000000000000000000000000000000000000, tokenId: 2)
-    │   │   │   │   │   └─ ← [Stop]
-    │   │   │   │   └─ ← [Return]
-    │   │   │   ├─ [22934] MockERC20::transfer(0x000000000000000000000000000000000000000b, 106829728599179196366523037 [1.068e26])
-    │   │   │   │   ├─ emit Transfer(from: ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], to: 0x000000000000000000000000000000000000000b, value: 106829728599179196366523037 [1.068e26])
-    │   │   │   │   └─ ← [Return] true
-    │   │   │   ├─ emit Withdraw(depositor: 0x000000000000000000000000000000000000000b, tokenId: 2, value: 106829728599179196366523037 [1.068e26], ts: 4233601 [4.233e6], newTotalLocked: 110533513482684482255882928264 [1.105e29])
-    │   │   │   └─ ← [Stop]
-    │   │   └─ ← [Return]
-    │   ├─ [0] VM::stopPrank()
-    │   │   └─ ← [Return]
-    │   └─ ← [Stop]
-    ├─ [711604] DelegationHandler::createLock(814003234376095171224 [8.14e20], 4359705986 [4.359e9], 69781429156575956513815389873623725094172 [6.978e40])
-    │   ├─ [0] VM::warp(5811565 [5.811e6])
-    │   │   └─ ← [Return]
-    │   ├─ [769] ERC1967Proxy::fallback() [staticcall]
-    │   │   ├─ [386] VotingEscrowV1_2_0::minDeposit() [delegatecall]
-    │   │   │   └─ ← [Return] 1
-    │   │   └─ ← [Return] 1
-    │   ├─ [1014] ERC1967Proxy::fallback(PointEvaluation: [0x000000000000000000000000000000000000000A]) [staticcall]
-    │   │   ├─ [628] EscrowIVotesAdapter::delegates(PointEvaluation: [0x000000000000000000000000000000000000000A]) [delegatecall]
-    │   │   │   └─ ← [Return] 0x0000000000000000000000000000000000000000
-    │   │   └─ ← [Return] 0x0000000000000000000000000000000000000000
-    │   ├─ [1010] ERC1967Proxy::fallback(0x0000000000000000000000000000000000000000) [staticcall]
-    │   │   ├─ [624] EscrowIVotesAdapter::latestPointIndex(0x0000000000000000000000000000000000000000) [delegatecall]
-    │   │   │   └─ ← [Return] 0
-    │   │   └─ ← [Return] 0
-    │   ├─ [1401] ERC1967Proxy::fallback(0x0000000000000000000000000000000000000000, 0) [staticcall]
-    │   │   ├─ [1006] EscrowIVotesAdapter::pointHistory(0x0000000000000000000000000000000000000000, 0) [delegatecall]
-    │   │   │   └─ ← [Return] 0, 0, 0
-    │   │   └─ ← [Return] 0, 0, 0
-    │   ├─ [22692] MockERC20::mint(PointEvaluation: [0x000000000000000000000000000000000000000A], 4359705986 [4.359e9])
-    │   │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000000, to: PointEvaluation: [0x000000000000000000000000000000000000000A], value: 4359705986 [4.359e9])
-    │   │   └─ ← [Stop]
-    │   ├─ [0] VM::startPrank(PointEvaluation: [0x000000000000000000000000000000000000000A])
-    │   │   └─ ← [Return]
-    │   ├─ [22503] MockERC20::approve(ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], 4359705986 [4.359e9])
-    │   │   ├─ emit Approval(owner: PointEvaluation: [0x000000000000000000000000000000000000000A], spender: ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], value: 4359705986 [4.359e9])
-    │   │   └─ ← [Return] true
-    │   ├─ [565970] ERC1967Proxy::fallback(4359705986 [4.359e9])
-    │   │   ├─ [565584] VotingEscrowV1_2_0::createLock(4359705986 [4.359e9]) [delegatecall]
-    │   │   │   ├─ [800] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   ├─ [417] ClockV1_2_0::epochPrevCheckpointTs() [delegatecall]
-    │   │   │   │   │   └─ ← [Return] 5443200 [5.443e6]
-    │   │   │   │   └─ ← [Return] 5443200 [5.443e6]
-    │   │   │   ├─ [404671] ERC1967Proxy::fallback(4, LockedBalance({ amount: 0, start: 0 }), LockedBalance({ amount: 4359705986 [4.359e9], start: 5443200 [5.443e6] }))
-    │   │   │   │   ├─ [404267] LinearIncreasingCurve::checkpoint(4, LockedBalance({ amount: 0, start: 0 }), LockedBalance({ amount: 4359705986 [4.359e9], start: 5443200 [5.443e6] })) [delegatecall]
-    │   │   │   │   │   ├─ [632] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [249] ClockV1_2_0::epochDuration() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   ├─ [655] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [272] ClockV1_2_0::checkpointInterval() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 604800 [6.048e5]
-    │   │   │   │   │   │   └─ ← [Return] 604800 [6.048e5]
-    │   │   │   │   │   ├─ [632] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [249] ClockV1_2_0::epochDuration() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   └─ ← [Stop]
-    │   │   │   │   └─ ← [Return]
-    │   │   │   ├─ [561] MockERC20::balanceOf(ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211]) [staticcall]
-    │   │   │   │   └─ ← [Return] 110533513482684482255882928264 [1.105e29]
-    │   │   │   ├─ [5608] MockERC20::transferFrom(PointEvaluation: [0x000000000000000000000000000000000000000A], ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], 4359705986 [4.359e9])
-    │   │   │   │   ├─ emit Approval(owner: PointEvaluation: [0x000000000000000000000000000000000000000A], spender: ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], value: 0)
-    │   │   │   │   ├─ emit Transfer(from: PointEvaluation: [0x000000000000000000000000000000000000000A], to: ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], value: 4359705986 [4.359e9])
-    │   │   │   │   └─ ← [Return] true
-    │   │   │   ├─ [561] MockERC20::balanceOf(ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211]) [staticcall]
-    │   │   │   │   └─ ← [Return] 110533513482684482260242634250 [1.105e29]
-    │   │   │   ├─ [116693] ERC1967Proxy::fallback(PointEvaluation: [0x000000000000000000000000000000000000000A], 4)
-    │   │   │   │   ├─ [116307] LockV1_2_0::mint(PointEvaluation: [0x000000000000000000000000000000000000000A], 4) [delegatecall]
-    │   │   │   │   │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000000, to: PointEvaluation: [0x000000000000000000000000000000000000000A], tokenId: 4)
-    │   │   │   │   │   └─ ← [Stop]
-    │   │   │   │   └─ ← [Return]
-    │   │   │   ├─ [1983] ERC1967Proxy::fallback(0x0000000000000000000000000000000000000000, PointEvaluation: [0x000000000000000000000000000000000000000A], 4, LockedBalance({ amount: 4359705986 [4.359e9], start: 5443200 [5.443e6] }))
-    │   │   │   │   ├─ [1579] EscrowIVotesAdapter::moveDelegateVotes(0x0000000000000000000000000000000000000000, PointEvaluation: [0x000000000000000000000000000000000000000A], 4, LockedBalance({ amount: 4359705986 [4.359e9], start: 5443200 [5.443e6] })) [delegatecall]
-    │   │   │   │   │   └─ ← [Stop]
-    │   │   │   │   └─ ← [Return]
-    │   │   │   ├─ emit Deposit(depositor: PointEvaluation: [0x000000000000000000000000000000000000000A], tokenId: 4, startTs: 5443200 [5.443e6], value: 4359705986 [4.359e9], newTotalLocked: 110533513482684482260242634250 [1.105e29])
-    │   │   │   └─ ← [Return] 4
-    │   │   └─ ← [Return] 4
-    │   ├─ [0] VM::stopPrank()
-    │   │   └─ ← [Return]
-    │   └─ ← [Return] 4
-    ├─ [2411] DelegationHandler::getActors() [staticcall]
-    │   └─ ← [Return] [0x000000000000000000000000000000000000000A, 0x000000000000000000000000000000000000000b, 0x000000000000000000000000000000000000000C, 0x000000000000000000000000000000000000000d, 0x000000000000000000000000000000000000000E, 0x000000000000000000000000000000000000000F]
-    ├─ [0] console::log("createLock", PointEvaluation: [0x000000000000000000000000000000000000000A]) [staticcall]
-    │   └─ ← [Stop]
-    ├─ [527824] DelegationHandler::split(22018 [2.201e4], 15385 [1.538e4], 8, 20997 [2.099e4])
-    │   ├─ [0] VM::warp(5833583 [5.833e6])
-    │   │   └─ ← [Return]
-    │   ├─ [1014] ERC1967Proxy::fallback(0x000000000000000000000000000000000000000d) [staticcall]
-    │   │   ├─ [628] EscrowIVotesAdapter::delegates(0x000000000000000000000000000000000000000d) [delegatecall]
-    │   │   │   └─ ← [Return] 0x0000000000000000000000000000000000000000
-    │   │   └─ ← [Return] 0x0000000000000000000000000000000000000000
-    │   ├─ [1010] ERC1967Proxy::fallback(0x0000000000000000000000000000000000000000) [staticcall]
-    │   │   ├─ [624] EscrowIVotesAdapter::latestPointIndex(0x0000000000000000000000000000000000000000) [delegatecall]
-    │   │   │   └─ ← [Return] 0
-    │   │   └─ ← [Return] 0
-    │   ├─ [1401] ERC1967Proxy::fallback(0x0000000000000000000000000000000000000000, 0) [staticcall]
-    │   │   ├─ [1006] EscrowIVotesAdapter::pointHistory(0x0000000000000000000000000000000000000000, 0) [delegatecall]
-    │   │   │   └─ ← [Return] 0, 0, 0
-    │   │   └─ ← [Return] 0, 0, 0
-    │   ├─ [1127] ERC1967Proxy::fallback(3) [staticcall]
-    │   │   ├─ [738] VotingEscrowV1_2_0::locked(3) [delegatecall]
-    │   │   │   └─ ← [Return] LockedBalance({ amount: 31305350968420144662338977931 [3.13e28], start: 3024000 [3.024e6] })
-    │   │   └─ ← [Return] LockedBalance({ amount: 31305350968420144662338977931 [3.13e28], start: 3024000 [3.024e6] })
-    │   ├─ [769] ERC1967Proxy::fallback() [staticcall]
-    │   │   ├─ [386] VotingEscrowV1_2_0::minDeposit() [delegatecall]
-    │   │   │   └─ ← [Return] 1
-    │   │   └─ ← [Return] 1
-    │   ├─ [2966] ERC1967Proxy::fallback(3) [staticcall]
-    │   │   ├─ [2580] EscrowIVotesAdapter::tokenIsDelegated(3) [delegatecall]
-    │   │   │   └─ ← [Return] false
-    │   │   └─ ← [Return] false
-    │   ├─ [0] VM::prank(0x000000000000000000000000000000000000000d)
-    │   │   └─ ← [Return]
-    │   ├─ [420435] ERC1967Proxy::fallback(3, 8)
-    │   │   ├─ [420046] VotingEscrowV1_2_0::split(3, 8) [delegatecall]
-    │   │   │   ├─ [944] ERC1967Proxy::fallback(3) [staticcall]
-    │   │   │   │   ├─ [558] LockV1_2_0::ownerOf(3) [delegatecall]
-    │   │   │   │   │   └─ ← [Return] 0x000000000000000000000000000000000000000d
-    │   │   │   │   └─ ← [Return] 0x000000000000000000000000000000000000000d
-    │   │   │   ├─ [1243] ERC1967Proxy::fallback(0x000000000000000000000000000000000000000d, 3) [staticcall]
-    │   │   │   │   ├─ [854] LockV1_2_0::isApprovedOrOwner(0x000000000000000000000000000000000000000d, 3) [delegatecall]
-    │   │   │   │   │   └─ ← [Return] true
-    │   │   │   │   └─ ← [Return] true
-    │   │   │   ├─ [155730] ERC1967Proxy::fallback(3, LockedBalance({ amount: 31305350968420144662338977931 [3.13e28], start: 3024000 [3.024e6] }), LockedBalance({ amount: 31305350968420144662338977923 [3.13e28], start: 3024000 [3.024e6] }))
-    │   │   │   │   ├─ [155326] LinearIncreasingCurve::checkpoint(3, LockedBalance({ amount: 31305350968420144662338977931 [3.13e28], start: 3024000 [3.024e6] }), LockedBalance({ amount: 31305350968420144662338977923 [3.13e28], start: 3024000 [3.024e6] })) [delegatecall]
-    │   │   │   │   │   ├─ [632] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [249] ClockV1_2_0::epochDuration() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   ├─ [655] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [272] ClockV1_2_0::checkpointInterval() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 604800 [6.048e5]
-    │   │   │   │   │   │   └─ ← [Return] 604800 [6.048e5]
-    │   │   │   │   │   ├─ [632] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [249] ClockV1_2_0::epochDuration() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   ├─ [632] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [249] ClockV1_2_0::epochDuration() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   └─ ← [Stop]
-    │   │   │   │   └─ ← [Return]
-    │   │   │   ├─ [108175] ERC1967Proxy::fallback(5, LockedBalance({ amount: 0, start: 0 }), LockedBalance({ amount: 8, start: 3024000 [3.024e6] }))
-    │   │   │   │   ├─ [107771] LinearIncreasingCurve::checkpoint(5, LockedBalance({ amount: 0, start: 0 }), LockedBalance({ amount: 8, start: 3024000 [3.024e6] })) [delegatecall]
-    │   │   │   │   │   ├─ [632] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [249] ClockV1_2_0::epochDuration() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   ├─ [655] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [272] ClockV1_2_0::checkpointInterval() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 604800 [6.048e5]
-    │   │   │   │   │   │   └─ ← [Return] 604800 [6.048e5]
-    │   │   │   │   │   ├─ [632] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [249] ClockV1_2_0::epochDuration() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   └─ ← [Stop]
-    │   │   │   │   └─ ← [Return]
-    │   │   │   ├─ [118793] ERC1967Proxy::fallback(0x000000000000000000000000000000000000000d, 5)
-    │   │   │   │   ├─ [118407] LockV1_2_0::mint(0x000000000000000000000000000000000000000d, 5) [delegatecall]
-    │   │   │   │   │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000000, to: 0x000000000000000000000000000000000000000d, tokenId: 5)
-    │   │   │   │   │   └─ ← [Stop]
-    │   │   │   │   └─ ← [Return]
-    │   │   │   ├─ [1807] ERC1967Proxy::fallback(Blax({ account: 0x000000000000000000000000000000000000000d, tokenId: 3, locked: LockedBalance({ amount: 0, start: 0 }) }), Blax({ account: 0x000000000000000000000000000000000000000d, tokenId: 5, locked: LockedBalance({ amount: 0, start: 0 }) }))
-    │   │   │   │   ├─ [1385] EscrowIVotesAdapter::splitDelegateVotes(Blax({ account: 0x000000000000000000000000000000000000000d, tokenId: 3, locked: LockedBalance({ amount: 0, start: 0 }) }), Blax({ account: 0x000000000000000000000000000000000000000d, tokenId: 5, locked: LockedBalance({ amount: 0, start: 0 }) })) [delegatecall]
-    │   │   │   │   │   └─ ← [Stop]
-    │   │   │   │   └─ ← [Return]
-    │   │   │   ├─ emit Split(_from: 3, newTokenId: 5, _sender: 0x000000000000000000000000000000000000000d, _splitAmount1: 31305350968420144662338977923 [3.13e28], _splitAmount2: 8)
-    │   │   │   └─ ← [Return] 5
-    │   │   └─ ← [Return] 5
-    │   └─ ← [Stop]
-    ├─ [2411] DelegationHandler::getActors() [staticcall]
-    │   └─ ← [Return] [0x000000000000000000000000000000000000000A, 0x000000000000000000000000000000000000000b, 0x000000000000000000000000000000000000000C, 0x000000000000000000000000000000000000000d, 0x000000000000000000000000000000000000000E, 0x000000000000000000000000000000000000000F]
-    ├─ [0] console::log("split", 0x000000000000000000000000000000000000000d) [staticcall]
-    │   └─ ← [Stop]
-    ├─ [754904] DelegationHandler::withdraw(10, 3)
-    │   ├─ [0] VM::warp(9289474 [9.289e6])
-    │   │   └─ ← [Return]
-    │   ├─ [944] ERC1967Proxy::fallback(5) [staticcall]
-    │   │   ├─ [558] LockV1_2_0::ownerOf(5) [delegatecall]
-    │   │   │   └─ ← [Return] 0x000000000000000000000000000000000000000d
-    │   │   └─ ← [Return] 0x000000000000000000000000000000000000000d
-    │   ├─ [2586] ERC1967Proxy::fallback(5, 1) [staticcall]
-    │   │   ├─ [2173] LinearIncreasingCurve::tokenPointHistory(5, 1) [delegatecall]
-    │   │   │   └─ ← [Return] TokenPoint({ bias: 8, checkpointTs: 3024000 [3.024e6], writtenTs: 5833583 [5.833e6], coefficients: [8357344195146504272 [8.357e18], 127187627184 [1.271e11], 0] })
-    │   │   └─ ← [Return] TokenPoint({ bias: 8, checkpointTs: 3024000 [3.024e6], writtenTs: 5833583 [5.833e6], coefficients: [8357344195146504272 [8.357e18], 127187627184 [1.271e11], 0] })
-    │   ├─ [1014] ERC1967Proxy::fallback(0x000000000000000000000000000000000000000d) [staticcall]
-    │   │   ├─ [628] EscrowIVotesAdapter::delegates(0x000000000000000000000000000000000000000d) [delegatecall]
-    │   │   │   └─ ← [Return] 0x0000000000000000000000000000000000000000
-    │   │   └─ ← [Return] 0x0000000000000000000000000000000000000000
-    │   ├─ [1127] ERC1967Proxy::fallback(5) [staticcall]
-    │   │   ├─ [738] VotingEscrowV1_2_0::locked(5) [delegatecall]
-    │   │   │   └─ ← [Return] LockedBalance({ amount: 8, start: 3024000 [3.024e6] })
-    │   │   └─ ← [Return] LockedBalance({ amount: 8, start: 3024000 [3.024e6] })
-    │   ├─ [1010] ERC1967Proxy::fallback(0x0000000000000000000000000000000000000000) [staticcall]
-    │   │   ├─ [624] EscrowIVotesAdapter::latestPointIndex(0x0000000000000000000000000000000000000000) [delegatecall]
-    │   │   │   └─ ← [Return] 0
-    │   │   └─ ← [Return] 0
-    │   ├─ [1401] ERC1967Proxy::fallback(0x0000000000000000000000000000000000000000, 0) [staticcall]
-    │   │   ├─ [1006] EscrowIVotesAdapter::pointHistory(0x0000000000000000000000000000000000000000, 0) [delegatecall]
-    │   │   │   └─ ← [Return] 0, 0, 0
-    │   │   └─ ← [Return] 0, 0, 0
-    │   ├─ [0] VM::startPrank(0x000000000000000000000000000000000000000d)
-    │   │   └─ ← [Return]
-    │   ├─ [25563] ERC1967Proxy::fallback(ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], 5)
-    │   │   ├─ [25177] LockV1_2_0::approve(ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], 5) [delegatecall]
-    │   │   │   ├─ emit Approval(owner: 0x000000000000000000000000000000000000000d, approved: ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], tokenId: 5)
-    │   │   │   └─ ← [Stop]
-    │   │   └─ ← [Return]
-    │   ├─ [656814] ERC1967Proxy::fallback(5)
-    │   │   ├─ [656431] VotingEscrowV1_2_0::beginWithdrawal(5) [delegatecall]
-    │   │   │   ├─ [5558] ERC1967Proxy::fallback(5, 9289474 [9.289e6]) [staticcall]
-    │   │   │   │   ├─ [5169] LinearIncreasingCurve::votingPowerAt(5, 9289474 [9.289e6]) [delegatecall]
-    │   │   │   │   │   ├─ [632] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [249] ClockV1_2_0::epochDuration() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   └─ ← [Return] 8
-    │   │   │   │   └─ ← [Return] 8
-    │   │   │   ├─ [2586] ERC1967Proxy::fallback(5, 1) [staticcall]
-    │   │   │   │   ├─ [2173] LinearIncreasingCurve::tokenPointHistory(5, 1) [delegatecall]
-    │   │   │   │   │   └─ ← [Return] TokenPoint({ bias: 8, checkpointTs: 3024000 [3.024e6], writtenTs: 5833583 [5.833e6], coefficients: [8357344195146504272 [8.357e18], 127187627184 [1.271e11], 0] })
-    │   │   │   │   └─ ← [Return] TokenPoint({ bias: 8, checkpointTs: 3024000 [3.024e6], writtenTs: 5833583 [5.833e6], coefficients: [8357344195146504272 [8.357e18], 127187627184 [1.271e11], 0] })
-    │   │   │   ├─ [944] ERC1967Proxy::fallback(5) [staticcall]
-    │   │   │   │   ├─ [558] LockV1_2_0::ownerOf(5) [delegatecall]
-    │   │   │   │   │   └─ ← [Return] 0x000000000000000000000000000000000000000d
-    │   │   │   │   └─ ← [Return] 0x000000000000000000000000000000000000000d
-    │   │   │   ├─ [533302] ERC1967Proxy::fallback(5, LockedBalance({ amount: 8, start: 3024000 [3.024e6] }), LockedBalance({ amount: 0, start: 3024000 [3.024e6] }))
-    │   │   │   │   ├─ [532898] LinearIncreasingCurve::checkpoint(5, LockedBalance({ amount: 8, start: 3024000 [3.024e6] }), LockedBalance({ amount: 0, start: 3024000 [3.024e6] })) [delegatecall]
-    │   │   │   │   │   ├─ [632] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [249] ClockV1_2_0::epochDuration() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   ├─ [655] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [272] ClockV1_2_0::checkpointInterval() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 604800 [6.048e5]
-    │   │   │   │   │   │   └─ ← [Return] 604800 [6.048e5]
-    │   │   │   │   │   ├─ [632] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [249] ClockV1_2_0::epochDuration() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   ├─ [632] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [249] ClockV1_2_0::epochDuration() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   └─ ← [Stop]
-    │   │   │   │   └─ ← [Return]
-    │   │   │   ├─ [54792] ERC1967Proxy::fallback(0x000000000000000000000000000000000000000d, ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], 5)
-    │   │   │   │   ├─ [54400] LockV1_2_0::transferFrom(0x000000000000000000000000000000000000000d, ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], 5) [delegatecall]
-    │   │   │   │   │   ├─ emit Transfer(from: 0x000000000000000000000000000000000000000d, to: ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], tokenId: 5)
-    │   │   │   │   │   ├─ [4158] ERC1967Proxy::fallback(0x000000000000000000000000000000000000000d, ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], 5)
-    │   │   │   │   │   │   ├─ [3766] VotingEscrowV1_2_0::moveDelegateVotes(0x000000000000000000000000000000000000000d, ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], 5) [delegatecall]
-    │   │   │   │   │   │   │   ├─ [1983] ERC1967Proxy::fallback(0x000000000000000000000000000000000000000d, ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], 5, LockedBalance({ amount: 8, start: 3024000 [3.024e6] }))
-    │   │   │   │   │   │   │   │   ├─ [1579] EscrowIVotesAdapter::moveDelegateVotes(0x000000000000000000000000000000000000000d, ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], 5, LockedBalance({ amount: 8, start: 3024000 [3.024e6] })) [delegatecall]
-    │   │   │   │   │   │   │   │   │   └─ ← [Stop]
-    │   │   │   │   │   │   │   │   └─ ← [Return]
-    │   │   │   │   │   │   │   └─ ← [Stop]
-    │   │   │   │   │   │   └─ ← [Return]
-    │   │   │   │   │   └─ ← [Stop]
-    │   │   │   │   └─ ← [Return]
-    │   │   │   ├─ [51116] ERC1967Proxy::fallback(5, 0x000000000000000000000000000000000000000d)
-    │   │   │   │   ├─ [50730] ExitQueue::queueExit(5, 0x000000000000000000000000000000000000000d) [delegatecall]
-    │   │   │   │   │   ├─ [1127] ERC1967Proxy::fallback(5) [staticcall]
-    │   │   │   │   │   │   ├─ [738] VotingEscrowV1_2_0::locked(5) [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] LockedBalance({ amount: 8, start: 3024000 [3.024e6] })
-    │   │   │   │   │   │   └─ ← [Return] LockedBalance({ amount: 8, start: 3024000 [3.024e6] })
-    │   │   │   │   │   ├─ [805] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [422] ClockV1_2_0::epochNextCheckpointTs() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 9676800 [9.676e6]
-    │   │   │   │   │   │   └─ ← [Return] 9676800 [9.676e6]
-    │   │   │   │   │   ├─ emit ExitQueued(tokenId: 5, holder: 0x000000000000000000000000000000000000000d, exitDate: 9676800 [9.676e6])
-    │   │   │   │   │   └─ ← [Stop]
-    │   │   │   │   └─ ← [Return]
-    │   │   │   └─ ← [Stop]
-    │   │   └─ ← [Return]
-    │   ├─ [1177] ERC1967Proxy::fallback(5) [staticcall]
-    │   │   ├─ [788] ExitQueue::queue(5) [delegatecall]
-    │   │   │   └─ ← [Return] Ticket({ holder: 0x000000000000000000000000000000000000000d, exitDate: 9676800 [9.676e6] })
-    │   │   └─ ← [Return] Ticket({ holder: 0x000000000000000000000000000000000000000d, exitDate: 9676800 [9.676e6] })
-    │   ├─ [0] VM::warp(9676801 [9.676e6])
-    │   │   └─ ← [Return]
-    │   ├─ [49914] ERC1967Proxy::fallback(5)
-    │   │   ├─ [49531] VotingEscrowV1_2_0::withdraw(5) [delegatecall]
-    │   │   │   ├─ [908] ERC1967Proxy::fallback(5) [staticcall]
-    │   │   │   │   ├─ [522] ExitQueue::ticketHolder(5) [delegatecall]
-    │   │   │   │   │   └─ ← [Return] 0x000000000000000000000000000000000000000d
-    │   │   │   │   └─ ← [Return] 0x000000000000000000000000000000000000000d
-    │   │   │   ├─ [1171] ERC1967Proxy::fallback(5) [staticcall]
-    │   │   │   │   ├─ [785] ExitQueue::canExit(5) [delegatecall]
-    │   │   │   │   │   └─ ← [Return] true
-    │   │   │   │   └─ ← [Return] true
-    │   │   │   ├─ [3458] ERC1967Proxy::fallback(5)
-    │   │   │   │   ├─ [3072] ExitQueue::exit(5) [delegatecall]
-    │   │   │   │   │   ├─ emit Exit(tokenId: 5, fee: 0)
-    │   │   │   │   │   └─ ← [Return] 0
-    │   │   │   │   └─ ← [Return] 0
-    │   │   │   ├─ [10242] ERC1967Proxy::fallback(5)
-    │   │   │   │   ├─ [9859] LockV1_2_0::burn(5) [delegatecall]
-    │   │   │   │   │   ├─ emit Transfer(from: ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], to: 0x0000000000000000000000000000000000000000, tokenId: 5)
-    │   │   │   │   │   └─ ← [Stop]
-    │   │   │   │   └─ ← [Return]
-    │   │   │   ├─ [22934] MockERC20::transfer(0x000000000000000000000000000000000000000d, 8)
-    │   │   │   │   ├─ emit Transfer(from: ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], to: 0x000000000000000000000000000000000000000d, value: 8)
-    │   │   │   │   └─ ← [Return] true
-    │   │   │   ├─ emit Withdraw(depositor: 0x000000000000000000000000000000000000000d, tokenId: 5, value: 8, ts: 9676801 [9.676e6], newTotalLocked: 110533513482684482260242634242 [1.105e29])
-    │   │   │   └─ ← [Stop]
-    │   │   └─ ← [Return]
-    │   ├─ [0] VM::stopPrank()
-    │   │   └─ ← [Return]
-    │   └─ ← [Stop]
-    ├─ [2731] DelegationHandler::getActiveTokenIds() [staticcall]
-    │   └─ ← [Return] [1, 3, 4]
-    ├─ [944] ERC1967Proxy::fallback(1) [staticcall]
-    │   ├─ [558] LockV1_2_0::ownerOf(1) [delegatecall]
-    │   │   └─ ← [Return] PointEvaluation: [0x000000000000000000000000000000000000000A]
-    │   └─ ← [Return] PointEvaluation: [0x000000000000000000000000000000000000000A]
-    ├─ [0] console::log("withdraw", PointEvaluation: [0x000000000000000000000000000000000000000A]) [staticcall]
-    │   └─ ← [Stop]
-    ├─ [618629] DelegationHandler::createLock(18247654858686891684199823131 [1.824e28], 2457329539800270165647546567856376983159222771120584492960 [2.457e57], 1192990909004989264263193830694214977676910743566563 [1.192e51])
-    │   ├─ [0] VM::warp(10678120 [1.067e7])
-    │   │   └─ ← [Return]
-    │   ├─ [769] ERC1967Proxy::fallback() [staticcall]
-    │   │   ├─ [386] VotingEscrowV1_2_0::minDeposit() [delegatecall]
-    │   │   │   └─ ← [Return] 1
-    │   │   └─ ← [Return] 1
-    │   ├─ [1014] ERC1967Proxy::fallback(0x000000000000000000000000000000000000000d) [staticcall]
-    │   │   ├─ [628] EscrowIVotesAdapter::delegates(0x000000000000000000000000000000000000000d) [delegatecall]
-    │   │   │   └─ ← [Return] 0x0000000000000000000000000000000000000000
-    │   │   └─ ← [Return] 0x0000000000000000000000000000000000000000
-    │   ├─ [1010] ERC1967Proxy::fallback(0x0000000000000000000000000000000000000000) [staticcall]
-    │   │   ├─ [624] EscrowIVotesAdapter::latestPointIndex(0x0000000000000000000000000000000000000000) [delegatecall]
-    │   │   │   └─ ← [Return] 0
-    │   │   └─ ← [Return] 0
-    │   ├─ [1401] ERC1967Proxy::fallback(0x0000000000000000000000000000000000000000, 0) [staticcall]
-    │   │   ├─ [1006] EscrowIVotesAdapter::pointHistory(0x0000000000000000000000000000000000000000, 0) [delegatecall]
-    │   │   │   └─ ← [Return] 0, 0, 0
-    │   │   └─ ← [Return] 0, 0, 0
-    │   ├─ [2792] MockERC20::mint(0x000000000000000000000000000000000000000d, 40793622672920073723371694995 [4.079e28])
-    │   │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000000, to: 0x000000000000000000000000000000000000000d, value: 40793622672920073723371694995 [4.079e28])
-    │   │   └─ ← [Stop]
-    │   ├─ [0] VM::startPrank(0x000000000000000000000000000000000000000d)
-    │   │   └─ ← [Return]
-    │   ├─ [22503] MockERC20::approve(ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], 40793622672920073723371694995 [4.079e28])
-    │   │   ├─ emit Approval(owner: 0x000000000000000000000000000000000000000d, spender: ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], value: 40793622672920073723371694995 [4.079e28])
-    │   │   └─ ← [Return] true
-    │   ├─ [494308] ERC1967Proxy::fallback(40793622672920073723371694995 [4.079e28])
-    │   │   ├─ [493922] VotingEscrowV1_2_0::createLock(40793622672920073723371694995 [4.079e28]) [delegatecall]
-    │   │   │   ├─ [800] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   ├─ [417] ClockV1_2_0::epochPrevCheckpointTs() [delegatecall]
-    │   │   │   │   │   └─ ← [Return] 10281600 [1.028e7]
-    │   │   │   │   └─ ← [Return] 10281600 [1.028e7]
-    │   │   │   ├─ [335109] ERC1967Proxy::fallback(6, LockedBalance({ amount: 0, start: 0 }), LockedBalance({ amount: 40793622672920073723371694995 [4.079e28], start: 10281600 [1.028e7] }))
-    │   │   │   │   ├─ [334705] LinearIncreasingCurve::checkpoint(6, LockedBalance({ amount: 0, start: 0 }), LockedBalance({ amount: 40793622672920073723371694995 [4.079e28], start: 10281600 [1.028e7] })) [delegatecall]
-    │   │   │   │   │   ├─ [632] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [249] ClockV1_2_0::epochDuration() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   ├─ [655] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [272] ClockV1_2_0::checkpointInterval() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 604800 [6.048e5]
-    │   │   │   │   │   │   └─ ← [Return] 604800 [6.048e5]
-    │   │   │   │   │   ├─ [632] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [249] ClockV1_2_0::epochDuration() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   └─ ← [Stop]
-    │   │   │   │   └─ ← [Return]
-    │   │   │   ├─ [561] MockERC20::balanceOf(ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211]) [staticcall]
-    │   │   │   │   └─ ← [Return] 110533513482684482260242634242 [1.105e29]
-    │   │   │   ├─ [5608] MockERC20::transferFrom(0x000000000000000000000000000000000000000d, ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], 40793622672920073723371694995 [4.079e28])
-    │   │   │   │   ├─ emit Approval(owner: 0x000000000000000000000000000000000000000d, spender: ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], value: 0)
-    │   │   │   │   ├─ emit Transfer(from: 0x000000000000000000000000000000000000000d, to: ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], value: 40793622672920073723371694995 [4.079e28])
-    │   │   │   │   └─ ← [Return] true
-    │   │   │   ├─ [561] MockERC20::balanceOf(ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211]) [staticcall]
-    │   │   │   │   └─ ← [Return] 151327136155604555983614329237 [1.513e29]
-    │   │   │   ├─ [114593] ERC1967Proxy::fallback(0x000000000000000000000000000000000000000d, 6)
-    │   │   │   │   ├─ [114207] LockV1_2_0::mint(0x000000000000000000000000000000000000000d, 6) [delegatecall]
-    │   │   │   │   │   ├─ emit Transfer(from: 0x0000000000000000000000000000000000000000, to: 0x000000000000000000000000000000000000000d, tokenId: 6)
-    │   │   │   │   │   └─ ← [Stop]
-    │   │   │   │   └─ ← [Return]
-    │   │   │   ├─ [1983] ERC1967Proxy::fallback(0x0000000000000000000000000000000000000000, 0x000000000000000000000000000000000000000d, 6, LockedBalance({ amount: 40793622672920073723371694995 [4.079e28], start: 10281600 [1.028e7] }))
-    │   │   │   │   ├─ [1579] EscrowIVotesAdapter::moveDelegateVotes(0x0000000000000000000000000000000000000000, 0x000000000000000000000000000000000000000d, 6, LockedBalance({ amount: 40793622672920073723371694995 [4.079e28], start: 10281600 [1.028e7] })) [delegatecall]
-    │   │   │   │   │   └─ ← [Stop]
-    │   │   │   │   └─ ← [Return]
-    │   │   │   ├─ emit Deposit(depositor: 0x000000000000000000000000000000000000000d, tokenId: 6, startTs: 10281600 [1.028e7], value: 40793622672920073723371694995 [4.079e28], newTotalLocked: 151327136155604555983614329237 [1.513e29])
-    │   │   │   └─ ← [Return] 6
-    │   │   └─ ← [Return] 6
-    │   ├─ [0] VM::stopPrank()
-    │   │   └─ ← [Return]
-    │   └─ ← [Return] 6
-    ├─ [2411] DelegationHandler::getActors() [staticcall]
-    │   └─ ← [Return] [0x000000000000000000000000000000000000000A, 0x000000000000000000000000000000000000000b, 0x000000000000000000000000000000000000000C, 0x000000000000000000000000000000000000000d, 0x000000000000000000000000000000000000000E, 0x000000000000000000000000000000000000000F]
-    ├─ [0] console::log("createLock", 0x000000000000000000000000000000000000000d) [staticcall]
-    │   └─ ← [Stop]
-    ├─ [30403] DelegationHandler::setDelegateAddress(1542102420108666751221076479276 [1.542e30], 65159 [6.515e4])
-    │   ├─ [2967] ERC1967Proxy::fallback(PointEvaluation: [0x000000000000000000000000000000000000000A]) [staticcall]
-    │   │   ├─ [2581] EscrowIVotesAdapter::numberOfDelegatedTokens(PointEvaluation: [0x000000000000000000000000000000000000000A]) [delegatecall]
-    │   │   │   └─ ← [Return] 0
-    │   │   └─ ← [Return] 0
-    │   ├─ [0] VM::prank(PointEvaluation: [0x000000000000000000000000000000000000000A])
-    │   │   └─ ← [Return]
-    │   ├─ [23240] ERC1967Proxy::fallback(0x000000000000000000000000000000000000000F)
-    │   │   ├─ [22857] EscrowIVotesAdapter::setDelegateAddress(0x000000000000000000000000000000000000000F) [delegatecall]
-    │   │   │   ├─ emit DelegateChanged(delegator: PointEvaluation: [0x000000000000000000000000000000000000000A], fromDelegate: 0x0000000000000000000000000000000000000000, toDelegate: 0x000000000000000000000000000000000000000F)
-    │   │   │   └─ ← [Stop]
-    │   │   └─ ← [Return]
-    │   └─ ← [Stop]
-    ├─ [2411] DelegationHandler::getActors() [staticcall]
-    │   └─ ← [Return] [0x000000000000000000000000000000000000000A, 0x000000000000000000000000000000000000000b, 0x000000000000000000000000000000000000000C, 0x000000000000000000000000000000000000000d, 0x000000000000000000000000000000000000000E, 0x000000000000000000000000000000000000000F]
-    ├─ [2411] DelegationHandler::getActors() [staticcall]
-    │   └─ ← [Return] [0x000000000000000000000000000000000000000A, 0x000000000000000000000000000000000000000b, 0x000000000000000000000000000000000000000C, 0x000000000000000000000000000000000000000d, 0x000000000000000000000000000000000000000E, 0x000000000000000000000000000000000000000F]
-    ├─ [0] console::log("delegator/delegatee", PointEvaluation: [0x000000000000000000000000000000000000000A], 0x000000000000000000000000000000000000000F) [staticcall]
-    │   └─ ← [Stop]
-    ├─ [3219] ERC1967Proxy::fallback(0x000000000000000000000000000000000000000F, 10678120 [1.067e7]) [staticcall]
-    │   ├─ [2830] EscrowIVotesAdapter::getPastVotes(0x000000000000000000000000000000000000000F, 10678120 [1.067e7]) [delegatecall]
-    │   │   └─ ← [Return] 0
-    │   └─ ← [Return] 0
-    ├─ [0] console::log("check ====", 0) [staticcall]
-    │   └─ ← [Stop]
-    ├─ [720701] DelegationHandler::withdraw(90296877479222766655426147366644077773671294114469858451619881532341940 [9.029e70], 0)
-    │   ├─ [0] VM::warp(13875042 [1.387e7])
-    │   │   └─ ← [Return]
-    │   ├─ [944] ERC1967Proxy::fallback(1) [staticcall]
-    │   │   ├─ [558] LockV1_2_0::ownerOf(1) [delegatecall]
-    │   │   │   └─ ← [Return] PointEvaluation: [0x000000000000000000000000000000000000000A]
-    │   │   └─ ← [Return] PointEvaluation: [0x000000000000000000000000000000000000000A]
-    │   ├─ [2586] ERC1967Proxy::fallback(1, 1) [staticcall]
-    │   │   ├─ [2173] LinearIncreasingCurve::tokenPointHistory(1, 1) [delegatecall]
-    │   │   │   └─ ← [Return] TokenPoint({ bias: 79229735761221015803943724221 [7.922e28], checkpointTs: 3024000 [3.024e6], writtenTs: 3025249 [3.025e6], coefficients: [79229735761221015803943724221152082499824835966 [7.922e46], 1259605249542202081484297960034027081534 [1.259e39], 0] })
-    │   │   └─ ← [Return] TokenPoint({ bias: 79229735761221015803943724221 [7.922e28], checkpointTs: 3024000 [3.024e6], writtenTs: 3025249 [3.025e6], coefficients: [79229735761221015803943724221152082499824835966 [7.922e46], 1259605249542202081484297960034027081534 [1.259e39], 0] })
-    │   ├─ [1014] ERC1967Proxy::fallback(PointEvaluation: [0x000000000000000000000000000000000000000A]) [staticcall]
-    │   │   ├─ [628] EscrowIVotesAdapter::delegates(PointEvaluation: [0x000000000000000000000000000000000000000A]) [delegatecall]
-    │   │   │   └─ ← [Return] 0x000000000000000000000000000000000000000F
-    │   │   └─ ← [Return] 0x000000000000000000000000000000000000000F
-    │   ├─ [1127] ERC1967Proxy::fallback(1) [staticcall]
-    │   │   ├─ [738] VotingEscrowV1_2_0::locked(1) [delegatecall]
-    │   │   │   └─ ← [Return] LockedBalance({ amount: 79228162514264337593543950333 [7.922e28], start: 3024000 [3.024e6] })
-    │   │   └─ ← [Return] LockedBalance({ amount: 79228162514264337593543950333 [7.922e28], start: 3024000 [3.024e6] })
-    │   ├─ [1010] ERC1967Proxy::fallback(0x000000000000000000000000000000000000000F) [staticcall]
-    │   │   ├─ [624] EscrowIVotesAdapter::latestPointIndex(0x000000000000000000000000000000000000000F) [delegatecall]
-    │   │   │   └─ ← [Return] 0
-    │   │   └─ ← [Return] 0
-    │   ├─ [7401] ERC1967Proxy::fallback(0x000000000000000000000000000000000000000F, 0) [staticcall]
-    │   │   ├─ [7006] EscrowIVotesAdapter::pointHistory(0x000000000000000000000000000000000000000F, 0) [delegatecall]
-    │   │   │   └─ ← [Return] 0, 0, 0
-    │   │   └─ ← [Return] 0, 0, 0
-    │   ├─ [0] VM::startPrank(PointEvaluation: [0x000000000000000000000000000000000000000A])
-    │   │   └─ ← [Return]
-    │   ├─ [25563] ERC1967Proxy::fallback(ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], 1)
-    │   │   ├─ [25177] LockV1_2_0::approve(ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], 1) [delegatecall]
-    │   │   │   ├─ emit Approval(owner: PointEvaluation: [0x000000000000000000000000000000000000000A], approved: ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], tokenId: 1)
-    │   │   │   └─ ← [Stop]
-    │   │   └─ ← [Return]
-    │   ├─ [610245] ERC1967Proxy::fallback(1)
-    │   │   ├─ [609862] VotingEscrowV1_2_0::beginWithdrawal(1) [delegatecall]
-    │   │   │   ├─ [5558] ERC1967Proxy::fallback(1, 13875042 [1.387e7]) [staticcall]
-    │   │   │   │   ├─ [5169] LinearIncreasingCurve::votingPowerAt(1, 13875042 [1.387e7]) [delegatecall]
-    │   │   │   │   │   ├─ [632] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [249] ClockV1_2_0::epochDuration() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   └─ ← [Return] 92896191980467253152217489837 [9.289e28]
-    │   │   │   │   └─ ← [Return] 92896191980467253152217489837 [9.289e28]
-    │   │   │   ├─ [2586] ERC1967Proxy::fallback(1, 1) [staticcall]
-    │   │   │   │   ├─ [2173] LinearIncreasingCurve::tokenPointHistory(1, 1) [delegatecall]
-    │   │   │   │   │   └─ ← [Return] TokenPoint({ bias: 79229735761221015803943724221 [7.922e28], checkpointTs: 3024000 [3.024e6], writtenTs: 3025249 [3.025e6], coefficients: [79229735761221015803943724221152082499824835966 [7.922e46], 1259605249542202081484297960034027081534 [1.259e39], 0] })
-    │   │   │   │   └─ ← [Return] TokenPoint({ bias: 79229735761221015803943724221 [7.922e28], checkpointTs: 3024000 [3.024e6], writtenTs: 3025249 [3.025e6], coefficients: [79229735761221015803943724221152082499824835966 [7.922e46], 1259605249542202081484297960034027081534 [1.259e39], 0] })
-    │   │   │   ├─ [944] ERC1967Proxy::fallback(1) [staticcall]
-    │   │   │   │   ├─ [558] LockV1_2_0::ownerOf(1) [delegatecall]
-    │   │   │   │   │   └─ ← [Return] PointEvaluation: [0x000000000000000000000000000000000000000A]
-    │   │   │   │   └─ ← [Return] PointEvaluation: [0x000000000000000000000000000000000000000A]
-    │   │   │   ├─ [463740] ERC1967Proxy::fallback(1, LockedBalance({ amount: 79228162514264337593543950333 [7.922e28], start: 3024000 [3.024e6] }), LockedBalance({ amount: 0, start: 3024000 [3.024e6] }))
-    │   │   │   │   ├─ [463336] LinearIncreasingCurve::checkpoint(1, LockedBalance({ amount: 79228162514264337593543950333 [7.922e28], start: 3024000 [3.024e6] }), LockedBalance({ amount: 0, start: 3024000 [3.024e6] })) [delegatecall]
-    │   │   │   │   │   ├─ [632] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [249] ClockV1_2_0::epochDuration() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   ├─ [655] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [272] ClockV1_2_0::checkpointInterval() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 604800 [6.048e5]
-    │   │   │   │   │   │   └─ ← [Return] 604800 [6.048e5]
-    │   │   │   │   │   ├─ [632] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [249] ClockV1_2_0::epochDuration() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   ├─ [632] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [249] ClockV1_2_0::epochDuration() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   └─ ← [Stop]
-    │   │   │   │   └─ ← [Return]
-    │   │   │   ├─ [77781] ERC1967Proxy::fallback(PointEvaluation: [0x000000000000000000000000000000000000000A], ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], 1)
-    │   │   │   │   ├─ [77389] LockV1_2_0::transferFrom(PointEvaluation: [0x000000000000000000000000000000000000000A], ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], 1) [delegatecall]
-    │   │   │   │   │   ├─ emit Transfer(from: PointEvaluation: [0x000000000000000000000000000000000000000A], to: ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], tokenId: 1)
-    │   │   │   │   │   ├─ [26553] ERC1967Proxy::fallback(PointEvaluation: [0x000000000000000000000000000000000000000A], ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], 1)
-    │   │   │   │   │   │   ├─ [26161] VotingEscrowV1_2_0::moveDelegateVotes(PointEvaluation: [0x000000000000000000000000000000000000000A], ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], 1) [delegatecall]
-    │   │   │   │   │   │   │   ├─ [24378] ERC1967Proxy::fallback(PointEvaluation: [0x000000000000000000000000000000000000000A], ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], 1, LockedBalance({ amount: 79228162514264337593543950333 [7.922e28], start: 3024000 [3.024e6] }))
-    │   │   │   │   │   │   │   │   ├─ [23974] EscrowIVotesAdapter::moveDelegateVotes(PointEvaluation: [0x000000000000000000000000000000000000000A], ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], 1, LockedBalance({ amount: 79228162514264337593543950333 [7.922e28], start: 3024000 [3.024e6] })) [delegatecall]
-    │   │   │   │   │   │   │   │   │   ├─ [21052] ERC1967Proxy::fallback(0x000000000000000000000000000000000000000F, 0x0000000000000000000000000000000000000000)
-    │   │   │   │   │   │   │   │   │   │   ├─ [20666] VotingEscrowV1_2_0::updateVotingPower(0x000000000000000000000000000000000000000F, 0x0000000000000000000000000000000000000000) [delegatecall]
-    │   │   │   │   │   │   │   │   │   │   │   ├─ [14906] ERC1967Proxy::fallback(0x000000000000000000000000000000000000000F, 0x0000000000000000000000000000000000000000)
-    │   │   │   │   │   │   │   │   │   │   │   │   ├─ [10020] AddressGaugeVoter::updateVotingPower(0x000000000000000000000000000000000000000F, 0x0000000000000000000000000000000000000000) [delegatecall]
-    │   │   │   │   │   │   │   │   │   │   │   │   │   └─ ← [Stop]
-    │   │   │   │   │   │   │   │   │   │   │   │   └─ ← [Return]
-    │   │   │   │   │   │   │   │   │   │   │   └─ ← [Stop]
-    │   │   │   │   │   │   │   │   │   │   └─ ← [Return]
-    │   │   │   │   │   │   │   │   │   └─ ← [Stop]
-    │   │   │   │   │   │   │   │   └─ ← [Return]
-    │   │   │   │   │   │   │   └─ ← [Stop]
-    │   │   │   │   │   │   └─ ← [Return]
-    │   │   │   │   │   └─ ← [Stop]
-    │   │   │   │   └─ ← [Return]
-    │   │   │   ├─ [51120] ERC1967Proxy::fallback(1, PointEvaluation: [0x000000000000000000000000000000000000000A])
-    │   │   │   │   ├─ [50734] ExitQueue::queueExit(1, PointEvaluation: [0x000000000000000000000000000000000000000A]) [delegatecall]
-    │   │   │   │   │   ├─ [1127] ERC1967Proxy::fallback(1) [staticcall]
-    │   │   │   │   │   │   ├─ [738] VotingEscrowV1_2_0::locked(1) [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] LockedBalance({ amount: 79228162514264337593543950333 [7.922e28], start: 3024000 [3.024e6] })
-    │   │   │   │   │   │   └─ ← [Return] LockedBalance({ amount: 79228162514264337593543950333 [7.922e28], start: 3024000 [3.024e6] })
-    │   │   │   │   │   ├─ [799] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [416] ClockV1_2_0::epochNextCheckpointTs() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 13910400 [1.391e7]
-    │   │   │   │   │   │   └─ ← [Return] 13910400 [1.391e7]
-    │   │   │   │   │   ├─ emit ExitQueued(tokenId: 1, holder: PointEvaluation: [0x000000000000000000000000000000000000000A], exitDate: 14134242 [1.413e7])
-    │   │   │   │   │   └─ ← [Stop]
-    │   │   │   │   └─ ← [Return]
-    │   │   │   └─ ← [Stop]
-    │   │   └─ ← [Return]
-    │   ├─ [1177] ERC1967Proxy::fallback(1) [staticcall]
-    │   │   ├─ [788] ExitQueue::queue(1) [delegatecall]
-    │   │   │   └─ ← [Return] Ticket({ holder: 0x000000000000000000000000000000000000000A, exitDate: 14134242 [1.413e7] })
-    │   │   └─ ← [Return] Ticket({ holder: 0x000000000000000000000000000000000000000A, exitDate: 14134242 [1.413e7] })
-    │   ├─ [0] VM::warp(14134243 [1.413e7])
-    │   │   └─ ← [Return]
-    │   ├─ [49914] ERC1967Proxy::fallback(1)
-    │   │   ├─ [49531] VotingEscrowV1_2_0::withdraw(1) [delegatecall]
-    │   │   │   ├─ [908] ERC1967Proxy::fallback(1) [staticcall]
-    │   │   │   │   ├─ [522] ExitQueue::ticketHolder(1) [delegatecall]
-    │   │   │   │   │   └─ ← [Return] PointEvaluation: [0x000000000000000000000000000000000000000A]
-    │   │   │   │   └─ ← [Return] PointEvaluation: [0x000000000000000000000000000000000000000A]
-    │   │   │   ├─ [1171] ERC1967Proxy::fallback(1) [staticcall]
-    │   │   │   │   ├─ [785] ExitQueue::canExit(1) [delegatecall]
-    │   │   │   │   │   └─ ← [Return] true
-    │   │   │   │   └─ ← [Return] true
-    │   │   │   ├─ [3458] ERC1967Proxy::fallback(1)
-    │   │   │   │   ├─ [3072] ExitQueue::exit(1) [delegatecall]
-    │   │   │   │   │   ├─ emit Exit(tokenId: 1, fee: 0)
-    │   │   │   │   │   └─ ← [Return] 0
-    │   │   │   │   └─ ← [Return] 0
-    │   │   │   ├─ [10242] ERC1967Proxy::fallback(1)
-    │   │   │   │   ├─ [9859] LockV1_2_0::burn(1) [delegatecall]
-    │   │   │   │   │   ├─ emit Transfer(from: ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], to: 0x0000000000000000000000000000000000000000, tokenId: 1)
-    │   │   │   │   │   └─ ← [Stop]
-    │   │   │   │   └─ ← [Return]
-    │   │   │   ├─ [22934] MockERC20::transfer(PointEvaluation: [0x000000000000000000000000000000000000000A], 79228162514264337593543950333 [7.922e28])
-    │   │   │   │   ├─ emit Transfer(from: ERC1967Proxy: [0x1d1499e622D69689cdf9004d05Ec547d650Ff211], to: PointEvaluation: [0x000000000000000000000000000000000000000A], value: 79228162514264337593543950333 [7.922e28])
-    │   │   │   │   └─ ← [Return] true
-    │   │   │   ├─ emit Withdraw(depositor: PointEvaluation: [0x000000000000000000000000000000000000000A], tokenId: 1, value: 79228162514264337593543950333 [7.922e28], ts: 14134243 [1.413e7], newTotalLocked: 72098973641340218390070378904 [7.209e28])
-    │   │   │   └─ ← [Stop]
-    │   │   └─ ← [Return]
-    │   ├─ [0] VM::stopPrank()
-    │   │   └─ ← [Return]
-    │   └─ ← [Stop]
-    ├─ [2731] DelegationHandler::getActiveTokenIds() [staticcall]
-    │   └─ ← [Return] [6, 3, 4]
-    ├─ [944] ERC1967Proxy::fallback(6) [staticcall]
-    │   ├─ [558] LockV1_2_0::ownerOf(6) [delegatecall]
-    │   │   └─ ← [Return] 0x000000000000000000000000000000000000000d
-    │   └─ ← [Return] 0x000000000000000000000000000000000000000d
-    ├─ [0] console::log("withdraw", 0x000000000000000000000000000000000000000d) [staticcall]
-    │   └─ ← [Stop]
-    ├─ [1219] ERC1967Proxy::fallback(0x000000000000000000000000000000000000000F, 14134243 [1.413e7]) [staticcall]
-    │   ├─ [830] EscrowIVotesAdapter::getPastVotes(0x000000000000000000000000000000000000000F, 14134243 [1.413e7]) [delegatecall]
-    │   │   └─ ← [Return] 0
-    │   └─ ← [Return] 0
-    ├─ [0] console::log("check ====", 0) [staticcall]
-    │   └─ ← [Stop]
-    ├─ [7087890] DelegationHandler::merge(10, 4347, 3118, 9)
-    │   ├─ [0] VM::warp(17590134 [1.759e7])
-    │   │   └─ ← [Return]
-    │   ├─ [1014] ERC1967Proxy::fallback(0x000000000000000000000000000000000000000d) [staticcall]
-    │   │   ├─ [628] EscrowIVotesAdapter::delegates(0x000000000000000000000000000000000000000d) [delegatecall]
-    │   │   │   └─ ← [Return] 0x0000000000000000000000000000000000000000
-    │   │   └─ ← [Return] 0x0000000000000000000000000000000000000000
-    │   ├─ [1127] ERC1967Proxy::fallback(6) [staticcall]
-    │   │   ├─ [738] VotingEscrowV1_2_0::locked(6) [delegatecall]
-    │   │   │   └─ ← [Return] LockedBalance({ amount: 40793622672920073723371694995 [4.079e28], start: 10281600 [1.028e7] })
-    │   │   └─ ← [Return] LockedBalance({ amount: 40793622672920073723371694995 [4.079e28], start: 10281600 [1.028e7] })
-    │   ├─ [1127] ERC1967Proxy::fallback(3) [staticcall]
-    │   │   ├─ [738] VotingEscrowV1_2_0::locked(3) [delegatecall]
-    │   │   │   └─ ← [Return] LockedBalance({ amount: 31305350968420144662338977923 [3.13e28], start: 3024000 [3.024e6] })
-    │   │   └─ ← [Return] LockedBalance({ amount: 31305350968420144662338977923 [3.13e28], start: 3024000 [3.024e6] })
-    │   ├─ [4029] ERC1967Proxy::fallback(LockedBalance({ amount: 40793622672920073723371694995 [4.079e28], start: 10281600 [1.028e7] }), LockedBalance({ amount: 31305350968420144662338977923 [3.13e28], start: 3024000 [3.024e6] })) [staticcall]
-    │   │   ├─ [3628] VotingEscrowV1_2_0::canMerge(LockedBalance({ amount: 40793622672920073723371694995 [4.079e28], start: 10281600 [1.028e7] }), LockedBalance({ amount: 31305350968420144662338977923 [3.13e28], start: 3024000 [3.024e6] })) [delegatecall]
-    │   │   │   ├─ [1883] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   ├─ [1500] LinearIncreasingCurve::maxTime() [delegatecall]
-    │   │   │   │   │   ├─ [632] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [249] ClockV1_2_0::epochDuration() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   └─ ← [Return] 62899200 [6.289e7]
-    │   │   │   │   └─ ← [Return] 62899200 [6.289e7]
-    │   │   │   └─ ← [Return] false
-    │   │   └─ ← [Return] false
-    │   ├─ [0] VM::warp(73180801 [7.318e7])
-    │   │   └─ ← [Return]
-    │   ├─ [1010] ERC1967Proxy::fallback(0x0000000000000000000000000000000000000000) [staticcall]
-    │   │   ├─ [624] EscrowIVotesAdapter::latestPointIndex(0x0000000000000000000000000000000000000000) [delegatecall]
-    │   │   │   └─ ← [Return] 0
-    │   │   └─ ← [Return] 0
-    │   ├─ [1401] ERC1967Proxy::fallback(0x0000000000000000000000000000000000000000, 0) [staticcall]
-    │   │   ├─ [1006] EscrowIVotesAdapter::pointHistory(0x0000000000000000000000000000000000000000, 0) [delegatecall]
-    │   │   │   └─ ← [Return] 0, 0, 0
-    │   │   └─ ← [Return] 0, 0, 0
-    │   ├─ [966] ERC1967Proxy::fallback(6) [staticcall]
-    │   │   ├─ [580] EscrowIVotesAdapter::tokenIsDelegated(6) [delegatecall]
-    │   │   │   └─ ← [Return] false
-    │   │   └─ ← [Return] false
-    │   ├─ [0] VM::prank(0x000000000000000000000000000000000000000d)
-    │   │   └─ ← [Return]
-    │   ├─ [7059395] ERC1967Proxy::fallback(6, 3)
-    │   │   ├─ [7059009] VotingEscrowV1_2_0::merge(6, 3) [delegatecall]
-    │   │   │   ├─ [944] ERC1967Proxy::fallback(6) [staticcall]
-    │   │   │   │   ├─ [558] LockV1_2_0::ownerOf(6) [delegatecall]
-    │   │   │   │   │   └─ ← [Return] 0x000000000000000000000000000000000000000d
-    │   │   │   │   └─ ← [Return] 0x000000000000000000000000000000000000000d
-    │   │   │   ├─ [944] ERC1967Proxy::fallback(3) [staticcall]
-    │   │   │   │   ├─ [558] LockV1_2_0::ownerOf(3) [delegatecall]
-    │   │   │   │   │   └─ ← [Return] 0x000000000000000000000000000000000000000d
-    │   │   │   │   └─ ← [Return] 0x000000000000000000000000000000000000000d
-    │   │   │   ├─ [1243] ERC1967Proxy::fallback(0x000000000000000000000000000000000000000d, 6) [staticcall]
-    │   │   │   │   ├─ [854] LockV1_2_0::isApprovedOrOwner(0x000000000000000000000000000000000000000d, 6) [delegatecall]
-    │   │   │   │   │   └─ ← [Return] true
-    │   │   │   │   └─ ← [Return] true
-    │   │   │   ├─ [1243] ERC1967Proxy::fallback(0x000000000000000000000000000000000000000d, 3) [staticcall]
-    │   │   │   │   ├─ [854] LockV1_2_0::isApprovedOrOwner(0x000000000000000000000000000000000000000d, 3) [delegatecall]
-    │   │   │   │   │   └─ ← [Return] true
-    │   │   │   │   └─ ← [Return] true
-    │   │   │   ├─ [1883] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   ├─ [1500] LinearIncreasingCurve::maxTime() [delegatecall]
-    │   │   │   │   │   ├─ [632] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [249] ClockV1_2_0::epochDuration() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   └─ ← [Return] 62899200 [6.289e7]
-    │   │   │   │   └─ ← [Return] 62899200 [6.289e7]
-    │   │   │   ├─ [3747] ERC1967Proxy::fallback(Blax({ account: 0x000000000000000000000000000000000000000d, tokenId: 6, locked: LockedBalance({ amount: 40793622672920073723371694995 [4.079e28], start: 10281600 [1.028e7] }) }), Blax({ account: 0x000000000000000000000000000000000000000d, tokenId: 3, locked: LockedBalance({ amount: 31305350968420144662338977923 [3.13e28], start: 3024000 [3.024e6] }) }))
-    │   │   │   │   ├─ [3325] EscrowIVotesAdapter::mergeDelegateVotes(Blax({ account: 0x000000000000000000000000000000000000000d, tokenId: 6, locked: LockedBalance({ amount: 40793622672920073723371694995 [4.079e28], start: 10281600 [1.028e7] }) }), Blax({ account: 0x000000000000000000000000000000000000000d, tokenId: 3, locked: LockedBalance({ amount: 31305350968420144662338977923 [3.13e28], start: 3024000 [3.024e6] }) })) [delegatecall]
-    │   │   │   │   │   ├─ [0] console::log("omg ggg", 0x0000000000000000000000000000000000000000) [staticcall]
-    │   │   │   │   │   │   └─ ← [Stop]
-    │   │   │   │   │   ├─ [0] console::log(6, false) [staticcall]
-    │   │   │   │   │   │   └─ ← [Stop]
-    │   │   │   │   │   ├─ [0] console::log(3, false) [staticcall]
-    │   │   │   │   │   │   └─ ← [Stop]
-    │   │   │   │   │   └─ ← [Stop]
-    │   │   │   │   └─ ← [Return]
-    │   │   │   ├─ [12242] ERC1967Proxy::fallback(6)
-    │   │   │   │   ├─ [11859] LockV1_2_0::burn(6) [delegatecall]
-    │   │   │   │   │   ├─ emit Transfer(from: 0x000000000000000000000000000000000000000d, to: 0x0000000000000000000000000000000000000000, tokenId: 6)
-    │   │   │   │   │   └─ ← [Stop]
-    │   │   │   │   └─ ← [Return]
-    │   │   │   ├─ [6956354] ERC1967Proxy::fallback(6, LockedBalance({ amount: 40793622672920073723371694995 [4.079e28], start: 10281600 [1.028e7] }), LockedBalance({ amount: 0, start: 10281600 [1.028e7] }))
-    │   │   │   │   ├─ [6955950] LinearIncreasingCurve::checkpoint(6, LockedBalance({ amount: 40793622672920073723371694995 [4.079e28], start: 10281600 [1.028e7] }), LockedBalance({ amount: 0, start: 10281600 [1.028e7] })) [delegatecall]
-    │   │   │   │   │   ├─ [632] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [249] ClockV1_2_0::epochDuration() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   ├─ [655] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [272] ClockV1_2_0::checkpointInterval() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 604800 [6.048e5]
-    │   │   │   │   │   │   └─ ← [Return] 604800 [6.048e5]
-    │   │   │   │   │   ├─ [632] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [249] ClockV1_2_0::epochDuration() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   ├─ [632] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [249] ClockV1_2_0::epochDuration() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   └─ ← [Stop]
-    │   │   │   │   └─ ← [Return]
-    │   │   │   ├─ [69506] ERC1967Proxy::fallback(3, LockedBalance({ amount: 31305350968420144662338977923 [3.13e28], start: 3024000 [3.024e6] }), LockedBalance({ amount: 72098973641340218385710672918 [7.209e28], start: 3024000 [3.024e6] }))
-    │   │   │   │   ├─ [69102] LinearIncreasingCurve::checkpoint(3, LockedBalance({ amount: 31305350968420144662338977923 [3.13e28], start: 3024000 [3.024e6] }), LockedBalance({ amount: 72098973641340218385710672918 [7.209e28], start: 3024000 [3.024e6] })) [delegatecall]
-    │   │   │   │   │   ├─ [632] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [249] ClockV1_2_0::epochDuration() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   ├─ [655] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [272] ClockV1_2_0::checkpointInterval() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 604800 [6.048e5]
-    │   │   │   │   │   │   └─ ← [Return] 604800 [6.048e5]
-    │   │   │   │   │   ├─ [632] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [249] ClockV1_2_0::epochDuration() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   ├─ [632] ERC1967Proxy::fallback() [staticcall]
-    │   │   │   │   │   │   ├─ [249] ClockV1_2_0::epochDuration() [delegatecall]
-    │   │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   │   └─ ← [Return] 1209600 [1.209e6]
-    │   │   │   │   │   └─ ← [Stop]
-    │   │   │   │   └─ ← [Return]
-    │   │   │   ├─ emit Merged(_sender: 0x000000000000000000000000000000000000000d, _from: 6, _to: 3, _amountFrom: 40793622672920073723371694995 [4.079e28], _amountTo: 31305350968420144662338977923 [3.13e28], _amountFinal: 72098973641340218385710672918 [7.209e28])
-    │   │   │   └─ ← [Stop]
-    │   │   └─ ← [Return]
-    │   └─ ← [Stop]
-    ├─ [2411] DelegationHandler::getActors() [staticcall]
-    │   └─ ← [Return] [0x000000000000000000000000000000000000000A, 0x000000000000000000000000000000000000000b, 0x000000000000000000000000000000000000000C, 0x000000000000000000000000000000000000000d, 0x000000000000000000000000000000000000000E, 0x000000000000000000000000000000000000000F]
-    ├─ [0] console::log("merge", 0x000000000000000000000000000000000000000d) [staticcall]
-    │   └─ ← [Stop]
-    ├─ [1219] ERC1967Proxy::fallback(0x000000000000000000000000000000000000000F, 73180801 [7.318e7]) [staticcall]
-    │   ├─ [830] EscrowIVotesAdapter::getPastVotes(0x000000000000000000000000000000000000000F, 73180801 [7.318e7]) [delegatecall]
-    │   │   └─ ← [Return] 0
-    │   └─ ← [Return] 0
-    ├─ [0] console::log("check ====", 0) [staticcall]
-    │   └─ ← [Stop]
-    ├─ [1014] ERC1967Proxy::fallback(0x000000000000000000000000000000000000000d) [staticcall]
-    │   ├─ [628] EscrowIVotesAdapter::delegates(0x000000000000000000000000000000000000000d) [delegatecall]
-    │   │   └─ ← [Return] 0x0000000000000000000000000000000000000000
-    │   └─ ← [Return] 0x0000000000000000000000000000000000000000
-    ├─ [0] console::log("jesus baby", 0x0000000000000000000000000000000000000000) [staticcall]
-    │   └─ ← [Stop]
-    ├─ [3003] DelegationHandler::getIncomingTokens(0x000000000000000000000000000000000000000F) [staticcall]
-    │   └─ ← [Return] []
-    ├─ [2958] DelegationHandler::getOutgoingTokens(0x000000000000000000000000000000000000000F) [staticcall]
-    │   └─ ← [Return] []
-    ├─ [2967] ERC1967Proxy::fallback(0x000000000000000000000000000000000000000F) [staticcall]
-    │   ├─ [2581] EscrowIVotesAdapter::numberOfDelegatedTokens(0x000000000000000000000000000000000000000F) [delegatecall]
-    │   │   └─ ← [Return] 0
-    │   └─ ← [Return] 0
-    ├─ [0] VM::assertEq(0, 0) [staticcall]
+    ├─ [0] VM::stopPrank()
     │   └─ ← [Return]
-    ├─ [1219] ERC1967Proxy::fallback(0x000000000000000000000000000000000000000F, 73180801 [7.318e7]) [staticcall]
-    │   ├─ [830] EscrowIVotesAdapter::getPastVotes(0x000000000000000000000000000000000000000F, 73180801 [7.318e7]) [delegatecall]
+    ├─ [134378] ERC1967Proxy::fallback(0x0000000000000000000000000000000000000016, "metadata")
+    │   ├─ [133977] AddressGaugeVoter::createGauge(0x0000000000000000000000000000000000000016, "metadata") [delegatecall]
+    │   │   ├─ [8629] ERC1967Proxy::fallback(ERC1967Proxy: [0xD16d567549A2a2a2005aEACf7fB193851603dd70], TestSplit_DelegationAndVoter: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], 0xfda1ae526c1fb38407f23e8b7712f7cfacc146f3e340a04221488331e0d42014, 0x071d21710000000000000000000000000000000000000000000000000000000000000016000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000086d65746164617461000000000000000000000000000000000000000000000000) [staticcall]
+    │   │   │   ├─ [3692] DAO::hasPermission(ERC1967Proxy: [0xD16d567549A2a2a2005aEACf7fB193851603dd70], TestSplit_DelegationAndVoter: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], 0xfda1ae526c1fb38407f23e8b7712f7cfacc146f3e340a04221488331e0d42014, 0x071d21710000000000000000000000000000000000000000000000000000000000000016000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000086d65746164617461000000000000000000000000000000000000000000000000) [delegatecall]
+    │   │   │   │   └─ ← [Return] true
+    │   │   │   └─ ← [Return] true
+    │   │   ├─ emit GaugeCreated(gauge: 0x0000000000000000000000000000000000000016, creator: TestSplit_DelegationAndVoter: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], metadataURI: "metadata")
+    │   │   └─ ← [Return] 0x0000000000000000000000000000000000000016
+    │   └─ ← [Return] 0x0000000000000000000000000000000000000016
+    ├─ [99478] ERC1967Proxy::fallback(0x0000000000000000000000000000000000000014, "metadata")
+    │   ├─ [99077] AddressGaugeVoter::createGauge(0x0000000000000000000000000000000000000014, "metadata") [delegatecall]
+    │   │   ├─ [2129] ERC1967Proxy::fallback(ERC1967Proxy: [0xD16d567549A2a2a2005aEACf7fB193851603dd70], TestSplit_DelegationAndVoter: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], 0xfda1ae526c1fb38407f23e8b7712f7cfacc146f3e340a04221488331e0d42014, 0x071d21710000000000000000000000000000000000000000000000000000000000000014000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000086d65746164617461000000000000000000000000000000000000000000000000) [staticcall]
+    │   │   │   ├─ [1692] DAO::hasPermission(ERC1967Proxy: [0xD16d567549A2a2a2005aEACf7fB193851603dd70], TestSplit_DelegationAndVoter: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], 0xfda1ae526c1fb38407f23e8b7712f7cfacc146f3e340a04221488331e0d42014, 0x071d21710000000000000000000000000000000000000000000000000000000000000014000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000086d65746164617461000000000000000000000000000000000000000000000000) [delegatecall]
+    │   │   │   │   └─ ← [Return] true
+    │   │   │   └─ ← [Return] true
+    │   │   ├─ emit GaugeCreated(gauge: 0x0000000000000000000000000000000000000014, creator: TestSplit_DelegationAndVoter: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], metadataURI: "metadata")
+    │   │   └─ ← [Return] 0x0000000000000000000000000000000000000014
+    │   └─ ← [Return] 0x0000000000000000000000000000000000000014
+    ├─ [99478] ERC1967Proxy::fallback(0x0000000000000000000000000000000000000019, "metadata")
+    │   ├─ [99077] AddressGaugeVoter::createGauge(0x0000000000000000000000000000000000000019, "metadata") [delegatecall]
+    │   │   ├─ [2129] ERC1967Proxy::fallback(ERC1967Proxy: [0xD16d567549A2a2a2005aEACf7fB193851603dd70], TestSplit_DelegationAndVoter: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], 0xfda1ae526c1fb38407f23e8b7712f7cfacc146f3e340a04221488331e0d42014, 0x071d21710000000000000000000000000000000000000000000000000000000000000019000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000086d65746164617461000000000000000000000000000000000000000000000000) [staticcall]
+    │   │   │   ├─ [1692] DAO::hasPermission(ERC1967Proxy: [0xD16d567549A2a2a2005aEACf7fB193851603dd70], TestSplit_DelegationAndVoter: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], 0xfda1ae526c1fb38407f23e8b7712f7cfacc146f3e340a04221488331e0d42014, 0x071d21710000000000000000000000000000000000000000000000000000000000000019000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000086d65746164617461000000000000000000000000000000000000000000000000) [delegatecall]
+    │   │   │   │   └─ ← [Return] true
+    │   │   │   └─ ← [Return] true
+    │   │   ├─ emit GaugeCreated(gauge: 0x0000000000000000000000000000000000000019, creator: TestSplit_DelegationAndVoter: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], metadataURI: "metadata")
+    │   │   └─ ← [Return] 0x0000000000000000000000000000000000000019
+    │   └─ ← [Return] 0x0000000000000000000000000000000000000019
+    ├─ [99478] ERC1967Proxy::fallback(0x0000000000000000000000000000000000000015, "metadata")
+    │   ├─ [99077] AddressGaugeVoter::createGauge(0x0000000000000000000000000000000000000015, "metadata") [delegatecall]
+    │   │   ├─ [2129] ERC1967Proxy::fallback(ERC1967Proxy: [0xD16d567549A2a2a2005aEACf7fB193851603dd70], TestSplit_DelegationAndVoter: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], 0xfda1ae526c1fb38407f23e8b7712f7cfacc146f3e340a04221488331e0d42014, 0x071d21710000000000000000000000000000000000000000000000000000000000000015000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000086d65746164617461000000000000000000000000000000000000000000000000) [staticcall]
+    │   │   │   ├─ [1692] DAO::hasPermission(ERC1967Proxy: [0xD16d567549A2a2a2005aEACf7fB193851603dd70], TestSplit_DelegationAndVoter: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], 0xfda1ae526c1fb38407f23e8b7712f7cfacc146f3e340a04221488331e0d42014, 0x071d21710000000000000000000000000000000000000000000000000000000000000015000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000086d65746164617461000000000000000000000000000000000000000000000000) [delegatecall]
+    │   │   │   │   └─ ← [Return] true
+    │   │   │   └─ ← [Return] true
+    │   │   ├─ emit GaugeCreated(gauge: 0x0000000000000000000000000000000000000015, creator: TestSplit_DelegationAndVoter: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], metadataURI: "metadata")
+    │   │   └─ ← [Return] 0x0000000000000000000000000000000000000015
+    │   └─ ← [Return] 0x0000000000000000000000000000000000000015
+    ├─ [0] VM::prank(0x000000000000000000000000000000000000000F)
+    │   └─ ← [Return]
+    ├─ [403735] ERC1967Proxy::fallback([GaugeVote({ weight: 1, gauge: 0x0000000000000000000000000000000000000016 }), GaugeVote({ weight: 18446744073709551613 [1.844e19], gauge: 0x0000000000000000000000000000000000000014 }), GaugeVote({ weight: 7847948105712314 [7.847e15], gauge: 0x0000000000000000000000000000000000000019 }), GaugeVote({ weight: 451357228 [4.513e8], gauge: 0x0000000000000000000000000000000000000015 })])
+    │   ├─ [403301] AddressGaugeVoter::vote([GaugeVote({ weight: 1, gauge: 0x0000000000000000000000000000000000000016 }), GaugeVote({ weight: 18446744073709551613 [1.844e19], gauge: 0x0000000000000000000000000000000000000014 }), GaugeVote({ weight: 7847948105712314 [7.847e15], gauge: 0x0000000000000000000000000000000000000019 }), GaugeVote({ weight: 451357228 [4.513e8], gauge: 0x0000000000000000000000000000000000000015 })]) [delegatecall]
+    │   │   ├─ [1074] ERC1967Proxy::fallback() [staticcall]
+    │   │   │   ├─ [691] ClockV1_2_0::votingActive() [delegatecall]
+    │   │   │   │   └─ ← [Return] true
+    │   │   │   └─ ← [Return] true
+    │   │   ├─ [4074] ERC1967Proxy::fallback(0x000000000000000000000000000000000000000F) [staticcall]
+    │   │   │   ├─ [3688] EscrowIVotesAdapter::getVotes(0x000000000000000000000000000000000000000F) [delegatecall]
+    │   │   │   │   ├─ [655] ERC1967Proxy::fallback() [staticcall]
+    │   │   │   │   │   ├─ [272] ClockV1_2_0::checkpointInterval() [delegatecall]
+    │   │   │   │   │   │   └─ ← [Return] 604800 [6.048e5]
+    │   │   │   │   │   └─ ← [Return] 604800 [6.048e5]
+    │   │   │   │   └─ ← [Return] 79232698352767939063239375289 [7.923e28]
+    │   │   │   └─ ← [Return] 79232698352767939063239375289 [7.923e28]
+    │   │   ├─ [0] console::log("casting vote III", 4293386613 [4.293e9], 54187055384017 [5.418e13], 79232698352767939063239375289 [7.923e28]) [staticcall]
+    │   │   │   └─ ← [Stop]
+    │   │   ├─ [639] ERC1967Proxy::fallback() [staticcall]
+    │   │   │   ├─ [256] ClockV1_2_0::currentEpoch() [delegatecall]
+    │   │   │   │   └─ ← [Return] 1
+    │   │   │   └─ ← [Return] 1
+    │   │   ├─ emit Voted(voter: 0x000000000000000000000000000000000000000F, gauge: 0x0000000000000000000000000000000000000016, epoch: 1, votingPowerCastForGauge: 4293386613 [4.293e9], totalVotingPowerInGauge: 4293386613 [4.293e9], totalVotingPowerInContract: 4293386613 [4.293e9], timestamp: 1213201 [1.213e6])
+    │   │   ├─ [0] console::log("casting vote III", 79199004075486703379647873114 [7.919e28], 999574742776887156241704300967682 [9.995e32], 79232698352767939063239375289 [7.923e28]) [staticcall]
+    │   │   │   └─ ← [Stop]
+    │   │   ├─ [639] ERC1967Proxy::fallback() [staticcall]
+    │   │   │   ├─ [256] ClockV1_2_0::currentEpoch() [delegatecall]
+    │   │   │   │   └─ ← [Return] 1
+    │   │   │   └─ ← [Return] 1
+    │   │   ├─ emit Voted(voter: 0x000000000000000000000000000000000000000F, gauge: 0x0000000000000000000000000000000000000014, epoch: 1, votingPowerCastForGauge: 79199004075486703379647873114 [7.919e28], totalVotingPowerInGauge: 79199004075486703379647873114 [7.919e28], totalVotingPowerInContract: 79199004075486703383941259727 [7.919e28], timestamp: 1213201 [1.213e6])
+    │   │   ├─ [0] console::log("casting vote III", 33694275343384598531003113 [3.369e25], 425257198655124592496247438085 [4.252e29], 79232698352767939063239375289 [7.923e28]) [staticcall]
+    │   │   │   └─ ← [Stop]
+    │   │   ├─ [639] ERC1967Proxy::fallback() [staticcall]
+    │   │   │   ├─ [256] ClockV1_2_0::currentEpoch() [delegatecall]
+    │   │   │   │   └─ ← [Return] 1
+    │   │   │   └─ ← [Return] 1
+    │   │   ├─ emit Voted(voter: 0x000000000000000000000000000000000000000F, gauge: 0x0000000000000000000000000000000000000019, epoch: 1, votingPowerCastForGauge: 33694275343384598531003113 [3.369e25], totalVotingPowerInGauge: 33694275343384598531003113 [3.369e25], totalVotingPowerInContract: 79232698350830087982472262840 [7.923e28], timestamp: 1213201 [1.213e6])
+    │   │   ├─ [0] console::log("casting vote III", 1937851080767112447 [1.937e18], 24457719111612396210215 [2.445e22], 79232698352767939063239375289 [7.923e28]) [staticcall]
+    │   │   │   └─ ← [Stop]
+    │   │   ├─ [639] ERC1967Proxy::fallback() [staticcall]
+    │   │   │   ├─ [256] ClockV1_2_0::currentEpoch() [delegatecall]
+    │   │   │   │   └─ ← [Return] 1
+    │   │   │   └─ ← [Return] 1
+    │   │   ├─ emit Voted(voter: 0x000000000000000000000000000000000000000F, gauge: 0x0000000000000000000000000000000000000015, epoch: 1, votingPowerCastForGauge: 1937851080767112447 [1.937e18], totalVotingPowerInGauge: 1937851080767112447 [1.937e18], totalVotingPowerInContract: 79232698352767939063239375287 [7.923e28], timestamp: 1213201 [1.213e6])
+    │   │   └─ ← [Stop]
+    │   └─ ← [Return]
+    ├─ [1029] ERC1967Proxy::fallback() [staticcall]
+    │   ├─ [646] AddressGaugeVoter::totalVotingPowerCast() [delegatecall]
+    │   │   └─ ← [Return] 79232698352767939063239375287 [7.923e28]
+    │   └─ ← [Return] 79232698352767939063239375287 [7.923e28]
+    ├─ [0] console::log("123123124dkkdaks 999", 79232698352767939063239375287 [7.923e28]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] VM::prank(0x000000000000000000000000000000000000000d)
+    │   └─ ← [Return]
+    ├─ [325169] ERC1967Proxy::fallback([1])
+    │   ├─ [324777] EscrowIVotesAdapter::undelegate([1]) [delegatecall]
+    │   │   ├─ [2689] ERC1967Proxy::fallback(0x000000000000000000000000000000000000000d, 1) [staticcall]
+    │   │   │   ├─ [2300] VotingEscrowV1_2_0::isApprovedOrOwner(0x000000000000000000000000000000000000000d, 1) [delegatecall]
+    │   │   │   │   ├─ [1243] ERC1967Proxy::fallback(0x000000000000000000000000000000000000000d, 1) [staticcall]
+    │   │   │   │   │   ├─ [854] LockV1_2_0::isApprovedOrOwner(0x000000000000000000000000000000000000000d, 1) [delegatecall]
+    │   │   │   │   │   │   └─ ← [Return] true
+    │   │   │   │   │   └─ ← [Return] true
+    │   │   │   │   └─ ← [Return] true
+    │   │   │   └─ ← [Return] true
+    │   │   ├─ [1127] ERC1967Proxy::fallback(1) [staticcall]
+    │   │   │   ├─ [738] VotingEscrowV1_2_0::locked(1) [delegatecall]
+    │   │   │   │   └─ ← [Return] LockedBalance({ amount: 79228162514264337593543950333 [7.922e28], start: 1209600 [1.209e6] })
+    │   │   │   └─ ← [Return] LockedBalance({ amount: 79228162514264337593543950333 [7.922e28], start: 1209600 [1.209e6] })
+    │   │   ├─ [655] ERC1967Proxy::fallback() [staticcall]
+    │   │   │   ├─ [272] ClockV1_2_0::checkpointInterval() [delegatecall]
+    │   │   │   │   └─ ← [Return] 604800 [6.048e5]
+    │   │   │   └─ ← [Return] 604800 [6.048e5]
+    │   │   ├─ [280856] ERC1967Proxy::fallback(0x000000000000000000000000000000000000000d, 0x000000000000000000000000000000000000000F)
+    │   │   │   ├─ [280470] VotingEscrowV1_2_0::updateVotingPower(0x000000000000000000000000000000000000000d, 0x000000000000000000000000000000000000000F) [delegatecall]
+    │   │   │   │   ├─ [279210] ERC1967Proxy::fallback(0x000000000000000000000000000000000000000d, 0x000000000000000000000000000000000000000F)
+    │   │   │   │   │   ├─ [278824] AddressGaugeVoter::updateVotingPower(0x000000000000000000000000000000000000000d, 0x000000000000000000000000000000000000000F) [delegatecall]
+    │   │   │   │   │   │   ├─ [4074] ERC1967Proxy::fallback(0x000000000000000000000000000000000000000F) [staticcall]
+    │   │   │   │   │   │   │   ├─ [3688] EscrowIVotesAdapter::getVotes(0x000000000000000000000000000000000000000F) [delegatecall]
+    │   │   │   │   │   │   │   │   ├─ [655] ERC1967Proxy::fallback() [staticcall]
+    │   │   │   │   │   │   │   │   │   ├─ [272] ClockV1_2_0::checkpointInterval() [delegatecall]
+    │   │   │   │   │   │   │   │   │   │   └─ ← [Return] 604800 [6.048e5]
+    │   │   │   │   │   │   │   │   │   └─ ← [Return] 604800 [6.048e5]
+    │   │   │   │   │   │   │   │   └─ ← [Return] 0
+    │   │   │   │   │   │   │   └─ ← [Return] 0
+    │   │   │   │   │   │   ├─ [0] console::log("final 284174721", 79232698352767939063239375289 [7.923e28], 0) [staticcall]
+    │   │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   │   ├─ [0] console::log("Resetting vote Blax blux", 4293386613 [4.293e9], 54187055384017 [5.418e13], 79232698352767939063239375289 [7.923e28]) [staticcall]
+    │   │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   │   ├─ [639] ERC1967Proxy::fallback() [staticcall]
+    │   │   │   │   │   │   │   ├─ [256] ClockV1_2_0::currentEpoch() [delegatecall]
+    │   │   │   │   │   │   │   │   └─ ← [Return] 1
+    │   │   │   │   │   │   │   └─ ← [Return] 1
+    │   │   │   │   │   │   ├─ emit Reset(voter: 0x000000000000000000000000000000000000000F, gauge: 0x0000000000000000000000000000000000000016, epoch: 1, votingPowerRemovedFromGauge: 4293386613 [4.293e9], totalVotingPowerInGauge: 0, totalVotingPowerInContract: 79232698352767939058945988674 [7.923e28], timestamp: 1213201 [1.213e6])
+    │   │   │   │   │   │   ├─ [0] console::log("Resetting vote Blax blux", 79199004075486703379647873114 [7.919e28], 999574742776887156241704300967682 [9.995e32], 79232698352767939063239375289 [7.923e28]) [staticcall]
+    │   │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   │   ├─ [639] ERC1967Proxy::fallback() [staticcall]
+    │   │   │   │   │   │   │   ├─ [256] ClockV1_2_0::currentEpoch() [delegatecall]
+    │   │   │   │   │   │   │   │   └─ ← [Return] 1
+    │   │   │   │   │   │   │   └─ ← [Return] 1
+    │   │   │   │   │   │   ├─ emit Reset(voter: 0x000000000000000000000000000000000000000F, gauge: 0x0000000000000000000000000000000000000014, epoch: 1, votingPowerRemovedFromGauge: 79199004075486703379647873114 [7.919e28], totalVotingPowerInGauge: 0, totalVotingPowerInContract: 33694277281235679298115560 [3.369e25], timestamp: 1213201 [1.213e6])
+    │   │   │   │   │   │   ├─ [0] console::log("Resetting vote Blax blux", 33694275343384598531003113 [3.369e25], 425257198655124592496247438085 [4.252e29], 79232698352767939063239375289 [7.923e28]) [staticcall]
+    │   │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   │   ├─ [639] ERC1967Proxy::fallback() [staticcall]
+    │   │   │   │   │   │   │   ├─ [256] ClockV1_2_0::currentEpoch() [delegatecall]
+    │   │   │   │   │   │   │   │   └─ ← [Return] 1
+    │   │   │   │   │   │   │   └─ ← [Return] 1
+    │   │   │   │   │   │   ├─ emit Reset(voter: 0x000000000000000000000000000000000000000F, gauge: 0x0000000000000000000000000000000000000019, epoch: 1, votingPowerRemovedFromGauge: 33694275343384598531003113 [3.369e25], totalVotingPowerInGauge: 0, totalVotingPowerInContract: 1937851080767112447 [1.937e18], timestamp: 1213201 [1.213e6])
+    │   │   │   │   │   │   ├─ [0] console::log("Resetting vote Blax blux", 1937851080767112447 [1.937e18], 24457719111612396210215 [2.445e22], 79232698352767939063239375289 [7.923e28]) [staticcall]
+    │   │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   │   ├─ [639] ERC1967Proxy::fallback() [staticcall]
+    │   │   │   │   │   │   │   ├─ [256] ClockV1_2_0::currentEpoch() [delegatecall]
+    │   │   │   │   │   │   │   │   └─ ← [Return] 1
+    │   │   │   │   │   │   │   └─ ← [Return] 1
+    │   │   │   │   │   │   ├─ emit Reset(voter: 0x000000000000000000000000000000000000000F, gauge: 0x0000000000000000000000000000000000000015, epoch: 1, votingPowerRemovedFromGauge: 1937851080767112447 [1.937e18], totalVotingPowerInGauge: 0, totalVotingPowerInContract: 0, timestamp: 1213201 [1.213e6])
+    │   │   │   │   │   │   ├─ [0] console::log("after reset", 0) [staticcall]
+    │   │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   │   ├─ [0] console::log("casting vote III", 0, 54187055384017 [5.418e13], 0) [staticcall]
+    │   │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   │   ├─ [639] ERC1967Proxy::fallback() [staticcall]
+    │   │   │   │   │   │   │   ├─ [256] ClockV1_2_0::currentEpoch() [delegatecall]
+    │   │   │   │   │   │   │   │   └─ ← [Return] 1
+    │   │   │   │   │   │   │   └─ ← [Return] 1
+    │   │   │   │   │   │   ├─ emit Voted(voter: 0x000000000000000000000000000000000000000F, gauge: 0x0000000000000000000000000000000000000016, epoch: 1, votingPowerCastForGauge: 0, totalVotingPowerInGauge: 0, totalVotingPowerInContract: 0, timestamp: 1213201 [1.213e6])
+    │   │   │   │   │   │   ├─ [0] console::log("casting vote III", 0, 999574742776887156241704300967682 [9.995e32], 0) [staticcall]
+    │   │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   │   ├─ [639] ERC1967Proxy::fallback() [staticcall]
+    │   │   │   │   │   │   │   ├─ [256] ClockV1_2_0::currentEpoch() [delegatecall]
+    │   │   │   │   │   │   │   │   └─ ← [Return] 1
+    │   │   │   │   │   │   │   └─ ← [Return] 1
+    │   │   │   │   │   │   ├─ emit Voted(voter: 0x000000000000000000000000000000000000000F, gauge: 0x0000000000000000000000000000000000000014, epoch: 1, votingPowerCastForGauge: 0, totalVotingPowerInGauge: 0, totalVotingPowerInContract: 0, timestamp: 1213201 [1.213e6])
+    │   │   │   │   │   │   ├─ [0] console::log("casting vote III", 0, 425257198655124592496247438085 [4.252e29], 0) [staticcall]
+    │   │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   │   ├─ [639] ERC1967Proxy::fallback() [staticcall]
+    │   │   │   │   │   │   │   ├─ [256] ClockV1_2_0::currentEpoch() [delegatecall]
+    │   │   │   │   │   │   │   │   └─ ← [Return] 1
+    │   │   │   │   │   │   │   └─ ← [Return] 1
+    │   │   │   │   │   │   ├─ emit Voted(voter: 0x000000000000000000000000000000000000000F, gauge: 0x0000000000000000000000000000000000000019, epoch: 1, votingPowerCastForGauge: 0, totalVotingPowerInGauge: 0, totalVotingPowerInContract: 0, timestamp: 1213201 [1.213e6])
+    │   │   │   │   │   │   ├─ [0] console::log("casting vote III", 0, 24457719111612396210215 [2.445e22], 0) [staticcall]
+    │   │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   │   ├─ [639] ERC1967Proxy::fallback() [staticcall]
+    │   │   │   │   │   │   │   ├─ [256] ClockV1_2_0::currentEpoch() [delegatecall]
+    │   │   │   │   │   │   │   │   └─ ← [Return] 1
+    │   │   │   │   │   │   │   └─ ← [Return] 1
+    │   │   │   │   │   │   ├─ emit Voted(voter: 0x000000000000000000000000000000000000000F, gauge: 0x0000000000000000000000000000000000000015, epoch: 1, votingPowerCastForGauge: 0, totalVotingPowerInGauge: 0, totalVotingPowerInContract: 0, timestamp: 1213201 [1.213e6])
+    │   │   │   │   │   │   └─ ← [Stop]
+    │   │   │   │   │   └─ ← [Return]
+    │   │   │   │   └─ ← [Stop]
+    │   │   │   └─ ← [Return]
+    │   │   ├─ emit TokensUndelegated(sender: 0x000000000000000000000000000000000000000d, delegatee: 0x000000000000000000000000000000000000000F, tokenIds: [1])
+    │   │   └─ ← [Stop]
+    │   └─ ← [Return]
+    ├─ [1029] ERC1967Proxy::fallback() [staticcall]
+    │   ├─ [646] AddressGaugeVoter::totalVotingPowerCast() [delegatecall]
     │   │   └─ ← [Return] 0
     │   └─ ← [Return] 0
-    ├─ [0] VM::assertApproxEqAbs(0, 0, 0) [staticcall]
-    │   └─ ← [Return]
+    ├─ [0] console::log("123123124dkkdaks 777", 0) [staticcall]
+    │   └─ ← [Stop]
     └─ ← [Stop]
 
-Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 12.18ms (5.64ms CPU time)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 10.17ms (2.71ms CPU time)
 
-Ran 1 test suite in 153.14ms (12.18ms CPU time): 1 tests passed, 0 failed, 0 skipped (1 total tests)
+Ran 1 test suite in 147.19ms (10.17ms CPU time): 1 tests passed, 0 failed, 0 skipped (1 total tests)
+test suite in 145.46ms (3.60ms CPU time): 1 tests passed, 0 failed, 0 skipped (1 total tests)

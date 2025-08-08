@@ -19,7 +19,8 @@ import {
     Clock,
     VotingEscrow,
     ExitQueue,
-    SimpleGaugeVoter,
+    SimpleGaugeVoter as GaugeVoter,
+    IGaugeVote,
     SimpleGaugeVoterSetup,
     IEscrowCurveIncreasing,
     IEscrowCurveTokenStorage,
@@ -36,59 +37,131 @@ import {CommonBase} from "forge-std/Base.sol";
 
 contract DelegationHandler is StdUtils, StdCheats, CommonBase {
     using EnumerableSet for EnumerableSet.UintSet;
+    using EnumerableSet for EnumerableSet.AddressSet;
 
     IERC721EMB private lockNft;
     VotingEscrow private escrow;
     EscrowIVotesAdapter private ivotesAdapter;
     Curve private curve;
     ExitQueue private queue;
+    GaugeVoter private voter;
 
     MockERC20 private token;
     uint256 private maxTime;
     uint256 private checkpointInterval;
 
-    // Ghost variables
+    // ======= Ghost variables =========
+
+    // The addresses that participate in testing
     address[] public actors;
 
-    // This gives a list of tokens that user owns.
+    // The gauge addresses for which users can vote on AddressGaugeVoter
+    address[] public gauges;
+
+    // The list of tokens that user owns.
     mapping(address => EnumerableSet.UintSet) internal ownedTokens;
 
-    // This gives us a list of addresses that have tokens.
+    // The list of addresses that have vp > 0.
+    EnumerableSet.AddressSet internal delegateesWithVpPower;
 
-    // Outgoing tokens give a set that user has delegated to others.
+    // The set of tokens that user has delegated to his/her delegatee.
     mapping(address => EnumerableSet.UintSet) internal outgoingTokens;
 
-    // incoming tokens give a set of what tokens are delegated to the user.
+    // The set of tokens thatare delegated to the user.
     mapping(address => EnumerableSet.UintSet) internal incomingTokens;
 
-    // Active tokenIds..
+    // Active tokenIds - withdraw and merge cause removal of the token id.
     EnumerableSet.UintSet internal activeTokenIds;
 
+    // Track how much ERC20 token value is stored inside the escrow.
     uint256 public totalLocked;
 
+    /// All the contract addresses necessary for the handler to work.
+    struct Contracts {
+        address escrow;
+        address curve;
+        address lockNft;
+        address ivotesAdapter;
+        address queue;
+        address voter;
+    }
+
+    // Number that is used to choose how many actors 
+    // and gauges we will test the invariants. 
+    uint256 private constant COUNT = 5;
+
     constructor(
-        address _escrow,
-        address _curve,
-        address _lockNft,
-        address _ivotesAdapter,
-        address _queue,
+        Contracts memory _c,
+        address _admin,
         uint256 _maxTime,
         uint256 _checkpointInterval
     ) {
-        escrow = VotingEscrow(_escrow);
-        curve = Curve(_curve);
-        lockNft = IERC721EMB(_lockNft);
+        escrow = VotingEscrow(_c.escrow);
+        curve = Curve(_c.curve);
+        lockNft = IERC721EMB(_c.lockNft);
         token = MockERC20(escrow.token());
-        ivotesAdapter = EscrowIVotesAdapter(_ivotesAdapter);
-        queue = ExitQueue(_queue);
+        ivotesAdapter = EscrowIVotesAdapter(_c.ivotesAdapter);
+        voter = GaugeVoter(_c.voter);
+        queue = ExitQueue(_c.queue);
 
         maxTime = _maxTime;
         checkpointInterval = _checkpointInterval;
 
         // create 5 actors.
-        for (uint256 i = 10; i <= 15; i++) {
+        for (uint256 i = 10; i <= 10 + COUNT; i++) {
             actors.push(address(uint160(i)));
         }
+
+        // create 5 gauges
+        for (uint256 i = 20; i <= 20 + COUNT; i++) {
+            address gauge = address(uint160(i));
+
+            vm.prank(_admin);
+            voter.createGauge(gauge, "metadata");
+
+            gauges.push(gauge);
+        }
+
+        vm.prank(_admin);
+        voter.setEnableUpdateVotingPowerHook(true);
+    }
+
+    function vote(
+        uint256 _seedAddr,
+        uint8[COUNT] memory _gaugeSeeds,
+        uint64[COUNT] memory _weights
+    ) public {
+        address[] memory _delegateesWithPower = getDelegateesWithPower();
+        if (_delegateesWithPower.length == 0) return;
+
+        _seedAddr = _bound(_seedAddr, 0, _delegateesWithPower.length - 1);
+        address sender = _delegateesWithPower[_seedAddr];
+
+        bool[6] memory used;
+        uint256 count = 0;
+
+        IGaugeVote.GaugeVote[] memory votes = new IGaugeVote.GaugeVote[](_gaugeSeeds.length);
+        for (uint256 i = 0; i < _gaugeSeeds.length; i++) {
+            uint256 index = uint256(_gaugeSeeds[i]) % gauges.length;
+            _weights[i] = uint64(_bound(_weights[i], 1, type(uint64).max));
+
+            address gauge = gauges[index];
+            if(!used[index]) {
+                used[index] = true;
+                votes[count++] = IGaugeVote.GaugeVote(_weights[i], gauge);
+            }
+        }
+
+        assembly {
+            mstore(votes, count)
+        }
+
+        if(!voter.votingActive()) {
+            vm.warp(voter.epochVoteStart() + 1);
+        }
+
+        vm.prank(sender);
+        voter.vote(votes);
     }
 
     function setDelegateAddress(uint256 _delegatorIdx, uint256 _delegateeIdx) public {
@@ -108,16 +181,9 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
         uint256 _seedAddr,
         uint256 _numToDelegateSeed
     ) public adjustTimestamp(_jumpSeed) {
+        
         address msgSender = _getSender(_seedAddr);
         address delegatee = ivotesAdapter.delegates(msgSender);
-
-        // TODO: it might be a good option to ensure that the return here doesn't occur - i.e 
-        // when delegate is called in a sequence, it always is called
-        // with someone that already has a delegatee and has tokens undelegated that he can delegate.
-        // This way, delegate calls will not be wasted by those that don't have delegatee set or tokens = 0.
-        // To do this, ` address msgSender = _getSender(_seedAddr);` is incorrect, we probably need
-        // to track the users in separate structure which holds only those that have delegates set and tokens !=0.
-        // then _seedAddr will get it from that list/structure.
 
         // TODO 3: Echidna....
         if (ownedTokens[msgSender].length() == 0 || delegatee == address(0)) {
@@ -141,6 +207,10 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
         for (uint256 i = 0; i < tokens.length; i++) {
             incomingTokens[delegatee].add(tokens[i]);
             outgoingTokens[msgSender].add(tokens[i]);
+        }
+
+        if(ivotesAdapter.getVotes(delegatee) != 0) {
+            delegateesWithVpPower.add(delegatee);
         }
     }
 
@@ -174,6 +244,10 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
             incomingTokens[delegatee].remove(tokens[i]);
             outgoingTokens[msgSender].remove(tokens[i]);
         }
+
+        if(ivotesAdapter.getVotes(delegatee) == 0) {
+            delegateesWithVpPower.remove(delegatee);
+        }
     }
 
     function createLock(
@@ -203,6 +277,9 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
         // If sender has a delegatee already set,
         // tokenId automatically gets delegated.
         if (delegatee != address(0)) {
+            if(ivotesAdapter.getVotes(delegatee) > 0) {
+                delegateesWithVpPower.add(delegatee);
+            }
             incomingTokens[delegatee].add(tokenId);
             outgoingTokens[msgSender].add(tokenId);
         }
@@ -261,6 +338,9 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
         activeTokenIds.remove(fromId);
 
         if (delegatee != address(0)) {
+            if(ivotesAdapter.getVotes(delegatee) > 0) {
+                delegateesWithVpPower.add(delegatee);
+            }
             // If `from` token was delegated and is merged
             // into `to`, `to` automatically becomes delegated.
             if (isFromTokenDelegated) {
@@ -310,6 +390,9 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
         // When `from` is split, new token id is minted. We only
         // delegate it automatically if `from` was also delegated.
         if (delegatee != address(0) && isFromTokenDelegated) {
+            if(ivotesAdapter.getVotes(delegatee) > 0) {
+                delegateesWithVpPower.add(delegatee);
+            }
             incomingTokens[delegatee].add(fromId);
             outgoingTokens[msgSender].add(fromId);
 
@@ -348,6 +431,9 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
         ownedTokens[owner].remove(tokenId);
 
         if (delegatee != address(0)) {
+            if (ivotesAdapter.getVotes(delegatee) == 0) {
+                delegateesWithVpPower.remove(delegatee);
+            }
             incomingTokens[delegatee].remove(tokenId);
             outgoingTokens[owner].remove(tokenId);
         }
@@ -415,6 +501,11 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
         return _fromSetToArray(activeTokenIds);
     }
 
+    // The list of addresses to which at least 1 token is delegated(i.e whose vp > 0)
+    function getDelegateesWithPower() public view returns (address[] memory) {
+        return _fromSetToArray(delegateesWithVpPower);
+    }
+
     // Helper function to convert set into an array.
     function _fromSetToArray(
         EnumerableSet.UintSet storage _set
@@ -427,6 +518,20 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
         }
 
         return ids;
+    }
+
+    // Helper function to convert set into an array.
+    function _fromSetToArray(
+        EnumerableSet.AddressSet storage _set
+    ) private view returns (address[] memory) {
+        uint256 length = _set.length();
+        address[] memory addresses = new address[](length);
+
+        for (uint256 i = 0; i < length; i++) {
+            addresses[i] = _set.at(i);
+        }
+
+        return addresses;
     }
 
     // Adjust timestamps so that each function call

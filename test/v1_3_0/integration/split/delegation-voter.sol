@@ -17,7 +17,8 @@ import {
     ILockedBalanceIncreasing,
     IEscrowCurveGlobalStorage,
     IEscrowCurveTokenStorage,
-    IEscrowCurveGlobalStorage
+    IEscrowCurveGlobalStorage,
+    IGaugeVote
 } from "../../versions.sol";
 
 contract TestSplit_DelegationAndVoter is
@@ -32,11 +33,11 @@ contract TestSplit_DelegationAndVoter is
     function setUp() public override {
         super.setUp();
 
-        super.mintAndApproveEscrow(type(uint256).max);
+        // super.mintAndApproveEscrow(type(uint256).max);
 
         vm.warp(2 weeks + 1 hours + 1);
-        voter.createGauge(gauge, "metadata");
-        escrow.enableSplit();
+        // voter.createGauge(gauge, "metadata");
+        // escrow.enableSplit();
     }
 
     function test_Split_CorrectlyUpdatesDelegationAndVotes() public {
@@ -137,5 +138,50 @@ contract TestSplit_DelegationAndVoter is
 
         vm.prank(_who);
         token.approve(address(escrow), _amount);
+    }
+
+    function test_fuck() public {
+        address alice = address(0x000000000000000000000000000000000000000d);
+        address bob = address(0x000000000000000000000000000000000000000F);
+
+        vm.prank(alice);
+        ivotesAdapter.setDelegateAddress(bob);
+
+        token.mint(alice, 79228162514264337593543950333);
+
+        vm.startPrank(alice);
+        token.approve(address(escrow), 79228162514264337593543950333);
+        escrow.createLock(79228162514264337593543950333);
+        vm.stopPrank();
+
+        voter.createGauge(address(0x0000000000000000000000000000000000000016), "metadata");
+        voter.createGauge(address(0x0000000000000000000000000000000000000014), "metadata");
+        voter.createGauge(address(0x0000000000000000000000000000000000000019), "metadata");
+        voter.createGauge(address(0x0000000000000000000000000000000000000015), "metadata");
+
+        IGaugeVote.GaugeVote[] memory gaugeVotes = new IGaugeVote.GaugeVote[](4);
+        gaugeVotes[0] = IGaugeVote.GaugeVote(1, address(0x0000000000000000000000000000000000000016));
+        gaugeVotes[1] = IGaugeVote.GaugeVote(18446744073709551613, address(0x0000000000000000000000000000000000000014));
+        gaugeVotes[2] = IGaugeVote.GaugeVote(7847948105712314, address(0x0000000000000000000000000000000000000019));
+        gaugeVotes[3] = IGaugeVote.GaugeVote(451357228, address(0x0000000000000000000000000000000000000015));
+
+        vm.prank(bob);
+        voter.vote(gaugeVotes);
+
+        console.log("123123124dkkdaks 999", voter.totalVotingPowerCast());
+
+        vm.prank(alice);
+        uint256[] memory ids = new uint256[](1);
+        ids[0] = 1;
+        ivotesAdapter.undelegate(ids);
+
+        console.log("123123124dkkdaks 777", voter.totalVotingPowerCast());
+
+
+        // 0x000000000000000000000000000000000000000d delegates to 0x000000000000000000000000000000000000000F
+        // 0x000000000000000000000000000000000000000d creates lock with amount = 79228162514264337593543950333 (tokenId = 1)
+        // 0x000000000000000000000000000000000000000F votes 
+        // 0x000000000000000000000000000000000000000d undelegates tokenId = 1
+
     }
 }

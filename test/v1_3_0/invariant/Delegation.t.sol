@@ -42,11 +42,15 @@ contract TestDelegationInvariant is IEscrowCurveTokenStorage, EscrowBase {
         escrow.enableSplit();
 
         h = new DelegationHandler(
-            address(escrow),
-            address(curve),
-            address(nftLock),
-            address(ivotesAdapter),
-            address(queue),
+            DelegationHandler.Contracts({
+                escrow: address(escrow),
+                curve: address(curve),
+                lockNft: address(nftLock),
+                ivotesAdapter: address(ivotesAdapter),
+                queue: address(queue),
+                voter: address(voter)
+            }),
+            address(this),
             curve.maxTime(),
             clock.checkpointInterval()
         );
@@ -54,7 +58,7 @@ contract TestDelegationInvariant is IEscrowCurveTokenStorage, EscrowBase {
         targetContract(address(h));
 
         {
-            bytes4[] memory selectors = new bytes4[](7);
+            bytes4[] memory selectors = new bytes4[](8);
             selectors[0] = DelegationHandler.createLock.selector;
             selectors[1] = DelegationHandler.merge.selector;
             selectors[2] = DelegationHandler.split.selector;
@@ -62,6 +66,7 @@ contract TestDelegationInvariant is IEscrowCurveTokenStorage, EscrowBase {
             selectors[4] = DelegationHandler.delegate.selector;
             selectors[5] = DelegationHandler.undelegate.selector;
             selectors[6] = DelegationHandler.withdraw.selector;
+            selectors[7] = DelegationHandler.vote.selector;
             FuzzSelector memory a = FuzzSelector(address(h), selectors);
 
             targetSelector(a);
@@ -119,5 +124,26 @@ contract TestDelegationInvariant is IEscrowCurveTokenStorage, EscrowBase {
 
             assertApproxEqAbs(userVp, ivotesAdapter.getPastVotes(actor, block.timestamp), userIncomingTokens.length);
         }
+    }
+
+    function invariant_UserCannotHaveMoreVotesOnGaugeVoterThanIVotesAdapter() public {
+        address[] memory actors = h.getActors();
+
+        uint256 totalPastVotes = 0;
+        uint256 delta = 0;
+        for(uint256 i = 0; i < actors.length; i++) {
+            address actor = actors[i];
+
+            uint256 pastVotes = ivotesAdapter.getVotes(actor);
+            totalPastVotes += pastVotes;
+            assertLe(voter.usedVotingPower(actor), pastVotes);
+
+            delta += h.getIncomingTokens(actor).length;
+        }
+
+        uint256 totalOnGaugeVoter = voter.totalVotingPowerCast();
+        if(totalOnGaugeVoter > totalPastVotes) {
+            assertApproxEqAbs(totalOnGaugeVoter, totalPastVotes, delta);
+        } 
     }
 }
