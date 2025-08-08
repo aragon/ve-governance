@@ -256,4 +256,7 @@ abstract contract DelegationHelper is IEscrowIVotesAdapter, Pausable, UUPSUpgrad
         address _delegatee,
         uint256 _transitionCount
     ) internal virtual;
+
+     /// @dev Reserved storage space to allow for layout changes in the future.
+    uint256[47] private __gap;
 }

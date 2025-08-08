@@ -573,5 +573,5 @@ contract EscrowIVotesAdapter is
     function _authorizeUpgrade(address) internal virtual override auth(DELEGATION_ADMIN_ROLE) {}
 
     /// @dev Reserved storage space to allow for layout changes in the future.
-    uint256[40] private __gap;
+    uint256[43] private __gap;
 }
