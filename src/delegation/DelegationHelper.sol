@@ -83,8 +83,6 @@ abstract contract DelegationHelper is IEscrowIVotesAdapter, Pausable, UUPSUpgrad
             _setDelegated(_to.tokenId, true);
             emit TokensDelegated(_to.account, delegates(_to.account), _getTokenIdList(_to.tokenId));
         }
-
-        // TODO: if `x` not delegated, do we want to automatically delegate both `x` and `y` as long as delegate is set ?
     }
 
     /// @inheritdoc IDelegateMoveVoteRecipient
@@ -175,14 +173,6 @@ abstract contract DelegationHelper is IEscrowIVotesAdapter, Pausable, UUPSUpgrad
             }
         }
 
-        // Giorgi has tokenId = 5 and his delegatee is bob.
-        // Giorgi transfers tokenId = 5 to Alice.
-
-        // 1. alice doesn't have a delegatee.
-        // Shouldn't emit TokensDelegated event
-        // 2. alice has a delegatee
-        // Should emit TokensDelegated event
-        // 3.
         if (toDelegatee != address(0)) {
             (int256 bias, int256 slope) = _getBiasAndSlope(toDelegatee, _locked, _positive);
             _checkpoint(bias, slope, toDelegatee);
