@@ -20,6 +20,8 @@ import {
     IEscrowCurveGlobalStorage,
     IGaugeVote
 } from "../../versions.sol";
+import {DelegationHandler} from "../../invariant/handlers/DelegationHandler.sol";
+
 
 contract TestSplit_DelegationAndVoter is
     IEscrowCurveTokenStorage,
@@ -29,11 +31,25 @@ contract TestSplit_DelegationAndVoter is
     address gauge = address(0x777);
     address alice = address(0x123);
     address bob = address(0x192);
-
+    DelegationHandler handler;
     function setUp() public override {
         super.setUp();
 
         // super.mintAndApproveEscrow(type(uint256).max);
+
+         handler = new DelegationHandler(
+            DelegationHandler.Contracts({
+                escrow: address(escrow),
+                curve: address(curve),
+                lockNft: address(nftLock),
+                ivotesAdapter: address(ivotesAdapter),
+                queue: address(queue),
+                voter: address(voter)
+            }),
+            address(this),
+            curve.maxTime(),
+            clock.checkpointInterval()
+        );
 
         vm.warp(2 weeks + 1 hours + 1);
         // voter.createGauge(gauge, "metadata");
@@ -140,48 +156,73 @@ contract TestSplit_DelegationAndVoter is
         token.approve(address(escrow), _amount);
     }
 
-    function test_fuck() public {
-        address alice = address(0x000000000000000000000000000000000000000d);
-        address bob = address(0x000000000000000000000000000000000000000F);
+    // function test_fuck() public {
+    //     address alice = address(0x000000000000000000000000000000000000000d);
+    //     address bob = address(0x000000000000000000000000000000000000000F);
 
-        vm.prank(alice);
-        ivotesAdapter.setDelegateAddress(bob);
+    //     vm.prank(alice);
+    //     ivotesAdapter.setDelegateAddress(bob);
 
-        token.mint(alice, 79228162514264337593543950333);
+    //     token.mint(alice, 79228162514264337593543950333);
 
-        vm.startPrank(alice);
-        token.approve(address(escrow), 79228162514264337593543950333);
-        escrow.createLock(79228162514264337593543950333);
-        vm.stopPrank();
+    //     vm.startPrank(alice);
+    //     token.approve(address(escrow), 79228162514264337593543950333);
+    //     escrow.createLock(79228162514264337593543950333);
+    //     vm.stopPrank();
 
-        voter.createGauge(address(0x0000000000000000000000000000000000000016), "metadata");
-        voter.createGauge(address(0x0000000000000000000000000000000000000014), "metadata");
-        voter.createGauge(address(0x0000000000000000000000000000000000000019), "metadata");
-        voter.createGauge(address(0x0000000000000000000000000000000000000015), "metadata");
+    //     voter.createGauge(address(0x0000000000000000000000000000000000000016), "metadata");
+    //     voter.createGauge(address(0x0000000000000000000000000000000000000014), "metadata");
+    //     voter.createGauge(address(0x0000000000000000000000000000000000000019), "metadata");
+    //     voter.createGauge(address(0x0000000000000000000000000000000000000015), "metadata");
 
-        IGaugeVote.GaugeVote[] memory gaugeVotes = new IGaugeVote.GaugeVote[](4);
-        gaugeVotes[0] = IGaugeVote.GaugeVote(1, address(0x0000000000000000000000000000000000000016));
-        gaugeVotes[1] = IGaugeVote.GaugeVote(18446744073709551613, address(0x0000000000000000000000000000000000000014));
-        gaugeVotes[2] = IGaugeVote.GaugeVote(7847948105712314, address(0x0000000000000000000000000000000000000019));
-        gaugeVotes[3] = IGaugeVote.GaugeVote(451357228, address(0x0000000000000000000000000000000000000015));
+    //     IGaugeVote.GaugeVote[] memory gaugeVotes = new IGaugeVote.GaugeVote[](4);
+    //     gaugeVotes[0] = IGaugeVote.GaugeVote(1, address(0x0000000000000000000000000000000000000016));
+    //     gaugeVotes[1] = IGaugeVote.GaugeVote(18446744073709551613, address(0x0000000000000000000000000000000000000014));
+    //     gaugeVotes[2] = IGaugeVote.GaugeVote(7847948105712314, address(0x0000000000000000000000000000000000000019));
+    //     gaugeVotes[3] = IGaugeVote.GaugeVote(451357228, address(0x0000000000000000000000000000000000000015));
 
-        vm.prank(bob);
-        voter.vote(gaugeVotes);
+    //     vm.prank(bob);
+    //     voter.vote(gaugeVotes);
 
-        console.log("123123124dkkdaks 999", voter.totalVotingPowerCast());
+    //     console.log("23124dkkdaks 99", voter.totalVotingPowerCast());
 
-        vm.prank(alice);
-        uint256[] memory ids = new uint256[](1);
-        ids[0] = 1;
-        ivotesAdapter.undelegate(ids);
+    //     vm.prank(alice);
+    //     uint256[] memory ids = new uint256[](1);
+    //     ids[0] = 1;
+    //     ivotesAdapter.undelegate(ids);
 
-        console.log("123123124dkkdaks 777", voter.totalVotingPowerCast());
+    //     console.log("123123124dkkdaks 777", voter.totalVotingPowerCast());
 
 
-        // 0x000000000000000000000000000000000000000d delegates to 0x000000000000000000000000000000000000000F
-        // 0x000000000000000000000000000000000000000d creates lock with amount = 79228162514264337593543950333 (tokenId = 1)
-        // 0x000000000000000000000000000000000000000F votes 
-        // 0x000000000000000000000000000000000000000d undelegates tokenId = 1
+    //     // 0x000000000000000000000000000000000000000d delegates to 0x000000000000000000000000000000000000000F
+    //     // 0x000000000000000000000000000000000000000d creates lock with amount = 79228162514264337593543950333 (tokenId = 1)
+    //     // 0x000000000000000000000000000000000000000F votes 
+    //     // 0x000000000000000000000000000000000000000d undelegates tokenId = 1
 
+    // }
+
+    function test_blax() public {
+        address alice = address(0x000000000000000000000000000000000000000b);
+
+        handler.setDelegateAddress(5027023867677955921499300954145412896080652900726947055697, 1);
+        handler.createLock(11420, 1, 1);
+        handler.delegate(2946698112025714197753955350563990231382004644021242935273, 5910877921636927225964175309731733369742205233330600007111118745, 11353652829362931200336682428070764277731204863);
+
+
+        uint256[] memory userIncomingTokens = handler.getIncomingTokens(alice);
+        console.log(userIncomingTokens.length, " fuck yeah");
+        // uint256 userVp = 0;
+
+        // for(uint256 j = 0; j < userIncomingTokens.length; j++) {
+        //     userVp += escrow.votingPower(userIncomingTokens[j]);
+        // }
+
+        // assertApproxEqAbs(userVp, ivotesAdapter.getPastVotes(alice, block.timestamp), userIncomingTokens.length);
+        
+
+        // 0x000000000000000000000000000000000000000b delegates to 0x000000000000000000000000000000000000000b
+        // 0x000000000000000000000000000000000000000b creates lock with amount = 101 (tokenId = 1)
+        // 0x000000000000000000000000000000000000000b delegate(0x000000000000000000000000000000000000000b)
+   
     }
 }
