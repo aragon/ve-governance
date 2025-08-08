@@ -56,13 +56,9 @@ contract EscrowIVotesAdapter is
     mapping(address => mapping(uint256 => GlobalPoint)) public pointHistory;
     mapping(address => address) private delegatees_;
 
-    // Todo: what's the point of this to be public if pointHistory is not public ?
     mapping(address => uint256) public latestPointIndex;
-
-    
     mapping(address => bool) private autoDelegationDisabled_;
     
-
     uint256 private maxTime;
 
     /*///////////////////////////////////////////////////////////////

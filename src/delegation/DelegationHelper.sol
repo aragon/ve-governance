@@ -63,8 +63,8 @@ abstract contract DelegationHelper is IEscrowIVotesAdapter, Pausable, UUPSUpgrad
 
     /// @inheritdoc IDelegateMoveVoteRecipient
     function splitDelegateVotes(
-        Blax calldata _from,
-        Blax calldata _to
+        TokenLock calldata _from,
+        TokenLock calldata _to
     ) public virtual whenNotPaused onlyEscrow {
         if (_from.tokenId == 0 || _to.tokenId == 0) {
             revert IncorrectTokenIds();
@@ -81,6 +81,7 @@ abstract contract DelegationHelper is IEscrowIVotesAdapter, Pausable, UUPSUpgrad
         if (isFromTokenDelegated) {
             numberOfDelegatedTokens[_from.account]++;
             _setDelegated(_to.tokenId, true);
+            emit TokensDelegated(_to.account, delegates(_to.account), _getTokenIdList(_to.tokenId));
         }
 
         // TODO: if `x` not delegated, do we want to automatically delegate both `x` and `y` as long as delegate is set ?
@@ -88,8 +89,8 @@ abstract contract DelegationHelper is IEscrowIVotesAdapter, Pausable, UUPSUpgrad
 
     /// @inheritdoc IDelegateMoveVoteRecipient
     function mergeDelegateVotes(
-        Blax calldata _from,
-        Blax calldata _to
+        TokenLock calldata _from,
+        TokenLock calldata _to
     ) public virtual whenNotPaused onlyEscrow {
         if (_from.tokenId == 0 || _to.tokenId == 0) {
             revert IncorrectTokenIds();
@@ -111,7 +112,7 @@ abstract contract DelegationHelper is IEscrowIVotesAdapter, Pausable, UUPSUpgrad
                 _checkpoint(bias, slope, fromDelegatee);
             }
 
-            // If none of them are delegated, do nothing. TODO:
+            // If none of them are delegated, do nothing.
         } else {
             // from is delegated and to is delegated.
             // since both are already delegated, their amounts are already included in checkpoints.
@@ -133,13 +134,20 @@ abstract contract DelegationHelper is IEscrowIVotesAdapter, Pausable, UUPSUpgrad
                 _checkpoint(bias, slope, fromDelegatee);
 
                 _setDelegated(_to.tokenId, true);
+                emit TokensDelegated(
+                    _to.account,
+                    delegates(_to.account),
+                    _getTokenIdList(_to.tokenId)
+                );
             }
 
             _setDelegated(_from.tokenId, false);
+            emit TokensUndelegated(_from.account, fromDelegatee, _getTokenIdList(_from.tokenId));
         }
     }
 
     /// @inheritdoc IDelegateMoveVoteRecipient
+    /// @dev This is called on `transfer`, `withdraw` and `createLock`.
     /// @notice Assumes that: if this is called on transfer, then it can only be called if _from and _to are different.
     function moveDelegateVotes(
         address _from,
@@ -155,24 +163,30 @@ abstract contract DelegationHelper is IEscrowIVotesAdapter, Pausable, UUPSUpgrad
             return;
         }
 
-        uint256[] memory tokenIds = new uint256[](1);
-        tokenIds[0] = _tokenId;
+        uint256[] memory tokenIds = _getTokenIdList(_tokenId);
 
         if (fromDelegatee != address(0)) {
             if (tokenIsDelegated(_tokenId)) {
                 (int256 bias, int256 slope) = _getBiasAndSlope(fromDelegatee, _locked, _negative);
                 _checkpoint(bias, slope, fromDelegatee);
-            
-            
+
                 numberOfDelegatedTokens[_from]--;
                 emit TokensUndelegated(_from, fromDelegatee, tokenIds);
             }
         }
 
+        // Giorgi has tokenId = 5 and his delegatee is bob.
+        // Giorgi transfers tokenId = 5 to Alice.
+
+        // 1. alice doesn't have a delegatee.
+        // Shouldn't emit TokensDelegated event
+        // 2. alice has a delegatee
+        // Should emit TokensDelegated event
+        // 3.
         if (toDelegatee != address(0)) {
             (int256 bias, int256 slope) = _getBiasAndSlope(toDelegatee, _locked, _positive);
             _checkpoint(bias, slope, toDelegatee);
-            
+
             numberOfDelegatedTokens[_to]++;
             _setDelegated(_tokenId, true);
             emit TokensDelegated(_to, toDelegatee, tokenIds);
@@ -180,7 +194,7 @@ abstract contract DelegationHelper is IEscrowIVotesAdapter, Pausable, UUPSUpgrad
             // else this is new delegate voting power being burned
             _setDelegated(_tokenId, false);
         }
-        
+
         if (fromDelegatee != toDelegatee) {
             IVotingEscrow(escrow).updateVotingPower(fromDelegatee, toDelegatee);
         }
@@ -204,13 +218,18 @@ abstract contract DelegationHelper is IEscrowIVotesAdapter, Pausable, UUPSUpgrad
             delegatedBitmap[bucket] &= ~mask;
         }
     }
-    
+
     function _positive(int256 _value) internal pure returns (int256) {
         return _value;
     }
 
     function _negative(int256 _value) internal pure returns (int256) {
         return -_value;
+    }
+
+    function _getTokenIdList(uint256 _tokenId) private pure returns (uint256[] memory tokenIds) {
+        tokenIds = new uint256[](1);
+        tokenIds[0] = _tokenId;
     }
 
     /*//////////////////////////////////////////////////////////////

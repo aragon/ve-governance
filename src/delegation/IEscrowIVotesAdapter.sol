@@ -28,19 +28,17 @@ interface IEscrowIVotesAdapterErrorsAndEvents {
 }
 
 interface IDelegateMoveVoteRecipient {
-
-    struct Blax {
+    struct TokenLock {
         address account;
         uint256 tokenId;
         ILockedBalanceIncreasing.LockedBalance locked;
     }
 
-    /// @notice The hook function that is called upon `split`. 
-    function splitDelegateVotes(Blax calldata _from, Blax calldata _to) external;
+    /// @notice The hook function that is called upon `split`.
+    function splitDelegateVotes(TokenLock calldata _from, TokenLock calldata _to) external;
 
     /// @notice The hook function that is called upon `merge`.
-    function mergeDelegateVotes(Blax calldata _from, Blax calldata _to) external;
-
+    function mergeDelegateVotes(TokenLock calldata _from, TokenLock calldata _to) external;
 
     /// @notice After a token transfer, decreases `_from`'s voting power and increases `_to`'s voting power.
     /// @dev Called upon a token transfer or create lock.

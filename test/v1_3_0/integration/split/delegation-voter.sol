@@ -2,6 +2,7 @@ pragma solidity ^0.8.17;
 
 import {EscrowBase, IAddressGaugeVote} from "../../base/EscrowBase.sol";
 import {console2 as console} from "forge-std/console2.sol";
+import {Vm} from "forge-std/Vm.sol";
 
 import {
     Clock,
@@ -20,8 +21,6 @@ import {
     IEscrowCurveGlobalStorage,
     IGaugeVote
 } from "../../versions.sol";
-import {DelegationHandler} from "../../invariant/handlers/DelegationHandler.sol";
-
 
 contract TestSplit_DelegationAndVoter is
     IEscrowCurveTokenStorage,
@@ -31,29 +30,15 @@ contract TestSplit_DelegationAndVoter is
     address gauge = address(0x777);
     address alice = address(0x123);
     address bob = address(0x192);
-    DelegationHandler handler;
+
     function setUp() public override {
         super.setUp();
 
-        // super.mintAndApproveEscrow(type(uint256).max);
-
-         handler = new DelegationHandler(
-            DelegationHandler.Contracts({
-                escrow: address(escrow),
-                curve: address(curve),
-                lockNft: address(nftLock),
-                ivotesAdapter: address(ivotesAdapter),
-                queue: address(queue),
-                voter: address(voter)
-            }),
-            address(this),
-            curve.maxTime(),
-            clock.checkpointInterval()
-        );
+        super.mintAndApproveEscrow(type(uint256).max);
 
         vm.warp(2 weeks + 1 hours + 1);
-        // voter.createGauge(gauge, "metadata");
-        // escrow.enableSplit();
+        voter.createGauge(gauge, "metadata");
+        escrow.enableSplit();
     }
 
     function test_Split_CorrectlyUpdatesDelegationAndVotes() public {
@@ -99,17 +84,25 @@ contract TestSplit_DelegationAndVoter is
         assertEq(voter.votes(alice, gauge), bias(aliceAmount, block.timestamp - checkpointTs));
     }
 
-    function testFuzz_Split_WhenTokenIsNotDelegated(uint192 _amount) public {
-        uint256 minDeposit = 100;
-        escrow.setMinDeposit(minDeposit);
-        _approve(_amount, minDeposit);
+    function testFuzz_Split_WhenTokenIsNotDelegated(uint192 _amount, uint192 _splitAmount, uint192 _minDeposit) public {
+        vm.assume(_minDeposit != 0);
+        vm.assume(_amount > _splitAmount);
+        vm.assume(_splitAmount > _minDeposit);
+        vm.assume(_amount - _splitAmount > _minDeposit);
+
+        escrow.setMinDeposit(_minDeposit);
+        _approve(alice, _amount, _minDeposit);
 
         vm.startPrank(alice);
         uint256 tokenId1 = escrow.createLock(_amount);
 
         assertFalse(ivotesAdapter.tokenIsDelegated(tokenId1));
 
-        escrow.split(tokenId1, minDeposit);
+        vm.recordLogs();
+        escrow.split(tokenId1, _splitAmount);
+        _ensureNotEmitted(TokensDelegatedSignature);
+        _ensureNotEmitted(TokensUndelegatedSignature);
+
         assertEq(ivotesAdapter.getPastVotes(bob, block.timestamp), 0);
 
         assertFalse(ivotesAdapter.tokenIsDelegated(tokenId1));
@@ -118,10 +111,14 @@ contract TestSplit_DelegationAndVoter is
         vm.stopPrank();
     }
 
-    function testFuzz_Split_WhenTokenIsDelegated(uint192 _amount) public {
-        uint256 minDeposit = 100;
-        escrow.setMinDeposit(minDeposit);
-        _approve(_amount, minDeposit);
+    function testFuzz_Split_WhenTokenIsDelegated(uint192 _amount, uint192 _splitAmount, uint192 _minDeposit) public {
+        vm.assume(_minDeposit != 0);
+        vm.assume(_amount > _splitAmount);
+        vm.assume(_splitAmount > _minDeposit);
+        vm.assume(_amount - _splitAmount > _minDeposit);
+
+        escrow.setMinDeposit(_minDeposit);
+        _approve(alice, _amount, _minDeposit);
 
         vm.startPrank(alice);
         ivotesAdapter.setDelegateAddress(bob);
@@ -129,7 +126,12 @@ contract TestSplit_DelegationAndVoter is
 
         assertTrue(ivotesAdapter.tokenIsDelegated(tokenId1));
 
-        escrow.split(tokenId1, minDeposit);
+        vm.expectEmit();
+        emit TokensDelegated(alice, bob, _getTokenIdList(tokenId1 + 1));
+        vm.recordLogs();
+        escrow.split(tokenId1, _splitAmount);
+        _ensureNotEmitted(TokensUndelegatedSignature);
+
         assertEq(
             ivotesAdapter.getPastVotes(bob, block.timestamp),
             bias(_amount, block.timestamp - weekStartTs(block.timestamp))
@@ -141,88 +143,10 @@ contract TestSplit_DelegationAndVoter is
         vm.stopPrank();
     }
 
-    function _approve(uint256 _amount, uint256 _minDeposit) private {
-        vm.assume(_amount >= _minDeposit);
-        token.transfer(alice, _amount);
-
-        vm.prank(alice);
-        token.approve(address(escrow), _amount);
-    }
-
-    function _approve(address _who, uint256 _amount) private {
+    function _approve(address _who, uint256 _amount, uint256 _minDeposit) private {
         token.transfer(_who, _amount);
 
         vm.prank(_who);
         token.approve(address(escrow), _amount);
-    }
-
-    // function test_fuck() public {
-    //     address alice = address(0x000000000000000000000000000000000000000d);
-    //     address bob = address(0x000000000000000000000000000000000000000F);
-
-    //     vm.prank(alice);
-    //     ivotesAdapter.setDelegateAddress(bob);
-
-    //     token.mint(alice, 79228162514264337593543950333);
-
-    //     vm.startPrank(alice);
-    //     token.approve(address(escrow), 79228162514264337593543950333);
-    //     escrow.createLock(79228162514264337593543950333);
-    //     vm.stopPrank();
-
-    //     voter.createGauge(address(0x0000000000000000000000000000000000000016), "metadata");
-    //     voter.createGauge(address(0x0000000000000000000000000000000000000014), "metadata");
-    //     voter.createGauge(address(0x0000000000000000000000000000000000000019), "metadata");
-    //     voter.createGauge(address(0x0000000000000000000000000000000000000015), "metadata");
-
-    //     IGaugeVote.GaugeVote[] memory gaugeVotes = new IGaugeVote.GaugeVote[](4);
-    //     gaugeVotes[0] = IGaugeVote.GaugeVote(1, address(0x0000000000000000000000000000000000000016));
-    //     gaugeVotes[1] = IGaugeVote.GaugeVote(18446744073709551613, address(0x0000000000000000000000000000000000000014));
-    //     gaugeVotes[2] = IGaugeVote.GaugeVote(7847948105712314, address(0x0000000000000000000000000000000000000019));
-    //     gaugeVotes[3] = IGaugeVote.GaugeVote(451357228, address(0x0000000000000000000000000000000000000015));
-
-    //     vm.prank(bob);
-    //     voter.vote(gaugeVotes);
-
-    //     console.log("23124dkkdaks 99", voter.totalVotingPowerCast());
-
-    //     vm.prank(alice);
-    //     uint256[] memory ids = new uint256[](1);
-    //     ids[0] = 1;
-    //     ivotesAdapter.undelegate(ids);
-
-    //     console.log("123123124dkkdaks 777", voter.totalVotingPowerCast());
-
-
-    //     // 0x000000000000000000000000000000000000000d delegates to 0x000000000000000000000000000000000000000F
-    //     // 0x000000000000000000000000000000000000000d creates lock with amount = 79228162514264337593543950333 (tokenId = 1)
-    //     // 0x000000000000000000000000000000000000000F votes 
-    //     // 0x000000000000000000000000000000000000000d undelegates tokenId = 1
-
-    // }
-
-    function test_blax() public {
-        address alice = address(0x000000000000000000000000000000000000000b);
-
-        handler.setDelegateAddress(5027023867677955921499300954145412896080652900726947055697, 1);
-        handler.createLock(11420, 1, 1);
-        handler.delegate(2946698112025714197753955350563990231382004644021242935273, 5910877921636927225964175309731733369742205233330600007111118745, 11353652829362931200336682428070764277731204863);
-
-
-        uint256[] memory userIncomingTokens = handler.getIncomingTokens(alice);
-        console.log(userIncomingTokens.length, " fuck yeah");
-        // uint256 userVp = 0;
-
-        // for(uint256 j = 0; j < userIncomingTokens.length; j++) {
-        //     userVp += escrow.votingPower(userIncomingTokens[j]);
-        // }
-
-        // assertApproxEqAbs(userVp, ivotesAdapter.getPastVotes(alice, block.timestamp), userIncomingTokens.length);
-        
-
-        // 0x000000000000000000000000000000000000000b delegates to 0x000000000000000000000000000000000000000b
-        // 0x000000000000000000000000000000000000000b creates lock with amount = 101 (tokenId = 1)
-        // 0x000000000000000000000000000000000000000b delegate(0x000000000000000000000000000000000000000b)
-   
     }
 }

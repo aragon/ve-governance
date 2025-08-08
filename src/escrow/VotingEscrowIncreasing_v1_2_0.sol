@@ -390,10 +390,6 @@ contract VotingEscrowV1_2_0 is
             revert CannotMerge(_from, _to);
         }
 
-        // Bug 2... 
-
-       
-
         // We only allow merge when both tokens have the same owner.
         // After the merge, owner still should have the same voting power
         // as one token gets merged into another. For this reason,
@@ -402,8 +398,8 @@ contract VotingEscrowV1_2_0 is
         // Note that we still decrease owner's delegated token count
         // as `_from` token is destroyed.
         IEscrowIVotesAdapter(ivotesAdapter).mergeDelegateVotes(
-            IDelegateMoveVoteRecipient.Blax(ownerFrom, _from, oldLockedFrom),
-            IDelegateMoveVoteRecipient.Blax(ownerFrom, _to, oldLockedTo)
+            IDelegateMoveVoteRecipient.TokenLock(ownerFrom, _from, oldLockedFrom),
+            IDelegateMoveVoteRecipient.TokenLock(ownerFrom, _to, oldLockedTo)
         );
 
         // Update for `_from`.
@@ -483,8 +479,8 @@ contract VotingEscrowV1_2_0 is
         // We still call `_moveDelegateVotes` with zero LockedBalance to
         // make sure we update delegatee's token count due to newtokenId.
         IEscrowIVotesAdapter(ivotesAdapter).splitDelegateVotes(
-            IDelegateMoveVoteRecipient.Blax(owner, _from, LockedBalance(0, 0)),
-            IDelegateMoveVoteRecipient.Blax(owner, newTokenId, LockedBalance(0, 0))
+            IDelegateMoveVoteRecipient.TokenLock(owner, _from, LockedBalance(0, 0)),
+            IDelegateMoveVoteRecipient.TokenLock(owner, newTokenId, LockedBalance(0, 0))
         );
 
         emit Split(_from, newTokenId, sender, amount1, amount2);

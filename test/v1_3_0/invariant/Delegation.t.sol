@@ -101,7 +101,7 @@ contract TestDelegationInvariant is IEscrowCurveTokenStorage, EscrowBase {
         }
 
         assertEq(amountSum, escrow.totalLocked(), "Sum of NFT Amoutns != totalLocked");
-        // assertEq(vpSum, escrow.totalVotingPower(), "Sum of vps individually != total vp");
+        assertApproxEqAbs(vpSum, escrow.totalVotingPower(), ids.length, "Sum of vps individually != total vp");
     }
 
     function invariant_UserHasCorrectPastVotes() public {
