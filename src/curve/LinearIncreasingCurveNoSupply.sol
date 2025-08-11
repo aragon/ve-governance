@@ -68,11 +68,14 @@ contract LinearIncreasingCurveNoSupply is
     /*//////////////////////////////////////////////////////////////
                                 MATH
     //////////////////////////////////////////////////////////////*/
-
-    /// @dev precomputed coefficients of the quadratic curve
+        
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     int256 private immutable SHARED_QUADRATIC_COEFFICIENT;
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     int256 private immutable SHARED_LINEAR_COEFFICIENT;
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     int256 private immutable SHARED_CONSTANT_COEFFICIENT;
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     uint256 private immutable MAX_EPOCHS;
 
     error UpgradeNotPossible();
