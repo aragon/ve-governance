@@ -400,6 +400,8 @@ contract EscrowIVotesAdapter is
             }
         }
         
+        // totalBias and totalSlope can be negative, in which case
+        // it will subtract instead of adding.
         lastPoint.bias += _totalBias;
         lastPoint.slope += _totalSlope;
         lastPoint.writtenTs = uint48(expectedWrittenTs);
@@ -431,10 +433,7 @@ contract EscrowIVotesAdapter is
     function getPastVotes(address _account, uint256 _timestamp) public view returns (uint256) {
         return _delegateBalanceAt(_account, _timestamp);
     }
-
-    // TODO: Giorgi is this correct ? I mean there could be 10000 locks(tokens created), but assume none of them are delegated.
-    // then supply must be 0 from the perspective of delegation total supply. it's like ERC20 where supply is x, but if no one delegated,
-    // getPastVotes is still 0.
+    
     function getPastTotalSupply(uint256 _timestamp) external view returns (uint256) {
         return IVotingEscrow(escrow).totalVotingPowerAt(_timestamp);
     }
