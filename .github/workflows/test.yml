@@ -154,6 +154,29 @@ jobs:
           forge test --match-path "test/**/upgrade/**/*.sol" --force
         id: test
 
+  test-invariant:
+    strategy:
+      fail-fast: true
+    name: Test Invariant
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: foundry-toolchain
+        uses: foundry-rs/foundry-toolchain@v1.3.1
+
+      - name: Run Forge build
+        run: |
+          forge build
+        id: build
+
+      - name: Run Forge tests
+        run: |
+          forge test --match-path "test/**/invariant/**/*.sol"
+        id: test
+    
   test-fork:
     strategy:
       fail-fast: true

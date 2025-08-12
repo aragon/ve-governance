@@ -48,7 +48,8 @@ import {
 } from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
 import {
     IDelegateUpdateVotingPower,
-    IEscrowIVotesAdapter
+    IEscrowIVotesAdapter,
+    IDelegateMoveVoteRecipient
 } from "../delegation/IEscrowIVotesAdapter.sol";
 
 contract VotingEscrowV1_2_0 is
@@ -396,7 +397,10 @@ contract VotingEscrowV1_2_0 is
         // reduce/increase the same voting power for gas efficiency.
         // Note that we still decrease owner's delegated token count
         // as `_from` token is destroyed.
-        _moveDelegateVotes(ownerFrom, address(0), _from, LockedBalance(0, 0));
+        IEscrowIVotesAdapter(ivotesAdapter).mergeDelegateVotes(
+            IDelegateMoveVoteRecipient.TokenLock(ownerFrom, _from, oldLockedFrom),
+            IDelegateMoveVoteRecipient.TokenLock(ownerFrom, _to, oldLockedTo)
+        );
 
         // Update for `_from`.
         // Note that on the checkpoint, we still don't
@@ -474,7 +478,10 @@ contract VotingEscrowV1_2_0 is
         // to update voting power on ivotesAdapter, as total doesn't change.
         // We still call `_moveDelegateVotes` with zero LockedBalance to
         // make sure we update delegatee's token count due to newtokenId.
-        _moveDelegateVotes(address(0), owner, newTokenId, LockedBalance(0, 0));
+        IEscrowIVotesAdapter(ivotesAdapter).splitDelegateVotes(
+            IDelegateMoveVoteRecipient.TokenLock(owner, _from, LockedBalance(0, 0)),
+            IDelegateMoveVoteRecipient.TokenLock(owner, newTokenId, LockedBalance(0, 0))
+        );
 
         emit Split(_from, newTokenId, sender, amount1, amount2);
 
