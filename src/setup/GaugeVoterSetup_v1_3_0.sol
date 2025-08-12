@@ -86,6 +86,11 @@ contract GaugeVoterSetupV1_3_0 is PluginSetup {
     }
 
     /// @notice Deploys the setup by binding the implementation contracts required during installation.
+    /// @dev Note that Curve contract is an upgradeable contract and uses `immutable` variables in the constructor.
+    ///      Extra caution must be taken as using the same Setup contract will always deploy curve with 
+    ///      the same coefficients. In case one wants to deploy the curve with different coefficients in each time,
+    ///      one must deploy a new curve and pass that address to this setup. Alternatively, one should always
+    ///      deploy the curve in this setup's constructor and add coefficients param to this constructor.
     constructor(
         address _voterBase,
         address _curveBase,

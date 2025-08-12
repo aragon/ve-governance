@@ -274,10 +274,11 @@ contract RegressionV1_0_0__to__V1_2_0_Fork is
             dao.applyMultiTargetPermissions(grant0);
             dao.applyMultiTargetPermissions(grant1);
 
+            (int256[3] memory coefficients, uint256 maxEpoch) = CurveConstantLib.getCoefficients();
             upgradeFactory.upgrade(
                 false,
                 new ClockV1_2_0(),
-                new LinearEscrowCurve(),
+                new LinearEscrowCurve(coefficients, maxEpoch),
                 new VotingEscrowV1_2_0(),
                 new LockV1_2_0(),
                 new EscrowIVotesAdapter(),

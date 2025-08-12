@@ -13,6 +13,7 @@ import {
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
 import {FixedPointBase} from "../../../base/FixedPointBase.sol";
+import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 
 contract MockEscrow {
     address public token;
@@ -55,7 +56,8 @@ contract CurveBase is TestHelpers, FixedPointBase, ILockedBalanceIncreasing {
         bytes memory initClockCalldata = abi.encodeWithSelector(Clock.initialize.selector, dao);
         clock = Clock(clockImpl.deployUUPSProxy(initClockCalldata));
 
-        address impl = address(new Curve());
+        (int256[3] memory coefficients, uint256 maxEpoch) = CurveConstantLib.getCoefficients();
+        address impl = address(new Curve(coefficients, maxEpoch));
 
         bytes memory initCalldata = abi.encodeCall(
             Curve.initialize,

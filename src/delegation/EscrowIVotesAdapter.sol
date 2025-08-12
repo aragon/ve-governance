@@ -426,22 +426,30 @@ contract EscrowIVotesAdapter is
                       IVotes Function
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Returns the current amount of votes that `account` has.
     function getVotes(address _account) external view returns (uint256) {
         return _delegateBalanceAt(_account, block.timestamp);
     }
 
+    /// @notice Returns the amount of votes that `account` had at a specific moment in the past.
     function getPastVotes(address _account, uint256 _timestamp) public view returns (uint256) {
         return _delegateBalanceAt(_account, _timestamp);
     }
-    
+
+    /// @notice Returns the total supply of votes available at a specific moment in the past. 
+    /// @dev This value is the sum of all available votes, which is not necessarily the sum 
+    ///      of all delegated votes. Votes that have not been delegated are still part of 
+    ///      total supply, even though they would not participate in a vote.
     function getPastTotalSupply(uint256 _timestamp) external view returns (uint256) {
         return IVotingEscrow(escrow).totalVotingPowerAt(_timestamp);
     }
 
+    /// @inheritdoc IEscrowIVotesAdapter
     function delegates(address _account) public view virtual override returns (address) {
         return delegatees_[_account];
     }
 
+    /// @dev Not implemented.
     function delegateBySig(address, uint256, uint256, uint8, bytes32, bytes32) public virtual {
         revert DelegateBySigNotSupported();
     }
