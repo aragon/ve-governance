@@ -2,6 +2,7 @@
 pragma solidity ^0.8.17;
 
 import {Test} from "forge-std/Test.sol";
+import {Vm} from "forge-std/Vm.sol";
 
 // aragon contracts
 import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
@@ -40,8 +41,10 @@ import {
 
 import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 import {FixedPointBase} from "./FixedPointBase.sol";
+import {StdInvariant} from "forge-std/StdInvariant.sol";
 
 contract EscrowBase is
+    StdInvariant,
     Test,
     FixedPointBase,
     IVotingEscrowEventsStorageErrorsEvents,
@@ -86,6 +89,13 @@ contract EscrowBase is
     uint256 internal Lock_2_start;
 
     uint48 public warmupPeriod;
+
+    event TokensDelegated(address indexed sender, address indexed delegatee, uint256[] tokenIds);
+    event TokensUndelegated(address indexed sender, address indexed delegatee, uint256[] tokenIds);
+    bytes32 internal TokensDelegatedSignature =
+        keccak256("TokensDelegated(address,address,uint256[])");
+    bytes32 internal TokensUndelegatedSignature =
+        keccak256("TokensUndelegated(address,address,uint256[])");
 
     error OnlyEscrow();
 
@@ -315,6 +325,11 @@ contract EscrowBase is
         return IERC721Receiver.onERC721Received.selector;
     }
 
+    function _getTokenIdList(uint256 _tokenId) internal pure returns (uint256[] memory tokenIds) {
+        tokenIds = new uint256[](1);
+        tokenIds[0] = _tokenId;
+    }
+
     function _authErr(
         address _caller,
         address _contract,
@@ -328,6 +343,16 @@ contract EscrowBase is
                 _caller,
                 _perm
             );
+    }
+
+    function _ensureNotEmitted(bytes32 _expected) internal {
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        for (uint256 i = 0; i < logs.length; i++) {
+            bytes32 topic = logs[i].topics[0];
+            if (topic == _expected || topic == _expected) {
+                assertEq(true, false, "Event was not supposed to be emitted");
+            }
+        }
     }
 
     function _deployEscrow(
