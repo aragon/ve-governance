@@ -22,7 +22,6 @@ import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {
     DaoAuthorizableUpgradeable as DaoAuthorizable
 } from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
-import {console2 as console} from "forge-std/console2.sol";
 
 import {
     IVotingEscrowIncreasingV1_2_0 as IVotingEscrow
@@ -405,13 +404,11 @@ contract EscrowIVotesAdapter is
         lastPoint.slope += _totalSlope;
         lastPoint.writtenTs = uint48(expectedWrittenTs);
         
-
         if (lastPoint.slope < 0) lastPoint.slope = 0;
         if (lastPoint.bias < 0) lastPoint.bias = 0;
 
         latestPointIndex[_delegatee] = ++latestPointIndex_;
         pointHistory[_delegatee][latestPointIndex_] = lastPoint;
-
     }
 
     /// @notice Proxies a call to the ERC721 contract
@@ -523,7 +520,6 @@ contract EscrowIVotesAdapter is
             slope -= dSlope;
             ts = t_i;
         }
-
 
         if (bias < 0) bias = 0;
 

@@ -22,7 +22,6 @@ import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
 import {
     DaoAuthorizableUpgradeable as DaoAuthorizable
 } from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
-import {console2 as console} from "forge-std/console2.sol";
 
 import {
     IVotingEscrowIncreasingV1_2_0 as IVotingEscrow
