@@ -9,6 +9,7 @@ import {
     IDeprecated
 } from "../../../versions.sol";
 import {CurveBase} from "./CurveBase.t.sol";
+import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 
 contract TestIncreasingCurveLogic is CurveBase {
     address attacker = address(0x1);
@@ -21,7 +22,8 @@ contract TestIncreasingCurveLogic is CurveBase {
     );
 
     function testUUPSUpgrade() public {
-        address newImpl = address(new Curve());
+        (int256[3] memory coefficients, uint256 maxEpoch) = CurveConstantLib.getCoefficients();
+        address newImpl = address(new Curve(coefficients, maxEpoch));
         curve.upgradeTo(newImpl);
         assertEq(curve.implementation(), newImpl);
 

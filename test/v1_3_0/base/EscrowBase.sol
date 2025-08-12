@@ -20,6 +20,7 @@ import {console2 as console} from "forge-std/console2.sol";
 
 import "@helpers/OSxHelpers.sol";
 import {ProxyLib} from "@libs/ProxyLib.sol";
+import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 
 import {
     Lock,

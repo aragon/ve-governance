@@ -17,6 +17,7 @@ import {Addresslist} from "@aragon/osx/plugins/utils/Addresslist.sol";
 import {
     MultisigSetup as MultisigPluginSetup
 } from "@aragon/osx/plugins/governance/multisig/MultisigSetup.sol";
+import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 
 import {
     SimpleGaugeVoterSetup,
@@ -34,6 +35,13 @@ import {
 } from "../../versions.sol";
 
 contract GaugesDaoFactoryTest is Test {
+    int256[3] internal coefficients;
+    uint256 internal maxEpoch;
+    
+    function setUp() public {
+        (coefficients, maxEpoch) = CurveConstantLib.getCoefficients();
+    }
+    
     function test_ShouldStoreTheSettings_1() public {
         address[] memory multisigMembers = new address[](13);
         for (uint256 i = 0; i < 13; i++) {
@@ -42,7 +50,7 @@ contract GaugesDaoFactoryTest is Test {
 
         SimpleGaugeVoterSetup gaugeVoterPluginSetup = new SimpleGaugeVoterSetup(
             address(new SimpleGaugeVoter()),
-            address(new Curve()),
+            address(new Curve(coefficients, maxEpoch)),
             address(new ExitQueue()),
             address(new VotingEscrow()),
             address(new Clock()),
@@ -207,7 +215,7 @@ contract GaugesDaoFactoryTest is Test {
 
         SimpleGaugeVoterSetup gaugeVoterPluginSetup = new SimpleGaugeVoterSetup(
             address(new SimpleGaugeVoter()),
-            address(new Curve()),
+            address(new Curve(coefficients, maxEpoch)),
             address(new ExitQueue()),
             address(new VotingEscrow()),
             address(new Clock()),
@@ -387,7 +395,7 @@ contract GaugesDaoFactoryTest is Test {
 
         SimpleGaugeVoterSetup gaugeVoterPluginSetup = new SimpleGaugeVoterSetup(
             address(new SimpleGaugeVoter()),
-            address(new Curve()),
+            address(new Curve(coefficients, maxEpoch)),
             address(new ExitQueue()),
             address(new VotingEscrow()),
             address(new Clock()),
@@ -762,7 +770,7 @@ contract GaugesDaoFactoryTest is Test {
 
         SimpleGaugeVoterSetup gaugeVoterPluginSetup = new SimpleGaugeVoterSetup(
             address(new SimpleGaugeVoter()),
-            address(new Curve()),
+            address(new Curve(coefficients, maxEpoch)),
             address(new ExitQueue()),
             address(new VotingEscrow()),
             address(new Clock()),
@@ -1241,7 +1249,7 @@ contract GaugesDaoFactoryTest is Test {
 
         SimpleGaugeVoterSetup gaugeVoterPluginSetup = new SimpleGaugeVoterSetup(
             address(new SimpleGaugeVoter()),
-            address(new Curve()),
+            address(new Curve(coefficients, maxEpoch)),
             address(new ExitQueue()),
             address(new VotingEscrow()),
             address(new Clock()),
