@@ -25,7 +25,7 @@ test-ui-110 :; forge test --match-path "test/v1_1_0/{unit,integration}/**/*.sol"
 test-ui-120 :; forge test --match-path "test/v1_2_0/{unit,integration}/**/*.sol" 
 test-ui-130 :; forge test --match-path "test/v1_3_0/{unit,integration}/**/*.sol"
 test-ui-season :; forge test --match-path "test/season/{unit,integration}/**/*.sol"
-	
+
 # run unit tests
 test-unit :; forge test --match-path "test/**/unit/**/*.sol"
 
