@@ -33,7 +33,7 @@ jobs:
             final-cleanup: false  # Don't cleanup after this job
           - name: claude-direct
             download-repos: false
-            slither: false
+            slither: true
             claude: false
             claude-template: "prompts/slither/02-claude-direct-analysis.md"
             upload-artifacts: false
