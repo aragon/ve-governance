@@ -31,6 +31,7 @@ jobs:
 
   claude-direct-analysis:
     if: always()
+    needs: slither-analysis
     uses: "aragon/github-templates/.github/workflows/sc-security-analysis.yml@feat/sc-analysis"
     with:
       claude: true
