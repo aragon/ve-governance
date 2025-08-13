@@ -24,9 +24,9 @@ jobs:
       matrix:
         include:
           - name: slither-analysis
-            download-repos: true
-            slither: true
-            claude: true
+            #download-repos: true
+            #slither: true
+            #claude: true
             claude-template: "prompts/slither/01-slither_summary.md"
             upload-artifacts: false
           - name: claude-direct
