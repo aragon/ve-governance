@@ -27,6 +27,7 @@ jobs:
       final-cleanup: false
 
   exploit-generation:
+    needs: slither-analysis
     uses: "aragon/github-templates/.github/workflows/sc-security-analysis.yml@feat/sc-analysis"
     with:
       claude: true
