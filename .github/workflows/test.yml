@@ -30,7 +30,7 @@ jobs:
       final-cleanup: false
 
   claude-direct-analysis:
-    if: always()
+    if: ${{ !cancelled() }}
     needs: slither-analysis
     uses: "aragon/github-templates/.github/workflows/sc-security-analysis.yml@feat/sc-analysis"
     with:
