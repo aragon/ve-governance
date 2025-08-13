@@ -76,19 +76,6 @@ Classify findings using these criteria:
 ## Executive Summary
 [2-3 paragraph overview of the security posture, highlighting the most critical findings and overall risk assessment]
 
-## Detailed Findings
-
-### [Vulnerability ID]: [Brief Description]
-- **Affected Contract(s)**: [Contract name(s) and path(s)]
-- **Slither Rule/Detector**: [Exact name of the Slither detector]
-- **Description**: [Detailed contextualized description explaining why this matters]
-- **Severity**: [Critical/High/Medium/Low/Informational] - [Clear justification for severity rating]
-- **Potential Impact**: [Specific consequences if exploited, including affected functions/users]
-- **Recommended Mitigation**: [Step-by-step remediation with code examples if applicable]
-- **Code Location**: `[filename]:[line_numbers]`
-
-[Repeat for each vulnerability]
-
 ## Statistics Summary
 | Severity      | Count        |
 | ------------- | ------------ |
@@ -111,6 +98,21 @@ Classify findings using these criteria:
 
 ## False Positives Identified
 [List any Slither findings determined to be false positives with justification]
+
+## Detailed Findings
+
+### [Vulnerability ID]: [Brief Description]
+- **Affected Contract(s)**: [Contract name(s) and path(s)]
+- **Slither Rule/Detector**: [Exact name of the Slither detector]
+- **Description**: [Detailed contextualized description explaining why this matters]
+- **Severity**: [Critical/High/Medium/Low/Informational] - [Clear justification for severity rating]
+- **Potential Impact**: [Specific consequences if exploited, including affected functions/users]
+- **Recommended Mitigation**: [Step-by-step remediation with code examples if applicable]
+- **Code Location**: `[filename]:[line_numbers]`
+
+[Repeat for each vulnerability]
+
+
 ```
 
 ### 6. **Prioritization Framework**
