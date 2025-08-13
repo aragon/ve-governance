@@ -4,28 +4,21 @@ on:
     inputs:
       # Tools to use
       ## Slither
-      slither:
-        description: "Enable Slither analysis"
-        type: boolean
-        default: true
       template-ref:
         required: false
         type: string
         default: "feat/sc-analysis"
         description: "template branch ref (branch, tag, or commit SHA)"
-      claude-template:
-        required: false
-        type: string
-        default: ".github/workflows/security/claude-template.md"
-        description: "claude template"
+
 
 jobs:
-  build-and-test:
+  slither-analysis:
     uses: "aragon/github-templates/.github/workflows/sc-security-analysis.yml@feat/sc-analysis"
     with:
-      slither: ${{ inputs.slither}}
-      claude-template: ${{ inputs.claude-template }}
-      slither-include-paths: src/curve
+      slither: true
+      claude: true
+      claude-template: "prompts/slither/sarif_summary.md"
+      paths-to-analyze: "src/curve"
       final-cleanup: false
     permissions:
       contents: read
