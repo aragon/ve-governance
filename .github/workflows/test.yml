@@ -24,7 +24,7 @@ jobs:
       matrix:
         include:
           - name: slither-analysis
-            #download-repos: true
+            download-repos: true
             #slither: true
             #claude: true
             claude-template: "prompts/slither/01-slither_summary.md"
@@ -45,7 +45,7 @@ jobs:
       claude-template: ${{ matrix.claude-template }}
       paths-to-analyze: "src/curve"
       upload-artifacts: ${{ matrix.upload-artifacts }}
-      final-cleanup: false
+      final-cleanup: true
 #jobs:
 #  slither-analysis:
 #    uses: "aragon/github-templates/.github/workflows/sc-security-analysis.yml@feat/sc-analysis"
