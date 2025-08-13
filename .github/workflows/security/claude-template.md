@@ -46,7 +46,6 @@ When analyzing Slither results, you will:
    - Clear explanation of why it matters in this specific context
    - Concrete steps to remediate the issue
    - Assessment of whether the issue is likely a false positive
-8. **Write a report in markdown format**
 
 Your analysis should be thorough yet accessible, helping both technical and non-technical stakeholders understand the security implications. Focus on practical risks rather than theoretical vulnerabilities, and always consider the specific architecture and use case of the contracts under review.
 
