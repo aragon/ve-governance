@@ -18,6 +18,7 @@ permissions:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
+
 jobs:
   security-analysis:
     strategy:
@@ -25,27 +26,30 @@ jobs:
         include:
           - name: slither-analysis
             download-repos: true
-            #slither: true
-            #claude: true
+            slither: false
+            claude: false
             claude-template: "prompts/slither/01-slither_summary.md"
             upload-artifacts: false
+            final-cleanup: false  # Don't cleanup after this job
           - name: claude-direct
             download-repos: false
             slither: false
-            claude: true
+            claude: false
             claude-template: "prompts/slither/02-claude-direct-analysis.md"
-            upload-artifacts: true
+            upload-artifacts: false
+            final-cleanup: true   # Only cleanup after the last job
       fail-fast: false  # Continue even if one fails
-      max-parallel: 1
+      max-parallel: 1   # This ensures sequential execution
     uses: "aragon/github-templates/.github/workflows/sc-security-analysis.yml@feat/sc-analysis"
     with:
       download-repos: ${{ matrix.download-repos }}
-      slither: ${{ matrix.slither }}
-      claude: ${{ matrix.claude }}
+      slither: ${{ matrix.slither || false }}  # Default to false if not specified
+      claude: ${{ matrix.claude || false }}    # Default to false if not specified
       claude-template: ${{ matrix.claude-template }}
       paths-to-analyze: "src/curve"
-      upload-artifacts: ${{ matrix.upload-artifacts }}
-      final-cleanup: true
+      upload-artifacts: ${{ matrix.upload-artifacts || false }}  # Default to false if not specified
+      final-cleanup: ${{ matrix.final-cleanup || true}}
+      template-ref: ${{ inputs.template-ref }}  # Pass through the template-ref input
 #jobs:
 #  slither-analysis:
 #    uses: "aragon/github-templates/.github/workflows/sc-security-analysis.yml@feat/sc-analysis"
