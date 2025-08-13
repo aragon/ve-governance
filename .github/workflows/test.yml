@@ -9,22 +9,23 @@ on:
         type: string
         default: "feat/sc-analysis"
         description: "template branch ref (branch, tag, or commit SHA)"
-
+permissions:
+  contents: read
+  pull-requests: read
+  issues: read
+  id-token: write
 
 jobs:
   slither-analysis:
     uses: "aragon/github-templates/.github/workflows/sc-security-analysis.yml@feat/sc-analysis"
     with:
+      download-repos: true
       slither: true
       claude: true
       claude-template: "prompts/slither/sarif_summary.md"
       paths-to-analyze: "src/curve"
       final-cleanup: false
-    permissions:
-      contents: read
-      pull-requests: read
-      issues: read
-      id-token: write
+
 
       #  notify:
 #    needs: [build-and-test, deploy]
