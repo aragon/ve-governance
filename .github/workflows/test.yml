@@ -20,7 +20,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  security-analysis:
+  sc-analysis:
     strategy:
       matrix:
         include:
@@ -36,7 +36,7 @@ jobs:
             slither: true
             claude: false
             claude-template: "prompts/slither/02-claude-direct-analysis.md"
-            upload-artifacts: false
+            upload-artifacts: true
             final-cleanup: true
       fail-fast: false  # Continue even if one fails
       max-parallel: 1   # This ensures sequential execution
