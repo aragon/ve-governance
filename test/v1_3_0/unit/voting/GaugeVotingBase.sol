@@ -13,6 +13,7 @@ import {MockDAOFactory} from "@mocks/osx/MockDAOFactory.sol";
 import {MockERC20} from "@mocks/MockERC20.sol";
 import {DaoUnauthorized} from "@aragon/osx/core/utils/auth.sol";
 import {ProxyLib} from "@libs/ProxyLib.sol";
+import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 
 import "@helpers/OSxHelpers.sol";
 
@@ -118,10 +119,11 @@ contract GaugeVotingBase is
 
         voterBase = address(new SimpleGaugeVoter());
 
+        (int256[3] memory coefficients, uint256 maxEpochs) = CurveConstantLib.getCoefficients();
         // deploy setup
         voterSetup = new SimpleGaugeVoterSetup(
             voterBase,
-            address(new LinearIncreasingCurve()),
+            address(new LinearIncreasingCurve(coefficients, maxEpochs)),
             address(new ExitQueue()),
             address(new VotingEscrow()),
             address(new Clock()),
