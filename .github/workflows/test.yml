@@ -30,14 +30,14 @@ jobs:
             claude: false
             claude-template: "prompts/slither/01-slither_summary.md"
             upload-artifacts: false
-            final-cleanup: false  # Don't cleanup after this job
+            final-cleanup: false
           - name: claude-direct
             download-repos: false
             slither: true
             claude: false
             claude-template: "prompts/slither/02-claude-direct-analysis.md"
             upload-artifacts: false
-            final-cleanup: true   # Only cleanup after the last job
+            final-cleanup: true
       fail-fast: false  # Continue even if one fails
       max-parallel: 1   # This ensures sequential execution
     uses: "aragon/github-templates/.github/workflows/sc-security-analysis.yml@feat/sc-analysis"
@@ -48,7 +48,7 @@ jobs:
       claude-template: ${{ matrix.claude-template }}
       paths-to-analyze: "src/curve"
       upload-artifacts: ${{ matrix.upload-artifacts || false }}  # Default to false if not specified
-      final-cleanup: ${{ matrix.final-cleanup || true}}
+      final-cleanup: ${{ matrix.final-cleanup || false }}
       template-ref: ${{ inputs.template-ref }}  # Pass through the template-ref input
 #jobs:
 #  slither-analysis:
