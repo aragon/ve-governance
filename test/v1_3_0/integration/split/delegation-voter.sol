@@ -38,7 +38,7 @@ contract TestSplit_DelegationAndVoter is
     function setUp() public override {
         super.setUp();
 
-        super.mintAndApproveEscrow(type(uint256).max);
+        super.mintAndApproveEscrow();
 
         vm.warp(2 weeks + 1 hours + 1);
         voter.createGauge(gauge, "metadata");

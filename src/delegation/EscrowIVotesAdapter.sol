@@ -384,8 +384,7 @@ contract EscrowIVotesAdapter is
                 } else {
                     dSlope = slopeChanges_[t_i];
                 }
-
-
+                
                 lastPoint.bias += lastPoint.slope * int256(t_i - lastPointCheckpoint);
                 lastPoint.slope -= dSlope;
 
