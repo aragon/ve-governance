@@ -133,6 +133,9 @@ contract TestVPAndCheckpoints is Base {
             vm.stopPrank();
         }
 
+        assertSlopeChange(alice, bobDelegateStart + maxTime, 0);
+        assertSlopeChange(bob, bobDelegateStart + maxTime, 0);
+
         vm.warp(block.timestamp + 1 weeks + 1 hours);
         uint256 carolDelegateStart = weekStartTs(block.timestamp);
 
@@ -149,6 +152,7 @@ contract TestVPAndCheckpoints is Base {
         }
 
         assertEq(dg.getVotes(alice), bias(carolAmount, block.timestamp - carolDelegateStart));
+        assertSlopeChange(alice, carolDelegateStart + maxTime, carolAmount);
 
         vm.warp(block.timestamp + 100);
         assertEq(dg.getVotes(alice), bias(carolAmount, block.timestamp - carolDelegateStart));

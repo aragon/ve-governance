@@ -93,7 +93,7 @@ contract TestSplit_DelegationAndVoter is
     // It will revert. Otherwise, it would cause voting power on Alice
     // to increase more than original token's voting power even though
     // split must not cause any such anomaly.
-    function testRevert_IfDelegateTokenIsCalledFromTokenMint() public {
+    function testRevert_Reentrancy_IfDelegateTokenIsCalledFromTokenMint() public {
         escrow.enableSplit();
 
         address c = address(new ReentrancyDelegate(address(escrow), address(ivotesAdapter)));
@@ -131,7 +131,7 @@ contract TestSplit_DelegationAndVoter is
         escrow.split(tokenId, 3e18);
     }
 
-    function testRevert_IfDelegateAddressIsCalledFromTokenMint() public {
+    function test_Reentrancy_IfDelegateAddressIsCalledFromTokenMint() public {
         escrow.enableSplit();
 
         address c = address(new ReentrancyDelegate(address(escrow), address(ivotesAdapter)));
@@ -156,9 +156,10 @@ contract TestSplit_DelegationAndVoter is
 
         uint256 vpBefore = ivotesAdapter.getVotes(alice);
 
-        // Split calls token.mint which calls `delegate([newTokenId])` on escrowAdapter.
-        // This must revert as before `token.mint` is called, `_moveDelegateVotes` already
-        // makes this new token as "delegated: true`.
+        // Split calls token.mint which calls `delegate(address)` on escrowAdapter.
+        // This must not cause any change in `getVotes` because `delegate(address)`
+        // undelegates all tokens that were delegated and delegates them. In this
+        // test case, delegatee address doesn't change and is Alice.
         vm.prank(c);
         escrow.split(tokenId, 3e18);
 

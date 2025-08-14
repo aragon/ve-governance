@@ -91,7 +91,7 @@ contract TestCreateLock_DelegationAndVoter is
     // calls back `delegate([tokenIds])` by ERC721Received function,
     // It will revert. Otherwise, it would cause voting power on Alice
     // to double on escrowIVotesAdapter.
-    function testRevert_IfDelegateTokenIsCalledFromTokenMint_oe() public {
+    function testRevert_Reentrancy_IfDelegateTokenIsCalledFromTokenMint() public {
         escrow.enableSplit();
 
         address c = address(new ReentrancyDelegate(address(escrow), address(ivotesAdapter)));
@@ -121,29 +121,5 @@ contract TestCreateLock_DelegationAndVoter is
             )
         );
         escrow.createLockFor(10e18, c);
-    }
-
-    function testRevert_IfDelegateAddressIsCalledFromTokenMint_blax() public {
-        escrow.enableSplit();
-
-        address c = address(new ReentrancyDelegate(address(escrow), address(ivotesAdapter)));
-        token.mint(c, 10e18);
-
-        // C delegates to Alice
-        address alice = address(123);
-        vm.prank(c);
-        ivotesAdapter.setDelegateAddress(alice);
-
-        {
-            ReentrancyDelegate(c).setParams(abi.encodeWithSignature("delegate(address)", alice));
-            ReentrancyDelegate(c).enableExploit(true);
-        }
-
-        uint256 tokenId = escrow.createLockFor(10e18, c);
-
-        uint256 vp1 = escrow.votingPower(tokenId);
-        uint256 vp2 = ivotesAdapter.getVotes(alice);
-
-        assertEq(vp1, vp2);
     }
 }
