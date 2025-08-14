@@ -38,14 +38,14 @@ contract TestSplit_DelegationAndVoter is
     function setUp() public override {
         super.setUp();
 
-        super.mintAndApproveEscrow();
-
         vm.warp(2 weeks + 1 hours + 1);
         voter.createGauge(gauge, "metadata");
         escrow.enableSplit();
     }
 
     function test_Split_CorrectlyUpdatesDelegationAndVotes() public {
+        super.mintAndApproveEscrow();
+
         uint256 aliceAmount = 30e18;
         token.transfer(alice, aliceAmount);
 
@@ -94,6 +94,8 @@ contract TestSplit_DelegationAndVoter is
     // to increase more than original token's voting power even though
     // split must not cause any such anomaly.
     function testRevert_Reentrancy_IfDelegateTokenIsCalledFromTokenMint() public {
+        super.mintAndApproveEscrow();
+
         escrow.enableSplit();
 
         address c = address(new ReentrancyDelegate(address(escrow), address(ivotesAdapter)));
@@ -132,6 +134,8 @@ contract TestSplit_DelegationAndVoter is
     }
 
     function test_Reentrancy_IfDelegateAddressIsCalledFromTokenMint() public {
+        super.mintAndApproveEscrow();
+
         escrow.enableSplit();
 
         address c = address(new ReentrancyDelegate(address(escrow), address(ivotesAdapter)));
@@ -169,6 +173,8 @@ contract TestSplit_DelegationAndVoter is
     }
     
     function testFuzz_Split_WhenTokenIsNotDelegated(uint192 _amount, uint192 _splitAmount, uint192 _minDeposit) public {
+        super.mintAndApproveEscrow(type(uint256).max);
+
         vm.assume(_minDeposit != 0);
         vm.assume(_amount > _splitAmount);
         vm.assume(_splitAmount > _minDeposit);
@@ -196,6 +202,8 @@ contract TestSplit_DelegationAndVoter is
     }
 
     function testFuzz_Split_WhenTokenIsDelegated(uint192 _amount, uint192 _splitAmount, uint192 _minDeposit) public {
+        super.mintAndApproveEscrow(type(uint256).max);
+
         vm.assume(_minDeposit != 0);
         vm.assume(_amount > _splitAmount);
         vm.assume(_splitAmount > _minDeposit);
