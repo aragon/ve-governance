@@ -19,8 +19,12 @@ import {
     IEscrowCurveGlobalStorage,
     IEscrowCurveTokenStorage,
     IEscrowCurveGlobalStorage,
+    EscrowIVotesAdapter,
+    IEscrowIVotesAdapterErrorsAndEvents,
     IGaugeVote
 } from "../../versions.sol";
+
+import {ReentrancyDelegate} from "../utils/ReentrancyDelegate.sol";
 
 contract TestSplit_DelegationAndVoter is
     IEscrowCurveTokenStorage,
@@ -34,14 +38,14 @@ contract TestSplit_DelegationAndVoter is
     function setUp() public override {
         super.setUp();
 
-        super.mintAndApproveEscrow(type(uint256).max);
-
         vm.warp(2 weeks + 1 hours + 1);
         voter.createGauge(gauge, "metadata");
         escrow.enableSplit();
     }
 
     function test_Split_CorrectlyUpdatesDelegationAndVotes() public {
+        super.mintAndApproveEscrow();
+
         uint256 aliceAmount = 30e18;
         token.transfer(alice, aliceAmount);
 
@@ -84,7 +88,93 @@ contract TestSplit_DelegationAndVoter is
         assertEq(voter.votes(alice, gauge), bias(aliceAmount, block.timestamp - checkpointTs));
     }
 
+    // Ensures that even if `.mint` call on the new tokenId
+    // calls back `delegate([tokenIds])` by ERC721Received function,
+    // It will revert. Otherwise, it would cause voting power on Alice
+    // to increase more than original token's voting power even though
+    // split must not cause any such anomaly.
+    function testRevert_Reentrancy_IfDelegateTokenIsCalledFromTokenMint() public {
+        super.mintAndApproveEscrow();
+
+        escrow.enableSplit();
+
+        address delegatee = address(new ReentrancyDelegate(address(escrow), address(ivotesAdapter)));
+        token.mint(delegatee, 10e18);
+
+        // C delegates to Alice
+        address alice = address(123);
+        vm.prank(delegatee);
+        ivotesAdapter.setDelegateAddress(alice);
+
+        // tokenId gets created by `delegatee` address.
+        // This should automatically assign voting power
+        // of this tokenId to alice, because `delegatee` set its own
+        // delegate as Alice.
+        uint256 tokenId = escrow.createLockFor(10e18, delegatee);
+        uint256 splitTokenId = tokenId + 1;
+
+        {
+            uint256[] memory ids = new uint256[](1);
+            ids[0] = splitTokenId;
+            ReentrancyDelegate(delegatee).setParams(abi.encodeWithSignature("delegate(uint256[])", ids));
+            ReentrancyDelegate(delegatee).enableExploit(true);
+        }
+
+        // Split calls token.mint which calls `delegate([newTokenId])` on escrowAdapter.
+        // This must revert as before `token.mint` is called, `_moveDelegateVotes` already
+        // makes this new token as "delegated: true`.
+        vm.prank(delegatee);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IEscrowIVotesAdapterErrorsAndEvents.TokenAlreadyDelegated.selector,
+                splitTokenId
+            )
+        );
+        escrow.split(tokenId, 3e18);
+    }
+
+    function test_Reentrancy_IfDelegateAddressIsCalledFromTokenMint() public {
+        super.mintAndApproveEscrow();
+
+        escrow.enableSplit();
+
+        address delegatee = address(new ReentrancyDelegate(address(escrow), address(ivotesAdapter)));
+        token.mint(delegatee, 10e18);
+
+        // C delegates to Alice
+        address alice = address(123);
+        vm.prank(delegatee);
+        ivotesAdapter.setDelegateAddress(alice);
+
+        // tokenId gets created by `delegatee` address.
+        // This should automatically assign voting power
+        // of this tokenId to alice, because `delegatee` set its own
+        // delegate as Alice.
+        uint256 tokenId = escrow.createLockFor(10e18, delegatee);
+        uint256 splitTokenId = tokenId + 1;
+
+        {
+            ReentrancyDelegate(delegatee).setParams(abi.encodeWithSignature("delegate(address)", alice));
+            ReentrancyDelegate(delegatee).enableExploit(true);
+        }
+
+        uint256 vpBefore = ivotesAdapter.getVotes(alice);
+
+        // Split calls token.mint which calls `delegate(address)` on escrowAdapter.
+        // This must not cause any change in `getVotes` because `delegate(address)`
+        // undelegates all tokens that were delegated and delegates them. In this
+        // test case, delegatee address doesn't change and is Alice.
+        vm.prank(delegatee);
+        escrow.split(tokenId, 3e18);
+
+        uint256 vpAfter = ivotesAdapter.getVotes(alice);
+
+        assertEq(vpBefore, vpAfter);
+    }
+    
     function testFuzz_Split_WhenTokenIsNotDelegated(uint192 _amount, uint192 _splitAmount, uint192 _minDeposit) public {
+        super.mintAndApproveEscrow(type(uint256).max);
+
         vm.assume(_minDeposit != 0);
         vm.assume(_amount > _splitAmount);
         vm.assume(_splitAmount > _minDeposit);
@@ -112,6 +202,8 @@ contract TestSplit_DelegationAndVoter is
     }
 
     function testFuzz_Split_WhenTokenIsDelegated(uint192 _amount, uint192 _splitAmount, uint192 _minDeposit) public {
+        super.mintAndApproveEscrow(type(uint256).max);
+
         vm.assume(_minDeposit != 0);
         vm.assume(_amount > _splitAmount);
         vm.assume(_splitAmount > _minDeposit);

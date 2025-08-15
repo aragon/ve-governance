@@ -23,7 +23,7 @@ import {
 
 import {ReentrancyDelegate} from "../utils/ReentrancyDelegate.sol";
 
-contract TestCreateLock_DelegationAndVoter is
+contract TestSplit_DelegationAndVoter is
     IEscrowCurveTokenStorage,
     IEscrowCurveGlobalStorage,
     EscrowBase
@@ -34,60 +34,58 @@ contract TestCreateLock_DelegationAndVoter is
         super.mintAndApproveEscrow();
     }
 
-    function test_CreateLock_CorrectlyUpdatesDelegationAndVotes() public {
+    function test_Split_CorrectlyUpdatesDelegationAndVotes() public {
         vm.warp(1);
 
         address alice = address(0x123);
-        uint256 lock1Amount = 15e18;
-        uint256 lock2Amount = 35e18;
+        uint256 aliceAmount = 30e18;
+        token.transfer(alice, aliceAmount);
 
-        token.transfer(alice, lock1Amount + lock2Amount);
-
-        address gauge = address(0x777);
-
-        // activate cp & warp to an active window
         vm.warp(2 weeks + 1 hours + 1);
+        address gauge = address(0x777);
         voter.createGauge(gauge, "metadata");
+        escrow.enableSplit();
 
-        // alice creates lock, delegates to herself and votes.
+        // turn on delegation to alice, so when she splits,
+        // we can test that her delegation automatically updates.
         {
             vm.startPrank(alice);
+            token.approve(address(escrow), aliceAmount);
+            escrow.createLock(aliceAmount);
             ivotesAdapter.delegate(alice);
-
-            token.approve(address(escrow), lock1Amount);
-            escrow.createLock(lock1Amount);
 
             IAddressGaugeVote.GaugeVote[] memory votes = new IAddressGaugeVote.GaugeVote[](1);
             votes[0] = IAddressGaugeVote.GaugeVote(100, gauge);
             voter.vote(votes);
+
             vm.stopPrank();
         }
 
         uint256 checkpointTs = weekStartTs(block.timestamp);
 
-        uint256 alice1Bias = bias(lock1Amount, block.timestamp - checkpointTs);
-        uint256 alice2Bias = bias(lock2Amount, block.timestamp - checkpointTs);
-        assertEq(ivotesAdapter.getVotes(alice), alice1Bias);
-        assertEq(voter.votes(alice, gauge), alice1Bias);
-        assertTrue(ivotesAdapter.tokenIsDelegated(1));
+        assertEq(ivotesAdapter.tokenIsDelegated(1), true);
         assertEq(ivotesAdapter.numberOfDelegatedTokens(alice), 1);
+        assertEq(voter.votes(alice, gauge), bias(aliceAmount, block.timestamp - checkpointTs));
+        assertEq(ivotesAdapter.getVotes(alice), bias(aliceAmount, block.timestamp - checkpointTs));
 
-        // alice creates second lock which should
-        // automatically increase her delegation power.
-        {
-            vm.startPrank(alice);
-            token.approve(address(escrow), lock2Amount);
-            escrow.createLock(lock2Amount);
-            vm.stopPrank();
-        }
+        vm.prank(alice);
+        escrow.split(1, 5e18);
 
-        assertEq(ivotesAdapter.getVotes(alice), alice1Bias + alice2Bias);
-        assertEq(voter.votes(alice, gauge), alice1Bias);
-        assertTrue(ivotesAdapter.tokenIsDelegated(2));
+        // // Even though tokenId was destroyed, split produced
+        // // 2 new tokenIds of which's power sum must be the same.
+        assertEq(ivotesAdapter.getVotes(alice), bias(aliceAmount, block.timestamp - checkpointTs));
+        assertEq(ivotesAdapter.tokenIsDelegated(1), true);
+        assertEq(ivotesAdapter.tokenIsDelegated(2), true);
         assertEq(ivotesAdapter.numberOfDelegatedTokens(alice), 2);
+
+        // Even though `split` was called not by owner of the token, but address(this), it still
+        // shouldn't change any behaviour. It's still alice that gets minted a new tokenId.
+        // Note that split doesn't change the total amount for Alice, so her recorded voting power
+        // should stay the same on voter.
+        assertEq(voter.votes(alice, gauge), bias(aliceAmount, block.timestamp - checkpointTs));
     }
 
-    // Ensures that even if `.mint` call on the new tokenId
+   // Ensures that even if `.mint` call on the new tokenId
     // calls back `delegate([tokenIds])` by ERC721Received function,
     // It will revert. Otherwise, it would cause voting power on Alice
     // to double on escrowIVotesAdapter.
@@ -97,7 +95,7 @@ contract TestCreateLock_DelegationAndVoter is
         address delegatee = address(new ReentrancyDelegate(address(escrow), address(ivotesAdapter)));
         token.mint(delegatee, 10e18);
 
-        //  contract delegatee delegates to Alice
+        // delegatee contract delegates to Alice
         address alice = address(123);
         vm.prank(delegatee);
         ivotesAdapter.setDelegateAddress(alice);

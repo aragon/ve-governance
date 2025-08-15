@@ -384,8 +384,7 @@ contract EscrowIVotesAdapter is
                 } else {
                     dSlope = slopeChanges_[t_i];
                 }
-
-
+                
                 lastPoint.bias += lastPoint.slope * int256(t_i - lastPointCheckpoint);
                 lastPoint.slope -= dSlope;
 
@@ -517,7 +516,7 @@ contract EscrowIVotesAdapter is
             if (t_i > _timestamp) {
                 t_i = _timestamp;
             } else {
-                dSlope = slopeChanges_[t_i];
+                dSlope = slopeChanges_[t_i];                
             }
             bias += slope * int256(t_i - ts);
 
