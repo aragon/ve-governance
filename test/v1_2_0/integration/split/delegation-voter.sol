@@ -97,32 +97,32 @@ contract TestSplit_DelegationAndVoter is
 
         escrow.enableSplit();
 
-        address c = address(new ReentrancyDelegate(address(escrow), address(ivotesAdapter)));
-        token.mint(c, 10e18);
+        address delegatee = address(new ReentrancyDelegate(address(escrow), address(ivotesAdapter)));
+        token.mint(delegatee, 10e18);
 
         // C delegates to Alice
         address alice = address(123);
-        vm.prank(c);
+        vm.prank(delegatee);
         ivotesAdapter.setDelegateAddress(alice);
 
-        // tokenId gets created by `c` address.
+        // tokenId gets created by `delegatee` address.
         // This should automatically assign voting power
-        // of this tokenId to alice, because `c` set its own
+        // of this tokenId to alice, because `delegatee` set its own
         // delegate as Alice.
-        uint256 tokenId = escrow.createLockFor(10e18, c);
+        uint256 tokenId = escrow.createLockFor(10e18, delegatee);
         uint256 splitTokenId = tokenId + 1;
 
         {
             uint256[] memory ids = new uint256[](1);
             ids[0] = splitTokenId;
-            ReentrancyDelegate(c).setParams(abi.encodeWithSignature("delegate(uint256[])", ids));
-            ReentrancyDelegate(c).enableExploit(true);
+            ReentrancyDelegate(delegatee).setParams(abi.encodeWithSignature("delegate(uint256[])", ids));
+            ReentrancyDelegate(delegatee).enableExploit(true);
         }
 
         // Split calls token.mint which calls `delegate([newTokenId])` on escrowAdapter.
         // This must revert as before `token.mint` is called, `_moveDelegateVotes` already
         // makes this new token as "delegated: true`.
-        vm.prank(c);
+        vm.prank(delegatee);
         vm.expectRevert(
             abi.encodeWithSelector(
                 IEscrowIVotesAdapterErrorsAndEvents.TokenAlreadyDelegated.selector,
@@ -137,24 +137,24 @@ contract TestSplit_DelegationAndVoter is
 
         escrow.enableSplit();
 
-        address c = address(new ReentrancyDelegate(address(escrow), address(ivotesAdapter)));
-        token.mint(c, 10e18);
+        address delegatee = address(new ReentrancyDelegate(address(escrow), address(ivotesAdapter)));
+        token.mint(delegatee, 10e18);
 
         // C delegates to Alice
         address alice = address(123);
-        vm.prank(c);
+        vm.prank(delegatee);
         ivotesAdapter.setDelegateAddress(alice);
 
-        // tokenId gets created by `c` address.
+        // tokenId gets created by `delegatee` address.
         // This should automatically assign voting power
-        // of this tokenId to alice, because `c` set its own
+        // of this tokenId to alice, because `delegatee` set its own
         // delegate as Alice.
-        uint256 tokenId = escrow.createLockFor(10e18, c);
+        uint256 tokenId = escrow.createLockFor(10e18, delegatee);
         uint256 splitTokenId = tokenId + 1;
 
         {
-            ReentrancyDelegate(c).setParams(abi.encodeWithSignature("delegate(address)", alice));
-            ReentrancyDelegate(c).enableExploit(true);
+            ReentrancyDelegate(delegatee).setParams(abi.encodeWithSignature("delegate(address)", alice));
+            ReentrancyDelegate(delegatee).enableExploit(true);
         }
 
         uint256 vpBefore = ivotesAdapter.getVotes(alice);
@@ -163,7 +163,7 @@ contract TestSplit_DelegationAndVoter is
         // This must not cause any change in `getVotes` because `delegate(address)`
         // undelegates all tokens that were delegated and delegates them. In this
         // test case, delegatee address doesn't change and is Alice.
-        vm.prank(c);
+        vm.prank(delegatee);
         escrow.split(tokenId, 3e18);
 
         uint256 vpAfter = ivotesAdapter.getVotes(alice);

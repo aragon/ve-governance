@@ -94,12 +94,12 @@ contract TestCreateLock_DelegationAndVoter is
     function testRevert_Reentrancy_IfDelegateTokenIsCalledFromTokenMint() public {
         escrow.enableSplit();
 
-        address c = address(new ReentrancyDelegate(address(escrow), address(ivotesAdapter)));
-        token.mint(c, 10e18);
+        address delegatee = address(new ReentrancyDelegate(address(escrow), address(ivotesAdapter)));
+        token.mint(delegatee, 10e18);
 
-        // C delegates to Alice
+        //  contract delegatee delegates to Alice
         address alice = address(123);
-        vm.prank(c);
+        vm.prank(delegatee);
         ivotesAdapter.setDelegateAddress(alice);
 
         uint256 expectedTokenId = 1;
@@ -107,8 +107,8 @@ contract TestCreateLock_DelegationAndVoter is
         {
             uint256[] memory ids = new uint256[](1);
             ids[0] = expectedTokenId;
-            ReentrancyDelegate(c).setParams(abi.encodeWithSignature("delegate(uint256[])", ids));
-            ReentrancyDelegate(c).enableExploit(true);
+            ReentrancyDelegate(delegatee).setParams(abi.encodeWithSignature("delegate(uint256[])", ids));
+            ReentrancyDelegate(delegatee).enableExploit(true);
         }
 
         // createLock calls token.mint which calls `delegate([newTokenId])` on escrowAdapter.
@@ -120,6 +120,6 @@ contract TestCreateLock_DelegationAndVoter is
                 expectedTokenId
             )
         );
-        escrow.createLockFor(10e18, c);
+        escrow.createLockFor(10e18, delegatee);
     }
 }
