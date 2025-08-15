@@ -42,6 +42,8 @@ jobs:
   test-gas-report:
     strategy:
       fail-fast: true
+    permissions:
+      pull-requests: write
     name: Gas Report
     runs-on: ubuntu-latest
     env:
