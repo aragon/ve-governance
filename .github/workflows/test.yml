@@ -236,7 +236,5 @@ jobs:
         id: build
 
       - name: Run Forge tests
-        env:
-          ALCHEMY_APIKEY: ${{ steps.load_secret.outputs.ALCHEMY_APIKEY }}
         run: |
-          forge test --match-path "test/**/fork/**/*.sol" --rpc-url https://sepolia.drpc.org -vvv
+          forge test --match-path "test/**/fork/**/*.sol" --rpc-url https://eth-sepolia.g.alchemy.com/v2/${{ steps.load_secret.outputs.ALCHEMY_APIKEY }} -vvv
