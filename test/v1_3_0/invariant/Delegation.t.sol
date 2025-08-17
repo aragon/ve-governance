@@ -58,6 +58,7 @@ contract TestDelegationInvariant is IEscrowCurveTokenStorage, EscrowBase {
         targetContract(address(h));
 
         {
+            // @jordan big one missing imo is transfer
             bytes4[] memory selectors = new bytes4[](9);
             selectors[0] = DelegationHandler.createLock.selector;
             selectors[1] = DelegationHandler.merge.selector;
@@ -99,9 +100,15 @@ contract TestDelegationInvariant is IEscrowCurveTokenStorage, EscrowBase {
             amountSum += amount;
             vpSum += vp;
         }
+        // @jordan we may wish to ensure at least 1 veNFT was created
 
         assertEq(amountSum, escrow.totalLocked(), "Sum of NFT Amoutns != totalLocked");
-        assertApproxEqAbs(vpSum, escrow.totalVotingPower(), ids.length, "Sum of vps individually != total vp");
+        assertApproxEqAbs(
+            vpSum,
+            escrow.totalVotingPower(),
+            ids.length,
+            "Sum of vps individually != total vp"
+        );
     }
 
     function invariant_UserHasCorrectPastVotes() public {
@@ -109,21 +116,25 @@ contract TestDelegationInvariant is IEscrowCurveTokenStorage, EscrowBase {
 
         uint256 totalVp = 0;
 
-        for(uint256 i = 0; i < actors.length; i++) {
+        for (uint256 i = 0; i < actors.length; i++) {
             address actor = actors[i];
-            
+
             uint256[] memory userIncomingTokens = h.getIncomingTokens(actor);
             uint256[] memory userOutgoingTokens = h.getOutgoingTokens(actor);
 
             uint256 userVp = 0;
             assertEq(userOutgoingTokens.length, ivotesAdapter.numberOfDelegatedTokens(actor));
 
-            for(uint256 j = 0; j < userIncomingTokens.length; j++) {
+            for (uint256 j = 0; j < userIncomingTokens.length; j++) {
                 assertTrue(ivotesAdapter.tokenIsDelegated(userIncomingTokens[j]));
                 userVp += escrow.votingPower(userIncomingTokens[j]);
             }
 
-            assertApproxEqAbs(userVp, ivotesAdapter.getPastVotes(actor, block.timestamp), userIncomingTokens.length);
+            assertApproxEqAbs(
+                userVp,
+                ivotesAdapter.getPastVotes(actor, block.timestamp),
+                userIncomingTokens.length
+            );
         }
     }
 
@@ -132,7 +143,7 @@ contract TestDelegationInvariant is IEscrowCurveTokenStorage, EscrowBase {
 
         uint256 totalPastVotes = 0;
         uint256 delta = 0;
-        for(uint256 i = 0; i < actors.length; i++) {
+        for (uint256 i = 0; i < actors.length; i++) {
             address actor = actors[i];
 
             uint256 pastVotes = ivotesAdapter.getVotes(actor);
@@ -143,8 +154,13 @@ contract TestDelegationInvariant is IEscrowCurveTokenStorage, EscrowBase {
         }
 
         uint256 totalOnGaugeVoter = voter.totalVotingPowerCast();
-        if(totalOnGaugeVoter > totalPastVotes) {
+        if (totalOnGaugeVoter > totalPastVotes) {
             assertApproxEqAbs(totalOnGaugeVoter, totalPastVotes, delta);
-        } 
+        }
     }
+
+    // @jordan: ideas:
+    // sum of getPastVotes === totalSupply (delegate checkpointing === total supply checkpointing)
+    // transfers don't affect the invariants
+    // total voting power cannot exceed total locked * max multiplier
 }

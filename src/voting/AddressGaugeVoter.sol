@@ -116,31 +116,32 @@ contract AddressGaugeVoter is
     }
 
     /**
-    * @dev If `enableUpdateVotingPowerHook` is false, It's assumed that token contract does/can NOT call 
-    * `updateVotingPower` during transfers This can happen if the token is already deployed and non-upgradeable, 
-    * or for other design limitations. In such cases, relying on `getVotes(_account)` (which reflects live balance) 
-    * instead of `getPastVotes(...)` (which snapshots voting power at a fixed time) can lead 
-    * to critical vulnerabilities, including double voting.
-    * 
-    * Example of the issue:
-    * - Ts 100: Epoch begins, voting window opens.
-    * - Ts 110: Alice has 1000 votes.
-    * - Ts 120: Alice votes for Gauge A with all 1000.
-    * - Ts 130: Alice transfers tokens to Bob, but `updateVotingPower` is NOT triggered.
-    * - Ts 140: Bob now votes for Gauge B using the same 1000 tokens.
-    * 
-    * Result: The same 1000 tokens were used to vote for *two* gauges in the same epoch — a double spend.
-    * 
-    * To prevent this, we use `getPastVotes(_account, currentEpochStart())`, which ensures voting power is fixed at epoch start.
-    * Even if a transfer happens mid-epoch, the recipient (e.g., Bob) cannot vote in that epoch because their `getPastVotes(...)` 
-    * will return 0.
-    * 
-    * Note: Once a new epoch starts, Bob *can* vote with the transferred tokens, but this is safe.
-    * Since gauge vote tracking is scoped per-epoch, votes from Alice in epoch 11 and from Bob in epoch 12 are kept separate.
-    * Querying Gauge A’s votes in epoch 12 will correctly return 1000, not 2000 — avoiding any vote inflation.
-    */
+     * @dev If `enableUpdateVotingPowerHook` is false, It's assumed that token contract does/can NOT call
+     * `updateVotingPower` during transfers This can happen if the token is already deployed and non-upgradeable,
+     * or for other design limitations. In such cases, relying on `getVotes(_account)` (which reflects live balance)
+     * instead of `getPastVotes(...)` (which snapshots voting power at a fixed time) can lead
+     * to critical vulnerabilities, including double voting.
+     *
+     * Example of the issue:
+     * - Ts 100: Epoch begins, voting window opens.
+     * - Ts 110: Alice has 1000 votes.
+     * - Ts 120: Alice votes for Gauge A with all 1000.
+     * - Ts 130: Alice transfers tokens to Bob, but `updateVotingPower` is NOT triggered.
+     * - Ts 140: Bob now votes for Gauge B using the same 1000 tokens.
+     *
+     * Result: The same 1000 tokens were used to vote for *two* gauges in the same epoch — a double spend.
+     *
+     * To prevent this, we use `getPastVotes(_account, currentEpochStart())`, which ensures voting power is fixed at epoch start.
+     * Even if a transfer happens mid-epoch, the recipient (e.g., Bob) cannot vote in that epoch because their `getPastVotes(...)`
+     * will return 0.
+     *
+     * Note: Once a new epoch starts, Bob *can* vote with the transferred tokens, but this is safe.
+     * Since gauge vote tracking is scoped per-epoch, votes from Alice in epoch 11 and from Bob in epoch 12 are kept separate.
+     * Querying Gauge A’s votes in epoch 12 will correctly return 1000, not 2000 — avoiding any vote inflation.
+     */
     function _vote(address _account, GaugeVote[] memory _votes) internal {
         // TODO: GIORGI we need to add a function gaugeVotes that also expects epochId...
+        // @jordan: resolve TODOs
         uint256 votingPower = enableUpdateVotingPowerHook
             ? IVotes(ivotesAdapter).getVotes(_account)
             : IVotes(ivotesAdapter).getPastVotes(_account, currentEpochStart());
@@ -213,6 +214,8 @@ contract AddressGaugeVoter is
         uint256 _voteWeight,
         AddressVoteData storage _voteData
     ) internal returns (uint256) {
+        // @jordan isn't this too aggressive for small votes and voteweights?
+        // due to 1e36 rounding
         uint256 _votes = _votesForGauge(_voteWeight, _votingPower);
 
         // record the vote for the token
@@ -321,6 +324,7 @@ contract AddressGaugeVoter is
                 epoch,
                 _account,
                 votingPower,
+                // @jordan why do we use the normalized weight here versus the vanilla vote function?
                 _normalizedWeight(newVoteData[i].weight, totalWeight),
                 voteData
             );
@@ -352,6 +356,7 @@ contract AddressGaugeVoter is
         return total;
     }
 
+    // @jordan could use a description as to the purpose of this function
     function _normalizedWeight(
         uint256 _weight,
         uint256 _totalWeight
@@ -359,6 +364,7 @@ contract AddressGaugeVoter is
         return (_weight * 10e32) / _totalWeight;
     }
 
+    // @jordan: if w * vp < 10e32 (i.e weight 1, vp = 1e18) then this will round to 0?
     function _votesForGauge(
         uint256 _weight,
         uint256 _votingPower
