@@ -111,34 +111,34 @@ contract AddressGaugeVoter is
     //////////////////////////////////////////////////////////////*/
 
     function vote(GaugeVote[] calldata _votes) public nonReentrant whenNotPaused whenVotingActive {
-        address account = _msgSender();
+        address account = msg.sender;
         _vote(account, _votes);
     }
 
     /**
-    * @dev If `enableUpdateVotingPowerHook` is false, It's assumed that token contract does/can NOT call 
-    * `updateVotingPower` during transfers This can happen if the token is already deployed and non-upgradeable, 
-    * or for other design limitations. In such cases, relying on `getVotes(_account)` (which reflects live balance) 
-    * instead of `getPastVotes(...)` (which snapshots voting power at a fixed time) can lead 
-    * to critical vulnerabilities, including double voting.
-    * 
-    * Example of the issue:
-    * - Ts 100: Epoch begins, voting window opens.
-    * - Ts 110: Alice has 1000 votes.
-    * - Ts 120: Alice votes for Gauge A with all 1000.
-    * - Ts 130: Alice transfers tokens to Bob, but `updateVotingPower` is NOT triggered.
-    * - Ts 140: Bob now votes for Gauge B using the same 1000 tokens.
-    * 
-    * Result: The same 1000 tokens were used to vote for *two* gauges in the same epoch — a double spend.
-    * 
-    * To prevent this, we use `getPastVotes(_account, currentEpochStart())`, which ensures voting power is fixed at epoch start.
-    * Even if a transfer happens mid-epoch, the recipient (e.g., Bob) cannot vote in that epoch because their `getPastVotes(...)` 
-    * will return 0.
-    * 
-    * Note: Once a new epoch starts, Bob *can* vote with the transferred tokens, but this is safe.
-    * Since gauge vote tracking is scoped per-epoch, votes from Alice in epoch 11 and from Bob in epoch 12 are kept separate.
-    * Querying Gauge A’s votes in epoch 12 will correctly return 1000, not 2000 — avoiding any vote inflation.
-    */
+     * @dev If `enableUpdateVotingPowerHook` is false, It's assumed that token contract does/can NOT call
+     * `updateVotingPower` during transfers This can happen if the token is already deployed and non-upgradeable,
+     * or for other design limitations. In such cases, relying on `getVotes(_account)` (which reflects live balance)
+     * instead of `getPastVotes(...)` (which snapshots voting power at a fixed time) can lead
+     * to critical vulnerabilities, including double voting.
+     *
+     * Example of the issue:
+     * - Ts 100: Epoch begins, voting window opens.
+     * - Ts 110: Alice has 1000 votes.
+     * - Ts 120: Alice votes for Gauge A with all 1000.
+     * - Ts 130: Alice transfers tokens to Bob, but `updateVotingPower` is NOT triggered.
+     * - Ts 140: Bob now votes for Gauge B using the same 1000 tokens.
+     *
+     * Result: The same 1000 tokens were used to vote for *two* gauges in the same epoch — a double spend.
+     *
+     * To prevent this, we use `getPastVotes(_account, currentEpochStart())`, which ensures voting power is fixed at epoch start.
+     * Even if a transfer happens mid-epoch, the recipient (e.g., Bob) cannot vote in that epoch because their `getPastVotes(...)`
+     * will return 0.
+     *
+     * Note: Once a new epoch starts, Bob *can* vote with the transferred tokens, but this is safe.
+     * Since gauge vote tracking is scoped per-epoch, votes from Alice in epoch 11 and from Bob in epoch 12 are kept separate.
+     * Querying Gauge A’s votes in epoch 12 will correctly return 1000, not 2000 — avoiding any vote inflation.
+     */
     function _vote(address _account, GaugeVote[] memory _votes) internal {
         // TODO: GIORGI we need to add a function gaugeVotes that also expects epochId...
         uint256 votingPower = enableUpdateVotingPowerHook
@@ -396,7 +396,7 @@ contract AddressGaugeVoter is
         gauges[_gauge] = Gauge(true, block.timestamp, _metadataURI);
         gaugeList.push(_gauge);
 
-        emit GaugeCreated(_gauge, _msgSender(), _metadataURI);
+        emit GaugeCreated(_gauge, msg.sender, _metadataURI);
         return _gauge;
     }
 
