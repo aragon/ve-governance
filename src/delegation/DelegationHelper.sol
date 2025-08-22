@@ -122,10 +122,6 @@ abstract contract DelegationHelper is IEscrowIVotesAdapter, Pausable, UUPSUpgrad
                 // user can manually delegate `to` which's vp at the time will include
                 // the total amount after the merge. This will cause double spend.
                 // lock needs to be `to`'s amount.
-                // @jordan interesting, so if I merge a delegated token => an undelegated one, the undelegated token
-                // 	now becomes delegated.
-                // 	Would it not make more sense to remove the voting power from the delegated balance?
-                // 	Not sure of the implications here, given the comment above
                 (int256 bias, int256 slope) = _getBiasAndSlope(
                     fromDelegatee,
                     _to.locked,

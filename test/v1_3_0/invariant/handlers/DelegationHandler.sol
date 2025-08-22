@@ -108,12 +108,12 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
         checkpointInterval = _checkpointInterval;
 
         // create 5 actors.
-        for (uint256 i = 10; i <= 10 + COUNT; i++) {
+        for (uint256 i = 10; i < 10 + COUNT; i++) {
             actors.push(address(uint160(i)));
         }
 
         // create 5 gauges
-        for (uint256 i = 20; i <= 20 + COUNT; i++) {
+        for (uint256 i = 20; i < 20 + COUNT; i++) {
             address gauge = address(uint160(i));
 
             vm.prank(_admin);
@@ -140,7 +140,7 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
         address sender = _delegateesWithPower[_seedAddr];
 
         // @jordan what's the signifcance of 6 when COUNT is 5
-        bool[6] memory used;
+        bool[COUNT] memory used;
         uint256 count = 0;
 
         IGaugeVote.GaugeVote[] memory votes = new IGaugeVote.GaugeVote[](_gaugeSeeds.length);
@@ -489,6 +489,51 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
         }
     }
 
+    function transfer(uint256 _jumpSeed, uint192 _fromSeed, uint192 _toSeed) public adjustTimestamp(_jumpSeed) {
+        (address from, uint256 tokenId) = getUserWithToken(_fromSeed);
+        if(from == address(0)) return;
+    
+        // Select `to` from remaining users (excluding `from`)
+        address to;
+        for (uint256 i = 0; i < COUNT; i++) {
+            uint256 idx = (_toSeed + i) % 5;
+            if (actors[idx] != from) {
+                to = actors[idx];
+                break;
+            }
+        }
+
+        if(to == address(0)) return;
+
+        // TODO: remove
+        if(from == to) return;
+        
+        // vm.prank(from);
+        // lockNft.transferFrom(from, to, tokenId);
+
+        // ownedTokens[from].remove(tokenId);
+        // ownedTokens[to].add(tokenId);
+
+        // address fromDelegatee = ivotesAdapter.delegates(from);
+        // address toDelegatee = ivotesAdapter.delegates(to);
+        
+        // if(fromDelegatee != address(0)) {
+        //     outgoingTokens[from].remove(tokenId);
+        //     incomingTokens[fromDelegatee].remove(tokenId);
+        //     if (ivotesAdapter.getVotes(fromDelegatee) == 0) {
+        //         delegateesWithVpPower.remove(fromDelegatee);
+        //     }
+        // }
+
+        // if(toDelegatee != address(0)) {
+        //     incomingTokens[toDelegatee].add(tokenId);
+        //     outgoingTokens[to].add(tokenId);
+        //     if (ivotesAdapter.getVotes(toDelegatee) != 0) {
+        //         delegateesWithVpPower.add(toDelegatee);
+        //     }
+        // }
+    }
+
     // @jordan should add a transfer function
 
     // ======================== Helper Functions ===================
@@ -538,6 +583,25 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
         }
 
         return newTokens;
+    }
+
+    function getUserWithToken(uint192 _seed) public view returns(address, uint256) {
+        // Try each user starting from seed index
+        address selectedUser;
+        uint256 tokenId;
+        
+        for (uint256 i = 0; i < COUNT; i++) {
+            uint256 index = (_seed + i) % 5;
+            address actor = actors[index];
+            uint256[] memory actorTokens = _fromSetToArray(ownedTokens[actor]);
+            if (actorTokens.length > 0) {
+                selectedUser = actor;
+                tokenId = actorTokens[_seed % actorTokens.length];
+                break;
+            }
+        }
+        
+        return (selectedUser, tokenId); 
     }
 
     // The list of token ids that `_account` has been delegated with.

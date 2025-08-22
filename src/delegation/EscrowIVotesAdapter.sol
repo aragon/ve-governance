@@ -288,20 +288,18 @@ contract EscrowIVotesAdapter is
     function getDelegatedTokens(
         uint256[] memory _tokenIds
     ) public view virtual returns (uint256[] memory) {
-        uint256[] memory tmp = new uint256[](_tokenIds.length);
+        uint256[] memory delegatedTokenIds = new uint256[](_tokenIds.length);
         uint256 count;
 
         for (uint256 i = 0; i < _tokenIds.length; ++i) {
             if (tokenIsDelegated(_tokenIds[i])) {
-                tmp[count++] = _tokenIds[i];
+                delegatedTokenIds[count++] = _tokenIds[i];
             }
         }
 
         // Trim to size
-        // @jordan: Giorgi can we use your mstore length hack to reduce gas?
-        uint256[] memory delegatedTokenIds = new uint256[](count);
-        for (uint256 i = 0; i < count; ++i) {
-            delegatedTokenIds[i] = tmp[i];
+        assembly {
+            mstore(delegatedTokenIds, count)
         }
 
         return delegatedTokenIds;
