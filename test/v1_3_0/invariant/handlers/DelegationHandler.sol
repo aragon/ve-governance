@@ -495,7 +495,6 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
 
         if (_delegatee == address(0)) return;
 
-        // createLock, merge for `toId`
         if (_action == Action.ADD) {
             incomingTokens[_delegatee].add(_token);
             outgoingTokens[_owner].add(_token);
@@ -504,7 +503,6 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
             return;
         }
 
-        // merge for `fromId`
         if (_action == Action.REMOVE) {
             incomingTokens[_delegatee].remove(_token);
             outgoingTokens[_owner].remove(_token);
