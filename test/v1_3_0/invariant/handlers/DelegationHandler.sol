@@ -208,9 +208,6 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
                 incomingTokens[currentDelegatee].remove(tokens[i]);
             }
 
-            // @jordan do we clear previous outgoing tokens?
-            // I guess this being enumerable set it just checks for existence and
-            // adds if needed
             outgoingTokens[msgSender].add(tokens[i]);
         }
 
@@ -470,7 +467,6 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
         lockNft.approve(address(escrow), tokenId);
         escrow.beginWithdrawal(tokenId);
 
-        // @jordan maybe we should wrap to separate function to allow beginWithdrawal, withdraw in separate functions
         vm.warp(queue.queue(tokenId).exitDate + 1);
         escrow.withdraw(tokenId);
         vm.stopPrank();
@@ -504,37 +500,36 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
         }
 
         if(to == address(0)) return;
-
-        // TODO: remove
         if(from == to) return;
+
+        address fromDelegatee = ivotesAdapter.delegates(from);
+        address toDelegatee = ivotesAdapter.delegates(to);
+        _transitionIfTooOld(fromDelegatee);
+        _transitionIfTooOld(toDelegatee);
+
+       
+        vm.prank(from);
+        lockNft.transferFrom(from, to, tokenId);
+
+        ownedTokens[from].remove(tokenId);
+        ownedTokens[to].add(tokenId);
         
-        // vm.prank(from);
-        // lockNft.transferFrom(from, to, tokenId);
+        if(fromDelegatee != address(0)) {
+            outgoingTokens[from].remove(tokenId);
+            incomingTokens[fromDelegatee].remove(tokenId);
+            if (ivotesAdapter.getVotes(fromDelegatee) == 0) {
+                delegateesWithVpPower.remove(fromDelegatee);
+            }
+        }
 
-        // ownedTokens[from].remove(tokenId);
-        // ownedTokens[to].add(tokenId);
-
-        // address fromDelegatee = ivotesAdapter.delegates(from);
-        // address toDelegatee = ivotesAdapter.delegates(to);
-        
-        // if(fromDelegatee != address(0)) {
-        //     outgoingTokens[from].remove(tokenId);
-        //     incomingTokens[fromDelegatee].remove(tokenId);
-        //     if (ivotesAdapter.getVotes(fromDelegatee) == 0) {
-        //         delegateesWithVpPower.remove(fromDelegatee);
-        //     }
-        // }
-
-        // if(toDelegatee != address(0)) {
-        //     incomingTokens[toDelegatee].add(tokenId);
-        //     outgoingTokens[to].add(tokenId);
-        //     if (ivotesAdapter.getVotes(toDelegatee) != 0) {
-        //         delegateesWithVpPower.add(toDelegatee);
-        //     }
-        // }
+        if(toDelegatee != address(0)) {
+            incomingTokens[toDelegatee].add(tokenId);
+            outgoingTokens[to].add(tokenId);
+            if (ivotesAdapter.getVotes(toDelegatee) != 0) {
+                delegateesWithVpPower.add(toDelegatee);
+            }
+        }
     }
-
-    // @jordan should add a transfer function
 
     // ======================== Helper Functions ===================
 
@@ -556,9 +551,7 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
                 temp[count++] = tokens[i];
             }
         }
-
-        // @jordan: this is ghetto trimming by telling the array it's
-        // len count instead of tokens.length.
+        
         assembly {
             mstore(temp, count)
         }

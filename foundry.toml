@@ -28,7 +28,7 @@ fuzz = { runs = 128 }
 
 [profile.default.invariant]
 fail_on_revert = true
-runs = 32
+runs = 2000
 depth = 128
 
 [rpc_endpoints]
