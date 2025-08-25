@@ -138,27 +138,20 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
         uint64[COUNT] memory _weights
     ) public {
         address[] memory _delegateesWithPower = getDelegateesWithPower();
-        // @jordan: this will presumably, and silently, cause a lot of invariants to pass
-        // if we don't also check that we have delegatees w. voting power
         if (_delegateesWithPower.length == 0) return;
 
         _seedAddr = _bound(_seedAddr, 0, _delegateesWithPower.length - 1);
         address sender = _delegateesWithPower[_seedAddr];
 
-        // @jordan what's the signifcance of 6 when COUNT is 5
         bool[COUNT] memory used;
         uint256 count = 0;
 
         IGaugeVote.GaugeVote[] memory votes = new IGaugeVote.GaugeVote[](_gaugeSeeds.length);
         for (uint256 i = 0; i < _gaugeSeeds.length; i++) {
-            // @jordan grab a random gauge index based on the seed
             uint256 index = uint256(_gaugeSeeds[i]) % gauges.length;
             _weights[i] = uint64(_bound(_weights[i], 1, type(uint64).max));
 
             address gauge = gauges[index];
-            // Ensure that votes don't contain duplicate gauges
-            // to avoid reverts in the EscrowIVotesAdapter.
-            // @jordan so this basically guarantees >= 1 unique vote, very nice
             if (!used[index]) {
                 used[index] = true;
                 votes[count++] = IGaugeVote.GaugeVote(_weights[i], gauge);
@@ -198,7 +191,6 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
         address newDelegatee = _getAddress(_delegateeSeed);
         address currentDelegatee = ivotesAdapter.delegates(msgSender);
 
-        // @jordan maybe this function should be added somewhere in the src
         _transitionIfTooOld(newDelegatee);
         _transitionIfTooOld(currentDelegatee);
 
