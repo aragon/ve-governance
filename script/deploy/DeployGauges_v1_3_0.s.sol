@@ -77,7 +77,7 @@ contract DeployGaugesV1_3_0 is Script {
         // NOTE: Deploying the plugin setup from the current script to avoid code size constraints
 
         GaugeVoterSetup gaugeVoterPluginSetup = deployGaugeVoterPluginSetup();
-
+    
         parameters = DeploymentParameters({
             // Multisig settings
             minApprovals: vm.envUint("MIN_APPROVALS").toUint8(),

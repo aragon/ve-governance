@@ -53,7 +53,6 @@ struct DeploymentParameters {
     // Multisig settings
     uint16 minApprovals;
     address[] multisigMembers;
-    bytes multisigMetadata;
     // Gauge Voter
     TokenParameters[] tokenParameters;
     uint16 feePercent;
@@ -120,7 +119,6 @@ contract GaugesDaoFactoryV1_1_0 {
     constructor(DeploymentParameters memory _parameters) {
         parameters.minApprovals = _parameters.minApprovals;
         parameters.multisigMembers = _parameters.multisigMembers;
-        parameters.multisigMetadata = _parameters.multisigMetadata;
 
         for (uint i = 0; i < _parameters.tokenParameters.length; ) {
             parameters.tokenParameters.push(_parameters.tokenParameters[i]);
@@ -276,7 +274,7 @@ contract GaugesDaoFactoryV1_1_0 {
                 parameters.minApprovals
             ),
             IPlugin.TargetConfig({target: address(dao), operation: IPlugin.Operation.Call}),
-            parameters.multisigMetadata
+            bytes("")
         );
 
         (address plugin, IPluginSetup.PreparedSetupData memory preparedSetupData) = parameters

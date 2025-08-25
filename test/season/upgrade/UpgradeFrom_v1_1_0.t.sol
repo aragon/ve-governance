@@ -367,7 +367,6 @@ contract RegressionV1_0_0__to__Season is Test, IGaugeVote, FixedPointBase {
             // Multisig settings
             minApprovals: 2,
             multisigMembers: multisigMembers,
-            multisigMetadata: bytes(""),
             // Gauge Voter
             tokenParameters: tokenParameters,
             feePercent: 500, // 500 / 10_000 = 5%

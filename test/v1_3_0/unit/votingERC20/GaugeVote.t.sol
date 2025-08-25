@@ -17,7 +17,7 @@ import "@helpers/OSxHelpers.sol";
 
 import {GaugeVotingBase} from "./GaugeVotingBase.sol";
 
-contract TestGaugeVoteWithERC20_omg9999 is GaugeVotingBase {
+contract TestGaugeVoteWithERC20 is GaugeVotingBase {
     uint256[] ids;
     GaugeVote[] votes;
 

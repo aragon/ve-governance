@@ -76,7 +76,6 @@ contract DeployGauges is Script {
             // Multisig settings
             minApprovals: vm.envUint("MIN_APPROVALS").toUint8(),
             multisigMembers: multisigMembers,
-            multisigMetadata: bytes(vm.envString("MULTISIG_METADATA_URI")),
             // Gauge Voter
             tokenParameters: tokenParameters,
             feePercent: vm.envUint("FEE_PERCENT").toUint16(),
