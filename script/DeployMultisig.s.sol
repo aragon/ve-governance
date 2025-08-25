@@ -4,7 +4,7 @@ pragma solidity ^0.8.17;
 import {Script, console} from "forge-std/Script.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {MultisigDaoFactory, DeploymentParameters, Deployment} from "src/factory/MultisigDaoFactory.sol";
-import {MultisigSetup as MultisigPluginSetup} from "@aragon/osx/plugins/governance/multisig/MultisigSetup.sol";
+import {MultisigSetup as MultisigPluginSetup} from "@aragon/multisig/src/MultisigSetup.sol";
 import {PluginRepo} from "@aragon/osx/framework/plugin/repo/PluginRepo.sol";
 import {PluginSetupProcessor} from "@aragon/osx/framework/plugin/setup/PluginSetupProcessor.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";

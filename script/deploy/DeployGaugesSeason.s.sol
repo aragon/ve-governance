@@ -21,7 +21,7 @@ import {
 } from "@setup/GaugeVoterSetupSeason.sol";
 import {
     MultisigSetup as MultisigPluginSetup
-} from "@aragon/osx/plugins/governance/multisig/MultisigSetup.sol";
+} from "@aragon/multisig/src/MultisigSetup.sol";
 
 import {PluginRepo} from "@aragon/osx/framework/plugin/repo/PluginRepo.sol";
 import {PluginRepoFactory} from "@aragon/osx/framework/plugin/repo/PluginRepoFactory.sol";

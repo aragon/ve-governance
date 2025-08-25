@@ -22,7 +22,7 @@ import {
 } from "@setup/GaugeVoterSetup_v1_3_0.sol";
 import {
     MultisigSetup as MultisigPluginSetup
-} from "@aragon/osx/plugins/governance/multisig/MultisigSetup.sol";
+} from "@aragon/multisig/src/MultisigSetup.sol";
 
 import {PluginRepo} from "@aragon/osx/framework/plugin/repo/PluginRepo.sol";
 import {PluginRepoFactory} from "@aragon/osx/framework/plugin/repo/PluginRepoFactory.sol";
@@ -82,6 +82,7 @@ contract DeployGaugesV1_3_0 is Script {
             // Multisig settings
             minApprovals: vm.envUint("MIN_APPROVALS").toUint8(),
             multisigMembers: multisigMembers,
+            multisigMetadata: bytes(vm.envString("MULTISIG_METADATA_URI")),
             // Gauge Voter
             tokenParameters: tokenParameters,
             feePercent: vm.envUint("FEE_PERCENT").toUint16(),

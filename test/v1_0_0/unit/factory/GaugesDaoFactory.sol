@@ -12,11 +12,10 @@ import {PluginRepoFactory} from "@aragon/osx/framework/plugin/repo/PluginRepoFac
 import {PluginRepoRegistry} from "@aragon/osx/framework/plugin/repo/PluginRepoRegistry.sol";
 import {PluginRepo} from "@aragon/osx/framework/plugin/repo/PluginRepo.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
-import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
-import {Addresslist} from "@aragon/osx/plugins/utils/Addresslist.sol";
+import {IDAO} from "@aragon/osx-commons-contracts/src/dao/IDAO.sol";
 import {
     MultisigSetup as MultisigPluginSetup
-} from "@aragon/osx/plugins/governance/multisig/MultisigSetup.sol";
+} from "@aragon/multisig/src/MultisigSetup.sol";
 
 import {
     SimpleGaugeVoterSetup,
@@ -456,11 +455,6 @@ contract GaugesDaoFactoryTest is Test {
         assertNotEq(address(deployment.dao), address(0), "Empty DAO field");
         assertEq(deployment.dao.daoURI(), "", "DAO URI should be empty");
         assertEq(
-            address(deployment.dao.signatureValidator()),
-            address(0),
-            "signatureValidator should be empty"
-        );
-        assertEq(
             address(deployment.dao.getTrustedForwarder()),
             address(0),
             "trustedForwarder should be empty"
@@ -846,11 +840,6 @@ contract GaugesDaoFactoryTest is Test {
 
         assertNotEq(address(deployment.dao), address(0), "Empty DAO field");
         assertEq(deployment.dao.daoURI(), "", "DAO URI should be empty");
-        assertEq(
-            address(deployment.dao.signatureValidator()),
-            address(0),
-            "signatureValidator should be empty"
-        );
         assertEq(
             address(deployment.dao.getTrustedForwarder()),
             address(0),

@@ -5,9 +5,9 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 import {EscrowBase} from "../base/EscrowBase.sol";
 
 import {console2 as console} from "forge-std/console2.sol";
-import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
+import {IDAO} from "@aragon/osx-commons-contracts/src/dao/IDAO.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
-import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
+import {Multisig, MultisigSetup} from "@aragon/multisig/src/MultisigSetup.sol";
 import {MockERC20} from "@mocks/MockERC20.sol";
 import {ILockedBalanceIncreasing} from "@escrow/IVotingEscrowIncreasing.sol";
 
