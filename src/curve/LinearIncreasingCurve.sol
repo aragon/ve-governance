@@ -197,6 +197,8 @@ contract LinearIncreasingCurve is
             slope
         );
 
+        
+
         return (int256(bias), slope);
     }
 
