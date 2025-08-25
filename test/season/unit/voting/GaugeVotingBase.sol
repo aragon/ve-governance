@@ -4,6 +4,7 @@ import {Test} from "forge-std/Test.sol";
 import {console2 as console} from "forge-std/console2.sol";
 
 // aragon contracts
+import {IPlugin} from "@aragon/osx-commons-contracts/src/plugin/IPlugin.sol";
 import {IDAO} from "@aragon/osx-commons-contracts/src/dao/IDAO.sol";
 import {DAO, PermissionManager} from "@aragon/osx/core/dao/DAO.sol";
 import {Multisig, MultisigSetup} from "@aragon/multisig/src/MultisigSetup.sol";
@@ -102,7 +103,9 @@ contract GaugeVotingBase is
         // encode a 1/1 multisig that can be adjusted later
         bytes memory data = abi.encode(
             members,
-            Multisig.MultisigSettings({onlyListed: true, minApprovals: 1})
+            Multisig.MultisigSettings({onlyListed: true, minApprovals: 1}),
+            IPlugin.TargetConfig({target: address(dao), operation: IPlugin.Operation.Call}),
+            bytes("0x11")
         );
 
         dao = daoFactory.createDao(_mockDAOSettings(), _mockPluginSettings(data));

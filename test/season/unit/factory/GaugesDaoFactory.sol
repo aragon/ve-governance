@@ -70,6 +70,7 @@ contract GaugesDaoFactoryTest is Test {
             // Multisig settings
             minApprovals: 2,
             multisigMembers: multisigMembers,
+            multisigMetadata: bytes(""),
             // Gauge Voter
             tokenParameters: tokenParameters,
             feePercent: 50, // 0.5%
@@ -236,6 +237,7 @@ contract GaugesDaoFactoryTest is Test {
             // Multisig settings
             minApprovals: 3,
             multisigMembers: multisigMembers,
+            multisigMetadata: bytes(""),
             // Gauge Voter
             tokenParameters: tokenParameters,
             feePercent: 100, // 100/10k = 1%
@@ -422,6 +424,7 @@ contract GaugesDaoFactoryTest is Test {
             // Multisig settings
             minApprovals: 2,
             multisigMembers: multisigMembers,
+            multisigMetadata: bytes(""),
             // Gauge Voter
             tokenParameters: tokenParameters,
             feePercent: 500,
@@ -498,7 +501,6 @@ contract GaugesDaoFactoryTest is Test {
             block.number - 1,
             "Invalid lastMultisigSettingsChange"
         );
-        assertEq(deployment.multisigPlugin.proposalCount(), 0, "Invalid proposal count");
         assertEq(deployment.multisigPlugin.addresslistLength(), 13, "Invalid addresslistLength");
         for (uint256 i = 0; i < 13; i++) {
             assertEq(
@@ -808,6 +810,7 @@ contract GaugesDaoFactoryTest is Test {
             // Multisig settings
             minApprovals: 5,
             multisigMembers: multisigMembers,
+            multisigMetadata: bytes(""),
             // Gauge Voter
             tokenParameters: tokenParameters,
             feePercent: 20, // 20/10k = 0.2%
@@ -884,7 +887,6 @@ contract GaugesDaoFactoryTest is Test {
             block.number - 1,
             "Invalid lastMultisigSettingsChange"
         );
-        assertEq(deployment.multisigPlugin.proposalCount(), 0, "Invalid proposal count");
         assertEq(deployment.multisigPlugin.addresslistLength(), 13, "Invalid addresslistLength");
         for (uint256 i = 0; i < 13; i++) {
             assertEq(
@@ -1297,6 +1299,7 @@ contract GaugesDaoFactoryTest is Test {
             // Multisig settings
             minApprovals: 5,
             multisigMembers: multisigMembers,
+            multisigMetadata: bytes(""),
             // Gauge Voter
             tokenParameters: tokenParameters,
             feePercent: 500, // 500/10k = 5%

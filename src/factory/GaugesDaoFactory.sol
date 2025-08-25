@@ -25,6 +25,7 @@ import {PluginRepoFactory} from "@aragon/osx/framework/plugin/repo/PluginRepoFac
 import {PluginRepo} from "@aragon/osx/framework/plugin/repo/PluginRepo.sol";
 import {IPluginSetup} from "@aragon/osx-commons-contracts/src/plugin/setup/IPluginSetup.sol";
 import {Multisig} from "@aragon/multisig/src/Multisig.sol";
+import {IPlugin} from "@aragon/osx-commons-contracts/src/plugin/IPlugin.sol";
 import {MultisigSetup as MultisigPluginSetup} from "@aragon/multisig/src/MultisigSetup.sol";
 import {PermissionLib} from "@aragon/osx-commons-contracts/src/permission/PermissionLib.sol";
 import {ProxyLib} from "@aragon/osx-commons-contracts/src/utils/deployment/ProxyLib.sol";
@@ -50,6 +51,7 @@ struct DeploymentParameters {
     // Multisig settings
     uint16 minApprovals;
     address[] multisigMembers;
+    bytes multisigMetadata;
     // Gauge Voter
     TokenParameters[] tokenParameters;
     uint16 feePercent;
@@ -115,6 +117,7 @@ contract GaugesDaoFactory {
     constructor(DeploymentParameters memory _parameters) {
         parameters.minApprovals = _parameters.minApprovals;
         parameters.multisigMembers = _parameters.multisigMembers;
+        parameters.multisigMetadata = _parameters.multisigMetadata;
 
         for (uint i = 0; i < _parameters.tokenParameters.length; ) {
             parameters.tokenParameters.push(_parameters.tokenParameters[i]);
@@ -268,7 +271,9 @@ contract GaugesDaoFactory {
             Multisig.MultisigSettings(
                 true, // onlyListed
                 parameters.minApprovals
-            )
+            ),
+            IPlugin.TargetConfig({target: address(dao), operation: IPlugin.Operation.Call}),
+            parameters.multisigMetadata
         );
 
         (address plugin, IPluginSetup.PreparedSetupData memory preparedSetupData) = parameters
