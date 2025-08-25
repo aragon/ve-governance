@@ -317,7 +317,6 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
 
         _from = _bound(_from, 0, len - 1);
         _to = _bound(_to, 0, len - 1);
-        // @jordan looks good assume this can't resolve to _from due to +1 and modulo
         _to = _from == _to ? (_to + 1) % len : _to;
 
         uint256 fromId = ownedTokens[msgSender].at(_from);
@@ -368,7 +367,6 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
     ) public adjustTimestamp(_jumpSeed) {
         address msgSender = _getAddress(_senderSeed);
         address delegatee = ivotesAdapter.delegates(msgSender);
-        // @jordan wonder if we need this in src again
         _transitionIfTooOld(delegatee);
 
         if (ownedTokens[msgSender].length() == 0) return;
