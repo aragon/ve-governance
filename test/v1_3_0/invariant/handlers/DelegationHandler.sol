@@ -247,7 +247,6 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
         address msgSender = _getAddress(_senderSeed);
         address delegatee = ivotesAdapter.delegates(msgSender);
 
-        // @jordan wonder if we need to check how many times we called state changes versus early returns
         if (ownedTokens[msgSender].length() == 0 || delegatee == address(0)) {
             return;
         }
