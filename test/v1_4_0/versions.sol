@@ -33,11 +33,11 @@ import {
     IDeprecated
 } from "@curve/IEscrowCurveIncreasing_v1_2_0.sol";
 import {
-    IExitQueue,
-    ITicket,
-    IExitQueueErrorsAndEvents,
+    IDynamicExitQueue as IExitQueue,
+    ITicketV2 as ITicket,
+    IDynamicExitQueueErrorsAndEvents as IExitQueueErrorsAndEvents,
     IExitMinLockCooldownErrorsAndEvents
-} from "@queue/IExitQueue.sol";
+} from "@queue/IDynamicExitQueue.sol";
 import {ILock, IWhitelistErrors, IWhitelistEvents} from "@lock/ILock.sol";
 import {
     IMerge,
