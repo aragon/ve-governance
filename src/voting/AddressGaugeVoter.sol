@@ -1,7 +1,7 @@
 /// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
-import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
+import {IDAO} from "@aragon/osx-commons-contracts/src/dao/IDAO.sol";
 import {IClockUser, IClockV1_2_0 as IClock} from "@clock/IClock_v1_2_0.sol";
 import {IAddressGaugeVoter} from "./IAddressGaugeVoter.sol";
 
@@ -14,7 +14,7 @@ import {
 import {
     IVotesUpgradeable as IVotes
 } from "@openzeppelin/contracts-upgradeable/governance/utils/IVotesUpgradeable.sol";
-import {PluginUUPSUpgradeable} from "@aragon/osx/core/plugin/PluginUUPSUpgradeable.sol";
+import {PluginUUPSUpgradeable} from "@aragon/osx-commons-contracts/src/plugin/PluginUUPSUpgradeable.sol";
 import {console2 as console} from "forge-std/console2.sol";
 
 contract AddressGaugeVoter is
@@ -140,7 +140,6 @@ contract AddressGaugeVoter is
      * Querying Gauge A’s votes in epoch 12 will correctly return 1000, not 2000 — avoiding any vote inflation.
      */
     function _vote(address _account, GaugeVote[] memory _votes) internal {
-        // TODO: GIORGI we need to add a function gaugeVotes that also expects epochId...
         uint256 votingPower = enableUpdateVotingPowerHook
             ? IVotes(ivotesAdapter).getVotes(_account)
             : IVotes(ivotesAdapter).getPastVotes(_account, currentEpochStart());
@@ -213,6 +212,8 @@ contract AddressGaugeVoter is
         uint256 _voteWeight,
         AddressVoteData storage _voteData
     ) internal returns (uint256) {
+        // @jordan isn't this too aggressive for small votes and voteweights?
+        // due to 1e36 rounding
         uint256 _votes = _votesForGauge(_voteWeight, _votingPower);
 
         // record the vote for the token
@@ -321,6 +322,7 @@ contract AddressGaugeVoter is
                 epoch,
                 _account,
                 votingPower,
+                // @jordan why do we use the normalized weight here versus the vanilla vote function?
                 _normalizedWeight(newVoteData[i].weight, totalWeight),
                 voteData
             );
@@ -352,6 +354,7 @@ contract AddressGaugeVoter is
         return total;
     }
 
+    // @jordan could use a description as to the purpose of this function
     function _normalizedWeight(
         uint256 _weight,
         uint256 _totalWeight
@@ -359,6 +362,7 @@ contract AddressGaugeVoter is
         return (_weight * 10e32) / _totalWeight;
     }
 
+    // @jordan: if w * vp < 10e32 (i.e weight 1, vp = 1e18) then this will round to 0?
     function _votesForGauge(
         uint256 _weight,
         uint256 _votingPower
@@ -515,6 +519,11 @@ contract AddressGaugeVoter is
     function gaugeVotes(address _address) public view returns (uint256) {
         uint256 epoch = getWriteEpochId();
         return epochGaugeVotes[epoch][_address];
+    }
+
+    /// @dev Consumer's responsibility to ensure that `_epoch` exists.
+    function gaugeVotes(uint256 _epoch, address _address) public view returns (uint256) {
+        return epochGaugeVotes[_epoch][_address];
     }
 
     /// @dev Reserved storage space to allow for layout changes in the future.

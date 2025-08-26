@@ -4,14 +4,15 @@ import {Test} from "forge-std/Test.sol";
 import {console2 as console} from "forge-std/console2.sol";
 
 // aragon contracts
-import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
+import {IPlugin} from "@aragon/osx-commons-contracts/src/plugin/IPlugin.sol";
+import {IDAO} from "@aragon/osx-commons-contracts/src/dao/IDAO.sol";
 import {DAO, PermissionManager} from "@aragon/osx/core/dao/DAO.sol";
-import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
+import {Multisig, MultisigSetup} from "@aragon/multisig/src/MultisigSetup.sol";
 
 import {MockPluginSetupProcessor} from "@mocks/osx/MockPSP.sol";
 import {MockDAOFactory} from "@mocks/osx/MockDAOFactory.sol";
 import {MockERC20} from "@mocks/MockERC20.sol";
-import {DaoUnauthorized} from "@aragon/osx/core/utils/auth.sol";
+import {DaoUnauthorized} from "@aragon/osx-commons-contracts/src/permission/auth/auth.sol";
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
 import "@helpers/OSxHelpers.sol";
@@ -99,7 +100,9 @@ contract GaugeVotingBase is
         // encode a 1/1 multisig that can be adjusted later
         bytes memory data = abi.encode(
             members,
-            Multisig.MultisigSettings({onlyListed: true, minApprovals: 1})
+            Multisig.MultisigSettings({onlyListed: true, minApprovals: 1}),
+            IPlugin.TargetConfig({target: address(dao), operation: IPlugin.Operation.Call}),
+            bytes("0x11")
         );
 
         dao = daoFactory.createDao(_mockDAOSettings(), _mockPluginSettings(data));
@@ -160,11 +163,11 @@ contract GaugeVotingBase is
         }
     }
 
-    function _actions() internal view returns (IDAO.Action[] memory) {
-        IDAO.Action[] memory actions = new IDAO.Action[](9);
+    function _actions() internal view returns (Action[] memory) {
+        Action[] memory actions = new Action[](9);
 
         // action 0: apply the ve installation
-        actions[0] = IDAO.Action({
+        actions[0] = Action({
             to: address(psp),
             value: 0,
             data: abi.encodeCall(
@@ -174,35 +177,35 @@ contract GaugeVotingBase is
         });
 
         // action 2: activate the curve on the ve
-        actions[1] = IDAO.Action({
+        actions[1] = Action({
             to: address(escrow),
             value: 0,
             data: abi.encodeWithSelector(escrow.setCurve.selector, address(curve))
         });
 
         // action 3: activate the queue on the ve
-        actions[2] = IDAO.Action({
+        actions[2] = Action({
             to: address(escrow),
             value: 0,
             data: abi.encodeWithSelector(escrow.setQueue.selector, address(queue))
         });
 
         // action 4: set the voter
-        actions[3] = IDAO.Action({
+        actions[3] = Action({
             to: address(escrow),
             value: 0,
             data: abi.encodeWithSelector(escrow.setVoter.selector, address(voter))
         });
 
         // action 5: set the nft lock
-        actions[4] = IDAO.Action({
+        actions[4] = Action({
             to: address(escrow),
             value: 0,
             data: abi.encodeWithSelector(escrow.setLockNFT.selector, address(nftLock))
         });
 
         // for testing, give this contract the admin roles on all the periphery contracts
-        actions[5] = IDAO.Action({
+        actions[5] = Action({
             to: address(dao),
             value: 0,
             data: abi.encodeCall(
@@ -211,7 +214,7 @@ contract GaugeVotingBase is
             )
         });
 
-        actions[6] = IDAO.Action({
+        actions[6] = Action({
             to: address(dao),
             value: 0,
             data: abi.encodeCall(
@@ -220,7 +223,7 @@ contract GaugeVotingBase is
             )
         });
 
-        actions[7] = IDAO.Action({
+        actions[7] = Action({
             to: address(dao),
             value: 0,
             data: abi.encodeCall(
@@ -229,7 +232,7 @@ contract GaugeVotingBase is
             )
         });
 
-        actions[8] = IDAO.Action({
+        actions[8] = Action({
             to: address(dao),
             value: 0,
             data: abi.encodeCall(
@@ -242,7 +245,7 @@ contract GaugeVotingBase is
     }
 
     function _applySetup() internal {
-        IDAO.Action[] memory actions = _actions();
+        Action[] memory actions = _actions();
 
         // execute the actions
         vm.startPrank(deployer);

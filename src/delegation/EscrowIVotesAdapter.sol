@@ -18,10 +18,10 @@ import {IERC721EnumerableMintableBurnable as IERC721EMB} from "@lock/IERC721EMB.
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {IERC6372} from "@openzeppelin/contracts/interfaces/IERC6372.sol";
 
-import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
+import {IDAO} from "@aragon/osx-commons-contracts/src/dao/IDAO.sol";
 import {
     DaoAuthorizableUpgradeable as DaoAuthorizable
-} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
+} from "@aragon/osx-commons-contracts/src/permission/auth/DaoAuthorizableUpgradeable.sol";
 
 import {
     IVotingEscrowIncreasingV1_2_0 as IVotingEscrow
@@ -57,7 +57,7 @@ contract EscrowIVotesAdapter is
 
     mapping(address => uint256) public latestPointIndex;
     mapping(address => bool) private autoDelegationDisabled_;
-    
+
     uint256 private maxTime;
 
     /*///////////////////////////////////////////////////////////////
@@ -111,6 +111,7 @@ contract EscrowIVotesAdapter is
     ///      which case  `delegate(address)` would go out of gas.
     ///      In rare cases, Caller first has to undelegate all tokens,
     ///      then call this function and then call `delegate(tokenIds)`.
+    // @jordan: definitely think these functions should be permissioned due to potential issues w. split && partial delegation
     function setDelegateAddress(address _delegatee) public whenNotPaused {
         address sender = _msgSender();
 
@@ -126,6 +127,7 @@ contract EscrowIVotesAdapter is
 
     /// @dev Note that `_tokenIds` must be either owned or approved to sender and tokens must not be delegated yet.
     /// @param _tokenIds The array of token ids that will be delegated to the current delegatee of `sender`.
+    // @jordan again maybe auth this
     function delegate(uint256[] memory _tokenIds) public virtual whenNotPaused {
         address sender = _msgSender();
         address delegatee = delegates(sender);
@@ -169,6 +171,7 @@ contract EscrowIVotesAdapter is
 
     /// @dev Note that the token ids must be currently delegated and must be owned/approved to the sender.
     /// @param _tokenIds The array of token ids that will be undelegated from the current delegatee.
+    // @jordan again maybe auth this
     function undelegate(uint256[] memory _tokenIds) public virtual whenNotPaused {
         address sender = _msgSender();
         address delegatee = delegates(sender);
@@ -285,19 +288,18 @@ contract EscrowIVotesAdapter is
     function getDelegatedTokens(
         uint256[] memory _tokenIds
     ) public view virtual returns (uint256[] memory) {
-        uint256[] memory tmp = new uint256[](_tokenIds.length);
+        uint256[] memory delegatedTokenIds = new uint256[](_tokenIds.length);
         uint256 count;
 
         for (uint256 i = 0; i < _tokenIds.length; ++i) {
             if (tokenIsDelegated(_tokenIds[i])) {
-                tmp[count++] = _tokenIds[i];
+                delegatedTokenIds[count++] = _tokenIds[i];
             }
         }
 
         // Trim to size
-        uint256[] memory delegatedTokenIds = new uint256[](count);
-        for (uint256 i = 0; i < count; ++i) {
-            delegatedTokenIds[i] = tmp[i];
+        assembly {
+            mstore(delegatedTokenIds, count)
         }
 
         return delegatedTokenIds;
@@ -324,7 +326,6 @@ contract EscrowIVotesAdapter is
         return "mode=timestamp";
     }
 
-
     /*//////////////////////////////////////////////////////////////
                         Checkpoint Functions
     //////////////////////////////////////////////////////////////*/
@@ -336,7 +337,11 @@ contract EscrowIVotesAdapter is
         _checkpoint(0, 0, _delegatee, _transitionCount);
     }
 
-    function _checkpoint(int256 _totalBias, int256 _totalSlope, address _delegatee) internal override {
+    function _checkpoint(
+        int256 _totalBias,
+        int256 _totalSlope,
+        address _delegatee
+    ) internal override {
         _checkpoint(_totalBias, _totalSlope, _delegatee, 255);
     }
 
@@ -361,7 +366,7 @@ contract EscrowIVotesAdapter is
         mapping(uint256 => int256) storage slopeChanges_ = slopeChanges[_delegatee];
 
         uint256 expectedWrittenTs;
-        
+
         {
             uint256 checkpointInterval = IClock(escrowClock).checkpointInterval();
             uint256 lastPointCheckpoint = lastPoint.writtenTs;
@@ -384,7 +389,7 @@ contract EscrowIVotesAdapter is
                 } else {
                     dSlope = slopeChanges_[t_i];
                 }
-                
+
                 lastPoint.bias += lastPoint.slope * int256(t_i - lastPointCheckpoint);
                 lastPoint.slope -= dSlope;
 
@@ -398,13 +403,13 @@ contract EscrowIVotesAdapter is
                 }
             }
         }
-        
+
         // totalBias and totalSlope can be negative, in which case
         // it will subtract instead of adding.
         lastPoint.bias += _totalBias;
         lastPoint.slope += _totalSlope;
         lastPoint.writtenTs = uint48(expectedWrittenTs);
-        
+
         if (lastPoint.slope < 0) lastPoint.slope = 0;
         if (lastPoint.bias < 0) lastPoint.bias = 0;
 
@@ -435,9 +440,9 @@ contract EscrowIVotesAdapter is
         return _delegateBalanceAt(_account, _timestamp);
     }
 
-    /// @notice Returns the total supply of votes available at a specific moment in the past. 
-    /// @dev This value is the sum of all available votes, which is not necessarily the sum 
-    ///      of all delegated votes. Votes that have not been delegated are still part of 
+    /// @notice Returns the total supply of votes available at a specific moment in the past.
+    /// @dev This value is the sum of all available votes, which is not necessarily the sum
+    ///      of all delegated votes. Votes that have not been delegated are still part of
     ///      total supply, even though they would not participate in a vote.
     function getPastTotalSupply(uint256 _timestamp) external view returns (uint256) {
         return IVotingEscrow(escrow).totalVotingPowerAt(_timestamp);
@@ -516,7 +521,7 @@ contract EscrowIVotesAdapter is
             if (t_i > _timestamp) {
                 t_i = _timestamp;
             } else {
-                dSlope = slopeChanges_[t_i];                
+                dSlope = slopeChanges_[t_i];
             }
             bias += slope * int256(t_i - ts);
 

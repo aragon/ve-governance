@@ -5,13 +5,13 @@ import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {ERC165Checker} from "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
 
-import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
-import {IPluginSetup} from "@aragon/osx/framework/plugin/setup/IPluginSetup.sol";
-import {IProposal} from "@aragon/osx/core/plugin/proposal/IProposal.sol";
+import {IDAO} from "@aragon/osx-commons-contracts/src/dao/IDAO.sol";
+import {IPluginSetup} from "@aragon/osx-commons-contracts/src/plugin/setup/IPluginSetup.sol";
+import {IProposal} from "@aragon/osx-commons-contracts/src/plugin/extensions/proposal/IProposal.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
-import {PermissionLib} from "@aragon/osx/core/permission/PermissionLib.sol";
-import {PluginSetup} from "@aragon/osx/framework/plugin/setup/PluginSetup.sol";
+import {PermissionLib} from "@aragon/osx-commons-contracts/src/permission/PermissionLib.sol";
+import {PluginSetup} from "@aragon/osx-commons-contracts/src/plugin/setup/PluginSetup.sol";
 
 import {AddressGaugeVoter as GaugeVoter} from "@voting/AddressGaugeVoter.sol";
 import {VotingEscrowV1_2_0 as VotingEscrow} from "@escrow/VotingEscrowIncreasing_v1_2_0.sol";
@@ -99,7 +99,7 @@ contract GaugeVoterSetupV1_3_0 is PluginSetup {
         address _clockBase,
         address _nftBase,
         address _ivotesAdapterBase
-    ) PluginSetup() {
+    ) PluginSetup(_voterBase) {
         voterBase = _voterBase;
         curveBase = _curveBase;
         queueBase = _queueBase;
@@ -107,10 +107,6 @@ contract GaugeVoterSetupV1_3_0 is PluginSetup {
         clockBase = _clockBase;
         nftBase = _nftBase;
         ivotesAdapterBase = _ivotesAdapterBase;
-    }
-
-    function implementation() external view returns (address) {
-        return voterBase;
     }
 
     /// @inheritdoc IPluginSetup

@@ -11,7 +11,7 @@ import {
 } from "@factory/GaugesDaoFactory.sol";
 import {
     MultisigSetup as MultisigPluginSetup
-} from "@aragon/osx/plugins/governance/multisig/MultisigSetup.sol";
+} from "@aragon/multisig/src/MultisigSetup.sol";
 import {
     VotingEscrow,
     Clock,
