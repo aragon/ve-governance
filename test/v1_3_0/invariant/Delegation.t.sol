@@ -59,7 +59,6 @@ contract TestDelegationInvariant is IEscrowCurveTokenStorage, EscrowBase {
         targetContract(address(h));
 
         {
-            // @jordan big one missing imo is transfer
             bytes4[] memory selectors = new bytes4[](10);
             selectors[0] = DelegationHandler.createLock.selector;
             selectors[1] = DelegationHandler.merge.selector;
