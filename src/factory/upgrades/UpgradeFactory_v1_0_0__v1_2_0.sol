@@ -7,11 +7,11 @@ import {PluginSetupProcessor} from "@aragon/osx/framework/plugin/setup/PluginSet
 import {PluginRepoFactory} from "@aragon/osx/framework/plugin/repo/PluginRepoFactory.sol";
 import {PluginRepo} from "@aragon/osx/framework/plugin/repo/PluginRepo.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
-import {PermissionLib} from "@aragon/osx/core/permission/PermissionLib.sol";
+import {PermissionLib} from "@aragon/osx-commons-contracts/src/permission/PermissionLib.sol";
 import {
     Multisig,
     MultisigSetup as MultisigPluginSetup
-} from "@aragon/osx/plugins/governance/multisig/MultisigSetup.sol";
+} from "@aragon/multisig/src/MultisigSetup.sol";
 import {
     hashHelpers,
     PluginSetupRef

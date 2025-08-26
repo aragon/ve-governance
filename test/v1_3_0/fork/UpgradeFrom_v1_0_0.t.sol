@@ -8,9 +8,9 @@ import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {
     Multisig,
     MultisigSetup as MultisigPluginSetup
-} from "@aragon/osx/plugins/governance/multisig/MultisigSetup.sol";
+} from "@aragon/multisig/src/MultisigSetup.sol";
 import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
-import {PermissionLib} from "@aragon/osx/core/permission/PermissionLib.sol";
+import {PermissionLib} from "@aragon/osx-commons-contracts/src/permission/PermissionLib.sol";
 
 import {
     GaugeVoterSetup,

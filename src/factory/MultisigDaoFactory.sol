@@ -6,11 +6,11 @@ import {DAOFactory} from "@aragon/osx/framework/dao/DAOFactory.sol";
 import {PluginSetupProcessor} from "@aragon/osx/framework/plugin/setup/PluginSetupProcessor.sol";
 import {hashHelpers, PluginSetupRef} from "@aragon/osx/framework/plugin/setup/PluginSetupProcessorHelpers.sol";
 import {PluginRepo} from "@aragon/osx/framework/plugin/repo/PluginRepo.sol";
-import {IPluginSetup} from "@aragon/osx/framework/plugin/setup/IPluginSetup.sol";
-import {Multisig} from "@aragon/osx/plugins/governance/multisig/Multisig.sol";
-import {MultisigSetup as MultisigPluginSetup} from "@aragon/osx/plugins/governance/multisig/MultisigSetup.sol";
-import {createERC1967Proxy} from "@aragon/osx/utils/Proxy.sol";
-import {PermissionLib} from "@aragon/osx/core/permission/PermissionLib.sol";
+import {IPluginSetup} from "@aragon/osx-commons-contracts/src/plugin/setup/IPluginSetup.sol";
+import {Multisig} from "@aragon/multisig/src/Multisig.sol";
+import {MultisigSetup as MultisigPluginSetup} from "@aragon/multisig/src/MultisigSetup.sol";
+import {ProxyLib} from "@aragon/osx-commons-contracts/src/utils/deployment/ProxyLib.sol";
+import {PermissionLib} from "@aragon/osx-commons-contracts/src/permission/PermissionLib.sol";
 
 /// @notice The struct containing all the parameters to deploy the DAO
 /// @param minApprovals The amount of approvals required for the multisig to be able to execute a proposal on the DAO
@@ -41,6 +41,8 @@ struct Deployment {
 
 /// @notice A singleton contract designed to run the deployment once and become a read-only store of the contracts deployed
 contract MultisigDaoFactory {
+    using ProxyLib for address;
+
     /// @notice Thrown when attempting to call deployOnce() when the DAO is already deployed.
     error AlreadyDeployed();
 
@@ -105,8 +107,7 @@ contract MultisigDaoFactory {
 
         dao = DAO(
             payable(
-                createERC1967Proxy(
-                    address(daoBase),
+                daoBase.deployUUPSProxy(
                     abi.encodeCall(
                         DAO.initialize,
                         (

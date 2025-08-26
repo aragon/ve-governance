@@ -13,13 +13,12 @@ import {PluginRepoFactory} from "@aragon/osx/framework/plugin/repo/PluginRepoFac
 import {PluginRepoRegistry} from "@aragon/osx/framework/plugin/repo/PluginRepoRegistry.sol";
 import {PluginRepo} from "@aragon/osx/framework/plugin/repo/PluginRepo.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
-import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
-import {Addresslist} from "@aragon/osx/plugins/utils/Addresslist.sol";
+import {IDAO} from "@aragon/osx-commons-contracts/src/dao/IDAO.sol";
 import {
     Multisig,
     MultisigSetup as MultisigPluginSetup
-} from "@aragon/osx/plugins/governance/multisig/MultisigSetup.sol";
-import {PermissionLib} from "@aragon/osx/core/permission/PermissionLib.sol";
+} from "@aragon/multisig/src/MultisigSetup.sol";
+import {PermissionLib} from "@aragon/osx-commons-contracts/src/permission/PermissionLib.sol";
 import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 
 import {
