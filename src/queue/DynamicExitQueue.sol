@@ -1,7 +1,7 @@
 /// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
-import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
+import {IDAO} from "@aragon/osx-commons-contracts/src/dao/IDAO.sol";
 import {IDynamicExitQueue, IDynamicExitQueueFee} from "./IDynamicExitQueue.sol";
 import {
     IERC20Upgradeable as IERC20
@@ -16,7 +16,7 @@ import {
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {
     DaoAuthorizableUpgradeable as DaoAuthorizable
-} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
+} from "@aragon/osx-commons-contracts/src/permission/auth/DaoAuthorizableUpgradeable.sol";
 
 /// @title DynamicExitQueue
 /// @notice Token IDs associated with an NFT are given a ticket when they are queued for exit.

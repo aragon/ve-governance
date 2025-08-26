@@ -11,7 +11,7 @@ import {
 import {IERC721EnumerableMintableBurnable as IERC721EMB} from "@lock/IERC721EMB.sol";
 
 // veGovernance
-import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
+import {IDAO} from "@aragon/osx-commons-contracts/src/dao/IDAO.sol";
 import {IAddressGaugeVoter} from "@voting/IAddressGaugeVoter.sol";
 import {
     IEscrowCurveIncreasingV1_2_0 as IEscrowCurve
@@ -45,7 +45,7 @@ import {
 } from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import {
     DaoAuthorizableUpgradeable as DaoAuthorizable
-} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
+} from "@aragon/osx-commons-contracts/src/permission/auth/DaoAuthorizableUpgradeable.sol";
 import {
     IDelegateUpdateVotingPower,
     IEscrowIVotesAdapter,

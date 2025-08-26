@@ -3,10 +3,10 @@ pragma solidity ^0.8.17;
 import {EscrowBase} from "./EscrowBase.sol";
 
 import {console2 as console} from "forge-std/console2.sol";
-import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
+import {IDAO} from "@aragon/osx-commons-contracts/src/dao/IDAO.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
-import {DaoUnauthorized} from "@aragon/osx/core/utils/auth.sol";
-import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
+import {DaoUnauthorized} from "@aragon/osx-commons-contracts/src/permission/auth/auth.sol";
+import {Multisig, MultisigSetup} from "@aragon/multisig/src/MultisigSetup.sol";
 
 import {
     IERC721EnumerableUpgradeable as IERC721Enumerable

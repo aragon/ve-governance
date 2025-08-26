@@ -1,7 +1,7 @@
 /// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
-import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
+import {IDAO} from "@aragon/osx-commons-contracts/src/dao/IDAO.sol";
 import {IClockUser, IClockV1_2_0 as IClock} from "@clock/IClock_v1_2_0.sol";
 import {IAddressGaugeVoter} from "./IAddressGaugeVoter.sol";
 
@@ -14,7 +14,7 @@ import {
 import {
     IVotesUpgradeable as IVotes
 } from "@openzeppelin/contracts-upgradeable/governance/utils/IVotesUpgradeable.sol";
-import {PluginUUPSUpgradeable} from "@aragon/osx/core/plugin/PluginUUPSUpgradeable.sol";
+import {PluginUUPSUpgradeable} from "@aragon/osx-commons-contracts/src/plugin/PluginUUPSUpgradeable.sol";
 import {console2 as console} from "forge-std/console2.sol";
 
 contract AddressGaugeVoter is
@@ -140,8 +140,6 @@ contract AddressGaugeVoter is
      * Querying Gauge A’s votes in epoch 12 will correctly return 1000, not 2000 — avoiding any vote inflation.
      */
     function _vote(address _account, GaugeVote[] memory _votes) internal {
-        // TODO: GIORGI we need to add a function gaugeVotes that also expects epochId...
-        // @jordan: resolve TODOs
         uint256 votingPower = enableUpdateVotingPowerHook
             ? IVotes(ivotesAdapter).getVotes(_account)
             : IVotes(ivotesAdapter).getPastVotes(_account, currentEpochStart());
@@ -521,6 +519,11 @@ contract AddressGaugeVoter is
     function gaugeVotes(address _address) public view returns (uint256) {
         uint256 epoch = getWriteEpochId();
         return epochGaugeVotes[epoch][_address];
+    }
+
+    /// @dev Consumer's responsibility to ensure that `_epoch` exists.
+    function gaugeVotes(uint256 _epoch, address _address) public view returns (uint256) {
+        return epochGaugeVotes[_epoch][_address];
     }
 
     /// @dev Reserved storage space to allow for layout changes in the future.

@@ -5,9 +5,9 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 import {EscrowBase} from "../base/EscrowBase.sol";
 
 import {console2 as console} from "forge-std/console2.sol";
-import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
+import {IDAO} from "@aragon/osx-commons-contracts/src/dao/IDAO.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
-import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
+import {Multisig, MultisigSetup} from "@aragon/multisig/src/MultisigSetup.sol";
 import {MockERC20} from "@mocks/MockERC20.sol";
 import {ILockedBalanceIncreasing} from "@escrow/IVotingEscrowIncreasing.sol";
 
@@ -40,6 +40,7 @@ contract TestDelegationInvariant is IEscrowCurveTokenStorage, EscrowBase {
 
         escrow.setMinDeposit(100);
         escrow.enableSplit();
+        nftLock.enableTransfers();
 
         h = new DelegationHandler(
             DelegationHandler.Contracts({
@@ -59,7 +60,7 @@ contract TestDelegationInvariant is IEscrowCurveTokenStorage, EscrowBase {
 
         {
             // @jordan big one missing imo is transfer
-            bytes4[] memory selectors = new bytes4[](9);
+            bytes4[] memory selectors = new bytes4[](10);
             selectors[0] = DelegationHandler.createLock.selector;
             selectors[1] = DelegationHandler.merge.selector;
             selectors[2] = DelegationHandler.split.selector;
@@ -69,6 +70,7 @@ contract TestDelegationInvariant is IEscrowCurveTokenStorage, EscrowBase {
             selectors[6] = DelegationHandler.undelegate.selector;
             selectors[7] = DelegationHandler.withdraw.selector;
             selectors[8] = DelegationHandler.vote.selector;
+            selectors[9] = DelegationHandler.transfer.selector;
             FuzzSelector memory a = FuzzSelector(address(h), selectors);
 
             targetSelector(a);
@@ -88,7 +90,6 @@ contract TestDelegationInvariant is IEscrowCurveTokenStorage, EscrowBase {
         uint256 vpSum = 0;
 
         uint256 globalPower = escrow.totalVotingPower();
-        uint256 lastId = escrow.lastLockId();
 
         uint256[] memory ids = h.getActiveTokenIds();
         for (uint256 i = 0; i < ids.length; i++) {
@@ -100,7 +101,6 @@ contract TestDelegationInvariant is IEscrowCurveTokenStorage, EscrowBase {
             amountSum += amount;
             vpSum += vp;
         }
-        // @jordan we may wish to ensure at least 1 veNFT was created
 
         assertEq(amountSum, escrow.totalLocked(), "Sum of NFT Amoutns != totalLocked");
         assertApproxEqAbs(
@@ -113,8 +113,6 @@ contract TestDelegationInvariant is IEscrowCurveTokenStorage, EscrowBase {
 
     function invariant_UserHasCorrectPastVotes() public {
         address[] memory actors = h.getActors();
-
-        uint256 totalVp = 0;
 
         for (uint256 i = 0; i < actors.length; i++) {
             address actor = actors[i];
@@ -159,8 +157,7 @@ contract TestDelegationInvariant is IEscrowCurveTokenStorage, EscrowBase {
         }
     }
 
-    // @jordan: ideas:
-    // sum of getPastVotes === totalSupply (delegate checkpointing === total supply checkpointing)
-    // transfers don't affect the invariants
-    // total voting power cannot exceed total locked * max multiplier
+    function invariant_TotalVotingPowerDoesNotExceedTotalLocked() public {
+        assertLe(escrow.totalVotingPower(), bias(h.totalLocked(), maxTime));
+    }
 }

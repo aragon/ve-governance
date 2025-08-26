@@ -6,7 +6,7 @@ import {console2 as console} from "forge-std/console2.sol";
 
 // aragon contracts
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
-import {DaoUnauthorized} from "@aragon/osx/core/utils/auth.sol";
+import {DaoUnauthorized} from "@aragon/osx-commons-contracts/src/permission/auth/auth.sol";
 
 import {createTestDAO} from "@mocks/MockDAO.sol";
 import {

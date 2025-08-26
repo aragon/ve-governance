@@ -5,9 +5,9 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 import {EscrowBase} from "../../base/EscrowBase.sol";
 
 import {console2 as console} from "forge-std/console2.sol";
-import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
+import {IDAO} from "@aragon/osx-commons-contracts/src/dao/IDAO.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
-import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
+import {Multisig, MultisigSetup} from "@aragon/multisig/src/MultisigSetup.sol";
 import {MockERC20} from "@mocks/MockERC20.sol";
 import {ILockedBalanceIncreasing} from "@escrow/IVotingEscrowIncreasing.sol";
 
@@ -49,6 +49,12 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
     MockERC20 private token;
     uint256 private maxTime;
     uint256 private checkpointInterval;
+
+    enum Action {
+        ADD,
+        REMOVE,
+        TRANSFER
+    }
 
     // ======= Ghost variables =========
 
@@ -108,12 +114,12 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
         checkpointInterval = _checkpointInterval;
 
         // create 5 actors.
-        for (uint256 i = 10; i <= 10 + COUNT; i++) {
+        for (uint256 i = 10; i < 10 + COUNT; i++) {
             actors.push(address(uint160(i)));
         }
 
         // create 5 gauges
-        for (uint256 i = 20; i <= 20 + COUNT; i++) {
+        for (uint256 i = 20; i < 20 + COUNT; i++) {
             address gauge = address(uint160(i));
 
             vm.prank(_admin);
@@ -132,27 +138,20 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
         uint64[COUNT] memory _weights
     ) public {
         address[] memory _delegateesWithPower = getDelegateesWithPower();
-        // @jordan: this will presumably, and silently, cause a lot of invariants to pass
-        // if we don't also check that we have delegatees w. voting power
         if (_delegateesWithPower.length == 0) return;
 
         _seedAddr = _bound(_seedAddr, 0, _delegateesWithPower.length - 1);
         address sender = _delegateesWithPower[_seedAddr];
 
-        // @jordan what's the signifcance of 6 when COUNT is 5
-        bool[6] memory used;
+        bool[COUNT] memory used;
         uint256 count = 0;
 
         IGaugeVote.GaugeVote[] memory votes = new IGaugeVote.GaugeVote[](_gaugeSeeds.length);
         for (uint256 i = 0; i < _gaugeSeeds.length; i++) {
-            // @jordan grab a random gauge index based on the seed
             uint256 index = uint256(_gaugeSeeds[i]) % gauges.length;
             _weights[i] = uint64(_bound(_weights[i], 1, type(uint64).max));
 
             address gauge = gauges[index];
-            // Ensure that votes don't contain duplicate gauges
-            // to avoid reverts in the EscrowIVotesAdapter.
-            // @jordan so this basically guarantees >= 1 unique vote, very nice
             if (!used[index]) {
                 used[index] = true;
                 votes[count++] = IGaugeVote.GaugeVote(_weights[i], gauge);
@@ -192,7 +191,6 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
         address newDelegatee = _getAddress(_delegateeSeed);
         address currentDelegatee = ivotesAdapter.delegates(msgSender);
 
-        // @jordan maybe this function should be added somewhere in the src
         _transitionIfTooOld(newDelegatee);
         _transitionIfTooOld(currentDelegatee);
 
@@ -203,23 +201,8 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
 
         // Ghost state variables
         for (uint256 i = 0; i < tokens.length; i++) {
-            incomingTokens[newDelegatee].add(tokens[i]);
-            if (newDelegatee != currentDelegatee) {
-                incomingTokens[currentDelegatee].remove(tokens[i]);
-            }
-
-            // @jordan do we clear previous outgoing tokens?
-            // I guess this being enumerable set it just checks for existence and
-            // adds if needed
-            outgoingTokens[msgSender].add(tokens[i]);
-        }
-
-        if (ivotesAdapter.getVotes(newDelegatee) != 0) {
-            delegateesWithVpPower.add(newDelegatee);
-        }
-
-        if (ivotesAdapter.getVotes(currentDelegatee) == 0) {
-            delegateesWithVpPower.remove(currentDelegatee);
+            _updateDelegationState(tokens[i], msgSender, Action.REMOVE, currentDelegatee);
+            _updateDelegationState(tokens[i], msgSender, Action.ADD, newDelegatee);
         }
     }
 
@@ -252,12 +235,7 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
 
         // Ghost state variables
         for (uint256 i = 0; i < tokens.length; i++) {
-            incomingTokens[delegatee].add(tokens[i]);
-            outgoingTokens[msgSender].add(tokens[i]);
-        }
-
-        if (ivotesAdapter.getVotes(delegatee) != 0) {
-            delegateesWithVpPower.add(delegatee);
+            _updateDelegationState(tokens[i], msgSender, Action.ADD, address(0));
         }
     }
 
@@ -269,7 +247,6 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
         address msgSender = _getAddress(_senderSeed);
         address delegatee = ivotesAdapter.delegates(msgSender);
 
-        // @jordan wonder if we need to check how many times we called state changes versus early returns
         if (ownedTokens[msgSender].length() == 0 || delegatee == address(0)) {
             return;
         }
@@ -290,12 +267,7 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
 
         // Ghost state variables
         for (uint256 i = 0; i < tokens.length; i++) {
-            incomingTokens[delegatee].remove(tokens[i]);
-            outgoingTokens[msgSender].remove(tokens[i]);
-        }
-
-        if (ivotesAdapter.getVotes(delegatee) == 0) {
-            delegateesWithVpPower.remove(delegatee);
+            _updateDelegationState(tokens[i], msgSender, Action.REMOVE, address(0));
         }
     }
 
@@ -323,15 +295,7 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
         activeTokenIds.add(tokenId);
         ownedTokens[msgSender].add(tokenId);
 
-        // If sender has a delegatee already set,
-        // tokenId automatically gets delegated.
-        if (delegatee != address(0)) {
-            if (ivotesAdapter.getVotes(delegatee) != 0) {
-                delegateesWithVpPower.add(delegatee);
-            }
-            incomingTokens[delegatee].add(tokenId);
-            outgoingTokens[msgSender].add(tokenId);
-        }
+        _updateDelegationState(tokenId, msgSender, Action.ADD, address(0));
 
         return tokenId;
     }
@@ -352,7 +316,6 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
 
         _from = _bound(_from, 0, len - 1);
         _to = _bound(_to, 0, len - 1);
-        // @jordan looks good assume this can't resolve to _from due to +1 and modulo
         _to = _from == _to ? (_to + 1) % len : _to;
 
         uint256 fromId = ownedTokens[msgSender].at(_from);
@@ -387,19 +350,11 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
         ownedTokens[msgSender].remove(fromId);
         activeTokenIds.remove(fromId);
 
-        if (delegatee != address(0)) {
-            if (ivotesAdapter.getVotes(delegatee) != 0) {
-                delegateesWithVpPower.add(delegatee);
-            }
-            // If `from` token was delegated and is merged
-            // into `to`, `to` automatically becomes delegated.
-            if (isFromTokenDelegated) {
-                incomingTokens[delegatee].add(toId);
-                outgoingTokens[msgSender].add(toId);
-            }
+        _updateDelegationState(fromId, msgSender, Action.REMOVE, address(0));
 
-            incomingTokens[delegatee].remove(fromId);
-            outgoingTokens[msgSender].remove(fromId);
+        // If from was delegated and merged into to, to becomes delegated
+        if (isFromTokenDelegated) {
+            _updateDelegationState(toId, msgSender, Action.ADD, address(0));
         }
     }
 
@@ -411,7 +366,6 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
     ) public adjustTimestamp(_jumpSeed) {
         address msgSender = _getAddress(_senderSeed);
         address delegatee = ivotesAdapter.delegates(msgSender);
-        // @jordan wonder if we need this in src again
         _transitionIfTooOld(delegatee);
 
         if (ownedTokens[msgSender].length() == 0) return;
@@ -434,17 +388,10 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
         ownedTokens[msgSender].add(newTokenId);
         activeTokenIds.add(newTokenId);
 
-        // When `from` is split, new token id is minted. We only
-        // delegate it automatically if `from` was also delegated.
-        if (delegatee != address(0) && isFromTokenDelegated) {
-            if (ivotesAdapter.getVotes(delegatee) > 0) {
-                delegateesWithVpPower.add(delegatee);
-            }
-            incomingTokens[delegatee].add(fromId);
-            outgoingTokens[msgSender].add(fromId);
-
-            incomingTokens[delegatee].add(newTokenId);
-            outgoingTokens[msgSender].add(newTokenId);
+        // split causes new token id to be minted. If `from` token
+        // was delegated, then automatically delegated a newly created token.
+        if (isFromTokenDelegated) {
+            _updateDelegationState(newTokenId, msgSender, Action.ADD, address(0));
         }
     }
 
@@ -470,7 +417,6 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
         lockNft.approve(address(escrow), tokenId);
         escrow.beginWithdrawal(tokenId);
 
-        // @jordan maybe we should wrap to separate function to allow beginWithdrawal, withdraw in separate functions
         vm.warp(queue.queue(tokenId).exitDate + 1);
         escrow.withdraw(tokenId);
         vm.stopPrank();
@@ -480,18 +426,88 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
         activeTokenIds.remove(tokenId);
         ownedTokens[owner].remove(tokenId);
 
-        if (delegatee != address(0)) {
-            if (ivotesAdapter.getVotes(delegatee) == 0) {
-                delegateesWithVpPower.remove(delegatee);
+        _updateDelegationState(tokenId, owner, Action.REMOVE, address(0));
+    }
+
+    function transfer(
+        uint256 _jumpSeed,
+        uint192 _fromSeed,
+        uint192 _toSeed
+    ) public adjustTimestamp(_jumpSeed) {
+        (address from, uint256 tokenId) = getUserWithToken(_fromSeed);
+        if (from == address(0)) return;
+
+        // Select `to` from remaining users (excluding `from`)
+        address to;
+        for (uint256 i = 0; i < COUNT; i++) {
+            uint256 idx = (_toSeed + i) % 5;
+            if (actors[idx] != from) {
+                to = actors[idx];
+                break;
             }
-            incomingTokens[delegatee].remove(tokenId);
-            outgoingTokens[owner].remove(tokenId);
+        }
+
+        if (to == address(0)) return;
+        if (from == to) return;
+
+        address fromDelegatee = ivotesAdapter.delegates(from);
+        address toDelegatee = ivotesAdapter.delegates(to);
+        _transitionIfTooOld(fromDelegatee);
+        _transitionIfTooOld(toDelegatee);
+
+        vm.prank(from);
+        lockNft.transferFrom(from, to, tokenId);
+
+        ownedTokens[from].remove(tokenId);
+        ownedTokens[to].add(tokenId);
+
+        if (fromDelegatee != address(0)) {
+            _updateDelegationState(tokenId, from, Action.REMOVE, fromDelegatee);
+        }
+
+        if (toDelegatee != address(0)) {
+            _updateDelegationState(tokenId, to, Action.ADD, toDelegatee);
         }
     }
 
-    // @jordan should add a transfer function
-
     // ======================== Helper Functions ===================
+
+    function _updateDelegationState(
+        uint256 _token,
+        address _owner,
+        Action _action,
+        address _delegatee
+    ) private {
+        if (_delegatee == address(0)) {
+            _delegatee = ivotesAdapter.delegates(_owner);
+        }
+
+        if (_delegatee == address(0)) return;
+
+        if (_action == Action.ADD) {
+            incomingTokens[_delegatee].add(_token);
+            outgoingTokens[_owner].add(_token);
+            _updateDelegateeVotingPower(_delegatee);
+
+            return;
+        }
+
+        if (_action == Action.REMOVE) {
+            incomingTokens[_delegatee].remove(_token);
+            outgoingTokens[_owner].remove(_token);
+            _updateDelegateeVotingPower(_delegatee);
+
+            return;
+        }
+    }
+    
+    function _updateDelegateeVotingPower(address _delegatee) private {
+        if (ivotesAdapter.getVotes(_delegatee) > 0) {
+            delegateesWithVpPower.add(_delegatee);
+        } else {
+            delegateesWithVpPower.remove(_delegatee);
+        }
+    }
 
     // The list of addresses that participate in testing.
     function getActors() public view returns (address[] memory) {
@@ -512,8 +528,6 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
             }
         }
 
-        // @jordan: this is ghetto trimming by telling the array it's
-        // len count instead of tokens.length.
         assembly {
             mstore(temp, count)
         }
@@ -538,6 +552,25 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
         }
 
         return newTokens;
+    }
+
+    function getUserWithToken(uint192 _seed) public view returns (address, uint256) {
+        // Try each user starting from seed index
+        address selectedUser;
+        uint256 tokenId;
+
+        for (uint256 i = 0; i < COUNT; i++) {
+            uint256 index = (_seed + i) % 5;
+            address actor = actors[index];
+            uint256[] memory actorTokens = _fromSetToArray(ownedTokens[actor]);
+            if (actorTokens.length > 0) {
+                selectedUser = actor;
+                tokenId = actorTokens[_seed % actorTokens.length];
+                break;
+            }
+        }
+
+        return (selectedUser, tokenId);
     }
 
     // The list of token ids that `_account` has been delegated with.

@@ -18,10 +18,10 @@ import {IERC721EnumerableMintableBurnable as IERC721EMB} from "@lock/IERC721EMB.
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {IERC6372} from "@openzeppelin/contracts/interfaces/IERC6372.sol";
 
-import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
+import {IDAO} from "@aragon/osx-commons-contracts/src/dao/IDAO.sol";
 import {
     DaoAuthorizableUpgradeable as DaoAuthorizable
-} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
+} from "@aragon/osx-commons-contracts/src/permission/auth/DaoAuthorizableUpgradeable.sol";
 
 import {
     IVotingEscrowIncreasingV1_2_0 as IVotingEscrow
@@ -122,10 +122,6 @@ abstract contract DelegationHelper is IEscrowIVotesAdapter, Pausable, UUPSUpgrad
                 // user can manually delegate `to` which's vp at the time will include
                 // the total amount after the merge. This will cause double spend.
                 // lock needs to be `to`'s amount.
-                // @jordan interesting, so if I merge a delegated token => an undelegated one, the undelegated token
-                // 	now becomes delegated.
-                // 	Would it not make more sense to remove the voting power from the delegated balance?
-                // 	Not sure of the implications here, given the comment above
                 (int256 bias, int256 slope) = _getBiasAndSlope(
                     fromDelegatee,
                     _to.locked,
