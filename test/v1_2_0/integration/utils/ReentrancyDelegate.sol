@@ -21,18 +21,13 @@ contract ReentrancyDelegate {
         exploitEnabled = _status;
     }
 
-    function onERC721Received(
-        address,
-        address,
-        uint256 tokenId,
-        bytes memory
-    ) public returns (bytes4) {
-        if(!exploitEnabled) {
+    function onERC721Received(address, address, uint256, bytes memory) public returns (bytes4) {
+        if (!exploitEnabled) {
             return this.onERC721Received.selector;
         }
 
         (bool success, bytes memory returnData) = adapter.call(params);
-        if(success) {
+        if (success) {
             return this.onERC721Received.selector;
         }
 
@@ -47,5 +42,3 @@ contract ReentrancyDelegate {
         }
     }
 }
-
-   

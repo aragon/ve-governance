@@ -83,7 +83,6 @@ contract GetFactoryValuesV1_2_0 is Script {
         }
 
         console.log("Deployment parameters:");
-        DeploymentParameters memory params = factory.getDeploymentParameters();
         console.log("  - MinApprovals: %d", factory.getDeploymentParameters().minApprovals);
         console.log("  - MultisigMembers:");
         for (uint i = 0; i < factory.getDeploymentParameters().multisigMembers.length; i++) {

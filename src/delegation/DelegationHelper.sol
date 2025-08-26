@@ -68,15 +68,12 @@ abstract contract DelegationHelper is IEscrowIVotesAdapter, Pausable, UUPSUpgrad
             revert IncorrectTokenIds();
         }
 
-        bool isFromTokenDelegated = tokenIsDelegated(_from.tokenId);
-        bool isToTokenDelegated = tokenIsDelegated(_to.tokenId);
-
         // If `x` is split into `x` and `y`, and `x` is delegated,
         // then automatically delegate `y` as well. This is to ensure that
         // later on, delegating `y` manually will revert, otherwise it would
         // cause votes to be double spent as original `x` that was delegated
         // already included the amount of `y`.
-        if (isFromTokenDelegated) {
+        if (tokenIsDelegated(_from.tokenId)) {
             numberOfDelegatedTokens[_from.account]++;
             _setDelegated(_to.tokenId, true);
             emit TokensDelegated(_to.account, delegates(_to.account), _getTokenIdList(_to.tokenId));

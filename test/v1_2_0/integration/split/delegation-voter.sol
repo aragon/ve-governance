@@ -97,11 +97,12 @@ contract TestSplit_DelegationAndVoter is
 
         escrow.enableSplit();
 
-        address delegatee = address(new ReentrancyDelegate(address(escrow), address(ivotesAdapter)));
+        address delegatee = address(
+            new ReentrancyDelegate(address(escrow), address(ivotesAdapter))
+        );
         token.mint(delegatee, 10e18);
 
         // C delegates to Alice
-        address alice = address(123);
         vm.prank(delegatee);
         ivotesAdapter.setDelegateAddress(alice);
 
@@ -110,12 +111,14 @@ contract TestSplit_DelegationAndVoter is
         // of this tokenId to alice, because `delegatee` set its own
         // delegate as Alice.
         uint256 tokenId = escrow.createLockFor(10e18, delegatee);
-        uint256 splitTokenId = tokenId + 1;
+        uint256 splitTokenId;
 
         {
             uint256[] memory ids = new uint256[](1);
             ids[0] = splitTokenId;
-            ReentrancyDelegate(delegatee).setParams(abi.encodeWithSignature("delegate(uint256[])", ids));
+            ReentrancyDelegate(delegatee).setParams(
+                abi.encodeWithSignature("delegate(uint256[])", ids)
+            );
             ReentrancyDelegate(delegatee).enableExploit(true);
         }
 
@@ -137,11 +140,12 @@ contract TestSplit_DelegationAndVoter is
 
         escrow.enableSplit();
 
-        address delegatee = address(new ReentrancyDelegate(address(escrow), address(ivotesAdapter)));
+        address delegatee = address(
+            new ReentrancyDelegate(address(escrow), address(ivotesAdapter))
+        );
         token.mint(delegatee, 10e18);
 
         // C delegates to Alice
-        address alice = address(123);
         vm.prank(delegatee);
         ivotesAdapter.setDelegateAddress(alice);
 
@@ -153,7 +157,9 @@ contract TestSplit_DelegationAndVoter is
         uint256 splitTokenId = tokenId + 1;
 
         {
-            ReentrancyDelegate(delegatee).setParams(abi.encodeWithSignature("delegate(address)", alice));
+            ReentrancyDelegate(delegatee).setParams(
+                abi.encodeWithSignature("delegate(address)", alice)
+            );
             ReentrancyDelegate(delegatee).enableExploit(true);
         }
 
@@ -170,8 +176,12 @@ contract TestSplit_DelegationAndVoter is
 
         assertEq(vpBefore, vpAfter);
     }
-    
-    function testFuzz_Split_WhenTokenIsNotDelegated(uint192 _amount, uint192 _splitAmount, uint192 _minDeposit) public {
+
+    function testFuzz_Split_WhenTokenIsNotDelegated(
+        uint192 _amount,
+        uint192 _splitAmount,
+        uint192 _minDeposit
+    ) public {
         super.mintAndApproveEscrow(type(uint256).max);
 
         vm.assume(_minDeposit != 0);
@@ -200,7 +210,11 @@ contract TestSplit_DelegationAndVoter is
         vm.stopPrank();
     }
 
-    function testFuzz_Split_WhenTokenIsDelegated(uint192 _amount, uint192 _splitAmount, uint192 _minDeposit) public {
+    function testFuzz_Split_WhenTokenIsDelegated(
+        uint192 _amount,
+        uint192 _splitAmount,
+        uint192 _minDeposit
+    ) public {
         super.mintAndApproveEscrow(type(uint256).max);
 
         vm.assume(_minDeposit != 0);
