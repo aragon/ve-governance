@@ -158,6 +158,12 @@ contract EscrowBase is
             _permissionId: nftLock.LOCK_ADMIN_ROLE()
         });
 
+        dao.grant({
+            _who: address(type(uint160).max),
+            _where: address(ivotesAdapter),
+            _permissionId: ivotesAdapter.DELEGATION_TOKEN_ROLE()
+        });
+
         // link them
         escrow.setCurve(address(curve));
         escrow.setVoter(address(voter));

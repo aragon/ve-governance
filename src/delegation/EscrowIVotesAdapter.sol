@@ -48,6 +48,9 @@ contract EscrowIVotesAdapter is
     /// @notice The Gauge admin can can create and manage voting gauges for token holders
     bytes32 public constant DELEGATION_ADMIN_ROLE = keccak256("DELEGATION_ADMIN");
 
+    /// @notice The role used to call `setDelegateAddress` and delegate/undelegate for specific tokens.
+    bytes32 public constant DELEGATION_TOKEN_ROLE = keccak256("DELEGATION_TOKEN_ROLE");
+
     /// @notice Clock contract for epoch duration
     address public escrowClock;
 
@@ -111,7 +114,9 @@ contract EscrowIVotesAdapter is
     ///      which case  `delegate(address)` would go out of gas.
     ///      In rare cases, Caller first has to undelegate all tokens,
     ///      then call this function and then call `delegate(tokenIds)`.
-    function setDelegateAddress(address _delegatee) public whenNotPaused {
+    function setDelegateAddress(
+        address _delegatee
+    ) public whenNotPaused auth(DELEGATION_TOKEN_ROLE) {
         address sender = _msgSender();
 
         if (numberOfDelegatedTokens[sender] != 0) {
@@ -126,7 +131,9 @@ contract EscrowIVotesAdapter is
 
     /// @dev Note that `_tokenIds` must be either owned or approved to sender and tokens must not be delegated yet.
     /// @param _tokenIds The array of token ids that will be delegated to the current delegatee of `sender`.
-    function delegate(uint256[] memory _tokenIds) public virtual whenNotPaused {
+    function delegate(
+        uint256[] memory _tokenIds
+    ) public virtual whenNotPaused auth(DELEGATION_TOKEN_ROLE) {
         address sender = _msgSender();
         address delegatee = delegates(sender);
 
@@ -169,7 +176,9 @@ contract EscrowIVotesAdapter is
 
     /// @dev Note that the token ids must be currently delegated and must be owned/approved to the sender.
     /// @param _tokenIds The array of token ids that will be undelegated from the current delegatee.
-    function undelegate(uint256[] memory _tokenIds) public virtual whenNotPaused {
+    function undelegate(
+        uint256[] memory _tokenIds
+    ) public virtual whenNotPaused auth(DELEGATION_TOKEN_ROLE) {
         address sender = _msgSender();
         address delegatee = delegates(sender);
 
