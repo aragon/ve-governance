@@ -39,6 +39,7 @@ contract TestDelegationInvariant is IEscrowCurveTokenStorage, EscrowBase {
         super.setUp();
 
         escrow.setMinDeposit(100);
+        queue.setMinLock(2 days);
         escrow.enableSplit();
         nftLock.enableTransfers();
 
@@ -59,8 +60,7 @@ contract TestDelegationInvariant is IEscrowCurveTokenStorage, EscrowBase {
         targetContract(address(h));
 
         {
-            // @jordan big one missing imo is transfer
-            bytes4[] memory selectors = new bytes4[](10);
+            bytes4[] memory selectors = new bytes4[](11);
             selectors[0] = DelegationHandler.createLock.selector;
             selectors[1] = DelegationHandler.merge.selector;
             selectors[2] = DelegationHandler.split.selector;
@@ -68,9 +68,10 @@ contract TestDelegationInvariant is IEscrowCurveTokenStorage, EscrowBase {
             selectors[4] = DelegationHandler.delegate.selector;
             selectors[5] = DelegationHandler.delegateSpecificTokens.selector;
             selectors[6] = DelegationHandler.undelegate.selector;
-            selectors[7] = DelegationHandler.withdraw.selector;
-            selectors[8] = DelegationHandler.vote.selector;
-            selectors[9] = DelegationHandler.transfer.selector;
+            selectors[7] = DelegationHandler.beginWithdrawal.selector;
+            selectors[8] = DelegationHandler.withdraw.selector;
+            selectors[9] = DelegationHandler.vote.selector;
+            selectors[10] = DelegationHandler.transfer.selector;
             FuzzSelector memory a = FuzzSelector(address(h), selectors);
 
             targetSelector(a);

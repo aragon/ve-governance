@@ -26,7 +26,8 @@ import {
     IEscrowCurveTokenStorage,
     EscrowIVotesAdapter,
     VotingEscrow,
-    Curve
+    Curve, 
+    ITicket
 } from "../../versions.sol";
 import {IERC721EnumerableMintableBurnable as IERC721EMB} from "@lock/IERC721EMB.sol";
 
@@ -73,10 +74,14 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
     // The set of tokens that user has delegated to his/her delegatee.
     mapping(address => EnumerableSet.UintSet) internal outgoingTokens;
 
-    // The set of tokens thatare delegated to the user.
+    // The set of tokens that are delegated to the user.
     mapping(address => EnumerableSet.UintSet) internal incomingTokens;
 
-    // Active tokenIds - withdraw and merge cause removal of the token id.
+    // The set of tokens for which begin withdrawal started.
+    EnumerableSet.UintSet internal beginWithdrawalTokens;
+
+    // Active tokenIds - withdraw(not beginWithdrawal) and merge 
+    // cause removal of the token id.
     EnumerableSet.UintSet internal activeTokenIds;
 
     // Track how much ERC20 token value is stored inside the escrow.
@@ -395,7 +400,10 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
         }
     }
 
-    function withdraw(uint256 _jumpSeed, uint256 _tokenIdSeed) public adjustTimestamp(_jumpSeed) {
+    function beginWithdrawal(
+        uint256 _jumpSeed,
+        uint256 _tokenIdSeed
+    ) public adjustTimestamp(_jumpSeed) {
         if (activeTokenIds.length() == 0) return;
 
         _tokenIdSeed = _bound(_tokenIdSeed, 0, activeTokenIds.length() - 1);
@@ -403,30 +411,59 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
         uint256 tokenId = activeTokenIds.at(_tokenIdSeed);
         address owner = lockNft.ownerOf(tokenId);
 
-        // Withdraw is disallowed in the same block as createLock/merge/split,
-        // so warp if last point was created in the same block.
+        if(beginWithdrawalTokens.contains(tokenId)) return;
+
+        // beginWithdrawal only works if at least min lock time 
+        // has passed since lock creation.
+        if(queue.timeToMinLock(tokenId) > block.timestamp) return;
+
+        // beginWithdrawal is disallowed in the same block as createLock,
+        // so warp if create lock occured in the same tx.
         if (block.timestamp == curve.tokenPointHistory(tokenId, 1).writtenTs) {
             vm.warp(block.timestamp + 1);
         }
 
         address delegatee = ivotesAdapter.delegates(owner);
-        uint256 amount = escrow.locked(tokenId).amount;
-
         _transitionIfTooOld(delegatee);
+
         vm.startPrank(owner);
         lockNft.approve(address(escrow), tokenId);
         escrow.beginWithdrawal(tokenId);
-
-        vm.warp(queue.queue(tokenId).exitDate + 1);
-        escrow.withdraw(tokenId);
         vm.stopPrank();
+
+        // Ghost state variables
+        beginWithdrawalTokens.add(tokenId);
+        ownedTokens[owner].remove(tokenId);
+
+        // the receiver is escrow itself, so no need to update its delegation state.
+        _updateDelegationState(tokenId, owner, Action.REMOVE, address(0));
+    }
+
+    function withdraw(uint256 _jumpSeed, uint256 _tokenIdSeed) public adjustTimestamp(_jumpSeed) {
+        if (beginWithdrawalTokens.length() == 0) return;
+
+        _tokenIdSeed = _bound(_tokenIdSeed, 0, beginWithdrawalTokens.length() - 1);
+        uint256 tokenId = beginWithdrawalTokens.at(_tokenIdSeed);
+
+        // withdraw only works if cool down has been passed.
+        // So warp to that time to avoid many early returns for withdraw.
+        ITicket.Ticket memory ticket = queue.queue(tokenId);
+        if(block.timestamp <= ticket.exitDate) {
+            vm.warp(ticket.exitDate + 1);
+        }
+        
+        address delegatee = ivotesAdapter.delegates(ticket.holder);
+        uint256 amount = escrow.locked(tokenId).amount;
+
+        _transitionIfTooOld(delegatee);
+
+        vm.prank(ticket.holder);
+        escrow.withdraw(tokenId);
 
         // Ghost state variables
         totalLocked -= amount;
         activeTokenIds.remove(tokenId);
-        ownedTokens[owner].remove(tokenId);
-
-        _updateDelegationState(tokenId, owner, Action.REMOVE, address(0));
+        beginWithdrawalTokens.remove(tokenId);
     }
 
     function transfer(
@@ -500,7 +537,7 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
             return;
         }
     }
-    
+
     function _updateDelegateeVotingPower(address _delegatee) private {
         if (ivotesAdapter.getVotes(_delegatee) > 0) {
             delegateesWithVpPower.add(_delegatee);
