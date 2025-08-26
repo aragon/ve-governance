@@ -102,7 +102,6 @@ contract TestSplit_DelegationAndVoter is
         token.mint(delegatee, 10e18);
 
         // C delegates to Alice
-        address alice = address(123);
         vm.prank(delegatee);
         ivotesAdapter.setDelegateAddress(alice);
 
@@ -142,7 +141,6 @@ contract TestSplit_DelegationAndVoter is
         token.mint(delegatee, 10e18);
 
         // C delegates to Alice
-        address alice = address(123);
         vm.prank(delegatee);
         ivotesAdapter.setDelegateAddress(alice);
 
@@ -151,7 +149,6 @@ contract TestSplit_DelegationAndVoter is
         // of this tokenId to alice, because `delegatee` set its own
         // delegate as Alice.
         uint256 tokenId = escrow.createLockFor(10e18, delegatee);
-        uint256 splitTokenId = tokenId + 1;
 
         {
             ReentrancyDelegate(delegatee).setParams(abi.encodeWithSignature("delegate(address)", alice));
@@ -181,7 +178,7 @@ contract TestSplit_DelegationAndVoter is
         vm.assume(_amount - _splitAmount > _minDeposit);
 
         escrow.setMinDeposit(_minDeposit);
-        _approve(alice, _amount, _minDeposit);
+        _approve(alice, _amount);
 
         vm.startPrank(alice);
         uint256 tokenId1 = escrow.createLock(_amount);
@@ -210,7 +207,7 @@ contract TestSplit_DelegationAndVoter is
         vm.assume(_amount - _splitAmount > _minDeposit);
 
         escrow.setMinDeposit(_minDeposit);
-        _approve(alice, _amount, _minDeposit);
+        _approve(alice, _amount);
 
         vm.startPrank(alice);
         ivotesAdapter.setDelegateAddress(bob);
@@ -235,7 +232,7 @@ contract TestSplit_DelegationAndVoter is
         vm.stopPrank();
     }
 
-    function _approve(address _who, uint256 _amount, uint256 _minDeposit) private {
+    function _approve(address _who, uint256 _amount) private {
         token.transfer(_who, _amount);
 
         vm.prank(_who);
