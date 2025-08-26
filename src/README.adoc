@@ -1,4 +1,3 @@
-omg
+Example...
 
-
-{{ VotingEscrowV1_2_0 }}
+{{ LockV1_2_0 }}
