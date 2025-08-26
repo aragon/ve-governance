@@ -36,7 +36,7 @@ import {StdUtils} from "forge-std/StdUtils.sol";
 import {StdCheats} from "forge-std/StdCheats.sol";
 import {CommonBase} from "forge-std/Base.sol";
 
-contract DelegationHandler is ILockedBalanceIncreasing, StdUtils, StdCheats, CommonBase {
+contract DelegationHandler is StdUtils, StdCheats, CommonBase {
     using EnumerableSet for EnumerableSet.UintSet;
     using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -327,8 +327,8 @@ contract DelegationHandler is ILockedBalanceIncreasing, StdUtils, StdCheats, Com
         uint256 toId = ownedTokens[msgSender].at(_to);
 
         {
-            LockedBalance memory fromLocked = escrow.locked(fromId);
-            LockedBalance memory toLocked = escrow.locked(toId);
+            ILockedBalanceIncreasing.LockedBalance memory fromLocked = escrow.locked(fromId);
+            ILockedBalanceIncreasing.LockedBalance memory toLocked = escrow.locked(toId);
 
             // Starts not equal and one of the token is not mature or both.
             if (!escrow.canMerge(fromLocked, toLocked)) {
@@ -447,9 +447,10 @@ contract DelegationHandler is ILockedBalanceIncreasing, StdUtils, StdCheats, Com
 
         // withdraw only works if cool down has been passed.
         // So warp to that time to avoid many early returns for withdraw.
-        ITicket.Ticket memory ticket = queue.queue(tokenId);
-        if(block.timestamp <= ticket.exitDate) {
-            vm.warp(ticket.exitDate + 1);
+        ITicket.TicketV2 memory ticket = queue.queue(tokenId);
+        uint48 minCooldown = queue.minCooldown();
+        if(block.timestamp <= ticket.queuedAt + minCooldown) {
+            vm.warp(ticket.queuedAt + minCooldown + 1);
         }
         
         address delegatee = ivotesAdapter.delegates(ticket.holder);
