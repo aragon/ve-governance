@@ -114,7 +114,6 @@ contract EscrowIVotesAdapter is
     ///      which case  `delegate(address)` would go out of gas.
     ///      In rare cases, Caller first has to undelegate all tokens,
     ///      then call this function and then call `delegate(tokenIds)`.
-    // @jordan: definitely think these functions should be permissioned due to potential issues w. split && partial delegation
     function setDelegateAddress(
         address _delegatee
     ) public whenNotPaused auth(DELEGATION_TOKEN_ROLE) {
@@ -132,7 +131,6 @@ contract EscrowIVotesAdapter is
 
     /// @dev Note that `_tokenIds` must be either owned or approved to sender and tokens must not be delegated yet.
     /// @param _tokenIds The array of token ids that will be delegated to the current delegatee of `sender`.
-    // @jordan again maybe auth this
     function delegate(
         uint256[] memory _tokenIds
     ) public virtual whenNotPaused auth(DELEGATION_TOKEN_ROLE) {
@@ -178,7 +176,6 @@ contract EscrowIVotesAdapter is
 
     /// @dev Note that the token ids must be currently delegated and must be owned/approved to the sender.
     /// @param _tokenIds The array of token ids that will be undelegated from the current delegatee.
-    // @jordan again maybe auth this
     function undelegate(
         uint256[] memory _tokenIds
     ) public virtual whenNotPaused auth(DELEGATION_TOKEN_ROLE) {

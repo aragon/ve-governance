@@ -14,7 +14,9 @@ import {
 import {
     IVotesUpgradeable as IVotes
 } from "@openzeppelin/contracts-upgradeable/governance/utils/IVotesUpgradeable.sol";
-import {PluginUUPSUpgradeable} from "@aragon/osx-commons-contracts/src/plugin/PluginUUPSUpgradeable.sol";
+import {
+    PluginUUPSUpgradeable
+} from "@aragon/osx-commons-contracts/src/plugin/PluginUUPSUpgradeable.sol";
 import {console2 as console} from "forge-std/console2.sol";
 
 contract AddressGaugeVoter is
@@ -111,7 +113,7 @@ contract AddressGaugeVoter is
     //////////////////////////////////////////////////////////////*/
 
     function vote(GaugeVote[] calldata _votes) public nonReentrant whenNotPaused whenVotingActive {
-        address account = _msgSender();
+        address account = msg.sender;
         _vote(account, _votes);
     }
 
@@ -193,17 +195,18 @@ contract AddressGaugeVoter is
         if (_voteData.voteWeights[_currentVote.gauge] != 0) revert DoubleVote();
 
         // calculate the weight for this gauge
-        uint256 votesForGauge = _normalizedWeight(_currentVote.weight, _totalWeights);
+        // No votes can happen with extreme weight discrepancies and/or small
+        // voting power, in which case caller should adjust weights accordingly
+        uint256 normWeight = _normalizedWeight(_currentVote.weight, _totalWeights);
+        if (normWeight == 0) revert NoVotes();
 
-        if (votesForGauge == 0) revert NoVotes();
-
-        return
-            _castVote(_currentVote.gauge, _epoch, _account, _votingPower, votesForGauge, _voteData);
+        return _castVote(_currentVote.gauge, _epoch, _account, _votingPower, normWeight, _voteData);
     }
 
     /// @notice Cast the vote of an tokenId to a specific gauge
     /// @dev This function doesn't do any safety checks and it's up to caller to do validations.
     ///      If you wish to have validations, see `_safeCastVote`.
+    /// @dev _voteWeight must be normalized to 1e36 precision.
     function _castVote(
         address _gauge,
         uint256 _epoch,
@@ -212,8 +215,6 @@ contract AddressGaugeVoter is
         uint256 _voteWeight,
         AddressVoteData storage _voteData
     ) internal returns (uint256) {
-        // @jordan isn't this too aggressive for small votes and voteweights?
-        // due to 1e36 rounding
         uint256 _votes = _votesForGauge(_voteWeight, _votingPower);
 
         // record the vote for the token
@@ -322,7 +323,6 @@ contract AddressGaugeVoter is
                 epoch,
                 _account,
                 votingPower,
-                // @jordan why do we use the normalized weight here versus the vanilla vote function?
                 _normalizedWeight(newVoteData[i].weight, totalWeight),
                 voteData
             );
@@ -354,20 +354,21 @@ contract AddressGaugeVoter is
         return total;
     }
 
-    // @jordan could use a description as to the purpose of this function
+    /// @dev Scales weights as percentage of total weight and then to 1e36 precision
     function _normalizedWeight(
         uint256 _weight,
         uint256 _totalWeight
     ) internal view virtual returns (uint256) {
-        return (_weight * 10e32) / _totalWeight;
+        return (_weight * 1e36) / _totalWeight;
     }
 
-    // @jordan: if w * vp < 10e32 (i.e weight 1, vp = 1e18) then this will round to 0?
+    /// @dev Calculates the votes for a gauge based on weight and voting power.
+    ///      We assume the weight is already normalized to 1e36 precision.
     function _votesForGauge(
         uint256 _weight,
         uint256 _votingPower
     ) internal view virtual returns (uint256) {
-        return (_weight * _votingPower) / 10e32;
+        return (_weight * _votingPower) / 1e36;
     }
 
     /// @notice This function is used to get the epoch id in the case of delegation mapper
@@ -400,7 +401,7 @@ contract AddressGaugeVoter is
         gauges[_gauge] = Gauge(true, block.timestamp, _metadataURI);
         gaugeList.push(_gauge);
 
-        emit GaugeCreated(_gauge, _msgSender(), _metadataURI);
+        emit GaugeCreated(_gauge, msg.sender, _metadataURI);
         return _gauge;
     }
 
