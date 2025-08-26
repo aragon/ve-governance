@@ -63,8 +63,12 @@ const compile = async (filePaths) => {
       const source = fs.readFileSync(fileName, "utf8");
       return { ...input, [relativePath]: { content: source } };
     }, {}),
-    settings: { outputSelection: { "*": { "*": ["*"], "": ["ast"] } } },
+    settings: { outputSelection: { "*": {
+          "*": ["abi", "devdoc", "userdoc", "metadata", "storageLayout"],
+          "": ["ast"]
+        } }}
   };
+
 
   console.log("Compiling contracts...");
 
@@ -84,7 +88,16 @@ async function main() {
     return path.extname(item).toLowerCase() == ".sol";
   });
 
+  
   const { input, output } = await compile(solFiles);
+  // if (output.sources) {
+  //   for (const [relativePath, sourceData] of Object.entries(output.sources)) {
+  //     if (sourceData.ast && sourceData.ast.absolutePath) {
+  //       // Convert relative path to absolute path
+  //       sourceData.ast.absolutePath = path.resolve(ROOT_DIR, "src", relativePath);
+  //     }
+  //   }
+  // }
 
   const templatesPath = "docs/templates";
   const apiPath = "docs/modules/api";
@@ -95,8 +108,6 @@ async function main() {
   helpers.version = () => `${version}`;
   helpers.githubURI = () => repository.url;
 
-  console.log(output)
-
   const config = {
     outputDir: `${apiPath}/pages`,
     sourcesDir: path.resolve(ROOT_DIR, "src"),
@@ -105,14 +116,16 @@ async function main() {
     pageExtension: ".adoc",
     collapseNewlines: true,
     pages: (_, file, config) => {
-      return REPO_NAME + config.pageExtension;
+      return "omg"
     },
   };
 
   const o = await output;
+
+  console.log(o);
+
   console.log("Generating docs...");
   await docgen.main([{ input, output: o }], config);
-
   const navOutput = execSync(`${RUNTIME} script/gen-nav.js ${apiPath}/pages`, {
     encoding: "utf8",
   });
