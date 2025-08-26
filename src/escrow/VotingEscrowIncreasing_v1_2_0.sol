@@ -649,7 +649,6 @@ contract VotingEscrowV1_2_0 is
         IEscrowIVotesAdapter(ivotesAdapter).moveDelegateVotes(_from, _to, _tokenId, locked_);
     }
 
-    /// @inheritdoc IDelegateUpdateVotingPower
     function updateVotingPower(address _from, address _to) public whenNotPaused {
         if (msg.sender != ivotesAdapter) revert OnlyIVotesAdapter();
 

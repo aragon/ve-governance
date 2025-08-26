@@ -16,7 +16,7 @@ import {ITokenGaugeVoter} from "@voting/ITokenGaugeVoter.sol";
 import {IClock} from "@clock/IClock.sol";
 import {IEscrowCurveIncreasing as IEscrowCurve} from "@curve/IEscrowCurveIncreasing.sol";
 import {IExitQueue} from "@queue/IExitQueue.sol";
-import {IVotingEscrowIncreasing as IVotingEscrow} from "./IVotingEscrowIncreasing.sol";
+import {IVotingEscrowIncreasing as IVotingEscrow, ILockedBalanceIncreasing} from "@escrow/IVotingEscrowIncreasing.sol";
 
 // libraries
 import {
@@ -37,7 +37,6 @@ import {
 import {
     DaoAuthorizableUpgradeable as DaoAuthorizable
 } from "@aragon/osx-commons-contracts/src/permission/auth/DaoAuthorizableUpgradeable.sol";
-import {ILockedBalanceIncreasing} from "@escrow/IVotingEscrowIncreasing.sol";
 
 contract VotingEscrow is
     ILockedBalanceIncreasing,
