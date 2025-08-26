@@ -1,4 +1,0 @@
-omg
-
-
-{{ VotingEscrowV1_2_0 }}
