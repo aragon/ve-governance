@@ -86,6 +86,12 @@ contract Base is
             _permissionId: dg.DELEGATION_ADMIN_ROLE()
         });
 
+        dao.grant({
+            _who: address(type(uint160).max),
+            _where: address(dg),
+            _permissionId: dg.DELEGATION_TOKEN_ROLE()
+        });
+
         // almost all tests need delegation to be disabled by default 
         // to test thoroughly the behaviour of the functions.
         // So we set it to true.
