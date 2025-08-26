@@ -6,38 +6,38 @@ import {DAO} from "@mocks/MockDAO.sol";
 import {
     Clock,
     Curve,
-    ILockedBalanceIncreasing,
     IVotingEscrowIncreasing as IVotingEscrow,
     IEscrowCurveIncreasing as IEscrowCurve
 } from "../../../versions.sol";
+import {ILockedBalanceIncreasing} from "@escrow/IVotingEscrowIncreasing.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
 import {FixedPointBase} from "../../../base/FixedPointBase.sol";
 import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 
-contract MockEscrow {
+contract MockEscrow is ILockedBalanceIncreasing {
     address public token;
     Curve public curve;
-    mapping(uint => IVotingEscrow.LockedBalance) locked_;
+    mapping(uint => LockedBalance) locked_;
 
     function setCurve(Curve _curve) external {
         curve = _curve;
     }
 
-    function setLocked(uint256 _tokenId, IVotingEscrow.LockedBalance memory _locked) external {
+    function setLocked(uint256 _tokenId, LockedBalance memory _locked) external {
         locked_[_tokenId] = _locked;
     }
 
     function checkpoint(
         uint256 _tokenId,
-        IVotingEscrow.LockedBalance memory _oldLocked,
-        IVotingEscrow.LockedBalance memory _newLocked
+        LockedBalance memory _oldLocked,
+        LockedBalance memory _newLocked
     ) external {
         locked_[_tokenId] = _newLocked;
         return curve.checkpoint(_tokenId, _oldLocked, _newLocked);
     }
 
-    function locked(uint256 _tokenId) external view returns (IVotingEscrow.LockedBalance memory) {
+    function locked(uint256 _tokenId) external view returns (LockedBalance memory) {
         return locked_[_tokenId];
     }
 }

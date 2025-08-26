@@ -44,6 +44,7 @@ contract EscrowIVotesAdapterA is EscrowIVotesAdapter {
 }
 
 contract Base is
+    ILockedBalanceIncreasing,
     IEscrowIVotesAdapterStorage,
     IEscrowIVotesAdapterErrorsAndEvents,
     FixedPointBase,
@@ -210,7 +211,7 @@ contract Base is
         vm.mockCall(
             address(escrow),
             abi.encodeWithSelector(VotingEscrow.locked.selector, (_tokenId)),
-            abi.encode(ILockedBalanceIncreasing.LockedBalance(uint208(_amount), uint48(_start)))
+            abi.encode(LockedBalance(uint208(_amount), uint48(_start)))
         );
     }
 

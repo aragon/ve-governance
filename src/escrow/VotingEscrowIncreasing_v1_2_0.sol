@@ -51,8 +51,10 @@ import {
     IEscrowIVotesAdapter,
     IDelegateMoveVoteRecipient
 } from "../delegation/IEscrowIVotesAdapter.sol";
+import {ILockedBalanceIncreasing} from "@escrow/IVotingEscrowIncreasing.sol";
 
 contract VotingEscrowV1_2_0 is
+    ILockedBalanceIncreasing,
     IVotingEscrow,
     ReentrancyGuard,
     Pausable,
@@ -642,9 +644,9 @@ contract VotingEscrowV1_2_0 is
         address _from,
         address _to,
         uint256 _tokenId,
-        LockedBalance memory _locked
+        LockedBalance memory locked_
     ) private {
-        IEscrowIVotesAdapter(ivotesAdapter).moveDelegateVotes(_from, _to, _tokenId, _locked);
+        IEscrowIVotesAdapter(ivotesAdapter).moveDelegateVotes(_from, _to, _tokenId, locked_);
     }
 
     /// @inheritdoc IDelegateUpdateVotingPower

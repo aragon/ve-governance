@@ -35,7 +35,7 @@ import {StdUtils} from "forge-std/StdUtils.sol";
 import {StdCheats} from "forge-std/StdCheats.sol";
 import {CommonBase} from "forge-std/Base.sol";
 
-contract DelegationHandler is StdUtils, StdCheats, CommonBase {
+contract DelegationHandler is ILockedBalanceIncreasing, StdUtils, StdCheats, CommonBase {
     using EnumerableSet for EnumerableSet.UintSet;
     using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -322,8 +322,8 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
         uint256 toId = ownedTokens[msgSender].at(_to);
 
         {
-            ILockedBalanceIncreasing.LockedBalance memory fromLocked = escrow.locked(fromId);
-            ILockedBalanceIncreasing.LockedBalance memory toLocked = escrow.locked(toId);
+            LockedBalance memory fromLocked = escrow.locked(fromId);
+            LockedBalance memory toLocked = escrow.locked(toId);
 
             // Starts not equal and one of the token is not mature or both.
             if (!escrow.canMerge(fromLocked, toLocked)) {

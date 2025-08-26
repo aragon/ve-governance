@@ -17,8 +17,8 @@ contract TestQuadraticIncreasingCurveLogic is CurveBase {
     error CheckpointOnDepositIntervalNotAllowed();
     error InvalidLocks(
         uint256 tokenId,
-        ILockedBalanceIncreasing.LockedBalance fromLocked,
-        ILockedBalanceIncreasing.LockedBalance newLocked
+        LockedBalance fromLocked,
+        LockedBalance newLocked
     );
 
     function testUUPSUpgrade() public {

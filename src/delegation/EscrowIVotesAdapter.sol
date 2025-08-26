@@ -34,8 +34,10 @@ import {IEscrowIVotesAdapter, IDelegateMoveVoteRecipient} from "./IEscrowIVotesA
 import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 import {SignedFixedPointMath} from "@libs/SignedFixedPointMathLib.sol";
 import {DelegationHelper} from "./DelegationHelper.sol";
+import {ILockedBalanceIncreasing} from "@escrow/IVotingEscrowIncreasing.sol";
 
 contract EscrowIVotesAdapter is
+    ILockedBalanceIncreasing,
     IERC6372,
     ReentrancyGuard,
     Pausable,
@@ -232,7 +234,7 @@ contract EscrowIVotesAdapter is
 
             _setDelegated(tokenId, true);
 
-            IVotingEscrow.LockedBalance memory locked = IVotingEscrow(escrow).locked(tokenId);
+            LockedBalance memory locked = IVotingEscrow(escrow).locked(tokenId);
             (int256 bias, int256 slope) = _getBiasAndSlope(_delegatee, locked, _positive);
             totalBias += bias;
             totalSlope += slope;
@@ -276,7 +278,7 @@ contract EscrowIVotesAdapter is
 
             _setDelegated(tokenId, false);
 
-            IVotingEscrow.LockedBalance memory locked = IVotingEscrow(escrow).locked(tokenId);
+            LockedBalance memory locked = IVotingEscrow(escrow).locked(tokenId);
             (int256 bias, int256 slope) = _getBiasAndSlope(_delegatee, locked, _negative);
 
             totalBias += bias;
@@ -550,7 +552,7 @@ contract EscrowIVotesAdapter is
     /// @dev Note that this function also updates slopeChanges.
     function _getBiasAndSlope(
         address _delegatee,
-        IVotingEscrow.LockedBalance memory _locked,
+        LockedBalance memory _locked,
         function(int256) view returns (int256) op
     ) internal override returns (int256, int256) {
         uint256 elapsed = block.timestamp - _locked.start;

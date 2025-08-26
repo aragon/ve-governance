@@ -12,12 +12,12 @@ contract TestMoveDelegateVotes is Base {
         dg.pause();
 
         vm.expectRevert("Pausable: paused");
-        dg.moveDelegateVotes(alice, bob, 1, ILockedBalanceIncreasing.LockedBalance(0, 0));
+        dg.moveDelegateVotes(alice, bob, 1, LockedBalance(0, 0));
     }
 
     function testRevert_IfNotCalledByEscrow() public {
         vm.expectRevert(OnlyEscrow.selector);
-        dg.moveDelegateVotes(alice, bob, 1, ILockedBalanceIncreasing.LockedBalance(0, 0));
+        dg.moveDelegateVotes(alice, bob, 1, LockedBalance(0, 0));
     }
 
     function test_OnlyUpdatesFromDelegateeWhenToIsNotSet() public {

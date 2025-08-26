@@ -36,7 +36,7 @@ import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 import {SignedFixedPointMath} from "@libs/SignedFixedPointMathLib.sol";
 import {IEscrowIVotesAdapter} from "./IEscrowIVotesAdapter.sol";
 
-abstract contract DelegationHelper is IEscrowIVotesAdapter, Pausable, UUPSUpgradeable {
+abstract contract DelegationHelper is ILockedBalanceIncreasing, IEscrowIVotesAdapter, Pausable, UUPSUpgradeable {
     /// @notice Address of the voting escrow contract that will track voting power
     address public escrow;
 
@@ -150,7 +150,7 @@ abstract contract DelegationHelper is IEscrowIVotesAdapter, Pausable, UUPSUpgrad
         address _from,
         address _to,
         uint256 _tokenId,
-        IVotingEscrow.LockedBalance memory _locked
+        LockedBalance memory _locked
     ) public virtual whenNotPaused onlyEscrow {
         address fromDelegatee = delegates(_from);
         address toDelegatee = delegates(_to);
@@ -229,7 +229,7 @@ abstract contract DelegationHelper is IEscrowIVotesAdapter, Pausable, UUPSUpgrad
 
     function _getBiasAndSlope(
         address _delegatee,
-        IVotingEscrow.LockedBalance memory _locked,
+        LockedBalance memory _locked,
         function(int256) view returns (int256) op
     ) internal virtual returns (int256, int256);
 

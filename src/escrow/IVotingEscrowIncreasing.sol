@@ -51,7 +51,6 @@ interface IVotingEscrowCoreEvents {
 }
 
 interface IVotingEscrowCore is
-    ILockedBalanceIncreasing,
     IVotingEscrowCoreErrors,
     IVotingEscrowCoreEvents
 {
@@ -65,7 +64,7 @@ interface IVotingEscrowCore is
     function totalLocked() external view returns (uint256);
 
     /// @notice Get the raw locked balance for `_tokenId`
-    function locked(uint256 _tokenId) external view returns (LockedBalance memory);
+    function locked(uint256 _tokenId) external view returns (ILockedBalanceIncreasing.LockedBalance memory);
 
     /// @notice Deposit `_value` tokens for `msg.sender`
     /// @param _value Amount to deposit

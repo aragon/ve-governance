@@ -14,6 +14,8 @@ import {
     IEscrowCurveTokenV1_2_0 as IEscrowCurveToken
 } from "@curve/IEscrowCurveIncreasing_v1_2_0.sol";
 
+import {ILockedBalanceIncreasing} from "@escrow/IVotingEscrowIncreasing.sol";
+
 import {IClockUser, IClockV1_2_0 as IClock} from "@clock/IClock_v1_2_0.sol";
 
 // libraries
@@ -33,6 +35,7 @@ import {
 
 /// @title Linear Increasing Escrow Curve
 contract LinearIncreasingCurve is
+    ILockedBalanceIncreasing,
     IEscrowCurve,
     IClockUser,
     ReentrancyGuard,
@@ -286,8 +289,8 @@ contract LinearIncreasingCurve is
     /// @notice A checkpoint can be called by the VotingEscrow contract to snapshot the user's voting power
     function checkpoint(
         uint256 _tokenId,
-        IVotingEscrow.LockedBalance memory _oldLocked,
-        IVotingEscrow.LockedBalance memory _newLocked
+        LockedBalance memory _oldLocked,
+        LockedBalance memory _newLocked
     ) external nonReentrant {
         if (msg.sender != escrow) revert OnlyEscrow();
         _checkpoint(_tokenId, _oldLocked, _newLocked);
@@ -300,8 +303,8 @@ contract LinearIncreasingCurve is
     /// @param _newLocked New locked amount / end lock time for the user
     function _checkpoint(
         uint256 _tokenId,
-        IVotingEscrow.LockedBalance memory _fromLocked,
-        IVotingEscrow.LockedBalance memory _newLocked
+        LockedBalance memory _fromLocked,
+        LockedBalance memory _newLocked
     ) internal {
         // this implementation doesn't yet support manual checkpointing
         if (_tokenId == 0) revert InvalidTokenId();

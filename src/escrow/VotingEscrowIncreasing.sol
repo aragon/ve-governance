@@ -37,8 +37,10 @@ import {
 import {
     DaoAuthorizableUpgradeable as DaoAuthorizable
 } from "@aragon/osx-commons-contracts/src/permission/auth/DaoAuthorizableUpgradeable.sol";
+import {ILockedBalanceIncreasing} from "@escrow/IVotingEscrowIncreasing.sol";
 
 contract VotingEscrow is
+    ILockedBalanceIncreasing,
     IVotingEscrow,
     ReentrancyGuard,
     Pausable,

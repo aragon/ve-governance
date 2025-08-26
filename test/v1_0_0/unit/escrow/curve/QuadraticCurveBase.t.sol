@@ -18,7 +18,7 @@ import {ProxyLib} from "@libs/ProxyLib.sol";
 import {FixedPointBase} from "../../../base/FixedPointBase.sol";
 import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 
-contract MockEscrow {
+contract MockEscrow is ILockedBalanceIncreasing {
     address public token;
     QuadraticIncreasingEscrow public curve;
 
@@ -28,8 +28,8 @@ contract MockEscrow {
 
     function checkpoint(
         uint256 _tokenId,
-        IVotingEscrow.LockedBalance memory _oldLocked,
-        IVotingEscrow.LockedBalance memory _newLocked
+        LockedBalance memory _oldLocked,
+        LockedBalance memory _newLocked
     ) external {
         return curve.checkpoint(_tokenId, _oldLocked, _newLocked);
     }

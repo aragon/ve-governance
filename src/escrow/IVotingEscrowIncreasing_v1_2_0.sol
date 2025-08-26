@@ -1,8 +1,18 @@
 /// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "./IVotingEscrowIncreasing.sol";
-import {IEscrowIVotesAdapter, IDelegateUpdateVotingPower} from "@delegation/IEscrowIVotesAdapter.sol";
+import {
+    IEscrowIVotesAdapter,
+    IDelegateUpdateVotingPower
+} from "@delegation/IEscrowIVotesAdapter.sol";
+import {
+    ILockedBalanceIncreasing,
+    IVotingEscrowCore,
+    IVotingEscrowCoreErrors,
+    IVotingEscrowEventsStorageErrorsEvents,
+    IVotingEscrowIncreasing,
+    IWithdrawalQueueErrors
+} from "@escrow/IVotingEscrowIncreasing.sol";
 
 interface IVotingEscrowExiting {
     /// @notice How much amount has been exiting.
@@ -25,7 +35,7 @@ interface IMergeEventsAndErrors {
     error SameNFT();
 }
 
-interface IMerge is ILockedBalanceIncreasing, IMergeEventsAndErrors {
+interface IMerge is IMergeEventsAndErrors {
     /// @notice Merge two tokens - i.e  `from` into `_to`.
     /// @param _from The token id from which merge is occuring
     /// @param _to The token id to which `_from` is merging
@@ -35,8 +45,8 @@ interface IMerge is ILockedBalanceIncreasing, IMergeEventsAndErrors {
     /// @param _from The token id from which merge should occur.
     /// @param _to The token id to which `_from` should merge.
     function canMerge(
-        LockedBalance memory _from,
-        LockedBalance memory _to
+        ILockedBalanceIncreasing.LockedBalance memory _from,
+        ILockedBalanceIncreasing.LockedBalance memory _to
     ) external view returns (bool);
 }
 
@@ -60,10 +70,7 @@ interface ISplit is ISplitEventsAndErrors {
     /// @param _from The token id that should be split
     /// @param _value The amount that determines how token is split
     /// @return _newTokenId The new token id after split.
-    function split(
-        uint256 _from,
-        uint256 _value
-    ) external returns (uint256 _newTokenId);
+    function split(uint256 _from, uint256 _value) external returns (uint256 _newTokenId);
 }
 
 interface IDelegateMoveVoteCaller {
@@ -72,11 +79,7 @@ interface IDelegateMoveVoteCaller {
     /// @param _from The current delegatee of `_tokenId`.
     /// @param _to The new delegatee of `_tokenId`
     /// @param _tokenId The token id that is being transferred.
-    function moveDelegateVotes(
-        address _from,
-        address _to,
-        uint256 _tokenId
-    ) external;
+    function moveDelegateVotes(address _from, address _to, uint256 _tokenId) external;
 }
 
 interface IVotingEscrowIncreasingV1_2_0 is

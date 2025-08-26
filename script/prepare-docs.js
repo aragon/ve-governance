@@ -123,6 +123,7 @@ async function main() {
   const o = await output;
 
   console.log(o);
+  console.log(o.errors.length);
 
   console.log("Generating docs...");
   await docgen.main([{ input, output: o }], config);
