@@ -206,7 +206,7 @@ contract AddressGaugeVoter is
     /// @notice Cast the vote of an tokenId to a specific gauge
     /// @dev This function doesn't do any safety checks and it's up to caller to do validations.
     ///      If you wish to have validations, see `_safeCastVote`.
-    /// @dev _voteWeight must be normalized to 1e32 precision.
+    /// @dev _voteWeight must be normalized to 1e36 precision.
     function _castVote(
         address _gauge,
         uint256 _epoch,
@@ -354,21 +354,21 @@ contract AddressGaugeVoter is
         return total;
     }
 
-    /// @dev Scales weights as percentage of total weight and then to 1e32 precision
+    /// @dev Scales weights as percentage of total weight and then to 1e36 precision
     function _normalizedWeight(
         uint256 _weight,
         uint256 _totalWeight
     ) internal view virtual returns (uint256) {
-        return (_weight * 1e32) / _totalWeight;
+        return (_weight * 1e36) / _totalWeight;
     }
 
     /// @dev Calculates the votes for a gauge based on weight and voting power.
-    ///      We assume the weight is already normalized to 1e32 precision.
+    ///      We assume the weight is already normalized to 1e36 precision.
     function _votesForGauge(
         uint256 _weight,
         uint256 _votingPower
     ) internal view virtual returns (uint256) {
-        return (_weight * _votingPower) / 1e32;
+        return (_weight * _votingPower) / 1e36;
     }
 
     /// @notice This function is used to get the epoch id in the case of delegation mapper
