@@ -1,7 +1,7 @@
 /// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
-import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
+import {IDAO} from "@aragon/osx-commons-contracts/src/dao/IDAO.sol";
 import {IClockUser, IClockV1_2_0 as IClock} from "@clock/IClock_v1_2_0.sol";
 import {IAddressGaugeVoter} from "./IAddressGaugeVoter.sol";
 
@@ -14,7 +14,9 @@ import {
 import {
     IVotesUpgradeable as IVotes
 } from "@openzeppelin/contracts-upgradeable/governance/utils/IVotesUpgradeable.sol";
-import {PluginUUPSUpgradeable} from "@aragon/osx/core/plugin/PluginUUPSUpgradeable.sol";
+import {
+    PluginUUPSUpgradeable
+} from "@aragon/osx-commons-contracts/src/plugin/PluginUUPSUpgradeable.sol";
 import {console2 as console} from "forge-std/console2.sol";
 
 contract AddressGaugeVoter is
@@ -111,14 +113,39 @@ contract AddressGaugeVoter is
     //////////////////////////////////////////////////////////////*/
 
     function vote(GaugeVote[] calldata _votes) public nonReentrant whenNotPaused whenVotingActive {
-        address account = _msgSender();
+        address account = msg.sender;
         _vote(account, _votes);
     }
 
+    /**
+     * @dev If `enableUpdateVotingPowerHook` is false, It's assumed that token contract does/can NOT call
+     * `updateVotingPower` during transfers This can happen if the token is already deployed and non-upgradeable,
+     * or for other design limitations. In such cases, relying on `getVotes(_account)` (which reflects live balance)
+     * instead of `getPastVotes(...)` (which snapshots voting power at a fixed time) can lead
+     * to critical vulnerabilities, including double voting.
+     *
+     * Example of the issue:
+     * - Ts 100: Epoch begins, voting window opens.
+     * - Ts 110: Alice has 1000 votes.
+     * - Ts 120: Alice votes for Gauge A with all 1000.
+     * - Ts 130: Alice transfers tokens to Bob, but `updateVotingPower` is NOT triggered.
+     * - Ts 140: Bob now votes for Gauge B using the same 1000 tokens.
+     *
+     * Result: The same 1000 tokens were used to vote for *two* gauges in the same epoch — a double spend.
+     *
+     * To prevent this, we use `getPastVotes(_account, currentEpochStart())`, which ensures voting power is fixed at epoch start.
+     * Even if a transfer happens mid-epoch, the recipient (e.g., Bob) cannot vote in that epoch because their `getPastVotes(...)`
+     * will return 0.
+     *
+     * Note: Once a new epoch starts, Bob *can* vote with the transferred tokens, but this is safe.
+     * Since gauge vote tracking is scoped per-epoch, votes from Alice in epoch 11 and from Bob in epoch 12 are kept separate.
+     * Querying Gauge A’s votes in epoch 12 will correctly return 1000, not 2000 — avoiding any vote inflation.
+     */
     function _vote(address _account, GaugeVote[] memory _votes) internal {
         uint256 votingPower = enableUpdateVotingPowerHook
             ? IVotes(ivotesAdapter).getVotes(_account)
             : IVotes(ivotesAdapter).getPastVotes(_account, currentEpochStart());
+
         if (votingPower == 0) revert NoVotingPower();
 
         uint256 numVotes = _votes.length;
@@ -146,6 +173,7 @@ contract AddressGaugeVoter is
             _safeCastVote(currentVote, epoch, _account, votingPower, totalWeight, voteData);
         }
 
+        voteData.usedVotingPower = votingPower;
         // setting the last voted also has the second-order effect of indicating the user has voted
         voteData.lastVoted = block.timestamp;
     }
@@ -167,16 +195,18 @@ contract AddressGaugeVoter is
         if (_voteData.voteWeights[_currentVote.gauge] != 0) revert DoubleVote();
 
         // calculate the weight for this gauge
-        uint256 votesForGauge = _normalizedWeight(_currentVote.weight, _totalWeights);
-        if (votesForGauge == 0) revert NoVotes();
+        // No votes can happen with extreme weight discrepancies and/or small
+        // voting power, in which case caller should adjust weights accordingly
+        uint256 normWeight = _normalizedWeight(_currentVote.weight, _totalWeights);
+        if (normWeight == 0) revert NoVotes();
 
-        return
-            _castVote(_currentVote.gauge, _epoch, _account, _votingPower, votesForGauge, _voteData);
+        return _castVote(_currentVote.gauge, _epoch, _account, _votingPower, normWeight, _voteData);
     }
 
     /// @notice Cast the vote of an tokenId to a specific gauge
     /// @dev This function doesn't do any safety checks and it's up to caller to do validations.
     ///      If you wish to have validations, see `_safeCastVote`.
+    /// @dev _voteWeight must be normalized to 1e36 precision.
     function _castVote(
         address _gauge,
         uint256 _epoch,
@@ -194,7 +224,6 @@ contract AddressGaugeVoter is
         // update the total weights accruing to this gauge
         epochGaugeVotes[_epoch][_gauge] += _votes;
         epochTotalVotingPowerCast[_epoch] += _votes;
-        _voteData.usedVotingPower += _votes;
 
         emit Voted({
             voter: _account,
@@ -215,7 +244,6 @@ contract AddressGaugeVoter is
     }
 
     function _reset(address _account) internal {
-        // get what we need
         uint256 epoch = getWriteEpochId();
         AddressVoteData storage voteData = epochVoteData[epoch][_account];
         address[] storage pastVotes = voteData.gaugesVotedFor;
@@ -265,11 +293,11 @@ contract AddressGaugeVoter is
         uint256 votingPower = IVotes(ivotesAdapter).getVotes(_account);
 
         // After the voting window closes, votes shouldn't be auto-recast via _updateVotingPower.
-        // But if a user loses voting power (e.g., had 100, now 0), 
+        // But if a user loses voting power (e.g., had 100, now 0),
         // gauges must reflect this drop to avoid overstated voting power.
-        // If a user's voting power increases (e.g., 100 → 150), 
+        // If a user's voting power increases (e.g., 100 → 150),
         // we *don't* auto-recast—doing so would inflate gauge power post-window.
-        // So: decrease → auto-adjust gauges; increase → ignored 
+        // So: decrease → auto-adjust gauges; increase → ignored
         // unless user manually votes when window reopens.
         if (voteData.usedVotingPower < votingPower) return;
 
@@ -300,6 +328,7 @@ contract AddressGaugeVoter is
             );
         }
 
+        voteData.usedVotingPower = votingPower;
         voteData.lastVoted = block.timestamp;
     }
 
@@ -325,18 +354,21 @@ contract AddressGaugeVoter is
         return total;
     }
 
+    /// @dev Scales weights as percentage of total weight and then to 1e36 precision
     function _normalizedWeight(
         uint256 _weight,
         uint256 _totalWeight
     ) internal view virtual returns (uint256) {
-        return (_weight * 10e32) / _totalWeight;
+        return (_weight * 1e36) / _totalWeight;
     }
 
+    /// @dev Calculates the votes for a gauge based on weight and voting power.
+    ///      We assume the weight is already normalized to 1e36 precision.
     function _votesForGauge(
         uint256 _weight,
         uint256 _votingPower
     ) internal view virtual returns (uint256) {
-        return (_weight * _votingPower) / 10e32;
+        return (_weight * _votingPower) / 1e36;
     }
 
     /// @notice This function is used to get the epoch id in the case of delegation mapper
@@ -369,7 +401,7 @@ contract AddressGaugeVoter is
         gauges[_gauge] = Gauge(true, block.timestamp, _metadataURI);
         gaugeList.push(_gauge);
 
-        emit GaugeCreated(_gauge, _msgSender(), _metadataURI);
+        emit GaugeCreated(_gauge, msg.sender, _metadataURI);
         return _gauge;
     }
 
@@ -488,6 +520,11 @@ contract AddressGaugeVoter is
     function gaugeVotes(address _address) public view returns (uint256) {
         uint256 epoch = getWriteEpochId();
         return epochGaugeVotes[epoch][_address];
+    }
+
+    /// @dev Consumer's responsibility to ensure that `_epoch` exists.
+    function gaugeVotes(uint256 _epoch, address _address) public view returns (uint256) {
+        return epochGaugeVotes[_epoch][_address];
     }
 
     /// @dev Reserved storage space to allow for layout changes in the future.

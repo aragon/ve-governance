@@ -18,10 +18,10 @@ import {IERC721EnumerableMintableBurnable as IERC721EMB} from "@lock/IERC721EMB.
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {IERC6372} from "@openzeppelin/contracts/interfaces/IERC6372.sol";
 
-import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
+import {IDAO} from "@aragon/osx-commons-contracts/src/dao/IDAO.sol";
 import {
     DaoAuthorizableUpgradeable as DaoAuthorizable
-} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
+} from "@aragon/osx-commons-contracts/src/permission/auth/DaoAuthorizableUpgradeable.sol";
 
 import {
     IVotingEscrowIncreasingV1_2_0 as IVotingEscrow
@@ -33,34 +33,33 @@ import {IClockV1_2_0 as IClock} from "@clock/IClock_v1_2_0.sol";
 import {IEscrowIVotesAdapter, IDelegateMoveVoteRecipient} from "./IEscrowIVotesAdapter.sol";
 import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 import {SignedFixedPointMath} from "@libs/SignedFixedPointMathLib.sol";
+import {DelegationHelper} from "./DelegationHelper.sol";
 
 contract EscrowIVotesAdapter is
     IERC6372,
     ReentrancyGuard,
-    IEscrowIVotesAdapter,
     Pausable,
     DaoAuthorizable,
-    UUPSUpgradeable
+    UUPSUpgradeable,
+    DelegationHelper
 {
     using SafeCastUpgradeable for uint256;
 
     /// @notice The Gauge admin can can create and manage voting gauges for token holders
     bytes32 public constant DELEGATION_ADMIN_ROLE = keccak256("DELEGATION_ADMIN");
 
-    /// @notice Address of the voting escrow contract that will track voting power
-    address public escrow;
+    /// @notice The role used to call `setDelegateAddress` and delegate/undelegate for specific tokens.
+    bytes32 public constant DELEGATION_TOKEN_ROLE = keccak256("DELEGATION_TOKEN_ROLE");
 
     /// @notice Clock contract for epoch duration
     address public escrowClock;
 
     mapping(address => mapping(uint256 => int256)) internal slopeChanges;
-    mapping(address => mapping(uint256 => GlobalPoint)) internal pointHistory;
+    mapping(address => mapping(uint256 => GlobalPoint)) public pointHistory;
     mapping(address => address) private delegatees_;
-    mapping(address => uint256) public latestPointIndex;
 
-    mapping(address => uint256) public numberOfDelegatedTokens;
+    mapping(address => uint256) public latestPointIndex;
     mapping(address => bool) private autoDelegationDisabled_;
-    mapping(uint256 => uint256) private delegatedBitmap;
 
     uint256 private maxTime;
 
@@ -80,7 +79,8 @@ contract EscrowIVotesAdapter is
     ) external initializer {
         __DaoAuthorizableUpgradeable_init(IDAO(_dao));
         __ReentrancyGuard_init();
-        escrow = _escrow;
+        __DelegationHelper_init(_escrow);
+
         escrowClock = _clock;
 
         if (_startPaused) _pause();
@@ -104,36 +104,19 @@ contract EscrowIVotesAdapter is
         emit AutoDelegationDisabledSet(sender, _disabled);
     }
 
-    /// @dev Internal helper function to set token delegated to true by using bitmap operations.
-    function _setDelegated(uint256 tokenId, bool value) internal virtual {
-        uint256 bucket = tokenId >> 8; // tokenId / 256
-        uint256 mask = 1 << (tokenId & 0xff); // tokenId % 256
-
-        if (value) {
-            delegatedBitmap[bucket] |= mask;
-        } else {
-            delegatedBitmap[bucket] &= ~mask;
-        }
-    }
-
-    /// @dev Whether token is currently delegated or not.
-    function tokenIsDelegated(uint256 tokenId) public view virtual returns (bool) {
-        uint256 bucket = tokenId >> 8;
-        uint256 mask = 1 << (tokenId & 0xff);
-        return (delegatedBitmap[bucket] & mask) != 0;
-    }
-
     /*//////////////////////////////////////////////////////////////
                         Delegate Functions
     //////////////////////////////////////////////////////////////*/
 
     /// @param _delegatee The new delegatee address.
-    /// @dev Allows to change a delegatee address. This is useful 
-    ///      for cases when delegator has huge number of tokens in 
-    ///      which case  `delegate(address)` would go out of gas. 
-    ///      In rare cases, Caller first has to undelegate all tokens, 
+    /// @dev Allows to change a delegatee address. This is useful
+    ///      for cases when delegator has huge number of tokens in
+    ///      which case  `delegate(address)` would go out of gas.
+    ///      In rare cases, Caller first has to undelegate all tokens,
     ///      then call this function and then call `delegate(tokenIds)`.
-    function setDelegateAddress(address _delegatee) public whenNotPaused {
+    function setDelegateAddress(
+        address _delegatee
+    ) public whenNotPaused auth(DELEGATION_TOKEN_ROLE) {
         address sender = _msgSender();
 
         if (numberOfDelegatedTokens[sender] != 0) {
@@ -148,7 +131,9 @@ contract EscrowIVotesAdapter is
 
     /// @dev Note that `_tokenIds` must be either owned or approved to sender and tokens must not be delegated yet.
     /// @param _tokenIds The array of token ids that will be delegated to the current delegatee of `sender`.
-    function delegate(uint256[] memory _tokenIds) public virtual whenNotPaused {
+    function delegate(
+        uint256[] memory _tokenIds
+    ) public virtual whenNotPaused auth(DELEGATION_TOKEN_ROLE) {
         address sender = _msgSender();
         address delegatee = delegates(sender);
 
@@ -191,7 +176,9 @@ contract EscrowIVotesAdapter is
 
     /// @dev Note that the token ids must be currently delegated and must be owned/approved to the sender.
     /// @param _tokenIds The array of token ids that will be undelegated from the current delegatee.
-    function undelegate(uint256[] memory _tokenIds) public virtual whenNotPaused {
+    function undelegate(
+        uint256[] memory _tokenIds
+    ) public virtual whenNotPaused auth(DELEGATION_TOKEN_ROLE) {
         address sender = _msgSender();
         address delegatee = delegates(sender);
 
@@ -307,19 +294,18 @@ contract EscrowIVotesAdapter is
     function getDelegatedTokens(
         uint256[] memory _tokenIds
     ) public view virtual returns (uint256[] memory) {
-        uint256[] memory tmp = new uint256[](_tokenIds.length);
+        uint256[] memory delegatedTokenIds = new uint256[](_tokenIds.length);
         uint256 count;
 
         for (uint256 i = 0; i < _tokenIds.length; ++i) {
             if (tokenIsDelegated(_tokenIds[i])) {
-                tmp[count++] = _tokenIds[i];
+                delegatedTokenIds[count++] = _tokenIds[i];
             }
         }
 
         // Trim to size
-        uint256[] memory delegatedTokenIds = new uint256[](count);
-        for (uint256 i = 0; i < count; ++i) {
-            delegatedTokenIds[i] = tmp[i];
+        assembly {
+            mstore(delegatedTokenIds, count)
         }
 
         return delegatedTokenIds;
@@ -331,7 +317,7 @@ contract EscrowIVotesAdapter is
     function autoDelegationDisabled(address _account) public view virtual returns (bool) {
         return autoDelegationDisabled_[_account];
     }
-    
+
     /*//////////////////////////////////////////////////////////////
                         IERC6372 Functions
     //////////////////////////////////////////////////////////////*/
@@ -347,67 +333,6 @@ contract EscrowIVotesAdapter is
     }
 
     /*//////////////////////////////////////////////////////////////
-                        Hook Functions
-    //////////////////////////////////////////////////////////////*/
-
-    /// @inheritdoc IDelegateMoveVoteRecipient
-    function moveDelegateVotes(
-        address _from,
-        address _to,
-        uint256 _tokenId,
-        IVotingEscrow.LockedBalance memory _locked
-    ) public virtual whenNotPaused {
-        if (_msgSender() != escrow) {
-            revert OnlyEscrow();
-        }
-
-        address fromDelegatee = delegates(_from);
-        address toDelegatee = delegates(_to);
-
-        // undelegated src and recipient, no balances to update
-        if (fromDelegatee == address(0) && toDelegatee == address(0)) {
-            return;
-        }
-
-        uint256[] memory tokenIds = new uint256[](1);
-        tokenIds[0] = _tokenId;
-
-        if (fromDelegatee != address(0)) {
-            // can be skipped if there are no updates
-            if (_locked.amount != 0) {
-                (int256 bias, int256 slope) = _getBiasAndSlope(fromDelegatee, _locked, _negative);
-                _checkpoint(bias, slope, fromDelegatee);
-            }
-
-            numberOfDelegatedTokens[_from]--;
-
-            emit TokensUndelegated(_from, fromDelegatee, tokenIds);
-        }
-
-        if (toDelegatee != address(0)) {
-            // can be skipped if there are no updates
-            if (_locked.amount != 0) {
-                (int256 bias, int256 slope) = _getBiasAndSlope(toDelegatee, _locked, _positive);
-                _checkpoint(bias, slope, toDelegatee);
-            }
-
-            numberOfDelegatedTokens[_to]++;
-            _setDelegated(_tokenId, true);
-
-            emit TokensDelegated(_to, toDelegatee, tokenIds);
-        } else {
-            // else this is new delegate voting power being burned
-            _setDelegated(_tokenId, false);
-        }
-
-        // If transfer is a merge or split of tokens owned by the same delegatee,
-        // we don't need to update the voting power.
-        if (fromDelegatee != toDelegatee) {
-            IVotingEscrow(escrow).updateVotingPower(fromDelegatee, toDelegatee);
-        }
-    }
-
-    /*//////////////////////////////////////////////////////////////
                         Checkpoint Functions
     //////////////////////////////////////////////////////////////*/
 
@@ -418,7 +343,11 @@ contract EscrowIVotesAdapter is
         _checkpoint(0, 0, _delegatee, _transitionCount);
     }
 
-    function _checkpoint(int256 _totalBias, int256 _totalSlope, address _delegatee) internal {
+    function _checkpoint(
+        int256 _totalBias,
+        int256 _totalSlope,
+        address _delegatee
+    ) internal override {
         _checkpoint(_totalBias, _totalSlope, _delegatee, 255);
     }
 
@@ -427,7 +356,7 @@ contract EscrowIVotesAdapter is
         int256 _totalSlope,
         address _delegatee,
         uint256 _transitionCount
-    ) internal {
+    ) internal override {
         GlobalPoint memory lastPoint = GlobalPoint({
             bias: 0,
             slope: 0,
@@ -507,22 +436,30 @@ contract EscrowIVotesAdapter is
                       IVotes Function
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Returns the current amount of votes that `account` has.
     function getVotes(address _account) external view returns (uint256) {
         return _delegateBalanceAt(_account, block.timestamp);
     }
 
-    function getPastVotes(address _account, uint256 _timestamp) external view returns (uint256) {
+    /// @notice Returns the amount of votes that `account` had at a specific moment in the past.
+    function getPastVotes(address _account, uint256 _timestamp) public view returns (uint256) {
         return _delegateBalanceAt(_account, _timestamp);
     }
 
+    /// @notice Returns the total supply of votes available at a specific moment in the past.
+    /// @dev This value is the sum of all available votes, which is not necessarily the sum
+    ///      of all delegated votes. Votes that have not been delegated are still part of
+    ///      total supply, even though they would not participate in a vote.
     function getPastTotalSupply(uint256 _timestamp) external view returns (uint256) {
         return IVotingEscrow(escrow).totalVotingPowerAt(_timestamp);
     }
 
-    function delegates(address _account) public view virtual returns (address) {
+    /// @inheritdoc IEscrowIVotesAdapter
+    function delegates(address _account) public view virtual override returns (address) {
         return delegatees_[_account];
     }
 
+    /// @dev Not implemented.
     function delegateBySig(address, uint256, uint256, uint8, bytes32, bytes32) public virtual {
         revert DelegateBySigNotSupported();
     }
@@ -615,7 +552,7 @@ contract EscrowIVotesAdapter is
         address _delegatee,
         IVotingEscrow.LockedBalance memory _locked,
         function(int256) view returns (int256) op
-    ) private returns (int256, int256) {
+    ) internal override returns (int256, int256) {
         uint256 elapsed = block.timestamp - _locked.start;
         elapsed = elapsed > maxTime ? maxTime : elapsed;
 
@@ -631,20 +568,12 @@ contract EscrowIVotesAdapter is
 
         if (elapsed < maxTime) {
             slope = op(slope);
-            slopeChanges[_delegatee][_locked.start + maxTime] += op(slope);
+            slopeChanges[_delegatee][_locked.start + maxTime] += slope;
         } else {
             slope = 0;
         }
 
         return (op(bias), slope);
-    }
-
-    function _positive(int256 _value) private pure returns (int256) {
-        return _value;
-    }
-
-    function _negative(int256 _value) private pure returns (int256) {
-        return -_value;
     }
 
     /// @notice Returns the address of the implementation contract in the [proxy storage slot](https://eips.ethereum.org/EIPS/eip-1967) slot the [UUPS proxy](https://eips.ethereum.org/EIPS/eip-1822) is pointing to.
@@ -657,5 +586,5 @@ contract EscrowIVotesAdapter is
     function _authorizeUpgrade(address) internal virtual override auth(DELEGATION_ADMIN_ROLE) {}
 
     /// @dev Reserved storage space to allow for layout changes in the future.
-    uint256[40] private __gap;
+    uint256[43] private __gap;
 }

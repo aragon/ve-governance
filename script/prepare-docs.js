@@ -122,7 +122,7 @@ async function main() {
   console.log("Writing nav to", targetFilePath);
   fs.writeFileSync(targetFilePath, navOutput, "utf8");
 
-  fs.rm(templatesPath, { recursive: true, force: true }, () => {});
+  fs.rm(templatesPath, { recursive: true, force: true }, () => { });
 }
 
 main()

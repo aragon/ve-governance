@@ -1,0 +1,89 @@
+pragma solidity ^0.8.17;
+
+import {console2 as console} from "forge-std/console2.sol";
+
+import {ProxyLib} from "@libs/ProxyLib.sol";
+import {DAO, createTestDAO} from "@mocks/MockDAO.sol";
+import {DaoUnauthorized} from "@aragon/osx-commons-contracts/src/permission/auth/auth.sol";
+import {ExitQueueBase, ExitQueue, IExitQueue} from "./ExitQueueBase.sol";
+
+contract TestExitQueueWithdrawals is ExitQueueBase {
+    function setUp() public override {
+        super.setUp();
+
+        dao.grant({
+            _who: address(this),
+            _where: address(queue),
+            _permissionId: queue.QUEUE_ADMIN_ROLE()
+        });
+
+        dao.grant({
+            _who: address(this),
+            _where: address(queue),
+            _permissionId: queue.WITHDRAW_ROLE()
+        });
+    }
+
+    // allow only the withdrawer to withdraw
+    function testOnlyWithdrawerCanWithdraw(address _notWithdrawer) public {
+        vm.assume(_notWithdrawer != address(this));
+        bytes memory data = abi.encodeWithSelector(
+            DaoUnauthorized.selector,
+            address(dao),
+            address(queue),
+            _notWithdrawer,
+            queue.WITHDRAW_ROLE()
+        );
+        vm.expectRevert(data);
+        vm.prank(_notWithdrawer);
+        queue.withdraw(0);
+    }
+
+    // withdraw the erc20
+    function testWithdraw() public {
+        token.mint(address(queue), 100e18);
+
+        queue.withdraw(90e18);
+
+        assertEq(token.balanceOf(address(queue)), 10e18);
+        assertEq(token.balanceOf(address(this)), 90e18);
+    }
+
+    /// @dev using 32 bit integers to avoid overflow
+    function testFuzz_CannotQueueWithIfBeforeMinLock(uint32 _minLock, uint32 _lockStart) public {
+        // create a lock at a random time
+        vm.assume(_minLock > 0);
+        vm.warp(_lockStart);
+        escrow.setMockLockedBalance(100e18, _lockStart);
+
+        // set the min lock to another random time
+        queue.setMinLock(_minLock);
+
+        uint256 minLockThreshold = uint256(_minLock) + uint256(_lockStart);
+
+        assertEq(queue.timeToMinLock(1), minLockThreshold);
+
+        vm.startPrank(address(escrow));
+        {
+            if (minLockThreshold > 0) {
+                // warp to one second before the min lock + start
+                vm.warp(minLockThreshold - 1);
+
+                bytes memory err = abi.encodeWithSelector(
+                    MinLockNotReached.selector,
+                    1,
+                    _minLock,
+                    minLockThreshold
+                );
+                // expect revert
+                vm.expectRevert(err);
+                queue.queueExit(1, address(this));
+            }
+
+            // warp to the min lock + start - expect success
+            vm.warp(minLockThreshold);
+            queue.queueExit(1, address(this));
+        }
+        vm.stopPrank();
+    }
+}

@@ -19,13 +19,17 @@ get-deployment-values :; forge script script/utils/GetDeploymentValues.sol:GetFa
 # run unit and integration tests
 test-ui :; forge test --match-path "test/**/{unit,integration}/**/*.sol"
 
+# run invariant tests
+invariant-ui :; forge test --match-path "test/**/invariant/**/*.sol" --show-progress
+
 # run unit tests for specific version
 test-ui-100 :; forge test --match-path "test/v1_0_0/{unit,integration}/**/*.sol" 
 test-ui-110 :; forge test --match-path "test/v1_1_0/{unit,integration}/**/*.sol" 
 test-ui-120 :; forge test --match-path "test/v1_2_0/{unit,integration}/**/*.sol" 
 test-ui-130 :; forge test --match-path "test/v1_3_0/{unit,integration}/**/*.sol"
+test-ui-140 :; forge test --match-path "test/v1_4_0/{unit,integration}/**/*.sol"
 test-ui-season :; forge test --match-path "test/season/{unit,integration}/**/*.sol"
-	
+
 # run unit tests
 test-unit :; forge test --match-path "test/**/unit/**/*.sol"
 
@@ -34,12 +38,14 @@ test-unit-100 :; forge test --match-path "test/v1_0_0/unit/**/*.sol"
 test-unit-110 :; forge test --match-path "test/v1_1_0/unit/**/*.sol" 
 test-unit-120 :; forge test --match-path "test/v1_2_0/unit/**/*.sol" 
 test-unit-130 :; forge test --match-path "test/v1_3_0/unit/**/*.sol" 
+test-unit-140 :; forge test --match-path "test/v1_4_0/unit/**/*.sol" 
 test-unit-season :; forge test --match-path "test/season/unit/**/*.sol" 
 
 # regression and upgrade tests
 test-upgrade-110 :; forge test --match-path "test/v1_1_0/upgrade/**/*.sol" --force
 test-upgrade-120 :; forge test --match-path "test/v1_2_0/upgrade/**/*.sol" --force
 test-upgrade-130 :; forge test --match-path "test/v1_3_0/upgrade/**/*.sol" --force
+test-upgrade-140 :; forge test --match-path "test/v1_4_0/upgrade/**/*.sol" --force
 test-upgrade-season :; forge test --match-path "test/season/upgrade/**/*.sol" --force
 
 #### Fork testing ####

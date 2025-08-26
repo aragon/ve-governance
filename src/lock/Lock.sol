@@ -11,8 +11,8 @@ import {
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {
     DaoAuthorizableUpgradeable as DaoAuthorizable
-} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
-import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
+} from "@aragon/osx-commons-contracts/src/permission/auth/DaoAuthorizableUpgradeable.sol";
+import {IDAO} from "@aragon/osx-commons-contracts/src/dao/IDAO.sol";
 
 /// @title NFT representation of an escrow locking mechanism
 contract Lock is ILock, ERC721Enumerable, UUPSUpgradeable, DaoAuthorizable, ReentrancyGuard {

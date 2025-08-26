@@ -1,0 +1,316 @@
+pragma solidity ^0.8.17;
+
+import {Test} from "forge-std/Test.sol";
+import {console2 as console} from "forge-std/console2.sol";
+
+// aragon contracts
+import {IPlugin} from "@aragon/osx-commons-contracts/src/plugin/IPlugin.sol";
+import {IPlugin} from "@aragon/osx-commons-contracts/src/plugin/IPlugin.sol";
+import {IDAO} from "@aragon/osx-commons-contracts/src/dao/IDAO.sol";
+import {DAO, PermissionManager} from "@aragon/osx/core/dao/DAO.sol";
+import {Multisig, MultisigSetup} from "@aragon/multisig/src/MultisigSetup.sol";
+
+import {MockPluginSetupProcessor} from "@mocks/osx/MockPSP.sol";
+import {MockDAOFactory} from "@mocks/osx/MockDAOFactory.sol";
+import {MockERC20, MockERC20Votes} from "@mocks/MockERC20.sol";
+import {DaoUnauthorized} from "@aragon/osx-commons-contracts/src/permission/auth/auth.sol";
+import {ProxyLib} from "@libs/ProxyLib.sol";
+
+import "@helpers/OSxHelpers.sol";
+import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
+
+import {
+    IEscrowCurveTokenStorage,
+    Clock,
+    VotingEscrow,
+    Lock,
+    Curve as LinearIncreasingCurve,
+    ExitQueue,
+    SimpleGaugeVoter,
+    SimpleGaugeVoterSetup,
+    ISimpleGaugeVoterSetupParams,
+    IGaugeVote,
+    IEscrowCurveTokenStorage,
+    ISimpleGaugeVoterStorageEventsErrors,
+    EscrowIVotesAdapter
+} from "../../versions.sol";
+
+contract GaugeVotingBase is
+    Test,
+    IGaugeVote,
+    IEscrowCurveTokenStorage,
+    ISimpleGaugeVoterStorageEventsErrors
+{
+    using ProxyLib for address;
+
+    MultisigSetup multisigSetup;
+    SimpleGaugeVoterSetup voterSetup;
+
+    // permissions
+    PermissionLib.MultiTargetPermission[] voterSetupPermissions;
+
+    MockPluginSetupProcessor psp;
+    MockDAOFactory daoFactory;
+    MockERC20 token;
+    MockERC20Votes votingToken;
+
+    Lock nftLock;
+    VotingEscrow escrow;
+    LinearIncreasingCurve curve;
+    SimpleGaugeVoter voter;
+    ExitQueue queue;
+    EscrowIVotesAdapter ivotesAdapter;
+
+    DAO dao;
+    Clock clock;
+    Multisig multisig;
+
+    address deployer = address(0x420);
+
+    uint256 constant COOLDOWN = 3 days;
+
+    address voterBase;
+
+    function setUp() public virtual {
+        // clock reset
+        vm.roll(0);
+        vm.warp(0);
+
+        // Deploy the OSx framework
+        _deployOSX();
+        // Deploy a DAO
+        _deployDAOAndMSig();
+
+        // new block for multisig
+        vm.roll(1);
+        // Define our pluginSetup contract to deploy the VE
+        _setupVoterContracts();
+        _applySetup();
+
+        // deploy the ERC20Votes
+        _deployERC20Votes();
+
+        // unpause the contract
+        voter.setEnableUpdateVotingPowerHook(false);
+        voter.setIVotesAdapter(address(votingToken));
+        voter.unpause();
+    }
+
+    function _deployERC20Votes() internal {
+        // deploy the mock ERC20Votes
+        votingToken = new MockERC20Votes();
+        token.mint(address(this), 1_000_000 ether);
+    }
+
+    function _deployOSX() internal {
+        // deploy the mock PSP with the multisig  plugin
+        multisigSetup = new MultisigSetup();
+        psp = new MockPluginSetupProcessor(address(multisigSetup));
+        daoFactory = new MockDAOFactory(psp);
+    }
+
+    function _deployDAOAndMSig() internal {
+        // use the OSx DAO factory with the Plugin
+        address[] memory members = new address[](1);
+        members[0] = deployer;
+
+        // encode a 1/1 multisig that can be adjusted later
+        bytes memory data = abi.encode(
+            members,
+            Multisig.MultisigSettings({onlyListed: true, minApprovals: 1}),
+            IPlugin.TargetConfig({target: address(dao), operation: IPlugin.Operation.Call}),
+            bytes("0x11")
+        );
+
+        dao = daoFactory.createDao(_mockDAOSettings(), _mockPluginSettings(data));
+
+        // nonce 0 is something?
+        // nonce 1 is implementation contract
+        // nonce 2 is the msig contract behind the proxy
+        multisig = Multisig(computeAddress(address(multisigSetup), 2));
+    }
+
+    function _setupVoterContracts() public {
+        token = new MockERC20();
+
+        voterBase = address(new SimpleGaugeVoter());
+
+        (int256[3] memory coefficients, uint256 maxEpoch) = CurveConstantLib.getCoefficients();
+
+        // deploy setup
+        voterSetup = new SimpleGaugeVoterSetup(
+            voterBase,
+            address(new LinearIncreasingCurve(coefficients, maxEpoch)),
+            address(new ExitQueue()),
+            address(new VotingEscrow()),
+            address(new Clock()),
+            address(new Lock()),
+            address(new EscrowIVotesAdapter())
+        );
+
+        // push to the PSP
+        psp.queueSetup(address(voterSetup));
+
+        // prepare the installation
+        bytes memory data = abi.encode(
+            ISimpleGaugeVoterSetupParams({
+                isPaused: true,
+                token: address(token),
+                veTokenName: "VE Token",
+                veTokenSymbol: "VE",
+                cooldown: 3 days,
+                feePercent: 0,
+                minLock: 1,
+                minDeposit: 1 wei
+            })
+        );
+        (address pluginAddress, IPluginSetup.PreparedSetupData memory preparedSetupData) = psp
+            .prepareInstallation(address(dao), _mockPrepareInstallationParams(data));
+
+        // fetch the contracts
+        voter = SimpleGaugeVoter(pluginAddress);
+        address[] memory helpers = preparedSetupData.helpers;
+        curve = LinearIncreasingCurve(helpers[0]); // not used
+        queue = ExitQueue(helpers[1]); // not used
+        escrow = VotingEscrow(helpers[2]); // not used
+        clock = Clock(helpers[3]);
+        nftLock = Lock(helpers[4]); // not used
+        ivotesAdapter = EscrowIVotesAdapter(helpers[5]); // not used
+
+        // set the permissions
+        for (uint i = 0; i < preparedSetupData.permissions.length; i++) {
+            voterSetupPermissions.push(preparedSetupData.permissions[i]);
+        }
+    }
+
+    function _actions() internal view returns (Action[] memory) {
+        Action[] memory actions = new Action[](11);
+
+        // action 0: apply the ve installation
+        actions[0] = Action({
+            to: address(psp),
+            value: 0,
+            data: abi.encodeCall(
+                psp.applyInstallation,
+                (address(dao), _mockApplyInstallationParams(address(escrow), voterSetupPermissions))
+            )
+        });
+
+        // action 1: activate the curve on the ve
+        actions[1] = Action({
+            to: address(escrow),
+            value: 0,
+            data: abi.encodeWithSelector(escrow.setCurve.selector, address(curve))
+        });
+
+        // action 2: activate the queue on the ve
+        actions[2] = Action({
+            to: address(escrow),
+            value: 0,
+            data: abi.encodeWithSelector(escrow.setQueue.selector, address(queue))
+        });
+
+        // action 3: set the voter
+        actions[3] = Action({
+            to: address(escrow),
+            value: 0,
+            data: abi.encodeWithSelector(escrow.setVoter.selector, address(voter))
+        });
+
+        // action 4: set the nft lock
+        actions[4] = Action({
+            to: address(escrow),
+            value: 0,
+            data: abi.encodeWithSelector(escrow.setLockNFT.selector, address(nftLock))
+        });
+
+        // action 5: set the ivotesAdapter
+        actions[5] = Action({
+            to: address(escrow),
+            value: 0,
+            data: abi.encodeWithSelector(escrow.setIVotesAdapter.selector, address(ivotesAdapter))
+        });
+
+        // for testing, give this contract the admin roles on all the periphery contracts
+        actions[6] = Action({
+            to: address(dao),
+            value: 0,
+            data: abi.encodeCall(
+                PermissionManager.grant,
+                (address(voter), address(this), voter.GAUGE_ADMIN_ROLE())
+            )
+        });
+
+        actions[7] = Action({
+            to: address(dao),
+            value: 0,
+            data: abi.encodeCall(
+                PermissionManager.grant,
+                (address(escrow), address(this), escrow.ESCROW_ADMIN_ROLE())
+            )
+        });
+
+        actions[8] = Action({
+            to: address(dao),
+            value: 0,
+            data: abi.encodeCall(
+                PermissionManager.grant,
+                (address(queue), address(this), queue.QUEUE_ADMIN_ROLE())
+            )
+        });
+
+        actions[9] = Action({
+            to: address(dao),
+            value: 0,
+            data: abi.encodeCall(
+                PermissionManager.grant,
+                (address(curve), address(this), curve.CURVE_ADMIN_ROLE())
+            )
+        });
+
+        actions[10] = Action({
+            to: address(dao),
+            value: 0,
+            data: abi.encodeCall(
+                PermissionManager.grant,
+                (address(clock), address(this), clock.CLOCK_ADMIN_ROLE())
+            )
+        });
+
+        return wrapGrantRevokeRoot(DAO(payable(address(dao))), address(psp), actions);
+    }
+
+    function _applySetup() internal {
+        Action[] memory actions = _actions();
+
+        // execute the actions
+        vm.startPrank(deployer);
+        {
+            multisig.createProposal({
+                _metadata: "",
+                _actions: actions,
+                _allowFailureMap: 0,
+                _approveProposal: true,
+                _tryExecution: true,
+                _startDate: 0,
+                _endDate: uint64(block.timestamp + 1)
+            });
+        }
+        vm.stopPrank();
+    }
+
+    function _authErr(
+        address _caller,
+        address _contract,
+        bytes32 _perm
+    ) internal view returns (bytes memory) {
+        return
+            abi.encodeWithSelector(
+                DaoUnauthorized.selector,
+                address(dao),
+                _contract,
+                _caller,
+                _perm
+            );
+    }
+}

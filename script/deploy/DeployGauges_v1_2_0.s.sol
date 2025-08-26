@@ -22,13 +22,14 @@ import {
 } from "@setup/GaugeVoterSetup_v1_2_0.sol";
 import {
     MultisigSetup as MultisigPluginSetup
-} from "@aragon/osx/plugins/governance/multisig/MultisigSetup.sol";
+} from "@aragon/multisig/src/MultisigSetup.sol";
 
 import {PluginRepo} from "@aragon/osx/framework/plugin/repo/PluginRepo.sol";
 import {PluginRepoFactory} from "@aragon/osx/framework/plugin/repo/PluginRepoFactory.sol";
 import {PluginSetupProcessor} from "@aragon/osx/framework/plugin/setup/PluginSetupProcessor.sol";
 import {MockERC20} from "@mocks/MockERC20.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 
 contract DeployGaugesV1_2_0 is Script {
     using SafeCast for uint256;
@@ -77,6 +78,7 @@ contract DeployGaugesV1_2_0 is Script {
             // Multisig settings
             minApprovals: vm.envUint("MIN_APPROVALS").toUint8(),
             multisigMembers: multisigMembers,
+            multisigMetadata: bytes(vm.envString("MULTISIG_METADATA_URI")),
             // Gauge Voter
             tokenParameters: tokenParameters,
             feePercent: vm.envUint("FEE_PERCENT").toUint16(),
@@ -113,9 +115,10 @@ contract DeployGaugesV1_2_0 is Script {
     }
 
     function deployGaugeVoterPluginSetup() internal returns (GaugeVoterSetup result) {
+        (int256[3] memory coefficients, uint256 maxEpoch) = CurveConstantLib.getCoefficients();
         result = new GaugeVoterSetup(
             address(new GaugeVoter()),
-            address(new Curve()),
+            address(new Curve(coefficients, maxEpoch)),
             address(new ExitQueue()),
             address(new VotingEscrow()),
             address(new Clock()),

@@ -2,9 +2,9 @@
 
 pragma solidity 0.8.17;
 
-import {PermissionLib} from "@aragon/osx/core/permission/PermissionLib.sol";
+import {PermissionLib} from "@aragon/osx-commons-contracts/src/permission/PermissionLib.sol";
 import {PluginRepo} from "@aragon/osx/framework/plugin/repo/PluginRepo.sol";
-import {PluginSetup} from "@aragon/osx/framework/plugin/setup/PluginSetup.sol";
+import {PluginSetup} from "@aragon/osx-commons-contracts/src/plugin/setup/PluginSetup.sol";
 
 /// @notice The struct containing a reference to a plugin setup by specifying the containing plugin repository and the associated version tag.
 /// @param versionTag The tag associated with the plugin setup version.
