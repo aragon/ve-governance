@@ -448,8 +448,9 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
         // withdraw only works if cool down has been passed.
         // So warp to that time to avoid many early returns for withdraw.
         ITicket.TicketV2 memory ticket = queue.queue(tokenId);
-        if(block.timestamp <= ticket.queuedAt) {
-            vm.warp(ticket.queuedAt + 1);
+        uint48 minCooldown = queue.minCooldown();
+        if(block.timestamp <= ticket.queuedAt + minCooldown) {
+            vm.warp(ticket.queuedAt + minCooldown + 1);
         }
         
         address delegatee = ivotesAdapter.delegates(ticket.holder);
