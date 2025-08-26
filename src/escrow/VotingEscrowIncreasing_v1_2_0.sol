@@ -317,18 +317,6 @@ contract VotingEscrowV1_2_0 is
         return _createLockFor(_value, _msgSender());
     }
 
-    function createLockAndDelegate(
-        uint256 _value,
-        address _delegatee
-    ) external nonReentrant whenNotPaused returns (uint256) {
-        uint256 tokenId = _createLockFor(_value, _msgSender());
-
-        // Delegate the newly created token to `_to`.
-        IEscrowIVotesAdapter(ivotesAdapter).delegate(_delegatee);
-
-        return tokenId;
-    }
-
     /// @notice Creates a lock on behalf of someone else. Restricted by default.
     function createLockFor(
         uint256 _value,
@@ -372,7 +360,7 @@ contract VotingEscrowV1_2_0 is
 
         // mint the NFT before and emit the event to complete the lock
         IERC721EMB(lockNFT).mint(_to, newTokenId);
-
+    
         emit Deposit(_to, newTokenId, startTime, _value, totalLocked);
 
         return newTokenId;
