@@ -23,7 +23,7 @@ import {
     IMerge,
     ISplit,
     IDelegateMoveVoteCaller
-} from "./IVotingEscrowIncreasing_v1_2_0.sol";
+} from "@escrow/IVotingEscrowIncreasing_v1_2_0.sol";
 import {IClockV1_2_0 as IClock} from "@clock/IClock_v1_2_0.sol";
 import {ExitQueue} from "@queue/ExitQueue.sol";
 
@@ -647,7 +647,6 @@ contract VotingEscrowV1_2_0 is
         IEscrowIVotesAdapter(ivotesAdapter).moveDelegateVotes(_from, _to, _tokenId, _lockedBalance);
     }
 
-    /// @inheritdoc IDelegateUpdateVotingPower
     function updateVotingPower(address _from, address _to) public whenNotPaused {
         if (msg.sender != ivotesAdapter) revert OnlyIVotesAdapter();
 

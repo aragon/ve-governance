@@ -16,7 +16,7 @@ import {ITokenGaugeVoter} from "@voting/ITokenGaugeVoter.sol";
 import {IClock} from "@clock/IClock.sol";
 import {IEscrowCurveIncreasing as IEscrowCurve} from "@curve/IEscrowCurveIncreasing.sol";
 import {IExitQueue} from "@queue/IExitQueue.sol";
-import {IVotingEscrowIncreasing as IVotingEscrow} from "./IVotingEscrowIncreasing.sol";
+import {IVotingEscrowIncreasing as IVotingEscrow} from "@escrow/IVotingEscrowIncreasing.sol";
 
 // libraries
 import {
