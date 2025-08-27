@@ -17,7 +17,6 @@ import {
 import {
     PluginUUPSUpgradeable
 } from "@aragon/osx-commons-contracts/src/plugin/PluginUUPSUpgradeable.sol";
-import {console2 as console} from "forge-std/console2.sol";
 
 contract AddressGaugeVoter is
     IAddressGaugeVoter,

@@ -25,9 +25,7 @@ import {PluginRepo} from "@aragon/osx/framework/plugin/repo/PluginRepo.sol";
 import {IPluginSetup} from "@aragon/osx-commons-contracts/src/plugin/setup/IPluginSetup.sol";
 import {IPlugin} from "@aragon/osx-commons-contracts/src/plugin/IPlugin.sol";
 import {Multisig} from "@aragon/multisig/src/Multisig.sol";
-import {
-    MultisigSetup as MultisigPluginSetup
-} from "@aragon/multisig/src/MultisigSetup.sol";
+import {MultisigSetup as MultisigPluginSetup} from "@aragon/multisig/src/MultisigSetup.sol";
 import {ProxyLib} from "@aragon/osx-commons-contracts/src/utils/deployment/ProxyLib.sol";
 import {PermissionLib} from "@aragon/osx-commons-contracts/src/permission/PermissionLib.sol";
 import {EscrowIVotesAdapter} from "@delegation/EscrowIVotesAdapter.sol";
@@ -104,7 +102,7 @@ contract GaugesDaoFactoryV1_4_0 {
     using ProxyLib for address;
 
     function version() external pure returns (string memory) {
-        return "1.3.0";
+        return "1.4.0";
     }
     /// @notice Thrown when attempting to call deployOnce() when the DAO is already deployed.
 

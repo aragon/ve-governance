@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.17;
 
-import "forge-std/Test.sol";
-import "test/constants.sol";
 import {PluginSetupProcessor} from "@aragon/osx/framework/plugin/setup/PluginSetupProcessor.sol";
 import {PluginRepoFactory} from "@aragon/osx/framework/plugin/repo/PluginRepoFactory.sol";
 import {PluginRepoRegistry} from "@aragon/osx/framework/plugin/repo/PluginRepoRegistry.sol";
@@ -154,7 +152,6 @@ contract UpgradeGaugesFactoryV1_0_0__V1_3_0 {
             GaugePluginSet memory newPluginSet;
 
             // copy the contracts over - for now casting them
-            // todo good idea?
             newPluginSet.plugin = AddressGaugeVoter(address(oldPluginSet.plugin));
             newPluginSet.curve = LinearIncreasingCurve(address(oldPluginSet.curve));
             newPluginSet.votingEscrow = VotingEscrowV1_2_0(address(oldPluginSet.votingEscrow));
@@ -256,12 +253,12 @@ contract UpgradeGaugesFactoryV1_0_0__V1_3_0 {
         _deployAddressGaugeVoter(address(addressGaugeVoter));
 
         _upgradeContracts(clockUpgrade, curveUpgrade, escrowUpgrade, lockUpgrade);
-        
+
         // deploy an address gauge voter that must be used on the upgraded escrow contract.
 
         // set the ivotes adapter on the escrow
         _setEscrowIVotesAdapter();
-        
+
         // set the address gauge voter on the escrow(before upgrade, it was token gauge voter)
         _setAddressGaugeVoter();
     }
@@ -284,9 +281,9 @@ contract UpgradeGaugesFactoryV1_0_0__V1_3_0 {
             pluginSet.votingEscrow.upgradeTo(address(escrowUpgrade));
             pluginSet.nftLock.upgradeTo(address(lockUpgrade));
 
-            // We only need to pause escrow as other contracts' state changing 
-            // functions can only be called by escrow and ivotesAdapter. 
-            // Note that `AddressGaugeVoter` and `iVotesAdapter` are by default paused 
+            // We only need to pause escrow as other contracts' state changing
+            // functions can only be called by escrow and ivotesAdapter.
+            // Note that `AddressGaugeVoter` and `iVotesAdapter` are by default paused
             // at the time of deployment.
             pluginSet.votingEscrow.pause();
         }

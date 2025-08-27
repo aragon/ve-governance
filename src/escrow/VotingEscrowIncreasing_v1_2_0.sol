@@ -25,7 +25,6 @@ import {
     IDelegateMoveVoteCaller
 } from "./IVotingEscrowIncreasing_v1_2_0.sol";
 import {IClockV1_2_0 as IClock} from "@clock/IClock_v1_2_0.sol";
-import {ExitQueue} from "@queue/ExitQueue.sol";
 
 // libraries
 import {
@@ -360,7 +359,7 @@ contract VotingEscrowV1_2_0 is
 
         // mint the NFT before and emit the event to complete the lock
         IERC721EMB(lockNFT).mint(_to, newTokenId);
-    
+
         emit Deposit(_to, newTokenId, startTime, _value, totalLocked);
 
         return newTokenId;

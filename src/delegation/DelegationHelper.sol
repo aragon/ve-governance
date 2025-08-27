@@ -5,35 +5,16 @@ import {
     IVotesUpgradeable
 } from "@openzeppelin/contracts-upgradeable/governance/utils/IVotesUpgradeable.sol";
 import {
-    SafeCastUpgradeable
-} from "@openzeppelin/contracts-upgradeable/utils/math/SafeCastUpgradeable.sol";
-import {
-    ReentrancyGuardUpgradeable as ReentrancyGuard
-} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import {
     PausableUpgradeable as Pausable
 } from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
-import {IERC721EnumerableMintableBurnable as IERC721EMB} from "@lock/IERC721EMB.sol";
 
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {IERC6372} from "@openzeppelin/contracts/interfaces/IERC6372.sol";
-
-import {IDAO} from "@aragon/osx-commons-contracts/src/dao/IDAO.sol";
-import {
-    DaoAuthorizableUpgradeable as DaoAuthorizable
-} from "@aragon/osx-commons-contracts/src/permission/auth/DaoAuthorizableUpgradeable.sol";
 
 import {
     IVotingEscrowIncreasingV1_2_0 as IVotingEscrow
 } from "@escrow/IVotingEscrowIncreasing_v1_2_0.sol";
-import {VotingEscrowV1_2_0 as VotingEscrow} from "@escrow/VotingEscrowIncreasing_v1_2_0.sol";
-
-import {IClockV1_2_0 as IClock} from "@clock/IClock_v1_2_0.sol";
 
 import {IEscrowIVotesAdapter, IDelegateMoveVoteRecipient} from "./IEscrowIVotesAdapter.sol";
-import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
-import {SignedFixedPointMath} from "@libs/SignedFixedPointMathLib.sol";
-import {IEscrowIVotesAdapter} from "./IEscrowIVotesAdapter.sol";
 
 abstract contract DelegationHelper is IEscrowIVotesAdapter, Pausable, UUPSUpgradeable {
     /// @notice Address of the voting escrow contract that will track voting power

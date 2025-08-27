@@ -10,12 +10,9 @@ import "../IDeprecated.sol";
 
 interface IEscrowCurveGlobalStorage {
     /// @notice Captures the shape of the aggregate voting curve at a specific point in time
-    /// TODO: change the natspec
     /// @param bias The y intercept of the aggregate voting curve at the given time
+    /// @param slope The slope of the aggregate voting curve at the given time
     /// @param writtenTs The timestamp at which the we last updated the aggregate voting curve
-    /// @param coefficients The coefficients of the aggregated curve, supports up to quadratic curves.
-    /// @dev Coefficients are stored in the following order: [constant, linear, quadratic]
-    /// and not all coefficients are used for all curves.
     struct GlobalPoint {
         int256 bias;
         int256 slope;
