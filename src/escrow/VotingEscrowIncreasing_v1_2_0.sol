@@ -564,6 +564,23 @@ contract VotingEscrowV1_2_0 is
         IExitQueue(queue).queueExit(_tokenId, owner);
     }
 
+    /// @notice Allows to cancel a withdrawal request as long as it has not been exitted from queue.
+    /// @dev The caller must be one that also called `beginWithdrawal`. 
+    /// @param _tokenId The tokenId to cancel the withdrawal request for.
+    function cancelWithdrawalRequest(uint256 _tokenId) public nonReentrant whenNotPaused {
+        address owner = IExitQueue(queue).ticketHolder(_tokenId);
+        address sender = _msgSender();
+
+        if(owner != sender) {
+            revert NotTicketHolder();
+        }
+
+        _checkpoint(_tokenId, LockedBalance(0, 0), _locked[_tokenId]);
+
+        IExitQueue(queue).cancelExit(_tokenId);
+        IERC721EMB(lockNFT).transferFrom(address(this), sender, _tokenId);
+    }
+
     /// @notice Withdraws tokens from the contract
     function withdraw(uint256 _tokenId) external nonReentrant whenNotPaused {
         address sender = _msgSender();

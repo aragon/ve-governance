@@ -7,6 +7,7 @@ interface IExitQueueCoreErrorsAndEvents {
     error ZeroAddress();
     error CannotExit();
     error NoLockBalance();
+    error CannotCancelExit();
     event ExitQueued(uint256 indexed tokenId, address indexed holder, uint256 exitDate);
     event Exit(uint256 indexed tokenId, uint256 fee);
 }
@@ -102,6 +103,8 @@ interface IExitQueue is
     /// @param _tokenId the tokenId to queue an exit for
     /// @param _ticketHolder the address that will be granted the ticket
     function queueExit(uint256 _tokenId, address _ticketHolder) external;
+
+    function cancelExit(uint256 _tokenId) external;
 
     /// @notice exit the queue for a given tokenId. Requires the cooldown period to have passed
     /// @return exitAmount the amount of tokens that can be withdrawn

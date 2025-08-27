@@ -51,7 +51,7 @@ contract TestWithdraw is IEscrowCurveTokenStorage, IGaugeVote, ITicket, EscrowBa
         vm.warp(block.timestamp + 1);
         escrow.beginWithdrawal(tokenId);
     }
-
+    
     // setup a fee withdrawal
     function testFuzz_feeWithdrawal(uint64 _fee, uint128 _dep, address _who) public {
         vm.assume(_who != address(0) && address(_who).code.length == 0);

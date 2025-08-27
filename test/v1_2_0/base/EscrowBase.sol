@@ -191,6 +191,12 @@ contract EscrowBase is
         token.approve(address(escrow), _amount);
     }
 
+    function mintAndApproveEscrow(address _account, uint256 _amount) internal {
+        token.mint(_account, _amount);
+        vm.prank(_account);
+        token.approve(address(escrow), _amount);
+    }
+
     function assertTokenPoint(
         uint256 _tokenId,
         uint256 _expectedLatestIndex,

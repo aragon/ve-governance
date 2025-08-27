@@ -26,7 +26,7 @@ import {
     IEscrowCurveTokenStorage,
     EscrowIVotesAdapter,
     VotingEscrow,
-    Curve, 
+    Curve,
     ITicket
 } from "../../versions.sol";
 import {IERC721EnumerableMintableBurnable as IERC721EMB} from "@lock/IERC721EMB.sol";
@@ -80,7 +80,7 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
     // The set of tokens for which begin withdrawal started.
     EnumerableSet.UintSet internal beginWithdrawalTokens;
 
-    // Active tokenIds - withdraw(not beginWithdrawal) and merge 
+    // Active tokenIds - withdraw(not beginWithdrawal) and merge
     // cause removal of the token id.
     EnumerableSet.UintSet internal activeTokenIds;
 
@@ -411,11 +411,11 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
         uint256 tokenId = activeTokenIds.at(_tokenIdSeed);
         address owner = lockNft.ownerOf(tokenId);
 
-        if(beginWithdrawalTokens.contains(tokenId)) return;
+        if (beginWithdrawalTokens.contains(tokenId)) return;
 
-        // beginWithdrawal only works if at least min lock time 
+        // beginWithdrawal only works if at least min lock time
         // has passed since lock creation.
-        if(queue.timeToMinLock(tokenId) > block.timestamp) return;
+        if (queue.timeToMinLock(tokenId) > block.timestamp) return;
 
         // beginWithdrawal is disallowed in the same block as createLock,
         // so warp if create lock occured in the same tx.
@@ -439,6 +439,29 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
         _updateDelegationState(tokenId, owner, Action.REMOVE, address(0));
     }
 
+    function cancelWithdrawalRequest(
+        uint256 _jumpSeed,
+        uint256 _tokenIdSeed
+    ) public adjustTimestamp(_jumpSeed) {
+        if (beginWithdrawalTokens.length() == 0) return;
+
+        _tokenIdSeed = _bound(_tokenIdSeed, 0, beginWithdrawalTokens.length() - 1);
+        uint256 tokenId = beginWithdrawalTokens.at(_tokenIdSeed);
+
+        ITicket.Ticket memory ticket = queue.queue(tokenId);
+        address owner = ticket.holder;
+
+        address delegatee = ivotesAdapter.delegates(owner);
+        _transitionIfTooOld(delegatee);
+
+        vm.prank(owner);
+        escrow.cancelWithdrawalRequest(tokenId);
+
+        beginWithdrawalTokens.remove(tokenId);
+        ownedTokens[owner].add(tokenId);
+        _updateDelegationState(tokenId, owner, Action.ADD, address(0));
+    }
+
     function withdraw(uint256 _jumpSeed, uint256 _tokenIdSeed) public adjustTimestamp(_jumpSeed) {
         if (beginWithdrawalTokens.length() == 0) return;
 
@@ -448,10 +471,10 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
         // withdraw only works if cool down has been passed.
         // So warp to that time to avoid many early returns for withdraw.
         ITicket.Ticket memory ticket = queue.queue(tokenId);
-        if(block.timestamp <= ticket.exitDate) {
+        if (block.timestamp <= ticket.exitDate) {
             vm.warp(ticket.exitDate + 1);
         }
-        
+
         address delegatee = ivotesAdapter.delegates(ticket.holder);
         uint256 amount = escrow.locked(tokenId).amount;
 
