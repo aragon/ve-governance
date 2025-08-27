@@ -328,7 +328,7 @@ contract EscrowIVotesAdapter is
     }
 
     /// @inheritdoc IERC6372
-    function CLOCK_MODE() external view returns (string memory) {
+    function CLOCK_MODE() external pure returns (string memory) {
         return "mode=timestamp";
     }
 

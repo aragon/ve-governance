@@ -53,21 +53,21 @@ contract UpgradeModeTo110 is Script, Test {
     }
 
     /// @dev We can't know the mode proposal in advance from tests, so this is pinned
-    function getInternalProposalId(string memory _network) public view returns (uint256) {
+    function getInternalProposalId(string memory _network) public pure returns (uint256) {
         if (isMainnet(_network)) return 47;
         else if (isTestnet(_network)) return 1;
         else revert("Invalid network");
     }
 
     // hardcoded staker, may or may not be voting at block
-    function getStaker(string memory _network) public view returns (address staker) {
+    function getStaker(string memory _network) public pure returns (address staker) {
         if (isMainnet(_network)) return 0xE28842dAF2cDe94EecC81b26A436eB043454F010;
         else if (isTestnet(_network)) return 0xE8375Ae2CaB4A9AB59097c500dD4b923c239ec01;
         else revert("Invalid network");
     }
 
     /// @dev the aragon multisig that will submit the proposal on mode
-    function getAragonMultisig(string memory _network) public view returns (Multisig) {
+    function getAragonMultisig(string memory _network) public pure returns (Multisig) {
         if (isMainnet(_network)) return Multisig(0x4315B4D2C707981f7fA51DBE91079Ea8c44e2e95);
         else if (isTestnet(_network)) return Multisig(0x14b1812260CB993bca69f204bC43586322d246d0);
         else revert("Invalid network");

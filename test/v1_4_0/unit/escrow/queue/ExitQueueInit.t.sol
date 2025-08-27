@@ -4,7 +4,7 @@ import {ProxyLib, ExitQueueBase, DynamicExitQueue, DaoUnauthorized} from "./Exit
 
 contract InitTest is ExitQueueBase {
     using ProxyLib for address;
-    function test_init_sets_values() public {
+    function test_init_sets_values() public view {
         assertEq(queue.escrow(), address(escrow));
         assertEq(queue.cooldown(), 0);
         assertEq(queue.feePercent(), 0);
@@ -18,7 +18,7 @@ contract InitTest is ExitQueueBase {
         queue.initialize(address(escrow), 0, address(dao), 0, address(clock), 1);
     }
 
-    function test_init_sets_dynamic_fee_params() public {
+    function test_init_sets_dynamic_fee_params() public view {
         assertEq(queue.minFeePercent(), 0);
         assertEq(queue.minCooldown(), 0);
         assertEq(queue.slope(), 0);
@@ -70,7 +70,7 @@ contract InitTest is ExitQueueBase {
         _deployDynamicExitQueue(address(escrow), 0, address(dao), 0, address(clock), 3600);
     }
 
-    function test_init_sets_correct_roles() public {
+    function test_init_sets_correct_roles() public view {
         assertEq(queue.QUEUE_ADMIN_ROLE(), keccak256("QUEUE_ADMIN"));
         assertEq(queue.WITHDRAW_ROLE(), keccak256("WITHDRAW_ROLE"));
     }

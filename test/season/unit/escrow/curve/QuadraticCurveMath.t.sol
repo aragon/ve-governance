@@ -16,7 +16,7 @@ import {
 contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
     using SafeCast for uint256;
 
-    function test_votingPowerComputesCorrect() public {
+    function test_votingPowerComputesCorrect() public view {
         /**
             Period	Result
           1	1

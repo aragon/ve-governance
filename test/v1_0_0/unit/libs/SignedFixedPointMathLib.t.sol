@@ -14,7 +14,7 @@ contract WrappedLib {
 contract SignedFixedPointMathTest is Test {
     using SignedFixedPointMath for int256;
 
-    function testToFP() public {
+    function testToFP() public pure {
         int256 eth = 1 ether; // 1 ETH = 1e18
         assertEq(SignedFixedPointMath.toFP(1), 1e18);
         assertEq(SignedFixedPointMath.toFP(eth), eth * 1e18); // 1 ETH scaled up to 1e36
@@ -23,7 +23,7 @@ contract SignedFixedPointMathTest is Test {
         assertEq(SignedFixedPointMath.toFP(quarterEth), (1e18 / 4) * 1e18); // Scaled down to 0.25
     }
 
-    function testFromFP() public {
+    function testFromFP() public pure {
         int256 scaledEth = 1e18; // 1 in FP format
         assertEq(SignedFixedPointMath.fromFP(scaledEth), 1); // Should return 1
 
@@ -31,7 +31,7 @@ contract SignedFixedPointMathTest is Test {
         assertEq(SignedFixedPointMath.fromFP(scaledQuarter), 25); // Should return 0.25 ETH
     }
 
-    function testMul() public {
+    function testMul() public pure {
         int256 eth = 100 ether;
         int256 quarterEth = 1 ether / 4;
 
@@ -39,7 +39,7 @@ contract SignedFixedPointMathTest is Test {
         assertEq(SignedFixedPointMath.fromFP(result), 25); // 1 * 0.25 = 0.25 ETH
     }
 
-    function testDiv() public {
+    function testDiv() public pure {
         int256 eth = 1 ether;
         int256 quarterEth = eth / 4;
 
@@ -47,7 +47,7 @@ contract SignedFixedPointMathTest is Test {
         assertEq(SignedFixedPointMath.fromFP(result), 4); // 1 ETH / 0.25 ETH = 4
     }
 
-    function testAdd() public {
+    function testAdd() public pure {
         int256 eth = 1 ether;
         int256 halfEth = eth / 2;
 
@@ -55,7 +55,7 @@ contract SignedFixedPointMathTest is Test {
         assertEq(SignedFixedPointMath.fromFP(result), 1.5 ether); // 1 + 0.5 = 1.5 ETH
     }
 
-    function testSub() public {
+    function testSub() public pure {
         int256 eth = 1 ether;
         int256 halfEth = eth / 2;
 
@@ -63,7 +63,7 @@ contract SignedFixedPointMathTest is Test {
         assertEq(SignedFixedPointMath.fromFP(result), 0.5 ether); // 1 - 0.5 = 0.5 ETH
     }
 
-    function testPow() public {
+    function testPow() public pure {
         int256 base = 2;
         int256 exp = 3;
 
@@ -71,7 +71,7 @@ contract SignedFixedPointMathTest is Test {
         assertApproxEqAbs(result, (8 ether), 20);
     }
 
-    function testPowZero() public {
+    function testPowZero() public pure {
         int256 base = 0;
         int256 exp = 3;
 
@@ -89,7 +89,7 @@ contract SignedFixedPointMathTest is Test {
         w.pow(base.toFP(), exp.toFP());
     }
 
-    function testComparison() public {
+    function testComparison() public pure {
         int256 eth = 1 ether;
         int256 halfEth = eth / 2;
 

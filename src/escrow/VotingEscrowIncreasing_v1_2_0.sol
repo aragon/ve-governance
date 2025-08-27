@@ -360,7 +360,7 @@ contract VotingEscrowV1_2_0 is
 
         // mint the NFT before and emit the event to complete the lock
         IERC721EMB(lockNFT).mint(_to, newTokenId);
-    
+
         emit Deposit(_to, newTokenId, startTime, _value, totalLocked);
 
         return newTokenId;
@@ -642,9 +642,9 @@ contract VotingEscrowV1_2_0 is
         address _from,
         address _to,
         uint256 _tokenId,
-        LockedBalance memory _locked
+        LockedBalance memory _lockedBalance
     ) private {
-        IEscrowIVotesAdapter(ivotesAdapter).moveDelegateVotes(_from, _to, _tokenId, _locked);
+        IEscrowIVotesAdapter(ivotesAdapter).moveDelegateVotes(_from, _to, _tokenId, _lockedBalance);
     }
 
     function updateVotingPower(address _from, address _to) public whenNotPaused {

@@ -601,21 +601,21 @@ contract LinearIncreasingCurve is
                           DEPRECATED: Warmup
     //////////////////////////////////////////////////////////////*/
 
-    function setWarmupPeriod(uint48) external {
+    function setWarmupPeriod(uint48) external pure {
         revert Deprecated();
     }
 
     /// @notice Returns whether the NFT is warm
     /// @dev In this version, warm functionality has been deprecated.
     ///      For backwards compatibility, always return true.
-    function isWarm(uint256) public view virtual returns (bool) {
+    function isWarm(uint256) public pure virtual returns (bool) {
         return true;
     }
 
     /// @notice Returns whether the NFT is warm at the specified timestamp(`_ts`)
     /// @dev In this version, warm functionality has been deprecated.
     ///      For backwards compatibility, always return true.
-    function isWarm(uint256, uint48) public view virtual returns (bool) {
+    function isWarm(uint256, uint48) public pure virtual returns (bool) {
         return true;
     }
 }

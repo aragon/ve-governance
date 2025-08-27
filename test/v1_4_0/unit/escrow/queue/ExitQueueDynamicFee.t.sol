@@ -89,8 +89,6 @@ contract DynamicExitQueueDynamicFeeTest is ExitQueueBase {
         uint48 cooldown = 518400; // 6 days
         uint48 minCooldown = 172800; // 2 days
 
-        uint256 expectedSlope = (maxFeePercent - minFeePercent) / (cooldown - minCooldown);
-
         // Expect event emission
         vm.expectEmit(true, true, true, true);
         emit ExitFeePercentAdjusted(maxFeePercent, minFeePercent, minCooldown, ExitFeeType.Dynamic);

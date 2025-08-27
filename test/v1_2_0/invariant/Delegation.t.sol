@@ -78,17 +78,19 @@ contract TestDelegationInvariant is IEscrowCurveTokenStorage, EscrowBase {
         }
     }
 
-    function invariant_TotalLockedCorrect() public view {
+    function invariant_TotalLockedCorrect() public {
         assertEq(h.totalLocked(), escrow.totalLocked());
     }
 
-    function invariant_TokenBalanceEqualsTotalLocked() public view {
+    function invariant_TokenBalanceEqualsTotalLocked() public {
         assertEq(MockERC20(escrow.token()).balanceOf(address(escrow)), escrow.totalLocked());
     }
 
-    function invariant_SumOfNftsAmountsEqualTotalLocked() public view {
+    function invariant_SumOfNftsAmountsEqualTotalLocked() public {
         uint256 amountSum = 0;
         uint256 vpSum = 0;
+
+        uint256 globalPower = escrow.totalVotingPower();
 
         uint256[] memory ids = h.getActiveTokenIds();
         for (uint256 i = 0; i < ids.length; i++) {
@@ -110,7 +112,7 @@ contract TestDelegationInvariant is IEscrowCurveTokenStorage, EscrowBase {
         );
     }
 
-    function invariant_UserHasCorrectPastVotes() public view {
+    function invariant_UserHasCorrectPastVotes() public {
         address[] memory actors = h.getActors();
 
         for (uint256 i = 0; i < actors.length; i++) {
@@ -135,7 +137,7 @@ contract TestDelegationInvariant is IEscrowCurveTokenStorage, EscrowBase {
         }
     }
 
-    function invariant_UserCannotHaveMoreVotesOnGaugeVoterThanIVotesAdapter() public view {
+    function invariant_UserCannotHaveMoreVotesOnGaugeVoterThanIVotesAdapter() public {
         address[] memory actors = h.getActors();
 
         uint256 totalPastVotes = 0;
@@ -156,7 +158,7 @@ contract TestDelegationInvariant is IEscrowCurveTokenStorage, EscrowBase {
         }
     }
 
-    function invariant_TotalVotingPowerDoesNotExceedTotalLocked() public view {
+    function invariant_TotalVotingPowerDoesNotExceedTotalLocked() public {
         assertLe(escrow.totalVotingPower(), bias(h.totalLocked(), maxTime));
     }
 }
