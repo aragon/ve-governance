@@ -196,7 +196,7 @@ contract LinearIncreasingCurve is
             _getConstantCoeff(_amount),
             slope
         );
-
+        
         return (int256(bias), slope);
     }
 

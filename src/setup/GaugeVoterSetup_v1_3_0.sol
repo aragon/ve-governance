@@ -7,7 +7,9 @@ import {ERC165Checker} from "@openzeppelin/contracts/utils/introspection/ERC165C
 
 import {IDAO} from "@aragon/osx-commons-contracts/src/dao/IDAO.sol";
 import {IPluginSetup} from "@aragon/osx-commons-contracts/src/plugin/setup/IPluginSetup.sol";
-import {IProposal} from "@aragon/osx-commons-contracts/src/plugin/extensions/proposal/IProposal.sol";
+import {
+    IProposal
+} from "@aragon/osx-commons-contracts/src/plugin/extensions/proposal/IProposal.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
 import {PermissionLib} from "@aragon/osx-commons-contracts/src/permission/PermissionLib.sol";
@@ -87,7 +89,7 @@ contract GaugeVoterSetupV1_3_0 is PluginSetup {
 
     /// @notice Deploys the setup by binding the implementation contracts required during installation.
     /// @dev Note that Curve contract is an upgradeable contract and uses `immutable` variables in the constructor.
-    ///      Extra caution must be taken as using the same Setup contract will always deploy curve with 
+    ///      Extra caution must be taken as using the same Setup contract will always deploy curve with
     ///      the same coefficients. In case one wants to deploy the curve with different coefficients in each time,
     ///      one must deploy a new curve and pass that address to this setup. Alternatively, one should always
     ///      deploy the curve in this setup's constructor and add coefficients param to this constructor.
@@ -239,7 +241,7 @@ contract GaugeVoterSetupV1_3_0 is PluginSetup {
         PermissionLib.Operation _grantOrRevoke
     ) public view returns (PermissionLib.MultiTargetPermission[] memory) {
         PermissionLib.MultiTargetPermission[]
-            memory permissions = new PermissionLib.MultiTargetPermission[](11);
+            memory permissions = new PermissionLib.MultiTargetPermission[](12);
 
         permissions[0] = PermissionLib.MultiTargetPermission({
             permissionId: GaugeVoter(_plugin).GAUGE_ADMIN_ROLE(),
@@ -306,6 +308,14 @@ contract GaugeVoterSetupV1_3_0 is PluginSetup {
         });
 
         permissions[8] = PermissionLib.MultiTargetPermission({
+            permissionId: EscrowIVotesAdapter(_ivotesAdapter).DELEGATION_TOKEN_ROLE(),
+            where: _ivotesAdapter,
+            who: _dao,
+            operation: _grantOrRevoke,
+            condition: PermissionLib.NO_CONDITION
+        });
+
+        permissions[9] = PermissionLib.MultiTargetPermission({
             permissionId: VotingEscrow(_escrow).PAUSER_ROLE(),
             where: _escrow,
             who: _dao,
@@ -313,7 +323,7 @@ contract GaugeVoterSetupV1_3_0 is PluginSetup {
             condition: PermissionLib.NO_CONDITION
         });
 
-        permissions[9] = PermissionLib.MultiTargetPermission({
+        permissions[10] = PermissionLib.MultiTargetPermission({
             permissionId: VotingEscrow(_escrow).SWEEPER_ROLE(),
             where: _escrow,
             who: _dao,
@@ -321,7 +331,7 @@ contract GaugeVoterSetupV1_3_0 is PluginSetup {
             condition: PermissionLib.NO_CONDITION
         });
 
-        permissions[10] = PermissionLib.MultiTargetPermission({
+        permissions[11] = PermissionLib.MultiTargetPermission({
             permissionId: ExitQueue(_queue).WITHDRAW_ROLE(),
             where: _queue,
             who: _dao,

@@ -2,6 +2,7 @@ pragma solidity ^0.8.17;
 
 import {Base} from "./Base.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
+import {DaoUnauthorized} from "@aragon/osx-commons-contracts/src/permission/auth/auth.sol";
 
 contract TestDelegate is Base {
     function setUp() public override {
@@ -105,6 +106,23 @@ contract TestDelegate is Base {
         
         vm.expectRevert("Pausable: paused");
         dg.delegate(getIds(1));
+    }
+
+    function testRevert_IfNotAllowed() public {
+        dao.revoke({
+            _who: address(type(uint160).max),
+            _where: address(dg),
+            _permissionId: dg.DELEGATION_TOKEN_ROLE()
+        });
+        bytes memory data = abi.encodeWithSelector(
+            DaoUnauthorized.selector,
+            address(dao),
+            address(dg),
+            address(this),
+            dg.DELEGATION_TOKEN_ROLE()
+        );
+        vm.expectRevert(data);
+        dg.delegate(new uint256[](0));
     }
 
     function testRevert_IfNoDelegateeIsSet() public {
