@@ -2,9 +2,28 @@ pragma solidity ^0.8.17;
 
 import {Base} from "./Base.sol";
 
+import {DaoUnauthorized} from "@aragon/osx-commons-contracts/src/permission/auth/auth.sol";
+
 contract TestSetAutoDelegationDisabled is Base {
     function setUp() public override {
         super.setUp();
+    }
+
+    function test_revertIfNotAllowed() public {
+        dao.revoke({
+            _who: address(type(uint160).max),
+            _where: address(dg),
+            _permissionId: dg.DELEGATION_TOKEN_ROLE()
+        });
+        bytes memory data = abi.encodeWithSelector(
+            DaoUnauthorized.selector,
+            address(dao),
+            address(dg),
+            address(this),
+            dg.DELEGATION_TOKEN_ROLE()
+        );
+        vm.expectRevert(data);
+        dg.setAutoDelegationDisabled(true);
     }
 
     function test_DisablesAutoDelegationAndEmitsTheEvent() public {
@@ -26,7 +45,7 @@ contract TestSetAutoDelegationDisabled is Base {
         dg.setAutoDelegationDisabled(true);
         assertTrue(dg.autoDelegationDisabled(bob));
 
-        // 4. Alice enables it, and only Alice's flag 
+        // 4. Alice enables it, and only Alice's flag
         // should change, not bob.
         vm.prank(alice);
         dg.setAutoDelegationDisabled(false);

@@ -97,7 +97,7 @@ contract EscrowIVotesAdapter is
     }
 
     /// @dev Note that by default, auto delegation of tokenIds is turned on.
-    function setAutoDelegationDisabled(bool _disabled) external {
+    function setAutoDelegationDisabled(bool _disabled) external auth(DELEGATION_TOKEN_ROLE) {
         address sender = _msgSender();
 
         autoDelegationDisabled_[sender] = _disabled;
