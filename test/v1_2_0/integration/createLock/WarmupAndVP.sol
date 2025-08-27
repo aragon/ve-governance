@@ -39,7 +39,6 @@ contract TestCreateLock_WarmUpAndVotingPower is
 
     function test_CreateLock() public {
         uint256 tokenId = escrow.createLock(Lock_1_Amount);
-        uint256 writtenTs = block.timestamp;
 
         assertVotingPower(tokenId, biasFP(Lock_1_Amount, block.timestamp - weekStart));
 
@@ -50,3 +49,4 @@ contract TestCreateLock_WarmUpAndVotingPower is
         assertVotingPower(tokenId, endTs + 10, maxVotingPower);
     }
 }
+

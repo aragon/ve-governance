@@ -16,7 +16,7 @@ import {
 contract TestQuadraticIncreasingCurve is CurveBase {
     using SafeCast for uint256;
 
-    function test_votingPowerComputesCorrect() public {
+    function test_votingPowerComputesCorrect() public view {
         /**
             Period	Result
           1	1
@@ -131,8 +131,6 @@ contract TestQuadraticIncreasingCurve is CurveBase {
             bias(depositSecond, block.timestamp - checkpointTs),
             "Balance incorrect after warmup II"
         );
-
-        uint256 endTs = getEndTimestamp(checkpointTs, writtenTs);
 
         uint256 expectedMaxI = bias(depositFirst, maxTime);
         uint256 expectedMaxII = bias(depositSecond, maxTime);

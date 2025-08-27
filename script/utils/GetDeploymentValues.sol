@@ -69,29 +69,29 @@ contract GetFactoryValues is Script {
 
         console.log("Deployment parameters:");
         DeploymentParameters memory params = factory.getDeploymentParameters();
-        console.log("  - MinApprovals: %d", factory.getDeploymentParameters().minApprovals);
+        console.log("  - MinApprovals: %d", params.minApprovals);
         console.log("  - MultisigMembers:");
-        for (uint i = 0; i < factory.getDeploymentParameters().multisigMembers.length; i++) {
-            console.log("      -", factory.getDeploymentParameters().multisigMembers[i]);
+        for (uint i = 0; i < params.multisigMembers.length; i++) {
+            console.log("      -", params.multisigMembers[i]);
         }
         console.log("  - TokenParameters:");
-        for (uint i = 0; i < factory.getDeploymentParameters().tokenParameters.length; i++) {
+        for (uint i = 0; i < params.tokenParameters.length; i++) {
             console.log(
                 "      - Token: %s [%s] (%s)",
-                factory.getDeploymentParameters().tokenParameters[i].veTokenName,
-                factory.getDeploymentParameters().tokenParameters[i].veTokenSymbol,
-                factory.getDeploymentParameters().tokenParameters[i].token
+                params.tokenParameters[i].veTokenName,
+                params.tokenParameters[i].veTokenSymbol,
+                params.tokenParameters[i].token
             );
         }
-        console.log("  - FeePercent: %d", factory.getDeploymentParameters().feePercent);
-        console.log("  - WarmupPeriod: %d", factory.getDeploymentParameters().warmupPeriod);
-        console.log("  - CooldownPeriod: %d", factory.getDeploymentParameters().cooldownPeriod);
-        console.log("  - MinLockDuration: %d", factory.getDeploymentParameters().minLockDuration);
-        console.log("  - VotingPaused: %d", factory.getDeploymentParameters().votingPaused);
-        console.log("  - MinDeposit: %d", factory.getDeploymentParameters().minDeposit);
+        console.log("  - FeePercent: %d", params.feePercent);
+        console.log("  - WarmupPeriod: %d", params.warmupPeriod);
+        console.log("  - CooldownPeriod: %d", params.cooldownPeriod);
+        console.log("  - MinLockDuration: %d", params.minLockDuration);
+        console.log("  - VotingPaused: %d", params.votingPaused);
+        console.log("  - MinDeposit: %d", params.minDeposit);
         console.log(
             "  - MultisigPluginRepo: %s",
-            address(factory.getDeploymentParameters().multisigPluginRepo)
+            address(params.multisigPluginRepo)
         );
         console.log(
             "  - MultisigPluginRelease: %s",

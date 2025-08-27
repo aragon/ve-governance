@@ -11,7 +11,7 @@ contract DynamicExitQueueCalculateFeeTest is ExitQueueBase {
     }
 
     /// @notice Test calculate fee with no ticket
-    function test_CalculateFeeWithNoTicket() public {
+    function test_CalculateFeeWithNoTicket() public view {
         uint256 fee = queue.calculateFee(999);
         assertEq(fee, 0);
     }
