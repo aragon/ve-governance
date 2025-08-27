@@ -75,9 +75,8 @@ The following files can be considered as part of the audit:
 | `escrow`       | IVotingEscrowIncreasing_v1_2_0.sol  | ✅       | Interface                              |
 | `factory`      | GaugesDaoFactory_v1_2_0.sol         | ✅       | Versioned implementation               |
 | `factory`      | GaugesDaoFactory_v1_3_0.sol         | ✅       | Versioned implementation               |
-| `factory`      | UpgradeFactory_v1_0_0\_\_v1_3_0.sol | ✅       | Upgrade utility                        |
+| `factory`      | UpgradeFactory_v1_0_0\_\_v1_2_0.sol | ✅       | Upgrade utility                        |
 | `lock`         | Lock_v1_2_0.sol                     | ✅       | Versioned implementation               |
-| `setup`        | GaugeVoterSetup_v1_1_0.sol          | ✅       | Versioned setup                        |
 | `setup`        | GaugeVoterSetup_v1_2_0.sol          | ✅       | Versioned setup                        |
 | `setup`        | GaugeVoterSetup_v1_3_0.sol          | ✅       | Versioned setup                        |
 | `voting`       | AddressGaugeVoter.sol               | ✅       | Address-based voter                    |
@@ -114,6 +113,7 @@ The following files are not in scope:
 | `queue`        | ExitQueue.sol                      | ❌       | Queue implementation       |
 | `queue`        | IExitQueue.sol                     | ❌       | Interface                  |
 | `setup`        | GaugeVoterSetup.sol                | ❌       | Setup logic                |
+| `setup`        | GaugeVoterSetup_v1_1_0.sol         | ❌       | Versioned setup            |
 | `setup`        | GaugeVoterSetupSeason.sol          | ❌       | Season-specific setup      |
 | `voting`       | TokenGaugeVoter.sol                | ❌       | Token-based voter          |
 | `voting`       | TokenGaugeVoterSeason.sol          | ❌       | Season-specific logic      |

@@ -243,7 +243,7 @@ interface IEarlyExitQueue is IEarlyExitQueueEventsAndErrors {
 - **Note**: When `minCooldown == cooldown`, slope is automatically 0 (no decay period exists)
 - Emit `ExitFeePercentAdjusted` event
 
-### 4. `getFee(uint256 _tokenId)`
+### 4. `calculateFee(uint256 _tokenId)`
 
 **Purpose**: Calculate absolute fee amount for token exit
 **Requirements**:
