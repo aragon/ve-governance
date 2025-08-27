@@ -49,13 +49,13 @@ contract TestWithdrawal is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage, 
         escrow.enableSplit();
     }
 
-    struct Blax {
+    struct User {
         address user;
         uint96 amount;
         bool withdraws;
     }
 
-    function testFuzz_giorgi(Blax[20] memory _users) public {
+    function testFuzz_WithrawWithCancel(User[20] memory _users) public {
         uint256[] memory tokenIds = new uint256[](_users.length);
         IAddressGaugeVote.GaugeVote[] memory votes = new IAddressGaugeVote.GaugeVote[](1);
         votes[0] = IAddressGaugeVote.GaugeVote(100, gauge);
