@@ -18,10 +18,11 @@ import {
     SimpleGaugeVoterSetup,
     IEscrowCurveTokenStorage,
     IGaugeVote,
-    ITicket
+    ITicket,
+    IExitQueueCancelErrorsAndEvents
 } from "../../../versions.sol";
 
-contract TestCancelWithdraw is IEscrowCurveTokenStorage, IGaugeVote, ITicket, EscrowBase {
+contract TestCancelWithdraw is IEscrowCurveTokenStorage, IGaugeVote, ITicket, IExitQueueCancelErrorsAndEvents, EscrowBase {
     function setUp() public override {
         super.setUp();
 
@@ -61,6 +62,8 @@ contract TestCancelWithdraw is IEscrowCurveTokenStorage, IGaugeVote, ITicket, Es
         assertEq(queue.ticketHolder(tokenId), address(this));
         assertNotEq(queue.queue(tokenId).exitDate, 0);
         
+        vm.expectEmit(true, true, false, true);
+        emit ExitCancelled(tokenId, address(this));
         escrow.cancelWithdrawalRequest(tokenId);
         uint256 vpAfterCancelWithdraw = escrow.votingPower(tokenId);
 
