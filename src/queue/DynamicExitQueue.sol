@@ -290,6 +290,21 @@ contract DynamicExitQueue is IDynamicExitQueue, IClockUser, DaoAuthorizable, UUP
         emit Exit(_tokenId, fee);
     }
 
+    /// @notice Cancels the exit.
+    /// @dev The token must have a holder.
+    function cancelExit(uint256 _tokenId) external onlyEscrow {
+        TicketV2 memory ticket = _queue[_tokenId];
+
+        // This should never occur as escrow already checks this
+        // but for safety, still advisable to have this check.
+        if (ticket.holder == address(0)) {
+            revert CannotCancelExit();
+        }
+
+        _queue[_tokenId] = TicketV2(address(0), 0);
+        emit ExitCancelled(_tokenId, ticket.holder);
+    }
+
     /// @notice Calculate the absolute fee amount for exiting a specific token
     /// @param _tokenId The token ID to calculate fee for
     /// @return Fee amount in underlying token units

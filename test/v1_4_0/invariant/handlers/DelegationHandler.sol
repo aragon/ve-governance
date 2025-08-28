@@ -439,6 +439,29 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
         _updateDelegationState(tokenId, owner, Action.REMOVE, address(0));
     }
 
+    function cancelWithdrawalRequest(
+        uint256 _jumpSeed,
+        uint256 _tokenIdSeed
+    ) public adjustTimestamp(_jumpSeed) {
+        if (beginWithdrawalTokens.length() == 0) return;
+
+        _tokenIdSeed = _bound(_tokenIdSeed, 0, beginWithdrawalTokens.length() - 1);
+        uint256 tokenId = beginWithdrawalTokens.at(_tokenIdSeed);
+
+        ITicket.TicketV2 memory ticket = queue.queue(tokenId);
+        address owner = ticket.holder;
+
+        address delegatee = ivotesAdapter.delegates(owner);
+        _transitionIfTooOld(delegatee);
+
+        vm.prank(owner);
+        escrow.cancelWithdrawalRequest(tokenId);
+
+        beginWithdrawalTokens.remove(tokenId);
+        ownedTokens[owner].add(tokenId);
+        _updateDelegationState(tokenId, owner, Action.ADD, address(0));
+    }
+
     function withdraw(uint256 _jumpSeed, uint256 _tokenIdSeed) public adjustTimestamp(_jumpSeed) {
         if (beginWithdrawalTokens.length() == 0) return;
 

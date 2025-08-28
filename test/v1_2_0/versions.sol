@@ -36,7 +36,8 @@ import {
     IExitQueue,
     ITicket,
     IExitQueueErrorsAndEvents,
-    IExitMinLockCooldownErrorsAndEvents
+    IExitMinLockCooldownErrorsAndEvents,
+    IExitQueueCancelErrorsAndEvents
 } from "@queue/IExitQueue.sol";
 import {ILock, IWhitelistErrors, IWhitelistEvents} from "@lock/ILock.sol";
 import {

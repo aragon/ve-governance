@@ -26,7 +26,7 @@ contract TestSetAutoDelegationDisabled is Base {
         dg.setAutoDelegationDisabled(true);
         assertTrue(dg.autoDelegationDisabled(bob));
 
-        // 4. Alice enables it, and only Alice's flag 
+        // 4. Alice enables it, and only Alice's flag
         // should change, not bob.
         vm.prank(alice);
         dg.setAutoDelegationDisabled(false);

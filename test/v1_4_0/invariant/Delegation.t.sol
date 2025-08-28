@@ -60,7 +60,7 @@ contract TestDelegationInvariant is IEscrowCurveTokenStorage, EscrowBase {
         targetContract(address(h));
 
         {
-            bytes4[] memory selectors = new bytes4[](11);
+            bytes4[] memory selectors = new bytes4[](12);
             selectors[0] = DelegationHandler.createLock.selector;
             selectors[1] = DelegationHandler.merge.selector;
             selectors[2] = DelegationHandler.split.selector;
@@ -69,9 +69,10 @@ contract TestDelegationInvariant is IEscrowCurveTokenStorage, EscrowBase {
             selectors[5] = DelegationHandler.delegateSpecificTokens.selector;
             selectors[6] = DelegationHandler.undelegate.selector;
             selectors[7] = DelegationHandler.beginWithdrawal.selector;
-            selectors[8] = DelegationHandler.withdraw.selector;
-            selectors[9] = DelegationHandler.vote.selector;
-            selectors[10] = DelegationHandler.transfer.selector;
+            selectors[8] = DelegationHandler.cancelWithdrawalRequest.selector;
+            selectors[9] = DelegationHandler.withdraw.selector;
+            selectors[10] = DelegationHandler.vote.selector;
+            selectors[11] = DelegationHandler.transfer.selector;
             FuzzSelector memory a = FuzzSelector(address(h), selectors);
 
             targetSelector(a);

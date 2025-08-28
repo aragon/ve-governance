@@ -60,7 +60,7 @@ contract TestDelegationInvariant is IEscrowCurveTokenStorage, EscrowBase {
         targetContract(address(h));
 
         {
-            bytes4[] memory selectors = new bytes4[](11);
+            bytes4[] memory selectors = new bytes4[](12);
             selectors[0] = DelegationHandler.createLock.selector;
             selectors[1] = DelegationHandler.merge.selector;
             selectors[2] = DelegationHandler.split.selector;
@@ -69,9 +69,10 @@ contract TestDelegationInvariant is IEscrowCurveTokenStorage, EscrowBase {
             selectors[5] = DelegationHandler.delegateSpecificTokens.selector;
             selectors[6] = DelegationHandler.undelegate.selector;
             selectors[7] = DelegationHandler.beginWithdrawal.selector;
-            selectors[8] = DelegationHandler.withdraw.selector;
-            selectors[9] = DelegationHandler.vote.selector;
-            selectors[10] = DelegationHandler.transfer.selector;
+            selectors[8] = DelegationHandler.cancelWithdrawalRequest.selector;
+            selectors[9] = DelegationHandler.withdraw.selector;
+            selectors[10] = DelegationHandler.vote.selector;
+            selectors[11] = DelegationHandler.transfer.selector;
             FuzzSelector memory a = FuzzSelector(address(h), selectors);
 
             targetSelector(a);
@@ -86,6 +87,9 @@ contract TestDelegationInvariant is IEscrowCurveTokenStorage, EscrowBase {
         assertEq(MockERC20(escrow.token()).balanceOf(address(escrow)), escrow.totalLocked());
     }
 
+    // Note that this doesn't use `totalVotingPower` checks as
+    // the escrow of 1_2_0 uses curve with no supply
+    // (i.e doesn't implement total supply).
     function invariant_SumOfNftsAmountsEqualTotalLocked() public view {
         uint256 amountSum = 0;
         uint256 vpSum = 0;
@@ -102,12 +106,6 @@ contract TestDelegationInvariant is IEscrowCurveTokenStorage, EscrowBase {
         }
 
         assertEq(amountSum, escrow.totalLocked(), "Sum of NFT Amoutns != totalLocked");
-        assertApproxEqAbs(
-            vpSum,
-            escrow.totalVotingPower(),
-            ids.length,
-            "Sum of vps individually != total vp"
-        );
     }
 
     function invariant_UserHasCorrectPastVotes() public view {
@@ -154,9 +152,5 @@ contract TestDelegationInvariant is IEscrowCurveTokenStorage, EscrowBase {
         if (totalOnGaugeVoter > totalPastVotes) {
             assertApproxEqAbs(totalOnGaugeVoter, totalPastVotes, delta);
         }
-    }
-
-    function invariant_TotalVotingPowerDoesNotExceedTotalLocked() public view {
-        assertLe(escrow.totalVotingPower(), bias(h.totalLocked(), maxTime));
     }
 }
