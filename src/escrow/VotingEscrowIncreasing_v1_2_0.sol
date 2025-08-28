@@ -25,7 +25,6 @@ import {
     IDelegateMoveVoteCaller
 } from "@escrow/IVotingEscrowIncreasing_v1_2_0.sol";
 import {IClockV1_2_0 as IClock} from "@clock/IClock_v1_2_0.sol";
-import {ExitQueue} from "@queue/ExitQueue.sol";
 
 // libraries
 import {

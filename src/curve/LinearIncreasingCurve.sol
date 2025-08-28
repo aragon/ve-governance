@@ -196,7 +196,7 @@ contract LinearIncreasingCurve is
             _getConstantCoeff(_amount),
             slope
         );
-        
+
         return (int256(bias), slope);
     }
 
@@ -293,8 +293,7 @@ contract LinearIncreasingCurve is
         _checkpoint(_tokenId, _oldLocked, _newLocked);
     }
 
-    /// @notice Record gper-user data to checkpoints. Used by VotingEscrow system.
-    /// @dev Curve finance style but just for users at this stage
+    /// @notice Record user data to checkpoints. Used by VotingEscrow system.
     /// @param _tokenId NFT token ID.
     /// @param _fromLocked The locked from which we're moving.
     /// @param _newLocked New locked amount / end lock time for the user

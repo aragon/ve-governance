@@ -79,36 +79,36 @@ contract TestDelegationInvariant is IEscrowCurveTokenStorage, EscrowBase {
         }
     }
 
-    function invariant_TotalLockedCorrect() public {
+    function invariant_TotalLockedCorrect() public view {
         assertEq(h.totalLocked(), escrow.totalLocked());
     }
 
-    function invariant_TokenBalanceEqualsTotalLocked() public {
+    function invariant_TokenBalanceEqualsTotalLocked() public view {
         assertEq(MockERC20(escrow.token()).balanceOf(address(escrow)), escrow.totalLocked());
     }
 
-    // Note that this doesn't use `totalVotingPower` checks as 
+    // Note that this doesn't use `totalVotingPower` checks as
     // the escrow of 1_2_0 uses curve with no supply
     // (i.e doesn't implement total supply).
-    function invariant_SumOfNftsAmountsEqualTotalLocked() public {
+    function invariant_SumOfNftsAmountsEqualTotalLocked() public view {
         uint256 amountSum = 0;
         uint256 vpSum = 0;
-    
+
         uint256[] memory ids = h.getActiveTokenIds();
         for (uint256 i = 0; i < ids.length; i++) {
             uint256 tokenId = ids[i];
-    
+
             uint256 vp = escrow.votingPower(tokenId);
             uint256 amount = escrow.locked(tokenId).amount;
-    
+
             amountSum += amount;
             vpSum += vp;
         }
-    
+
         assertEq(amountSum, escrow.totalLocked(), "Sum of NFT Amoutns != totalLocked");
     }
 
-    function invariant_UserHasCorrectPastVotes() public {
+    function invariant_UserHasCorrectPastVotes() public view {
         address[] memory actors = h.getActors();
 
         for (uint256 i = 0; i < actors.length; i++) {
@@ -133,7 +133,7 @@ contract TestDelegationInvariant is IEscrowCurveTokenStorage, EscrowBase {
         }
     }
 
-    function invariant_UserCannotHaveMoreVotesOnGaugeVoterThanIVotesAdapter() public {
+    function invariant_UserCannotHaveMoreVotesOnGaugeVoterThanIVotesAdapter() public view {
         address[] memory actors = h.getActors();
 
         uint256 totalPastVotes = 0;
