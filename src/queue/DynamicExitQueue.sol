@@ -296,7 +296,7 @@ contract DynamicExitQueue is IDynamicExitQueue, IClockUser, DaoAuthorizable, UUP
         TicketV2 memory ticket = _queue[_tokenId];
 
         // This should never occur as escrow already checks this
-        // but for safety, till adviseable to have this check.
+        // but for safety, still advisable to have this check.
         if(ticket.holder == address(0)) {
             revert CannotCancelExit();
         }
