@@ -10,8 +10,10 @@ const { version, repository } = require("../package.json");
 
 const ROOT_DIR = path.resolve(__dirname, "..");
 const REPO_NAME = "ve-governance";
+
 // or node
 const RUNTIME = "bun";
+const README = 'README.adoc'
 
 const walk = async (dirPath) =>
   Promise.all(
@@ -59,10 +61,17 @@ const compile = async (filePaths) => {
   const compilerInput = {
     language: "Solidity",
     sources: filePaths.reduce((input, fileName) => {
+      const relativePath = path.relative(path.resolve(ROOT_DIR, "src"), fileName);
       const source = fs.readFileSync(fileName, "utf8");
-      return { ...input, [fileName]: { content: source } };
+      return { ...input, [relativePath]: { content: source } };
     }, {}),
-    settings: { outputSelection: { "*": { "*": ["*"], "": ["ast"] } } },
+    settings: { 
+      outputSelection: { 
+        "*": {
+          "*": ["abi", "devdoc", "userdoc", "metadata", "storageLayout"],
+          "": ["ast"]
+        } 
+      }}
   };
 
   console.log("Compiling contracts...");
@@ -85,6 +94,17 @@ async function main() {
 
   const { input, output } = await compile(solFiles);
 
+  // `output.sources` contain files with `absolutePath` such as: "voting/AddressGaugeVoter.sol" 
+  // instead of `/Desktop/.../ve-governance/src/voting/AddressGaugeVoter.sol which solidity docgen
+  // can't handle. So rewrite absolute paths for each contract output compilation.
+  if (output.sources) {
+    for (const [relativePath, sourceData] of Object.entries(output.sources)) {
+      if (sourceData.ast && sourceData.ast.absolutePath) {
+        sourceData.ast.absolutePath = path.resolve(ROOT_DIR, "src", relativePath);
+      }
+    }
+  }
+
   const templatesPath = "docs/templates";
   const apiPath = "docs/modules/api";
 
@@ -93,23 +113,78 @@ async function main() {
   // overwrite the functions.
   helpers.version = () => `${version}`;
   helpers.githubURI = () => repository.url;
+  helpers.readmePath = (opts) => {
+    // In case no README was found in the respective folder 
+    // of the contract, then return the default README.adoc
+    if(opts.data.root.id == 'README.adoc') {
+      return 'src/' + README;
+    } 
+
+    // otherwise, return the contract's respective readme(i.e delegation.adoc)
+    return 'src/' + opts.data.root.id.replace(/\.adoc$/, '') + '/' + README;
+  }
 
   const config = {
     outputDir: `${apiPath}/pages`,
     sourcesDir: path.resolve(ROOT_DIR, "src"),
     templates: templatesPath,
-    exclude: ["mocks", "test"],
+    // The output.souces contain each contract as duplicated(one without `@` prefix and one with `@`)
+    // This is because we use remappings and import contracts with `@`. Without excluding them here,
+    // Solidity docgen still tries to find `README.adoc` located near them, which can never be found
+    // as such paths don't exist in reality. So we exclude them one by one for now.
+    exclude: [
+      "mocks", 
+      "test", 
+      "forge-std", 
+      "@openzeppelin", 
+      "@solmate", 
+      "@clock", 
+      "@curve", 
+      "@escrow", 
+      "@delegation", 
+      "@factory", 
+      "@libs", 
+      "@lock", 
+      "@queue", 
+      "@setup", 
+      "@voting", 
+      "@test", 
+      "@foundry-upgrades", 
+      "@ensdomains", 
+      "@aragon"
+    ],
     pageExtension: ".adoc",
     collapseNewlines: true,
     pages: (_, file, config) => {
-      return REPO_NAME + config.pageExtension;
+      // For each contract file, find the closest README.adoc and return its location as the output page path.
+      const sourcesDir = path.resolve(config.root, config.sourcesDir);
+      let dir = path.resolve(config.root, file.absolutePath);
+
+      while (dir.startsWith(sourcesDir)) {
+        dir = path.dirname(dir);
+        if (fs.existsSync(path.join(dir, README))) {
+          const relative = path.relative(sourcesDir, dir);
+          // If the `README` is NOT located in the respective folder of the contract, 
+          // it resolves to find it in the `src` in which case `relative` variable
+          // ends up empty string, so if that's the case, we return `README.adoc`
+          // so later on, page handlebar can find it.
+          if(relative == '') {
+            return README;
+          }
+
+          // Otherwise, `relative` is the name of the folder in which contract is located.
+          // I.e if the EscrowIVotesAdapter is in delegation folder, below would return
+          // and generate `delegation.adoc`.
+          return relative + config.pageExtension;
+        }
+      }
     },
   };
 
   const o = await output;
+
   console.log("Generating docs...");
   await docgen.main([{ input, output: o }], config);
-
   const navOutput = execSync(`${RUNTIME} script/gen-nav.js ${apiPath}/pages`, {
     encoding: "utf8",
   });
@@ -119,7 +194,7 @@ async function main() {
   console.log("Writing nav to", targetFilePath);
   fs.writeFileSync(targetFilePath, navOutput, "utf8");
 
-  fs.rm(templatesPath, { recursive: true, force: true }, () => {});
+  fs.rm(templatesPath, { recursive: true, force: true }, () => { });
 }
 
 main()

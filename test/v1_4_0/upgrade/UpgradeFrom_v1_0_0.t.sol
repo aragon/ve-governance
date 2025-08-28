@@ -53,8 +53,8 @@ import {
     GaugePluginSet as GaugePluginSetUpgrade
 } from "@factory/upgrades/UpgradeFactory_v1_0_0__v1_3_0.sol";
 
-import {Upgrades} from "@foundry-upgrades/LegacyUpgrades.sol";
-import {Options} from "@foundry-upgrades/Options.sol";
+import {Upgrades} from "@foundry-upgrades/src/LegacyUpgrades.sol";
+import {Options} from "@foundry-upgrades/src/Options.sol";
 
 import {
     CachedViewCurve as CachedView,

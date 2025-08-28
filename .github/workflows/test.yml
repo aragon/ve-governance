@@ -158,6 +158,7 @@ jobs:
           forge test --match-path "test/**/upgrade/**/*.sol" --force
         id: test
 
+  # Run invariants only on v1-3-0 to avoid huge downtimes for actions.
   test-invariant:
     strategy:
       fail-fast: true
@@ -178,7 +179,7 @@ jobs:
 
       - name: Run Forge tests
         run: |
-          forge test --match-path "test/**/invariant/**/*.sol"
+          forge test --match-path "test/v1_3_0/invariant/**/*.sol"
         id: test
     
   test-fork:

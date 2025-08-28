@@ -1,0 +1,348 @@
+:github-icon: pass:[<svg class="icon"><use href="#github-icon"/></svg>]
+:xref-LockV1_2_0-onlyEscrow--: xref:README.adoc#LockV1_2_0-onlyEscrow--
+:xref-LockV1_2_0-supportsInterface-bytes4-: xref:README.adoc#LockV1_2_0-supportsInterface-bytes4-
+:xref-LockV1_2_0-constructor--: xref:README.adoc#LockV1_2_0-constructor--
+:xref-LockV1_2_0-initialize-address-string-string-address-: xref:README.adoc#LockV1_2_0-initialize-address-string-string-address-
+:xref-LockV1_2_0-setWhitelisted-address-bool-: xref:README.adoc#LockV1_2_0-setWhitelisted-address-bool-
+:xref-LockV1_2_0-enableTransfers--: xref:README.adoc#LockV1_2_0-enableTransfers--
+:xref-LockV1_2_0-_transfer-address-address-uint256-: xref:README.adoc#LockV1_2_0-_transfer-address-address-uint256-
+:xref-LockV1_2_0-isApprovedOrOwner-address-uint256-: xref:README.adoc#LockV1_2_0-isApprovedOrOwner-address-uint256-
+:xref-LockV1_2_0-mint-address-uint256-: xref:README.adoc#LockV1_2_0-mint-address-uint256-
+:xref-LockV1_2_0-burn-uint256-: xref:README.adoc#LockV1_2_0-burn-uint256-
+:xref-LockV1_2_0-implementation--: xref:README.adoc#LockV1_2_0-implementation--
+:xref-LockV1_2_0-_authorizeUpgrade-address-: xref:README.adoc#LockV1_2_0-_authorizeUpgrade-address-
+:xref-LockV1_2_0-WHITELIST_ANY_ADDRESS-address: xref:README.adoc#LockV1_2_0-WHITELIST_ANY_ADDRESS-address
+:xref-LockV1_2_0-LOCK_ADMIN_ROLE-bytes32: xref:README.adoc#LockV1_2_0-LOCK_ADMIN_ROLE-bytes32
+:xref-LockV1_2_0-escrow-address: xref:README.adoc#LockV1_2_0-escrow-address
+:xref-LockV1_2_0-whitelisted-mapping-address----bool-: xref:README.adoc#LockV1_2_0-whitelisted-mapping-address----bool-
+:xref-IWhitelistEvents-WhitelistSet-address-bool-: xref:README.adoc#IWhitelistEvents-WhitelistSet-address-bool-
+:xref-ILock-OnlyEscrow--: xref:README.adoc#ILock-OnlyEscrow--
+:xref-IWhitelistErrors-NotWhitelisted--: xref:README.adoc#IWhitelistErrors-NotWhitelisted--
+:xref-IWhitelistErrors-ForbiddenWhitelistAddress--: xref:README.adoc#IWhitelistErrors-ForbiddenWhitelistAddress--
+Example...
+
+:WHITELIST_ANY_ADDRESS: pass:normal[xref:#LockV1_2_0-WHITELIST_ANY_ADDRESS-address[`++WHITELIST_ANY_ADDRESS++`]]
+:LOCK_ADMIN_ROLE: pass:normal[xref:#LockV1_2_0-LOCK_ADMIN_ROLE-bytes32[`++LOCK_ADMIN_ROLE++`]]
+:escrow: pass:normal[xref:#LockV1_2_0-escrow-address[`++escrow++`]]
+:whitelisted: pass:normal[xref:#LockV1_2_0-whitelisted-mapping-address----bool-[`++whitelisted++`]]
+:onlyEscrow: pass:normal[xref:#LockV1_2_0-onlyEscrow--[`++onlyEscrow++`]]
+:supportsInterface: pass:normal[xref:#LockV1_2_0-supportsInterface-bytes4-[`++supportsInterface++`]]
+:constructor: pass:normal[xref:#LockV1_2_0-constructor--[`++constructor++`]]
+:initialize: pass:normal[xref:#LockV1_2_0-initialize-address-string-string-address-[`++initialize++`]]
+:setWhitelisted: pass:normal[xref:#LockV1_2_0-setWhitelisted-address-bool-[`++setWhitelisted++`]]
+:enableTransfers: pass:normal[xref:#LockV1_2_0-enableTransfers--[`++enableTransfers++`]]
+:_transfer: pass:normal[xref:#LockV1_2_0-_transfer-address-address-uint256-[`++_transfer++`]]
+:isApprovedOrOwner: pass:normal[xref:#LockV1_2_0-isApprovedOrOwner-address-uint256-[`++isApprovedOrOwner++`]]
+:mint: pass:normal[xref:#LockV1_2_0-mint-address-uint256-[`++mint++`]]
+:burn: pass:normal[xref:#LockV1_2_0-burn-uint256-[`++burn++`]]
+:implementation: pass:normal[xref:#LockV1_2_0-implementation--[`++implementation++`]]
+:_authorizeUpgrade: pass:normal[xref:#LockV1_2_0-_authorizeUpgrade-address-[`++_authorizeUpgrade++`]]
+
+[.contract]
+[[LockV1_2_0]]
+=== `++LockV1_2_0++` link:https://github.com/aragon/ve-governance/blob/v1.0.0//Users/giorgilagidze/Desktop/work/ve-governance/src/lock/Lock_v1_2_0.sol[{github-icon},role=heading-link]
+
+[.contract-index]
+.Modifiers
+--
+* {xref-LockV1_2_0-onlyEscrow--}[`++onlyEscrow()++`]
+
+--
+
+[.contract-index]
+.Functions
+--
+* {xref-LockV1_2_0-supportsInterface-bytes4-}[`++supportsInterface(_interfaceId)++`]
+* {xref-LockV1_2_0-constructor--}[`++constructor()++`]
+* {xref-LockV1_2_0-initialize-address-string-string-address-}[`++initialize(_escrow, _name, _symbol, _dao)++`]
+* {xref-LockV1_2_0-setWhitelisted-address-bool-}[`++setWhitelisted(_account, _isWhitelisted)++`]
+* {xref-LockV1_2_0-enableTransfers--}[`++enableTransfers()++`]
+* {xref-LockV1_2_0-_transfer-address-address-uint256-}[`++_transfer(_from, _to, _tokenId)++`]
+* {xref-LockV1_2_0-isApprovedOrOwner-address-uint256-}[`++isApprovedOrOwner(_spender, _tokenId)++`]
+* {xref-LockV1_2_0-mint-address-uint256-}[`++mint(_to, _tokenId)++`]
+* {xref-LockV1_2_0-burn-uint256-}[`++burn(_tokenId)++`]
+* {xref-LockV1_2_0-implementation--}[`++implementation()++`]
+* {xref-LockV1_2_0-_authorizeUpgrade-address-}[`++_authorizeUpgrade()++`]
+* {xref-LockV1_2_0-WHITELIST_ANY_ADDRESS-address}[`++WHITELIST_ANY_ADDRESS()++`]
+* {xref-LockV1_2_0-LOCK_ADMIN_ROLE-bytes32}[`++LOCK_ADMIN_ROLE()++`]
+* {xref-LockV1_2_0-escrow-address}[`++escrow()++`]
+* {xref-LockV1_2_0-whitelisted-mapping-address----bool-}[`++whitelisted()++`]
+
+[.contract-subindex-inherited]
+.ReentrancyGuardUpgradeable
+
+[.contract-subindex-inherited]
+.DaoAuthorizableUpgradeable
+
+[.contract-subindex-inherited]
+.UUPSUpgradeable
+
+[.contract-subindex-inherited]
+.ERC1967UpgradeUpgradeable
+
+[.contract-subindex-inherited]
+.IERC1967Upgradeable
+
+[.contract-subindex-inherited]
+.IERC1822ProxiableUpgradeable
+
+[.contract-subindex-inherited]
+.ERC721EnumerableUpgradeable
+
+[.contract-subindex-inherited]
+.IERC721EnumerableUpgradeable
+
+[.contract-subindex-inherited]
+.ERC721Upgradeable
+
+[.contract-subindex-inherited]
+.IERC721MetadataUpgradeable
+
+[.contract-subindex-inherited]
+.IERC721Upgradeable
+
+[.contract-subindex-inherited]
+.ERC165Upgradeable
+
+[.contract-subindex-inherited]
+.IERC165Upgradeable
+
+[.contract-subindex-inherited]
+.ContextUpgradeable
+
+[.contract-subindex-inherited]
+.Initializable
+
+[.contract-subindex-inherited]
+.ILock
+
+[.contract-subindex-inherited]
+.IWhitelist
+
+[.contract-subindex-inherited]
+.IWhitelistErrors
+
+[.contract-subindex-inherited]
+.IWhitelistEvents
+
+--
+
+[.contract-index]
+.Events
+--
+
+[.contract-subindex-inherited]
+.ReentrancyGuardUpgradeable
+
+[.contract-subindex-inherited]
+.DaoAuthorizableUpgradeable
+
+[.contract-subindex-inherited]
+.UUPSUpgradeable
+
+[.contract-subindex-inherited]
+.ERC1967UpgradeUpgradeable
+
+[.contract-subindex-inherited]
+.IERC1967Upgradeable
+
+[.contract-subindex-inherited]
+.IERC1822ProxiableUpgradeable
+
+[.contract-subindex-inherited]
+.ERC721EnumerableUpgradeable
+
+[.contract-subindex-inherited]
+.IERC721EnumerableUpgradeable
+
+[.contract-subindex-inherited]
+.ERC721Upgradeable
+
+[.contract-subindex-inherited]
+.IERC721MetadataUpgradeable
+
+[.contract-subindex-inherited]
+.IERC721Upgradeable
+
+[.contract-subindex-inherited]
+.ERC165Upgradeable
+
+[.contract-subindex-inherited]
+.IERC165Upgradeable
+
+[.contract-subindex-inherited]
+.ContextUpgradeable
+
+[.contract-subindex-inherited]
+.Initializable
+
+[.contract-subindex-inherited]
+.ILock
+
+[.contract-subindex-inherited]
+.IWhitelist
+
+[.contract-subindex-inherited]
+.IWhitelistErrors
+
+[.contract-subindex-inherited]
+.IWhitelistEvents
+* {xref-IWhitelistEvents-WhitelistSet-address-bool-}[`++WhitelistSet(account, status)++`]
+
+--
+
+[.contract-index]
+.Errors
+--
+
+[.contract-subindex-inherited]
+.ReentrancyGuardUpgradeable
+
+[.contract-subindex-inherited]
+.DaoAuthorizableUpgradeable
+
+[.contract-subindex-inherited]
+.UUPSUpgradeable
+
+[.contract-subindex-inherited]
+.ERC1967UpgradeUpgradeable
+
+[.contract-subindex-inherited]
+.IERC1967Upgradeable
+
+[.contract-subindex-inherited]
+.IERC1822ProxiableUpgradeable
+
+[.contract-subindex-inherited]
+.ERC721EnumerableUpgradeable
+
+[.contract-subindex-inherited]
+.IERC721EnumerableUpgradeable
+
+[.contract-subindex-inherited]
+.ERC721Upgradeable
+
+[.contract-subindex-inherited]
+.IERC721MetadataUpgradeable
+
+[.contract-subindex-inherited]
+.IERC721Upgradeable
+
+[.contract-subindex-inherited]
+.ERC165Upgradeable
+
+[.contract-subindex-inherited]
+.IERC165Upgradeable
+
+[.contract-subindex-inherited]
+.ContextUpgradeable
+
+[.contract-subindex-inherited]
+.Initializable
+
+[.contract-subindex-inherited]
+.ILock
+* {xref-ILock-OnlyEscrow--}[`++OnlyEscrow()++`]
+
+[.contract-subindex-inherited]
+.IWhitelist
+
+[.contract-subindex-inherited]
+.IWhitelistErrors
+* {xref-IWhitelistErrors-NotWhitelisted--}[`++NotWhitelisted()++`]
+* {xref-IWhitelistErrors-ForbiddenWhitelistAddress--}[`++ForbiddenWhitelistAddress()++`]
+
+[.contract-subindex-inherited]
+.IWhitelistEvents
+
+--
+
+[.contract-item]
+[[LockV1_2_0-onlyEscrow--]]
+==== `[.contract-item-name]#++onlyEscrow++#++()++` [.item-kind]#modifier#
+
+[.contract-item]
+[[LockV1_2_0-supportsInterface-bytes4-]]
+==== `[.contract-item-name]#++supportsInterface++#++(bytes4 _interfaceId) → bool++` [.item-kind]#public#
+
+[.contract-item]
+[[LockV1_2_0-constructor--]]
+==== `[.contract-item-name]#++constructor++#++()++` [.item-kind]#public#
+
+[.contract-item]
+[[LockV1_2_0-initialize-address-string-string-address-]]
+==== `[.contract-item-name]#++initialize++#++(address _escrow, string _name, string _symbol, address _dao)++` [.item-kind]#external#
+
+[.contract-item]
+[[LockV1_2_0-setWhitelisted-address-bool-]]
+==== `[.contract-item-name]#++setWhitelisted++#++(address _account, bool _isWhitelisted)++` [.item-kind]#external#
+
+Transfers disabled by default, whitelisted addresses are allowed to be involved in transfers
+
+[.contract-item]
+[[LockV1_2_0-enableTransfers--]]
+==== `[.contract-item-name]#++enableTransfers++#++()++` [.item-kind]#external#
+
+Enable transfers to any address without whitelisting
+
+[.contract-item]
+[[LockV1_2_0-_transfer-address-address-uint256-]]
+==== `[.contract-item-name]#++_transfer++#++(address _from, address _to, uint256 _tokenId)++` [.item-kind]#internal#
+
+Override the transfer to check if the recipient is whitelisted
+This avoids needing to check for mint/burn but is less idomatic than beforeTokenTransfer
+
+[.contract-item]
+[[LockV1_2_0-isApprovedOrOwner-address-uint256-]]
+==== `[.contract-item-name]#++isApprovedOrOwner++#++(address _spender, uint256 _tokenId) → bool++` [.item-kind]#external#
+
+[.contract-item]
+[[LockV1_2_0-mint-address-uint256-]]
+==== `[.contract-item-name]#++mint++#++(address _to, uint256 _tokenId)++` [.item-kind]#external#
+
+Minting and burning functions that can only be called by the escrow contract
+
+Safe mint ensures contract addresses are ERC721 Receiver contracts
+
+[.contract-item]
+[[LockV1_2_0-burn-uint256-]]
+==== `[.contract-item-name]#++burn++#++(uint256 _tokenId)++` [.item-kind]#external#
+
+Minting and burning functions that can only be called by the escrow contract
+
+[.contract-item]
+[[LockV1_2_0-implementation--]]
+==== `[.contract-item-name]#++implementation++#++() → address++` [.item-kind]#public#
+
+Returns the address of the implementation contract in the [proxy storage slot](https://eips.ethereum.org/EIPS/eip-1967) slot the [UUPS proxy](https://eips.ethereum.org/EIPS/eip-1822) is pointing to.
+
+[.contract-item]
+[[LockV1_2_0-_authorizeUpgrade-address-]]
+==== `[.contract-item-name]#++_authorizeUpgrade++#++(address)++` [.item-kind]#internal#
+
+Internal method authorizing the upgrade of the contract via the [upgradeability mechanism for UUPS proxies](https://docs.openzeppelin.com/contracts/4.x/api/proxy#UUPSUpgradeable) (see [ERC-1822](https://eips.ethereum.org/EIPS/eip-1822)).
+
+[.contract-item]
+[[LockV1_2_0-WHITELIST_ANY_ADDRESS-address]]
+==== `[.contract-item-name]#++WHITELIST_ANY_ADDRESS++#++() → address++` [.item-kind]#public#
+
+enables transfers without whitelisting
+
+[.contract-item]
+[[LockV1_2_0-LOCK_ADMIN_ROLE-bytes32]]
+==== `[.contract-item-name]#++LOCK_ADMIN_ROLE++#++() → bytes32++` [.item-kind]#public#
+
+role to upgrade this contract
+
+[.contract-item]
+[[LockV1_2_0-escrow-address]]
+==== `[.contract-item-name]#++escrow++#++() → address++` [.item-kind]#public#
+
+Address of the escrow contract that holds underyling assets
+
+[.contract-item]
+[[LockV1_2_0-whitelisted-mapping-address----bool-]]
+==== `[.contract-item-name]#++whitelisted++#++() → mapping(address &#x3D;&gt; bool)++` [.item-kind]#public#
+
+Whitelisted contracts that are allowed to transfer
+

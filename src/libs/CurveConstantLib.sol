@@ -25,7 +25,7 @@ library CurveConstantLib {
     /// 26 epochs in a year, 2 years = 52 epochs
     uint256 internal constant MAX_EPOCHS = 52;
 
-    function getCoefficients() internal view returns (int256[3] memory, uint256) {
+    function getCoefficients() internal pure returns (int256[3] memory, uint256) {
         int256[3] memory coefficients;
         coefficients[0] = SHARED_CONSTANT_COEFFICIENT;
         coefficients[1] = SHARED_LINEAR_COEFFICIENT;
@@ -35,4 +35,3 @@ library CurveConstantLib {
         return (coefficients, maxEpoch);
     }
 }
-

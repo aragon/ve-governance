@@ -133,8 +133,6 @@ contract TestIncreasingCurve is CurveBase {
             "Balance incorrect after warmup II"
         );
 
-        uint256 endTs = getEndTimestamp(checkpointTs, writtenTs);
-
         uint256 expectedMaxI = bias(depositFirst, maxTime);
         uint256 expectedMaxII = bias(depositSecond, maxTime);
 

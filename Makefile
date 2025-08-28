@@ -20,7 +20,10 @@ get-deployment-values :; forge script script/utils/GetDeploymentValues.sol:GetFa
 test-ui :; forge test --match-path "test/**/{unit,integration}/**/*.sol"
 
 # run invariant tests
-invariant-ui :; forge test --match-path "test/**/invariant/**/*.sol" --show-progress
+test-invariant :; forge test --match-path "test/**/invariant/**/*.sol" --show-progress
+test-invariant-v1-2-0 :; forge test --match-path "test/v1_2_0/invariant/**/*.sol" --show-progress
+test-invariant-v1-3-0 :; forge test --match-path "test/v1_3_0/invariant/**/*.sol" --show-progress
+test-invariant-v1-4-0 :; forge test --match-path "test/v1_4_0/invariant/**/*.sol" --show-progress
 
 # run unit tests for specific version
 test-ui-100 :; forge test --match-path "test/v1_0_0/{unit,integration}/**/*.sol" 

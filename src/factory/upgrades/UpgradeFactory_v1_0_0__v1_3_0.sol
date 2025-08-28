@@ -1,19 +1,40 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.17;
 
+import "forge-std/Test.sol";
+import "@test/constants.sol";
 import {PluginSetupProcessor} from "@aragon/osx/framework/plugin/setup/PluginSetupProcessor.sol";
 import {PluginRepoFactory} from "@aragon/osx/framework/plugin/repo/PluginRepoFactory.sol";
+import {PluginRepoRegistry} from "@aragon/osx/framework/plugin/repo/PluginRepoRegistry.sol";
 import {PluginRepo} from "@aragon/osx/framework/plugin/repo/PluginRepo.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
+import {IDAO} from "@aragon/osx-commons-contracts/src/dao/IDAO.sol";
+import {IPluginSetup} from "@aragon/osx-commons-contracts/src/plugin/setup/IPluginSetup.sol";
 import {PermissionLib} from "@aragon/osx-commons-contracts/src/permission/PermissionLib.sol";
-import {Multisig} from "@aragon/multisig/src/MultisigSetup.sol";
-
-import {ExitQueue} from "@setup/GaugeVoterSetup.sol";
 import {
+    Multisig,
+    MultisigSetup as MultisigPluginSetup
+} from "@aragon/multisig/src/MultisigSetup.sol";
+import {
+    hashHelpers,
+    PluginSetupRef
+} from "@aragon/osx/framework/plugin/setup/PluginSetupProcessorHelpers.sol";
+
+import {
+    GaugeVoterSetup,
+    VotingEscrow,
+    Clock,
+    Lock,
+    Curve,
+    ExitQueue,
+    GaugeVoter as TokenGaugeVoter,
+    IGaugeVoterSetupParams
+} from "@setup/GaugeVoterSetup.sol";
+import {
+    GaugesDaoFactory,
     Deployment as DeploymentV1_0_0,
     DeploymentParameters as DeploymentParametersV1_0_0,
-    GaugePluginSet as GaugePluginSetV1_0_0,
-    GaugeVoterSetup
+    GaugePluginSet as GaugePluginSetV1_0_0
 } from "../GaugesDaoFactory.sol";
 
 import {
@@ -21,11 +42,15 @@ import {
     Curve as LinearIncreasingCurve,
     GaugeVoter as AddressGaugeVoter,
     VotingEscrow as VotingEscrowV1_2_0,
+    GaugeVoterSetupV1_3_0,
+    IGaugeVoterSetupParams as IGaugeVoterSetupParamsV1_3_0,
     EscrowIVotesAdapter,
     Lock as LockV1_2_0
-} from "@setup/GaugeVoterSetup_v1_2_0.sol";
+} from "@setup/GaugeVoterSetup_v1_3_0.sol";
 
+import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
+import {ERC165Checker} from "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
 import {Upgrades} from "@foundry-upgrades/src/LegacyUpgrades.sol";
@@ -106,8 +131,10 @@ struct Deployment {
     PluginRepo gaugeVoterPluginRepo;
 }
 
-contract UpgradeGaugesFactoryV1_0_0__V1_2_0 {
+contract UpgradeGaugesFactoryV1_0_0__V1_3_0 {
     using Address for address;
+    using Clones for address;
+    using ERC165Checker for address;
     using ProxyLib for address;
 
     address factory;
@@ -127,6 +154,7 @@ contract UpgradeGaugesFactoryV1_0_0__V1_2_0 {
             GaugePluginSet memory newPluginSet;
 
             // copy the contracts over - for now casting them
+            // todo good idea?
             newPluginSet.plugin = AddressGaugeVoter(address(oldPluginSet.plugin));
             newPluginSet.curve = LinearIncreasingCurve(address(oldPluginSet.curve));
             newPluginSet.votingEscrow = VotingEscrowV1_2_0(address(oldPluginSet.votingEscrow));
@@ -193,10 +221,7 @@ contract UpgradeGaugesFactoryV1_0_0__V1_2_0 {
         Upgrades.validateUpgrade("Lock_v1_2_0.sol:LockV1_2_0", options);
 
         options.referenceContract = "QuadraticIncreasingCurve.sol:QuadraticIncreasingEscrow";
-        Upgrades.validateUpgrade(
-            "LinearIncreasingCurveNoSupply.sol:LinearIncreasingCurveNoSupply",
-            options
-        );
+        Upgrades.validateUpgrade("LinearIncreasingCurve.sol:LinearIncreasingCurve", options);
     }
 
     function upgrade(
@@ -231,12 +256,12 @@ contract UpgradeGaugesFactoryV1_0_0__V1_2_0 {
         _deployAddressGaugeVoter(address(addressGaugeVoter));
 
         _upgradeContracts(clockUpgrade, curveUpgrade, escrowUpgrade, lockUpgrade);
-
+        
         // deploy an address gauge voter that must be used on the upgraded escrow contract.
 
         // set the ivotes adapter on the escrow
         _setEscrowIVotesAdapter();
-
+        
         // set the address gauge voter on the escrow(before upgrade, it was token gauge voter)
         _setAddressGaugeVoter();
     }
@@ -259,9 +284,9 @@ contract UpgradeGaugesFactoryV1_0_0__V1_2_0 {
             pluginSet.votingEscrow.upgradeTo(address(escrowUpgrade));
             pluginSet.nftLock.upgradeTo(address(lockUpgrade));
 
-            // We only need to pause escrow as other contracts' state changing
-            // functions can only be called by escrow and ivotesAdapter.
-            // Note that `AddressGaugeVoter` and `iVotesAdapter` are by default paused
+            // We only need to pause escrow as other contracts' state changing 
+            // functions can only be called by escrow and ivotesAdapter. 
+            // Note that `AddressGaugeVoter` and `iVotesAdapter` are by default paused 
             // at the time of deployment.
             pluginSet.votingEscrow.pause();
         }

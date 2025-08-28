@@ -416,7 +416,7 @@ contract LinearIncreasingCurveNoSupply is
                           DEPRECATED: Warmup
     //////////////////////////////////////////////////////////////*/
 
-    function setWarmupPeriod(uint48) external {
+    function setWarmupPeriod(uint48) external pure {
         revert Deprecated();
     }
 

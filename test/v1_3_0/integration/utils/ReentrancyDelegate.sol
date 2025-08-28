@@ -24,7 +24,7 @@ contract ReentrancyDelegate {
     function onERC721Received(
         address,
         address,
-        uint256 tokenId,
+        uint256,
         bytes memory
     ) public returns (bytes4) {
         if (!exploitEnabled) {
