@@ -62,64 +62,64 @@ Excluded files have previously been audited, although we have renamed some of th
 
 The following files can be considered as part of the audit:
 
-| Contract Group | Contract Name                       | In Scope | Details                                |
-| -------------- | ----------------------------------- | -------- | -------------------------------------- |
-| `clock`        | Clock_v1_2_0.sol                    | ✅       | Versioned implementation               |
-| `clock`        | IClock_v1_2_0.sol                   | ✅       | Interface                              |
-| `curve`        | LinearIncreasingCurve.sol           | ✅       | Main curve logic                       |
-| `curve`        | LinearIncreasingCurveNoSupply.sol   | ✅       | Variant without supply                 |
-| `curve`        | IEscrowCurveIncreasing_v1_2_0.sol   | ✅       | Interface                              |
-| `delegation`   | EscrowIVotesAdapter.sol             | ✅       | IVotes adapter                         |
-| `delegation`   | IEscrowIVotesAdapter.sol            | ✅       | Interface                              |
-| `escrow`       | VotingEscrowIncreasing_v1_2_0.sol   | ✅       | Versioned implementation               |
-| `escrow`       | IVotingEscrowIncreasing_v1_2_0.sol  | ✅       | Interface                              |
-| `factory`      | GaugesDaoFactory_v1_2_0.sol         | ✅       | Versioned implementation               |
-| `factory`      | GaugesDaoFactory_v1_3_0.sol         | ✅       | Versioned implementation               |
-| `factory`      | UpgradeFactory_v1_0_0\_\_v1_2_0.sol | ✅       | Upgrade utility                        |
-| `lock`         | Lock_v1_2_0.sol                     | ✅       | Versioned implementation               |
-| `setup`        | GaugeVoterSetup_v1_2_0.sol          | ✅       | Versioned setup                        |
-| `setup`        | GaugeVoterSetup_v1_3_0.sol          | ✅       | Versioned setup                        |
-| `voting`       | AddressGaugeVoter.sol               | ✅       | Address-based voter                    |
-| `voting`       | IAddressGaugeVoter.sol              | ✅       | Interface                              |
-| `factory`      | GaugesDaoFactory_v1_4_0.sol\*       | ✅       | Versioned implementation               |
-| `setup`        | GaugeVoterSetup_v1_4_0.sol\*        | ✅       | Versioned setup                        |
-| `delegation`   | DelegationHelper.sol\*              | ✅       | Delegation-specific utilities          |
-| `queue`        | DynamicExitQueue.sol\*              | ✅       | ExitQueue with variable fee structures |
+| Contract Group | Contract Name                      | In Scope | Details                                |
+| -------------- | ---------------------------------- | -------- | -------------------------------------- |
+| `clock`        | Clock_v1_2_0.sol                   | ✅       | Versioned implementation               |
+| `clock`        | IClock_v1_2_0.sol                  | ✅       | Interface                              |
+| `curve`        | LinearIncreasingCurve.sol          | ✅       | Main curve logic                       |
+| `curve`        | LinearIncreasingCurveNoSupply.sol  | ✅       | Variant without supply                 |
+| `curve`        | IEscrowCurveIncreasing_v1_2_0.sol  | ✅       | Interface                              |
+| `delegation`   | EscrowIVotesAdapter.sol            | ✅       | IVotes adapter                         |
+| `delegation`   | IEscrowIVotesAdapter.sol           | ✅       | Interface                              |
+| `escrow`       | VotingEscrowIncreasing_v1_2_0.sol  | ✅       | Versioned implementation               |
+| `escrow`       | IVotingEscrowIncreasing_v1_2_0.sol | ✅       | Interface                              |
+| `factory`      | GaugesDaoFactory_v1_2_0.sol        | ✅       | Versioned implementation               |
+| `factory`      | GaugesDaoFactory_v1_3_0.sol        | ✅       | Versioned implementation               |
+| `lock`         | Lock_v1_2_0.sol                    | ✅       | Versioned implementation               |
+| `setup`        | GaugeVoterSetup_v1_2_0.sol         | ✅       | Versioned setup                        |
+| `setup`        | GaugeVoterSetup_v1_3_0.sol         | ✅       | Versioned setup                        |
+| `voting`       | AddressGaugeVoter.sol              | ✅       | Address-based voter                    |
+| `voting`       | IAddressGaugeVoter.sol             | ✅       | Interface                              |
+| `factory`      | GaugesDaoFactory_v1_4_0.sol\*      | ✅       | Versioned implementation               |
+| `setup`        | GaugeVoterSetup_v1_4_0.sol\*       | ✅       | Versioned setup                        |
+| `delegation`   | DelegationHelper.sol\*             | ✅       | Delegation-specific utilities          |
+| `queue`        | DynamicExitQueue.sol\*             | ✅       | ExitQueue with variable fee structures |
 
 > \*These files were added between Audits 3 and Audits 4
 
 The following files are not in scope:
 
-| Contract Group | Contract Name                      | In Scope | Details                    |
-| -------------- | ---------------------------------- | -------- | -------------------------- |
-| `factory`      | GaugesDaoFactory.sol               | ❌       | Base factory               |
-| `factory`      | GaugesDaoFactory_v1_1_0.sol        | ❌       | Versioned implementation   |
-| `clock`        | Clock.sol                          | ❌       | Core clock contract        |
-| `clock`        | ClockSeason.sol                    | ❌       | Season-specific logic      |
-| `clock`        | IClock.sol                         | ❌       | Interface                  |
-| `clock`        | IClockSeason.sol                   | ❌       | Interface                  |
-| `curve`        | QuadraticIncreasingCurve.sol       | ❌       | Quadratic variant          |
-| `curve`        | QuadraticIncreasingCurveSeason.sol | ❌       | Season-specific variant    |
-| `curve`        | IEscrowCurveIncreasing.sol         | ❌       | Interface                  |
-| `escrow`       | VotingEscrowIncreasing.sol         | ❌       | Main escrow contract       |
-| `escrow`       | IVotingEscrowIncreasing.sol        | ❌       | Interface                  |
-| `factory`      | GaugesDaoFactorySeason.sol         | ❌       | Season-specific            |
-| `libs`         | CurveConstantLib.sol               | ❌       | Math/constants lib         |
-| `libs`         | ProxyLib.sol                       | ❌       | Proxy utilities            |
-| `libs`         | SignedFixedPointMathLib.sol        | ❌       | Math lib                   |
-| `lock`         | Lock.sol                           | ❌       | Main lock contract         |
-| `lock`         | ILock.sol                          | ❌       | Interface                  |
-| `lock`         | IERC721EMB.sol                     | ❌       | ERC721 interface extension |
-| `queue`        | ExitQueue.sol                      | ❌       | Queue implementation       |
-| `queue`        | IExitQueue.sol                     | ❌       | Interface                  |
-| `setup`        | GaugeVoterSetup.sol                | ❌       | Setup logic                |
-| `setup`        | GaugeVoterSetup_v1_1_0.sol         | ❌       | Versioned setup            |
-| `setup`        | GaugeVoterSetupSeason.sol          | ❌       | Season-specific setup      |
-| `voting`       | TokenGaugeVoter.sol                | ❌       | Token-based voter          |
-| `voting`       | TokenGaugeVoterSeason.sol          | ❌       | Season-specific logic      |
-| `voting`       | TokenGaugeVoter_v1_1_0.sol         | ❌       | Versioned implementation   |
-| `voting`       | IGaugeVoter.sol                    | ❌       | Interface                  |
-| `voting`       | ITokenGaugeVoter.sol               | ❌       | Interface                  |
+| Contract Group | Contract Name                       | In Scope | Details                    |
+| -------------- | ----------------------------------- | -------- | -------------------------- |
+| `factory`      | GaugesDaoFactory.sol                | ❌       | Base factory               |
+| `factory`      | GaugesDaoFactory_v1_1_0.sol         | ❌       | Versioned implementation   |
+| `factory`      | UpgradeFactory_v1_0_0\_\_v1_2_0.sol | ❌       | Upgrade utility            |
+| `clock`        | Clock.sol                           | ❌       | Core clock contract        |
+| `clock`        | ClockSeason.sol                     | ❌       | Season-specific logic      |
+| `clock`        | IClock.sol                          | ❌       | Interface                  |
+| `clock`        | IClockSeason.sol                    | ❌       | Interface                  |
+| `curve`        | QuadraticIncreasingCurve.sol        | ❌       | Quadratic variant          |
+| `curve`        | QuadraticIncreasingCurveSeason.sol  | ❌       | Season-specific variant    |
+| `curve`        | IEscrowCurveIncreasing.sol          | ❌       | Interface                  |
+| `escrow`       | VotingEscrowIncreasing.sol          | ❌       | Main escrow contract       |
+| `escrow`       | IVotingEscrowIncreasing.sol         | ❌       | Interface                  |
+| `factory`      | GaugesDaoFactorySeason.sol          | ❌       | Season-specific            |
+| `libs`         | CurveConstantLib.sol                | ❌       | Math/constants lib         |
+| `libs`         | ProxyLib.sol                        | ❌       | Proxy utilities            |
+| `libs`         | SignedFixedPointMathLib.sol         | ❌       | Math lib                   |
+| `lock`         | Lock.sol                            | ❌       | Main lock contract         |
+| `lock`         | ILock.sol                           | ❌       | Interface                  |
+| `lock`         | IERC721EMB.sol                      | ❌       | ERC721 interface extension |
+| `queue`        | ExitQueue.sol                       | ❌       | Queue implementation       |
+| `queue`        | IExitQueue.sol                      | ❌       | Interface                  |
+| `setup`        | GaugeVoterSetup.sol                 | ❌       | Setup logic                |
+| `setup`        | GaugeVoterSetup_v1_1_0.sol          | ❌       | Versioned setup            |
+| `setup`        | GaugeVoterSetupSeason.sol           | ❌       | Season-specific setup      |
+| `voting`       | TokenGaugeVoter.sol                 | ❌       | Token-based voter          |
+| `voting`       | TokenGaugeVoterSeason.sol           | ❌       | Season-specific logic      |
+| `voting`       | TokenGaugeVoter_v1_1_0.sol          | ❌       | Versioned implementation   |
+| `voting`       | IGaugeVoter.sol                     | ❌       | Interface                  |
+| `voting`       | ITokenGaugeVoter.sol                | ❌       | Interface                  |
 
 ## Understanding Versioned changes
 
