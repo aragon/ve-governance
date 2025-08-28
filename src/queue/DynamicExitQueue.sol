@@ -297,11 +297,12 @@ contract DynamicExitQueue is IDynamicExitQueue, IClockUser, DaoAuthorizable, UUP
 
         // This should never occur as escrow already checks this
         // but for safety, still advisable to have this check.
-        if(ticket.holder == address(0)) {
+        if (ticket.holder == address(0)) {
             revert CannotCancelExit();
         }
 
         _queue[_tokenId] = TicketV2(address(0), 0);
+        emit ExitCancelled(_tokenId, ticket.holder);
     }
 
     /// @notice Calculate the absolute fee amount for exiting a specific token

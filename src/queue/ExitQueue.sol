@@ -168,11 +168,12 @@ contract ExitQueue is IExitQueue, IClockUser, DaoAuthorizable, UUPSUpgradeable {
 
         // This should never occur as escrow already checks this
         // but for safety, still advisable to have this check.
-        if(ticket.holder == address(0)) {
+        if (ticket.holder == address(0)) {
             revert CannotCancelExit();
         }
 
         _queue[_tokenId] = Ticket(address(0), 0);
+        emit ExitCancelled(_tokenId, ticket.holder);
     }
 
     /// @notice Returns the next exit date for a ticket

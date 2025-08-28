@@ -7,7 +7,6 @@ interface IExitQueueCoreErrorsAndEvents {
     error ZeroAddress();
     error CannotExit();
     error NoLockBalance();
-    error CannotCancelExit();
     event ExitQueued(uint256 indexed tokenId, address indexed holder, uint256 exitDate);
     event Exit(uint256 indexed tokenId, uint256 fee);
 }
@@ -82,11 +81,25 @@ interface IExitQueueMinLock is IExitMinLockCooldownErrorsAndEvents {
                         Exit Queue
 //////////////////////////////////////////////////////////////*/
 
+interface IExitQueueCancelErrorsAndEvents {
+    error CannotCancelExit();
+    event ExitCancelled(uint256 indexed tokenId, address indexed holder);
+}
+
+interface IExitQueueCancel {
+    function cancelExit(uint256 _tokenId) external;
+}
+
+/*///////////////////////////////////////////////////////////////
+                        Exit Queue
+//////////////////////////////////////////////////////////////*/
+
 interface IExitQueueErrorsAndEvents is
     IExitQueueCoreErrorsAndEvents,
     IExitQueueFeeErrorsAndEvents,
     IExitQueueCooldownErrorsAndEvents,
-    IExitMinLockCooldownErrorsAndEvents
+    IExitMinLockCooldownErrorsAndEvents,
+    IExitQueueCancelErrorsAndEvents
 {}
 
 interface IExitQueue is
@@ -94,7 +107,8 @@ interface IExitQueue is
     ITicket,
     IExitQueueFee,
     IExitQueueCooldown,
-    IExitQueueMinLock
+    IExitQueueMinLock,
+    IExitQueueCancel
 {
     /// @notice tokenId => Ticket
     function queue(uint256 _tokenId) external view returns (Ticket memory);
