@@ -161,6 +161,21 @@ contract ExitQueue is IExitQueue, IClockUser, DaoAuthorizable, UUPSUpgradeable {
         emit ExitQueued(_tokenId, _ticketHolder, exitDate);
     }
 
+    /// @notice Cancels the exit.
+    /// @dev The token must have a holder.
+    function cancelExit(uint256 _tokenId) external onlyEscrow {
+        Ticket memory ticket = _queue[_tokenId];
+
+        // This should never occur as escrow already checks this
+        // but for safety, still advisable to have this check.
+        if (ticket.holder == address(0)) {
+            revert CannotCancelExit();
+        }
+
+        _queue[_tokenId] = Ticket(address(0), 0);
+        emit ExitCancelled(_tokenId, ticket.holder);
+    }
+
     /// @notice Returns the next exit date for a ticket
     /// @dev The next exit date is the later of the cooldown expiry and the next checkpoint
     function nextExitDate() public view returns (uint256) {

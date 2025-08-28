@@ -38,6 +38,7 @@ import {
     IDynamicExitQueueErrorsAndEvents as IExitQueueErrorsAndEvents,
     IExitMinLockCooldownErrorsAndEvents
 } from "@queue/IDynamicExitQueue.sol";
+import {IExitQueueCancelErrorsAndEvents} from "@queue/IExitQueue.sol";
 import {ILock, IWhitelistErrors, IWhitelistEvents} from "@lock/ILock.sol";
 import {
     IMerge,

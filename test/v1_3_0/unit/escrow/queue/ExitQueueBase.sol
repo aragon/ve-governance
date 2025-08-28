@@ -14,7 +14,8 @@ import {
     ExitQueue,
     IExitQueue,
     ITicket,
-    IExitQueueErrorsAndEvents
+    IExitQueueErrorsAndEvents,
+    IExitQueueCancelErrorsAndEvents
 } from "../../../versions.sol";
 
 contract MockEscrow {

@@ -81,11 +81,25 @@ interface IExitQueueMinLock is IExitMinLockCooldownErrorsAndEvents {
                         Exit Queue
 //////////////////////////////////////////////////////////////*/
 
+interface IExitQueueCancelErrorsAndEvents {
+    error CannotCancelExit();
+    event ExitCancelled(uint256 indexed tokenId, address indexed holder);
+}
+
+interface IExitQueueCancel {
+    function cancelExit(uint256 _tokenId) external;
+}
+
+/*///////////////////////////////////////////////////////////////
+                        Exit Queue
+//////////////////////////////////////////////////////////////*/
+
 interface IExitQueueErrorsAndEvents is
     IExitQueueCoreErrorsAndEvents,
     IExitQueueFeeErrorsAndEvents,
     IExitQueueCooldownErrorsAndEvents,
-    IExitMinLockCooldownErrorsAndEvents
+    IExitMinLockCooldownErrorsAndEvents,
+    IExitQueueCancelErrorsAndEvents
 {}
 
 interface IExitQueue is
@@ -93,7 +107,8 @@ interface IExitQueue is
     ITicket,
     IExitQueueFee,
     IExitQueueCooldown,
-    IExitQueueMinLock
+    IExitQueueMinLock,
+    IExitQueueCancel
 {
     /// @notice tokenId => Ticket
     function queue(uint256 _tokenId) external view returns (Ticket memory);
@@ -102,6 +117,8 @@ interface IExitQueue is
     /// @param _tokenId the tokenId to queue an exit for
     /// @param _ticketHolder the address that will be granted the ticket
     function queueExit(uint256 _tokenId, address _ticketHolder) external;
+
+    function cancelExit(uint256 _tokenId) external;
 
     /// @notice exit the queue for a given tokenId. Requires the cooldown period to have passed
     /// @return exitAmount the amount of tokens that can be withdrawn

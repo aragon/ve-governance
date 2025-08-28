@@ -24,7 +24,7 @@ import {
 // interfaces
 import {GaugeVoterSetup, IGaugeVoterSetupParams} from "@setup/GaugeVoterSetup.sol";
 import {IEscrowCurveIncreasing, IEscrowCurveTokenStorage} from "@curve/IEscrowCurveIncreasing.sol";
-import {IExitQueue, ITicket, IExitQueueErrorsAndEvents} from "@queue/IExitQueue.sol";
+import {IExitQueue, ITicket, IExitQueueErrorsAndEvents, IExitQueueCancelErrorsAndEvents} from "@queue/IExitQueue.sol";
 import {ILock, IWhitelistErrors, IWhitelistEvents} from "@lock/ILock.sol";
 import {
     IVotingEscrowIncreasing,

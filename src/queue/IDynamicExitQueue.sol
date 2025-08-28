@@ -4,7 +4,8 @@ pragma solidity ^0.8.0;
 import {
     IExitQueueMinLock,
     IExitMinLockCooldownErrorsAndEvents,
-    IExitQueueCoreErrorsAndEvents
+    IExitQueueCoreErrorsAndEvents,
+    IExitQueueCancelErrorsAndEvents
 } from "./IExitQueue.sol";
 
 interface ITicketV2 {
@@ -118,7 +119,8 @@ interface IDynamicExitQueueFee is IDynamicExitQueueEventsAndErrors {
 interface IDynamicExitQueueErrorsAndEvents is
     IExitQueueCoreErrorsAndEvents,
     IExitMinLockCooldownErrorsAndEvents,
-    IDynamicExitQueueEventsAndErrors
+    IDynamicExitQueueEventsAndErrors,
+    IExitQueueCancelErrorsAndEvents
 {}
 
 interface IDynamicExitQueue is

@@ -18,7 +18,8 @@ import {
     DynamicExitQueue,
     IDynamicExitQueue,
     IDynamicExitQueueErrorsAndEvents,
-    ITicketV2
+    ITicketV2,
+    IExitQueueCancelErrorsAndEvents
 } from "../../../versions.sol";
 
 contract MockEscrow {
