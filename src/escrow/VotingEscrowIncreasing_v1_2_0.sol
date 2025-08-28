@@ -564,7 +564,7 @@ contract VotingEscrowV1_2_0 is
         IExitQueue(queue).queueExit(_tokenId, owner);
     }
 
-    /// @notice Allows to cancel a withdrawal request as long as it has not been exitted from queue.
+    /// @notice Allows cancellation of a pending withdrawal request 
     /// @dev The caller must be one that also called `beginWithdrawal`. 
     /// @param _tokenId The tokenId to cancel the withdrawal request for.
     function cancelWithdrawalRequest(uint256 _tokenId) public nonReentrant whenNotPaused {
