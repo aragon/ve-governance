@@ -192,7 +192,7 @@ contract EscrowBase is
         token.approve(address(escrow), _amount);
     }
 
-    function slopeChanges(uint256 _end) internal view returns (int256 slope) {
+    function slopeChanges(uint256 _end) internal view virtual returns (int256 slope) {
         return curve.slopeChanges(_end);
     }
 

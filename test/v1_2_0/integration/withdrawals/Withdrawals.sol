@@ -38,8 +38,6 @@ contract ERC721ReceiverMock is IERC721Receiver {
 
 contract TestWithdrawal is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage, EscrowBase {
     address gauge = address(0x777);
-    address alice = address(0x123);
-    address bob = address(0x192);
 
     function setUp() public override {
         super.setUp();
@@ -53,8 +51,12 @@ contract TestWithdrawal is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage, 
         address user;
         uint96 amount;
         bool withdraws;
+        bool delegateToOther;
+        address delegatee;
     }
 
+    /// 20 users create locks. Each of them either delegates to themselves or someone else.
+    /// This means that a single user could end up being delegated multiple times.
     function testFuzz_WithrawWithCancel(User[20] memory _users) public {
         uint256[] memory tokenIds = new uint256[](_users.length);
         IAddressGaugeVote.GaugeVote[] memory votes = new IAddressGaugeVote.GaugeVote[](1);
@@ -88,49 +90,68 @@ contract TestWithdrawal is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage, 
             vm.startPrank(_users[i].user);
             tokenIds[i] = escrow.createLock(_users[i].amount);
             nftLock.approve(address(escrow), tokenIds[i]);
-            ivotesAdapter.delegate(_users[i].user);
-            voter.vote(votes);
+
+            // Either delegate to himself or someone else.
+            address user = _users[i].user;
+            if (_users[i].delegateToOther) {
+                user = _users[(i + 1) % _users.length].user;
+            }
+            _users[i].delegatee = user;
+
+            ivotesAdapter.delegate(user);
             vm.stopPrank();
+
+            vm.prank(user);
+            voter.vote(votes);
         }
 
         // warp so create locks and beginwithdrawals are not in the same block.
         vm.warp(block.timestamp + 1);
 
         uint256[] memory vpBefore = new uint256[](_users.length);
-        uint256[] memory dgBefore = new uint256[](_users.length);
 
         for (uint256 i = 0; i < _users.length; i++) {
             vpBefore[i] = escrow.votingPower(tokenIds[i]);
-            dgBefore[i] = ivotesAdapter.getVotes(_users[i].user);
 
-            if (!_users[i].withdraws) continue;
-
-            vm.prank(_users[i].user);
-            escrow.beginWithdrawal(tokenIds[i]);
-        }
-
-        for (uint256 i = 0; i < _users.length; i++) {
-            if (_users[i].withdraws) {
-                assertEq(escrow.votingPower(tokenIds[i]), 0);
-                assertEq(ivotesAdapter.getVotes(_users[i].user), 0);
+            if (!_users[i].withdraws) {
+                assertNotEq(escrow.votingPower(tokenIds[i]), 0);
 
                 continue;
             }
 
-            assertNotEq(escrow.votingPower(tokenIds[i]), 0);
-            assertNotEq(ivotesAdapter.getVotes(_users[i].user), 0);
+            // If beginWithdraw occurs, delegatee's balance must be decreased
+            // by the amount of that specific tokenId for which begin
+            // withdraw occured.
+            uint256 beforeBeginWithdraw = ivotesAdapter.getVotes(_users[i].delegatee);
+
+            vm.prank(_users[i].user);
+            escrow.beginWithdrawal(tokenIds[i]);
+
+            uint256 afterBeginWithdraw = ivotesAdapter.getVotes(_users[i].delegatee);
+
+            assertApproxEqAbs(afterBeginWithdraw, beforeBeginWithdraw - vpBefore[i], 1);
+            assertEq(escrow.votingPower(tokenIds[i]), 0);
         }
 
         for (uint256 i = 0; i < _users.length; i++) {
-            if (!_users[i].withdraws) continue;
+            if (!_users[i].withdraws) {
+                assertEq(escrow.votingPower(tokenIds[i]), vpBefore[i]);
+                continue;
+            }
+
+            // If cancel withdraw occurs, delegatee's balance must be increased
+            // by the amount of that specific tokenId for which begin
+            // cancel withdraw occured occured.
+            uint256 beforeCancelWithdraw = ivotesAdapter.getVotes(_users[i].delegatee);
 
             vm.prank(_users[i].user);
             escrow.cancelWithdrawalRequest(tokenIds[i]);
+
+            uint256 afterCancelWithdraw = ivotesAdapter.getVotes(_users[i].delegatee);
+
+            assertApproxEqAbs(afterCancelWithdraw, beforeCancelWithdraw + vpBefore[i], 1);
+            assertEq(escrow.votingPower(tokenIds[i]), vpBefore[i]);
         }
 
-        for (uint256 i = 0; i < _users.length; i++) {
-            assertEq(escrow.votingPower(tokenIds[i]), vpBefore[i]);
-            assertEq(ivotesAdapter.getVotes(_users[i].user), dgBefore[i]);
-        }
     }
 }
