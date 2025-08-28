@@ -167,7 +167,7 @@ contract ExitQueue is IExitQueue, IClockUser, DaoAuthorizable, UUPSUpgradeable {
         Ticket memory ticket = _queue[_tokenId];
 
         // This should never occur as escrow already checks this
-        // but for safety, till adviseable to have this check.
+        // but for safety, still advisable to have this check.
         if(ticket.holder == address(0)) {
             revert CannotCancelExit();
         }
