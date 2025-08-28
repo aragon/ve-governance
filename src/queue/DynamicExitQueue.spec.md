@@ -144,6 +144,7 @@ interface IEarlyExitQueueEventsAndErrors {
   error FeePercentTooHigh(uint256 maxAllowed);
   error CooldownTooShort();
   error LegacyFunctionDeprecated();
+  error CannotCancelExit();
 }
 
 interface IEarlyExitQueue is IEarlyExitQueueEventsAndErrors {
@@ -199,6 +200,11 @@ interface IEarlyExitQueue is IEarlyExitQueueEventsAndErrors {
   /// @notice Minimum wait time before any exit is possible
   /// @return Time in seconds
   function minCooldown() external view returns (uint48);
+
+  /// @notice Cancel an exit that has been queued
+  /// @param _tokenId The token ID to cancel exit for
+  /// @dev Only callable by escrow contract
+  function cancelExit(uint256 _tokenId) external;
 }
 ```
 
@@ -261,6 +267,16 @@ interface IEarlyExitQueue is IEarlyExitQueueEventsAndErrors {
 - Return `true` if full cooldown elapsed (Phase 3 - normal exit)
 - Return `false` if still in Phase 1 or 2
 - Clear indicator for "minimum fee applies" status
+
+### 6. `cancelExit(uint256 _tokenId)`
+
+**Purpose**: Cancel a previously queued exit request
+**Requirements**:
+
+- Only callable by the escrow contract (onlyEscrow modifier)
+- Validate that the ticket exists (ticket.holder != address(0))
+- If no ticket exists, revert with `CannotCancelExit()` error
+- Clear the ticket by setting holder to address(0) and queuedAt to 0
 
 ## Breaking Change: Ticket Structure Redesign
 
