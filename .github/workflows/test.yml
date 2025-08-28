@@ -26,18 +26,18 @@ jobs:
         include:
           - name: slither-analysis
             download-repos: true
-            slither: false
+            slither: true
             claude: false
             claude-template: "prompts/slither/01-slither_summary.md"
             upload-artifacts: false
             final-cleanup: false
-          - name: claude-direct
-            download-repos: false
-            slither: true
-            claude: false
-            claude-template: "prompts/slither/02-claude-direct-analysis.md"
-            upload-artifacts: true
-            final-cleanup: true
+          #- name: claude-direct
+          #  download-repos: false
+          #  slither: true
+          #  claude: false
+          #  claude-template: "prompts/slither/02-claude-direct-analysis.md"
+          #  upload-artifacts: true
+          #  final-cleanup: true
       fail-fast: false  # Continue even if one fails
       max-parallel: 1   # This ensures sequential execution
     uses: "aragon/github-templates/.github/workflows/sc-security-analysis.yml@feat/sc-analysis"
