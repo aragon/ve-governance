@@ -580,7 +580,7 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
     function getTokenIdsBasedOnSeed(
         uint256[] memory _tokenIds,
         uint256 _seed
-    ) public view returns (uint256[] memory) {
+    ) public pure returns (uint256[] memory) {
         if (_tokenIds.length == 0) return new uint256[](0);
 
         uint256 numToDelegate = _bound(_seed, 1, _tokenIds.length);
