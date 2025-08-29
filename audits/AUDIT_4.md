@@ -60,6 +60,8 @@ As a result, we decided to bring the contracts back into development and make a 
 
 Excluded files have previously been audited, although we have renamed some of the files for consistency. There are a set of contracts that implement "seasons" which is a separate, standalone feature we do not wish to audit at this moment.
 
+Specification documents for relevant contracts are found in the same directory as the files. These provide additional context on the iface and functional requirements of each contract.
+
 The following files can be considered as part of the audit:
 
 | Contract Group | Contract Name                      | In Scope | Details                                |
