@@ -31,6 +31,11 @@ contract EscrowVotingPowerMock is IDelegateUpdateVotingPower {
 }
 
 contract EscrowIVotesAdapterA is EscrowIVotesAdapter {
+    constructor(
+        int256[3] memory coefficients,
+        uint256 maxEpoch
+    ) EscrowIVotesAdapter(coefficients, maxEpoch) {}
+
     function pointHistory_(
         address _account,
         uint256 _index
@@ -139,7 +144,8 @@ contract Base is
         address _clock,
         address _escrow
     ) public returns (EscrowIVotesAdapterA) {
-        EscrowIVotesAdapterA impl = new EscrowIVotesAdapterA();
+        (int256[3] memory coefficients, uint256 maxEpochs) = CurveConstantLib.getCoefficients();
+        EscrowIVotesAdapterA impl = new EscrowIVotesAdapterA(coefficients, maxEpochs);
         bool startPaused = false;
 
         bytes memory initCalldata = abi.encodeCall(

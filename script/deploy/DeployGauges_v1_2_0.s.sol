@@ -123,7 +123,7 @@ contract DeployGaugesV1_2_0 is Script {
             address(new VotingEscrow()),
             address(new Clock()),
             address(new Lock()),
-            address(new EscrowIVotesAdapter())
+            address(new EscrowIVotesAdapter(coefficients, maxEpoch))
         );
     }
 
