@@ -41,9 +41,9 @@ The env.example file contains descriptions for all the initial settings. You don
 
 Fork testing has 2 modes:
 
-1. "new-factory" will run against the live network fork, deploying new contracts via a new instance of the factory. See `make test-fork-testnet`, `make test-fork-prodnet` and simmilar
+1. "new-factory" will run against the live network fork, deploying new contracts via a new instance of the factory. See `make test-fork-testnet`, `make test-fork-prodnet` and similar
 
-2. "existing-factory" will run against the live network fork, using the existing factory & therefore the existing contracts. See `make test-fork-factory-testnet`, `make test-fork-factory-prodnet` and simmilar
+2. "existing-factory" will run against the live network fork, using the existing factory & therefore the existing contracts. See `make test-fork-factory-testnet`, `make test-fork-factory-prodnet` and similar
 
 In both cases, you will need to find the correct Aragon OSx contracts for the chain you wish to fork against. These can be found in the [OSx commons repo](https://github.com/aragon/osx-commons/tree/main/configs/src/deployments/json)
 
@@ -218,7 +218,7 @@ The main workflow in the Aragon VE Governance build is as follows:
 
 ## Withdrawing
 
-- The user can exit their position at any time. In this case, they are entered into an "Exit Queue", whereupon their NFT is held in the queue for a "cooldown" period of X Days. After the period ends, they can burn the NFT to receieve their underlying balance back.
+- The user can exit their position at any time. In this case, they are entered into an "Exit Queue", whereupon their NFT is held in the queue for a "cooldown" period of X Days. After the period ends, they can burn the NFT to receive their underlying balance back.
   - It's possible to add a `minLock` period whereby a user is prevented from entering the exit queue before a certain time. This means they have their NFT available to vote but can't enter the exit process.
   - Voting power is removed from the NFT at this time
   - The exit queue can optionally set an exit fee that will be charged on exit.
@@ -256,7 +256,7 @@ The main workflow in the Aragon VE Governance build is as follows:
 
 - The address gauge voter requires an IVotes compatible voting token
 - Users must self delegate to vote on the voter
-- Delegates can vote on the user's behalf without recieving approval to transfer the token
+- Delegates can vote on the user's behalf without receiving approval to transfer the token
 - The address voter exposes a hook that can be called to update voting power when delegate balances change.
   - In our VE implementation, this automatically adjusts gauge votes when delegation changes
 
