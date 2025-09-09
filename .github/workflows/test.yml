@@ -19,7 +19,7 @@ jobs:
     name: Test Unit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           submodules: true
 
@@ -47,7 +47,7 @@ jobs:
     env:
       FOUNDRY_PROFILE: "gas-report"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           submodules: true
 
@@ -95,7 +95,7 @@ jobs:
     name: Coverage Report
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           submodules: true
 
@@ -134,7 +134,7 @@ jobs:
     name: Test Upgrade
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           submodules: true
 
@@ -189,7 +189,7 @@ jobs:
       PLUGIN_SETUP_PROCESSOR: "0xC24188a73dc09aA7C721f96Ad8857B469C01dC9f"
       PLUGIN_REPO_FACTORY: "0x399ce2a71ef78be6890eb628384dd09d4382a7f0"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           submodules: true
 
