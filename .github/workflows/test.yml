@@ -21,7 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: true
+          submodules: recursive
 
       - name: foundry-toolchain
         uses: foundry-rs/foundry-toolchain@v1.3.1
