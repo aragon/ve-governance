@@ -388,7 +388,8 @@ contract EscrowBase is
         address _escrow,
         address _clock
     ) public returns (EscrowIVotesAdapter) {
-        EscrowIVotesAdapter impl = new EscrowIVotesAdapter();
+        (int256[3] memory coefficients, uint256 maxEpoch) = CurveConstantLib.getCoefficients();
+        EscrowIVotesAdapter impl = new EscrowIVotesAdapter(coefficients, maxEpoch);
         bool startPaused = false;
 
         bytes memory initCalldata = abi.encodeCall(

@@ -419,7 +419,7 @@ contract RegressionV1_0_0__to__V1_3_0 is Test, IGaugeVote, FixedPointBase {
                 new LinearEscrowCurve(coefficients, maxEpochs),
                 new VotingEscrowV1_2_0(),
                 new LockV1_2_0(),
-                new EscrowIVotesAdapter(),
+                new EscrowIVotesAdapter(coefficients, maxEpochs),
                 new AddressGaugeVoter()
             );
 

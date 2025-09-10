@@ -280,7 +280,7 @@ contract RegressionV1_0_0__to__V1_3_0_Fork is
                 new LinearEscrowCurve(coefficients, maxEpoch),
                 new VotingEscrowV1_2_0(),
                 new LockV1_2_0(),
-                new EscrowIVotesAdapter(),
+                new EscrowIVotesAdapter(coefficients, maxEpoch),
                 new AddressGaugeVoter()
             );
 

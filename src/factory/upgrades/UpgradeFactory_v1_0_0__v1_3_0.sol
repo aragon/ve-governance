@@ -242,11 +242,11 @@ contract UpgradeGaugesFactoryV1_0_0__V1_3_0 {
                 // as the curve that was already deployed prior.
                 int256[3] memory coefficients = pluginSet.curve.getCoefficients(1);
                 require(
-                    CurveConstantLib.SHARED_CONSTANT_COEFFICIENT == coefficients[0],
+                    ivotesAdapter.SHARED_CONSTANT_COEFFICIENT() == coefficients[0],
                     "invalid constant coefficient"
                 );
                 require(
-                    CurveConstantLib.SHARED_LINEAR_COEFFICIENT == coefficients[1],
+                    ivotesAdapter.SHARED_LINEAR_COEFFICIENT() == coefficients[1],
                     "invalid linear coefficient"
                 );
             }

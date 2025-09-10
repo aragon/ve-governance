@@ -51,6 +51,15 @@ contract EscrowIVotesAdapter is
     /// @notice The role used to call `setDelegateAddress` and delegate/undelegate for specific tokens.
     bytes32 public constant DELEGATION_TOKEN_ROLE = keccak256("DELEGATION_TOKEN_ROLE");
 
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
+    int256 public immutable SHARED_QUADRATIC_COEFFICIENT;
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
+    int256 public immutable SHARED_LINEAR_COEFFICIENT;
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
+    int256 public immutable SHARED_CONSTANT_COEFFICIENT;
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
+    uint256 public immutable MAX_EPOCHS;
+    
     /// @notice Clock contract for epoch duration
     address public escrowClock;
 
@@ -67,7 +76,14 @@ contract EscrowIVotesAdapter is
                             Initialization
     //////////////////////////////////////////////////////////////*/
 
-    constructor() {
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor(int256[3] memory _coefficients, uint256 _maxEpochs) {
+        SHARED_CONSTANT_COEFFICIENT = _coefficients[0];
+        SHARED_LINEAR_COEFFICIENT = _coefficients[1];
+        SHARED_QUADRATIC_COEFFICIENT = _coefficients[2];
+
+        MAX_EPOCHS = _maxEpochs;
+
         _disableInitializers();
     }
 
@@ -85,7 +101,7 @@ contract EscrowIVotesAdapter is
 
         if (_startPaused) _pause();
 
-        maxTime = IClock(escrowClock).epochDuration() * CurveConstantLib.MAX_EPOCHS;
+        maxTime = IClock(escrowClock).epochDuration() * MAX_EPOCHS;
     }
 
     function pause() external auth(DELEGATION_ADMIN_ROLE) {
@@ -558,11 +574,11 @@ contract EscrowIVotesAdapter is
 
         int256 amount = uint256(_locked.amount).toInt256();
 
-        int256 slope = amount * CurveConstantLib.SHARED_LINEAR_COEFFICIENT;
+        int256 slope = amount * SHARED_LINEAR_COEFFICIENT;
         int256 bias = slope *
             int256(elapsed) +
             amount *
-            CurveConstantLib.SHARED_CONSTANT_COEFFICIENT;
+            SHARED_CONSTANT_COEFFICIENT;
 
         if (bias < 0) bias = 0;
 

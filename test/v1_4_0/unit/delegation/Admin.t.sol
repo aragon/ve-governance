@@ -3,6 +3,7 @@ pragma solidity ^0.8.17;
 import {Base} from "./Base.sol";
 
 import {EscrowIVotesAdapter} from "../../versions.sol";
+import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 
 contract TestDelegateAdmin is Base {
     address attacker = address(1);
@@ -12,7 +13,8 @@ contract TestDelegateAdmin is Base {
     }
 
     function testUUPSUpgrade() public {
-        address newImpl = address(new EscrowIVotesAdapter());
+        (int256[3] memory coefficients, uint256 maxEpoch) = CurveConstantLib.getCoefficients();
+        address newImpl = address(new EscrowIVotesAdapter(coefficients, maxEpoch));
         dg.upgradeTo(newImpl);
         assertEq(dg.implementation(), newImpl);
 
