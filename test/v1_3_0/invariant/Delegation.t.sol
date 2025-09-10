@@ -47,7 +47,7 @@ import {
 import {ProtocolFactory} from "@aragon/protocol-factory/src/ProtocolFactory.sol";
 import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 
-contract Testblaxblux is IEscrowCurveTokenStorage, FactoryBase {
+contract TestDelegationInvariant is IEscrowCurveTokenStorage, FactoryBase {
     DelegationHandler internal h;
 
     function setUp() public override {

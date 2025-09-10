@@ -7,16 +7,9 @@ import {Vm} from "forge-std/Vm.sol";
 // aragon contracts
 import {IDAO} from "@aragon/osx-commons-contracts/src/dao/IDAO.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
-import {DaoUnauthorized} from "@aragon/osx-commons-contracts/src/permission/auth/auth.sol";
-import {Multisig, MultisigSetup} from "@aragon/multisig/src/MultisigSetup.sol";
 
-import {MockPluginSetupProcessor} from "@mocks/osx/MockPSP.sol";
-import {MockDAOFactory} from "@mocks/osx/MockDAOFactory.sol";
 import {MockERC20} from "@mocks/MockERC20.sol";
 import {createTestDAO} from "@mocks/MockDAO.sol";
-
-import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
-import {console2 as console} from "forge-std/console2.sol";
 
 import "@helpers/OSxHelpers.sol";
 import {ProxyLib} from "@libs/ProxyLib.sol";
