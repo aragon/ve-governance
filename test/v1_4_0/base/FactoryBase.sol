@@ -8,7 +8,8 @@ import {Vm} from "forge-std/Vm.sol";
 import {IDAO} from "@aragon/osx-commons-contracts/src/dao/IDAO.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {DaoUnauthorized} from "@aragon/osx-commons-contracts/src/permission/auth/auth.sol";
-import {Multisig, MultisigSetup} from "@aragon/multisig/src/MultisigSetup.sol";
+
+import {MockERC20} from "@mocks/MockERC20.sol";
 
 import "@helpers/OSxHelpers.sol";
 import {ProxyLib} from "@libs/ProxyLib.sol";
