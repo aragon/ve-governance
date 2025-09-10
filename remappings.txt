@@ -6,6 +6,7 @@ utils/=test/utils/
 @aragon/admin/=lib/osx/packages/contracts/src/plugins/governance/admin/
 @aragon/multisig/=lib/multisig-plugin/packages/contracts/
 @aragon/osx-commons-contracts/=lib/osx-commons/contracts/
+@aragon/protocol-factory/=lib/protocol-factory/
 
 @interfaces/=src/interfaces/
 @libs/=src/libs/
@@ -24,7 +25,6 @@ utils/=test/utils/
 @mocks/=test/mocks/
 @test/=test/
   
-@ensdomains/ens-contracts/=lib/ens-contracts/
 ens-contracts/=lib/ens-contracts/contracts/
 
 @openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/

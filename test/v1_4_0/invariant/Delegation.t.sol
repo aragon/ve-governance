@@ -2,7 +2,7 @@ pragma solidity ^0.8.17;
 
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
-import {EscrowBase} from "../base/EscrowBase.sol";
+import {FactoryBase} from "../base/FactoryBase.sol";
 
 import {console2 as console} from "forge-std/console2.sol";
 import {IDAO} from "@aragon/osx-commons-contracts/src/dao/IDAO.sol";
@@ -32,16 +32,11 @@ import {StdInvariant} from "forge-std/StdInvariant.sol";
 
 import {DelegationHandler} from "./handlers/DelegationHandler.sol";
 
-contract TestDelegationInvariant is IEscrowCurveTokenStorage, EscrowBase {
+contract TestDelegationInvariant is IEscrowCurveTokenStorage, FactoryBase {
     DelegationHandler internal h;
 
     function setUp() public override {
         super.setUp();
-
-        escrow.setMinDeposit(100);
-        queue.setMinLock(2 days);
-        escrow.enableSplit();
-        nftLock.enableTransfers();
 
         h = new DelegationHandler(
             DelegationHandler.Contracts({
@@ -52,9 +47,9 @@ contract TestDelegationInvariant is IEscrowCurveTokenStorage, EscrowBase {
                 queue: address(queue),
                 voter: address(voter)
             }),
-            address(this),
-            curve.maxTime(),
-            clock.checkpointInterval()
+            address(dao),
+            maxTime,
+            checkpointInterval
         );
 
         targetContract(address(h));

@@ -19,9 +19,6 @@ branch = v4.9.2
 [submodule "lib/solmate"]
 	path = lib/solmate
 	url = https://github.com/transmissions11/solmate
-[submodule "lib/ens-contracts"]
-	path = lib/ens-contracts
-	url = https://github.com/ensdomains/ens-contracts
 [submodule "lib/openzeppelin-foundry-upgrades"]
 	path = lib/openzeppelin-foundry-upgrades
 	url = https://github.com/Openzeppelin/openzeppelin-foundry-upgrades
@@ -33,3 +30,6 @@ branch = v4.9.2
 	path = lib/osx-commons
 	url = https://github.com/aragon/osx-commons
 	branch = main
+[submodule "lib/protocol-factory"]
+	path = lib/protocol-factory
+	url = https://github.com/aragon/protocol-factory

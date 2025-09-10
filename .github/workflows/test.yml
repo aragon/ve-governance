@@ -21,7 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: true
+          submodules: recursive
 
       - name: foundry-toolchain
         uses: foundry-rs/foundry-toolchain@v1.3.1
@@ -31,7 +31,7 @@ jobs:
 
       - name: Run Forge build
         run: |
-          forge build --sizes
+          forge build
         id: build
 
       - name: Run Forge tests
@@ -51,7 +51,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: true
+          submodules: recursive
 
       - name: foundry-toolchain
         uses: foundry-rs/foundry-toolchain@v1.3.1
@@ -101,7 +101,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: true
+          submodules: recursive
 
       - name: foundry-toolchain
         uses: foundry-rs/foundry-toolchain@v1.3.1
@@ -140,7 +140,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: true
+          submodules: recursive
 
       - name: foundry-toolchain
         uses: foundry-rs/foundry-toolchain@v1.3.1
@@ -150,7 +150,7 @@ jobs:
 
       - name: Run Forge build
         run: |
-          forge build --sizes
+          forge build
         id: build
 
       - name: Run Forge tests
@@ -167,7 +167,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: true
+          submodules: recursive
 
       - name: foundry-toolchain
         uses: foundry-rs/foundry-toolchain@v1.3.1
@@ -220,7 +220,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: true
+          submodules: recursive
       - name: Load secret
         id: load_secret
         uses: 1password/load-secrets-action@v3
@@ -236,7 +236,7 @@ jobs:
 
       - name: Run Forge build
         run: |
-          forge build --sizes
+          forge build
         id: build
 
       - name: Run Forge tests
