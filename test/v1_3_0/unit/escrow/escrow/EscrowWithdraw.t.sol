@@ -52,24 +52,6 @@ contract TestWithdraw is IEscrowCurveTokenStorage, IGaugeVote, ITicket, EscrowBa
         escrow.beginWithdrawal(tokenId);
     }
     
-    // TODO:
-    // function test_blaxblux() public {
-    //     token.mint(address(this), 100e18);
-    //     token.approve(address(escrow), 100e18);
-
-    //     vm.warp(1);
-    //     uint256 to = escrow.createLock(40e18); // id = 3 gets created in 100th block
-
-    //     vm.warp(2);
-    //     uint256 from = escrow.createLock(60e18); // id = 4 gets created in 101th block
-        
-    //     escrow.merge(from, to);  // 4 gets merged into 3.
-    //     nftLock.approve(address(escrow), to);
-
-    //     // this should revert
-    //     escrow.beginWithdrawal(to);
-    // }
-    
     // setup a fee withdrawal
     function testFuzz_feeWithdrawal(uint64 _fee, uint128 _dep, address _who) public {
         vm.assume(_who != address(0) && address(_who).code.length == 0);
