@@ -531,6 +531,42 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
         }
     }
 
+    function checkpointTransition(
+        uint256 _jumpSeed,
+        uint256 _userSeed,
+        uint256 _transitionCount
+    ) public adjustTimestamp(_jumpSeed) {
+        uint256 len = delegateesWithVpPower.length();
+        if (len == 0) return;
+
+        address delegatee = delegateesWithVpPower.at(_bound(_userSeed, 0, len - 1));
+        // We don't allow _transitionCount to be 0.
+        // more than 300 causes too much gas overhead, 
+        // so 300 is enough to test most cases.
+        _transitionCount = _bound(_transitionCount, 1, 300);
+
+        ivotesAdapter.checkpointTransition(delegatee, _transitionCount);
+    }
+
+    function reset(uint256 _jumpSeed, uint256 _userSeed) public adjustTimestamp(_jumpSeed) {
+        uint256 len = delegateesWithVpPower.length();
+        if (len == 0) return;
+
+        address delegatee = delegateesWithVpPower.at(_bound(_userSeed, 0, len - 1));
+        _transitionIfTooOld(delegatee);
+
+        // These checks intentionally discard many cases. This is desirable because
+        // we don’t want `reset` to be invoked excessively. Since `reset` is already
+        // triggered during merge/split/createlock operations, calling it too often
+        // directly would reduce the effectiveness of those resets in testing.
+        // With high depths and runs, it still calls `voter.reset` below enough times.
+        if(!voter.isVoting(delegatee)) return;
+        if(!voter.votingActive()) return;
+
+        vm.prank(delegatee);
+        voter.reset();
+    }
+
     // ======================== Helper Functions ===================
 
     function _updateDelegationState(

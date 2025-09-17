@@ -29,6 +29,7 @@ interface IVotingEscrowCoreErrors {
     error AmountTooSmall();
     error OnlyLockNFT();
     error OnlyIVotesAdapter();
+    error AddressAlreadySet();
 }
 
 interface IVotingEscrowCoreEvents {

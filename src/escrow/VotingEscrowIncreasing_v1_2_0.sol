@@ -156,17 +156,26 @@ contract VotingEscrowV1_2_0 is
         emit MinDepositSet(_initialMinDeposit);
     }
 
+    /// @notice Used to revert if admin tries to change the contract address 2nd time.
+    modifier contractAlreadySet(address _contract) {
+        if (_contract != address(0)) revert AddressAlreadySet();
+
+        _;
+    }
+
     /*//////////////////////////////////////////////////////////////
                               Admin Setters
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Added in 1.2.0 to set the ivotes adapter
-    function setIVotesAdapter(address _ivotesAdapter) external auth(ESCROW_ADMIN_ROLE) {
+    function setIVotesAdapter(
+        address _ivotesAdapter
+    ) external auth(ESCROW_ADMIN_ROLE) contractAlreadySet(ivotesAdapter) {
         ivotesAdapter = _ivotesAdapter;
     }
 
     /// @notice Sets the curve contract that calculates the voting power
-    function setCurve(address _curve) external auth(ESCROW_ADMIN_ROLE) {
+    function setCurve(address _curve) external auth(ESCROW_ADMIN_ROLE) contractAlreadySet(curve) {
         curve = _curve;
     }
 
@@ -176,12 +185,12 @@ contract VotingEscrowV1_2_0 is
     }
 
     /// @notice Sets the exit queue contract that manages withdrawal eligibility
-    function setQueue(address _queue) external auth(ESCROW_ADMIN_ROLE) {
+    function setQueue(address _queue) external auth(ESCROW_ADMIN_ROLE) contractAlreadySet(queue) {
         queue = _queue;
     }
 
     /// @notice Sets the clock contract that manages epoch and voting periods
-    function setClock(address _clock) external auth(ESCROW_ADMIN_ROLE) {
+    function setClock(address _clock) external auth(ESCROW_ADMIN_ROLE) contractAlreadySet(clock) {
         clock = _clock;
     }
 
@@ -264,13 +273,11 @@ contract VotingEscrowV1_2_0 is
     }
 
     /// @return The total voting power at the current block
-    /// @dev Currently unsupported
     function totalVotingPower() external view returns (uint256) {
         return totalVotingPowerAt(block.timestamp);
     }
 
     /// @return The total voting power at a specific timestamp
-    /// @dev Currently unsupported
     function totalVotingPowerAt(uint256 _timestamp) public view returns (uint256) {
         return IEscrowCurve(curve).supplyAt(_timestamp);
     }
@@ -394,8 +401,6 @@ contract VotingEscrowV1_2_0 is
         // as one token gets merged into another. For this reason,
         // We call `_moveDelegateVotes` with empty locked, so it doesn't
         // reduce/increase the same voting power for gas efficiency.
-        // Note that we still decrease owner's delegated token count
-        // as `_from` token is destroyed.
         IEscrowIVotesAdapter(ivotesAdapter).mergeDelegateVotes(
             IDelegateMoveVoteRecipient.TokenLock(ownerFrom, _from, oldLockedFrom),
             IDelegateMoveVoteRecipient.TokenLock(ownerFrom, _to, oldLockedTo)
@@ -563,14 +568,14 @@ contract VotingEscrowV1_2_0 is
         IExitQueue(queue).queueExit(_tokenId, owner);
     }
 
-    /// @notice Allows cancellation of a pending withdrawal request 
-    /// @dev The caller must be one that also called `beginWithdrawal`. 
+    /// @notice Allows cancellation of a pending withdrawal request
+    /// @dev The caller must be one that also called `beginWithdrawal`.
     /// @param _tokenId The tokenId to cancel the withdrawal request for.
     function cancelWithdrawalRequest(uint256 _tokenId) public nonReentrant whenNotPaused {
         address owner = IExitQueue(queue).ticketHolder(_tokenId);
         address sender = _msgSender();
 
-        if(owner != sender) {
+        if (owner != sender) {
             revert NotTicketHolder();
         }
 

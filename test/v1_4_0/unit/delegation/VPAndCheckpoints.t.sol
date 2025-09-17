@@ -164,6 +164,11 @@ contract TestVPAndCheckpoints is Base {
                      Transition Checkpoints
     //////////////////////////////////////////////////////////////*/
 
+    function test_shouldRevertIfZeroTransition() public {
+        vm.expectRevert(ZeroTransition.selector);
+        dg.checkpointTransition(alice, 0);
+    }
+    
     function test_shouldRevertIfPaused() public {
         dg.pause();
 
