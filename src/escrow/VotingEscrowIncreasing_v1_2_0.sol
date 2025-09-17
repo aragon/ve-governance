@@ -190,7 +190,7 @@ contract VotingEscrowV1_2_0 is
     }
 
     /// @notice Sets the clock contract that manages epoch and voting periods
-    function setClock(address _clock) external auth(ESCROW_ADMIN_ROLE) ContractAlreadySet(clock) {
+    function setClock(address _clock) external auth(ESCROW_ADMIN_ROLE) contractAlreadySet(clock) {
         clock = _clock;
     }
 
