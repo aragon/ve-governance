@@ -157,7 +157,7 @@ contract VotingEscrowV1_2_0 is
     }
 
     /// @notice Used to revert if admin tries to change the contract address 2nd time.
-    modifier ContractAlreadySet(address _contract) {
+    modifier contractAlreadySet(address _contract) {
         if (_contract != address(0)) revert AddressAlreadySet();
 
         _;
@@ -170,12 +170,12 @@ contract VotingEscrowV1_2_0 is
     /// @notice Added in 1.2.0 to set the ivotes adapter
     function setIVotesAdapter(
         address _ivotesAdapter
-    ) external auth(ESCROW_ADMIN_ROLE) ContractAlreadySet(ivotesAdapter) {
+    ) external auth(ESCROW_ADMIN_ROLE) contractAlreadySet(ivotesAdapter) {
         ivotesAdapter = _ivotesAdapter;
     }
 
     /// @notice Sets the curve contract that calculates the voting power
-    function setCurve(address _curve) external auth(ESCROW_ADMIN_ROLE) ContractAlreadySet(curve) {
+    function setCurve(address _curve) external auth(ESCROW_ADMIN_ROLE) contractAlreadySet(curve) {
         curve = _curve;
     }
 
@@ -185,12 +185,12 @@ contract VotingEscrowV1_2_0 is
     }
 
     /// @notice Sets the exit queue contract that manages withdrawal eligibility
-    function setQueue(address _queue) external auth(ESCROW_ADMIN_ROLE) ContractAlreadySet(queue) {
+    function setQueue(address _queue) external auth(ESCROW_ADMIN_ROLE) contractAlreadySet(queue) {
         queue = _queue;
     }
 
     /// @notice Sets the clock contract that manages epoch and voting periods
-    function setClock(address _clock) external auth(ESCROW_ADMIN_ROLE) ContractAlreadySet(clock) {
+    function setClock(address _clock) external auth(ESCROW_ADMIN_ROLE) contractAlreadySet(clock) {
         clock = _clock;
     }
 
@@ -552,7 +552,10 @@ contract VotingEscrowV1_2_0 is
 
         // Make sure creating lock and begin withdrawal
         // doesn't occur in the same tx.
-        IEscrowCurve.TokenPoint memory point = IEscrowCurve(curve).tokenPointHistory(_tokenId, 1);
+        IEscrowCurve.TokenPoint memory point = IEscrowCurve(curve).tokenPointHistory(
+            _tokenId,
+            IEscrowCurve(curve).tokenPointLatestIndex(_tokenId)
+        );
         if (block.timestamp == point.writtenTs) {
             revert CannotWithdrawInSameBlock();
         }
