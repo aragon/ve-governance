@@ -180,7 +180,7 @@ contract VotingEscrowV1_2_0 is
     }
 
     /// @notice Sets the voter contract that tracks votes
-    function setVoter(address _voter) external auth(ESCROW_ADMIN_ROLE) ContractAlreadySet(voter) {
+    function setVoter(address _voter) external auth(ESCROW_ADMIN_ROLE) {
         voter = _voter;
     }
 

@@ -86,13 +86,10 @@ contract TestEscrowAdmin is EscrowBase {
         vm.prank(attacker);
         vm.expectRevert(err);
         escrow.setVoter(address(2));
-    }
 
-    function test_RevertIfVoterAlreadySet(address _newVoter) public {
-        vm.expectRevert(AddressAlreadySet.selector);
-        escrow.setVoter(_newVoter);
+        escrow.setVoter(address(2));
     }
-
+    
     function test_RevertIfQueueSetUnauthorized() public {
         VotingEscrow escrow_ = _deployEscrow(address(token), address(dao), address(clock), 1);
 
