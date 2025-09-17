@@ -89,7 +89,7 @@ contract TestEscrowAdmin is EscrowBase {
 
         escrow.setVoter(address(2));
     }
-    
+
     function test_RevertIfQueueSetUnauthorized() public {
         VotingEscrow escrow_ = _deployEscrow(address(token), address(dao), address(clock), 1);
 
@@ -101,7 +101,7 @@ contract TestEscrowAdmin is EscrowBase {
 
     function test_RevertIfQueueAlreadySet(address _queue) public {
         vm.expectRevert(AddressAlreadySet.selector);
-        escrow.setVoter(_queue);
+        escrow.setQueue(_queue);
     }
 
     function testUUPSUpgrade() public {

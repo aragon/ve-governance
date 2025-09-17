@@ -101,7 +101,7 @@ contract TestEscrowAdmin is EscrowBase {
 
     function test_RevertIfQueueAlreadySet(address _queue) public {
         vm.expectRevert(AddressAlreadySet.selector);
-        escrow.setVoter(_queue);
+        escrow.setQueue(_queue);
     }
 
     function testUUPSUpgrade() public {
