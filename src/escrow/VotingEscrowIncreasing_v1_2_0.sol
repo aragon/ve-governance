@@ -157,7 +157,7 @@ contract VotingEscrowV1_2_0 is
     }
 
     /// @notice Used to revert if admin tries to change the contract address 2nd time.
-    modifier ContractAlreadySet(address _contract) {
+    modifier contractAlreadySet(address _contract) {
         if (_contract != address(0)) revert AddressAlreadySet();
 
         _;
