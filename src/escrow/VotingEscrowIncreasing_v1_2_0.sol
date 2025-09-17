@@ -170,7 +170,7 @@ contract VotingEscrowV1_2_0 is
     /// @notice Added in 1.2.0 to set the ivotes adapter
     function setIVotesAdapter(
         address _ivotesAdapter
-    ) external auth(ESCROW_ADMIN_ROLE) ContractAlreadySet(ivotesAdapter) {
+    ) external auth(ESCROW_ADMIN_ROLE) contractAlreadySet(ivotesAdapter) {
         ivotesAdapter = _ivotesAdapter;
     }
 
