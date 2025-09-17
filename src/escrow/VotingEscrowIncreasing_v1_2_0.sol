@@ -175,7 +175,7 @@ contract VotingEscrowV1_2_0 is
     }
 
     /// @notice Sets the curve contract that calculates the voting power
-    function setCurve(address _curve) external auth(ESCROW_ADMIN_ROLE) ContractAlreadySet(curve) {
+    function setCurve(address _curve) external auth(ESCROW_ADMIN_ROLE) contractAlreadySet(curve) {
         curve = _curve;
     }
 
