@@ -185,7 +185,7 @@ contract VotingEscrowV1_2_0 is
     }
 
     /// @notice Sets the exit queue contract that manages withdrawal eligibility
-    function setQueue(address _queue) external auth(ESCROW_ADMIN_ROLE) ContractAlreadySet(queue) {
+    function setQueue(address _queue) external auth(ESCROW_ADMIN_ROLE) contractAlreadySet(queue) {
         queue = _queue;
     }
 
