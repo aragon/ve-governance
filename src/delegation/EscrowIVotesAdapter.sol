@@ -373,6 +373,8 @@ contract EscrowIVotesAdapter is
         address _delegatee,
         uint256 _transitionCount
     ) internal override {
+        if(_transitionCount == 0) revert ZeroTransition();
+        
         GlobalPoint memory lastPoint = GlobalPoint({
             bias: 0,
             slope: 0,

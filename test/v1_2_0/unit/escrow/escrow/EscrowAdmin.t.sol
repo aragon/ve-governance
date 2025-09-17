@@ -25,26 +25,46 @@ contract TestEscrowAdmin is EscrowBase {
         escrow.setLockNFT(address(0));
     }
 
-    function testSetIVotesAdapter(address _newIVotesAdapter) public {
-        escrow.setIVotesAdapter(_newIVotesAdapter);
-        assertEq(escrow.ivotesAdapter(), _newIVotesAdapter);
+    function test_RevertIfIVotesAdapterSetUnauthorized() public {
+        VotingEscrow escrow_ = _deployEscrow(address(token), address(dao), address(clock), 1);
 
         bytes memory err = _authErr(attacker, address(escrow), escrow.ESCROW_ADMIN_ROLE());
         vm.prank(attacker);
         vm.expectRevert(err);
-        escrow.setIVotesAdapter(_newIVotesAdapter);
-        escrow.setIVotesAdapter(address(0));
+        escrow.setIVotesAdapter(address(2));
     }
 
-    function testSetCurve(address _newCurve) public {
-        escrow.setCurve(_newCurve);
-        assertEq(escrow.curve(), _newCurve);
+    function test_RevertIfIvotesAdapterAlreadySet(address _ivotesAdapter) public {
+        vm.expectRevert(AddressAlreadySet.selector);
+        escrow.setIVotesAdapter(_ivotesAdapter);
+    }
+
+    function test_RevertIfCurveSetUnauthorized() public {
+        VotingEscrow escrow_ = _deployEscrow(address(token), address(dao), address(clock), 1);
 
         bytes memory err = _authErr(attacker, address(escrow), escrow.ESCROW_ADMIN_ROLE());
         vm.prank(attacker);
         vm.expectRevert(err);
+        escrow.setCurve(address(2));
+    }
+
+    function test_RevertIfCurveAlreadySet(address _newCurve) public {
+        vm.expectRevert(AddressAlreadySet.selector);
         escrow.setCurve(_newCurve);
-        escrow.setCurve(address(0));
+    }
+
+    function test_RevertIfClockSetUnauthorized() public {
+        VotingEscrow escrow_ = _deployEscrow(address(token), address(dao), address(clock), 1);
+
+        bytes memory err = _authErr(attacker, address(escrow), escrow.ESCROW_ADMIN_ROLE());
+        vm.prank(attacker);
+        vm.expectRevert(err);
+        escrow.setClock(address(2));
+    }
+
+    function test_RevertIfClockAlreadySet(address _newClock) public {
+        vm.expectRevert(AddressAlreadySet.selector);
+        escrow.setCurve(_newClock);
     }
 
     function testSetMinDeposit(uint256 _newMinDeposit) public {
@@ -59,25 +79,32 @@ contract TestEscrowAdmin is EscrowBase {
         escrow.setMinDeposit(_newMinDeposit);
     }
 
-    function testSetVoter(address _newVoter) public {
-        escrow.setVoter(_newVoter);
-        assertEq(escrow.voter(), _newVoter);
+    function test_RevertIfVoterSetUnauthorized() public {
+        VotingEscrow escrow_ = _deployEscrow(address(token), address(dao), address(clock), 1);
 
         bytes memory err = _authErr(attacker, address(escrow), escrow.ESCROW_ADMIN_ROLE());
         vm.prank(attacker);
         vm.expectRevert(err);
-        escrow.setVoter(_newVoter);
-        escrow.setVoter(address(0));
+        escrow.setVoter(address(2));
     }
 
-    function testSetQueue(address _newQueue) public {
-        escrow.setQueue(_newQueue);
-        assertEq(escrow.queue(), _newQueue);
+    function test_RevertIfVoterAlreadySet(address _newVoter) public {
+        vm.expectRevert(AddressAlreadySet.selector);
+        escrow.setVoter(_newVoter);
+    }
+
+    function test_RevertIfQueueSetUnauthorized() public {
+        VotingEscrow escrow_ = _deployEscrow(address(token), address(dao), address(clock), 1);
 
         bytes memory err = _authErr(attacker, address(escrow), escrow.ESCROW_ADMIN_ROLE());
         vm.prank(attacker);
         vm.expectRevert(err);
-        escrow.setQueue(_newQueue);
+        escrow.setVoter(address(2));
+    }
+
+    function test_RevertIfQueueAlreadySet(address _queue) public {
+        vm.expectRevert(AddressAlreadySet.selector);
+        escrow.setVoter(_queue);
     }
 
     function testUUPSUpgrade() public {
