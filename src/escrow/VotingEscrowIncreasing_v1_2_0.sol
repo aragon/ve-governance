@@ -582,7 +582,7 @@ contract VotingEscrowV1_2_0 is
             revert NotTicketHolder();
         }
 
-        _checkpoint(_tokenId, LockedBalance(0, 0), _locked[_tokenId]);
+        _checkpoint(_tokenId, LockedBalance(0, _locked[_tokenId].start), _locked[_tokenId]);
 
         IExitQueue(queue).cancelExit(_tokenId);
         IERC721EMB(lockNFT).transferFrom(address(this), sender, _tokenId);
