@@ -16,12 +16,15 @@ import {
     IGaugeVoterSetupParams
 } from "@setup/GaugeVoterSetup_v1_4_0.sol";
 import {PluginSetupProcessor} from "@aragon/osx/framework/plugin/setup/PluginSetupProcessor.sol";
+import {PermissionManager} from "@aragon/osx/core/permission/PermissionManager.sol";
+
 import {
     hashHelpers,
     PluginSetupRef
 } from "@aragon/osx/framework/plugin/setup/PluginSetupProcessorHelpers.sol";
 import {PluginRepoFactory} from "@aragon/osx/framework/plugin/repo/PluginRepoFactory.sol";
 import {PluginRepo} from "@aragon/osx/framework/plugin/repo/PluginRepo.sol";
+import {Action} from "@aragon/osx-commons-contracts/src/executors/IExecutor.sol";
 import {IPluginSetup} from "@aragon/osx-commons-contracts/src/plugin/setup/IPluginSetup.sol";
 import {IPlugin} from "@aragon/osx-commons-contracts/src/plugin/IPlugin.sol";
 import {Multisig} from "@aragon/multisig/src/Multisig.sol";
@@ -220,44 +223,22 @@ contract GaugesDaoFactoryV1_4_0 {
     }
 
     function prepareDao() internal returns (DAO dao) {
-        address daoBase = DAOFactory(parameters.osxDaoFactory).daoBase();
+        DAOFactory.DAOSettings memory daoSettings = DAOFactory.DAOSettings({
+            trustedForwarder: address(0),
+            daoURI: "",
+            subdomain: "",
+            metadata: ""
+        });
 
-        dao = DAO(
-            payable(
-                daoBase.deployUUPSProxy(
-                    abi.encodeCall(
-                        DAO.initialize,
-                        (
-                            "", // Metadata URI
-                            address(this), // initialOwner
-                            address(0x0), // Trusted forwarder
-                            "" // DAO URI
-                        )
-                    )
-                )
-            )
+        (dao, ) = DAOFactory(parameters.osxDaoFactory).createDao(
+            daoSettings,
+            new DAOFactory.PluginSettings[](0)
         );
 
-        // Grant DAO all the needed permissions on itself
-        PermissionLib.SingleTargetPermission[]
-            memory items = new PermissionLib.SingleTargetPermission[](3);
-        items[0] = PermissionLib.SingleTargetPermission(
-            PermissionLib.Operation.Grant,
-            address(dao),
-            dao.ROOT_PERMISSION_ID()
-        );
-        items[1] = PermissionLib.SingleTargetPermission(
-            PermissionLib.Operation.Grant,
-            address(dao),
-            dao.UPGRADE_DAO_PERMISSION_ID()
-        );
-        items[2] = PermissionLib.SingleTargetPermission(
-            PermissionLib.Operation.Grant,
-            address(dao),
-            dao.REGISTER_STANDARD_CALLBACK_PERMISSION_ID()
-        );
-
-        dao.applySingleTargetPermissions(address(dao), items);
+        Action[] memory actions = new Action[](1);
+        actions[0].to = address(dao);
+        actions[0].data = abi.encodeCall(PermissionManager.grant, (address(dao), address(this), dao.ROOT_PERMISSION_ID()));
+        dao.execute(bytes32(0), actions, 0);
     }
 
     function prepareMultisig(
@@ -409,6 +390,7 @@ contract GaugesDaoFactoryV1_4_0 {
     }
 
     function revokeOwnerPermission(DAO dao) internal {
+        dao.revoke(address(dao), address(this), dao.EXECUTE_PERMISSION_ID());
         dao.revoke(address(dao), address(this), dao.ROOT_PERMISSION_ID());
     }
 
