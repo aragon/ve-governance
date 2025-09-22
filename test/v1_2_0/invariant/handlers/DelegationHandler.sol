@@ -26,7 +26,7 @@ import {
     IEscrowCurveTokenStorage,
     EscrowIVotesAdapter,
     VotingEscrow,
-    Curve, 
+    Curve,
     ITicket
 } from "../../versions.sol";
 import {IERC721EnumerableMintableBurnable as IERC721EMB} from "@lock/IERC721EMB.sol";
@@ -80,7 +80,7 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
     // The set of tokens for which begin withdrawal started.
     EnumerableSet.UintSet internal beginWithdrawalTokens;
 
-    // Active tokenIds - withdraw(not beginWithdrawal) and merge 
+    // Active tokenIds - withdraw(not beginWithdrawal) and merge
     // cause removal of the token id.
     EnumerableSet.UintSet internal activeTokenIds;
 
@@ -411,15 +411,18 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
         uint256 tokenId = activeTokenIds.at(_tokenIdSeed);
         address owner = lockNft.ownerOf(tokenId);
 
-        if(beginWithdrawalTokens.contains(tokenId)) return;
+        if (beginWithdrawalTokens.contains(tokenId)) return;
 
-        // beginWithdrawal only works if at least min lock time 
+        // beginWithdrawal only works if at least min lock time
         // has passed since lock creation.
-        if(queue.timeToMinLock(tokenId) > block.timestamp) return;
+        if (queue.timeToMinLock(tokenId) > block.timestamp) return;
 
         // beginWithdrawal is disallowed in the same block as createLock,
         // so warp if create lock occured in the same tx.
-        if (block.timestamp == curve.tokenPointHistory(tokenId, 1).writtenTs) {
+        if (
+            block.timestamp ==
+            curve.tokenPointHistory(tokenId, curve.tokenPointLatestIndex(tokenId)).writtenTs
+        ) {
             vm.warp(block.timestamp + 1);
         }
 
@@ -471,10 +474,10 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
         // withdraw only works if cool down has been passed.
         // So warp to that time to avoid many early returns for withdraw.
         ITicket.Ticket memory ticket = queue.queue(tokenId);
-        if(block.timestamp <= ticket.exitDate) {
+        if (block.timestamp <= ticket.exitDate) {
             vm.warp(ticket.exitDate + 1);
         }
-        
+
         address delegatee = ivotesAdapter.delegates(ticket.holder);
         uint256 amount = escrow.locked(tokenId).amount;
 
@@ -540,7 +543,7 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
 
         address delegatee = delegateesWithVpPower.at(_bound(_userSeed, 0, len - 1));
         // We don't allow _transitionCount to be 0.
-        // more than 300 causes too much gas overhead, 
+        // more than 300 causes too much gas overhead,
         // so 300 is enough to test most cases.
         _transitionCount = _bound(_transitionCount, 1, 300);
 
@@ -559,8 +562,8 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
         // triggered during merge/split/createlock operations, calling it too often
         // directly would reduce the effectiveness of those resets in testing.
         // With high depths and runs, it still calls `voter.reset` below enough times.
-        if(!voter.isVoting(delegatee)) return;
-        if(!voter.votingActive()) return;
+        if (!voter.isVoting(delegatee)) return;
+        if (!voter.votingActive()) return;
 
         vm.prank(delegatee);
         voter.reset();

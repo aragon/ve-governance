@@ -419,7 +419,10 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
 
         // beginWithdrawal is disallowed in the same block as createLock,
         // so warp if create lock occured in the same tx.
-        if (block.timestamp == curve.tokenPointHistory(tokenId, 1).writtenTs) {
+        if (
+            block.timestamp ==
+            curve.tokenPointHistory(tokenId, curve.tokenPointLatestIndex(tokenId)).writtenTs
+        ) {
             vm.warp(block.timestamp + 1);
         }
 

@@ -552,7 +552,10 @@ contract VotingEscrowV1_2_0 is
 
         // Make sure creating lock and begin withdrawal
         // doesn't occur in the same tx.
-        IEscrowCurve.TokenPoint memory point = IEscrowCurve(curve).tokenPointHistory(_tokenId, 1);
+        IEscrowCurve.TokenPoint memory point = IEscrowCurve(curve).tokenPointHistory(
+            _tokenId,
+            IEscrowCurve(curve).tokenPointLatestIndex(_tokenId)
+        );
         if (block.timestamp == point.writtenTs) {
             revert CannotWithdrawInSameBlock();
         }
@@ -579,7 +582,7 @@ contract VotingEscrowV1_2_0 is
             revert NotTicketHolder();
         }
 
-        _checkpoint(_tokenId, LockedBalance(0, 0), _locked[_tokenId]);
+        _checkpoint(_tokenId, LockedBalance(0, _locked[_tokenId].start), _locked[_tokenId]);
 
         IExitQueue(queue).cancelExit(_tokenId);
         IERC721EMB(lockNFT).transferFrom(address(this), sender, _tokenId);
