@@ -92,8 +92,6 @@ contract LinearIncreasingCurve is
     /// @dev The global point history
     mapping(uint256 => GlobalPoint) internal _globalPointHistory;
 
-    error UpgradeNotPossible();
-
     /*//////////////////////////////////////////////////////////////
                               INITIALIZATION
     //////////////////////////////////////////////////////////////*/
