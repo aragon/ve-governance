@@ -126,9 +126,12 @@ contract VotingEscrowV1_2_0 is
     /// @notice Whitelisted contracts that are allowed to split
     mapping(address => bool) public splitWhitelisted;
 
-    address public ivotesAdapter;
+    /// @notice Updates `to` token's timestamp if merge occurs from a token
+    ///         whose creation lock occured in the same timestamp as current tx.
+    mapping(uint256 => uint256) internal mergeWithdrawalLock;
 
-    error UpgradeNotPossible();
+    /// @notice Addess of the escrow ivotes adapter where delegations occur.
+    address public ivotesAdapter;
 
     /*//////////////////////////////////////////////////////////////
                               Initialization
@@ -396,6 +399,13 @@ contract VotingEscrowV1_2_0 is
             revert CannotMerge(_from, _to);
         }
 
+        // If `_from` was created in this block, or if another token was merged into `_from` in this block,
+        // record the current timestamp for `_to` so that withdrawals for it are blocked in the same block.
+        IEscrowCurve.TokenPoint memory point = IEscrowCurve(curve).tokenPointHistory(_from, 1);
+        if (point.writtenTs == block.timestamp || mergeWithdrawalLock[_from] == block.timestamp) {
+            mergeWithdrawalLock[_to] = block.timestamp;
+        }
+
         // We only allow merge when both tokens have the same owner.
         // After the merge, owner still should have the same voting power
         // as one token gets merged into another. For this reason,
@@ -550,13 +560,16 @@ contract VotingEscrowV1_2_0 is
         // in the event of an increasing curve, 0 voting power means voting isn't active
         if (votingPower(_tokenId) == 0) revert CannotExit();
 
-        // Make sure creating lock and begin withdrawal
-        // doesn't occur in the same tx.
-        IEscrowCurve.TokenPoint memory point = IEscrowCurve(curve).tokenPointHistory(
-            _tokenId,
-            IEscrowCurve(curve).tokenPointLatestIndex(_tokenId)
-        );
-        if (block.timestamp == point.writtenTs) {
+        // Safety checks:
+        // 1. Prevent creating a lock and starting withdrawal in the same block.
+        // 2. Prevent withdrawals if another token created in the same block
+        //    was merged into `_tokenId`. Even though `_tokenId` itself was
+        //    created in a previous block, the merged portion is "fresh" and
+        //    would still be withdrawable without restriction.
+        IEscrowCurve.TokenPoint memory point = IEscrowCurve(curve).tokenPointHistory(_tokenId, 1);
+        if (
+            block.timestamp == point.writtenTs || block.timestamp == mergeWithdrawalLock[_tokenId]
+        ) {
             revert CannotWithdrawInSameBlock();
         }
 
@@ -695,5 +708,5 @@ contract VotingEscrowV1_2_0 is
     ///      incorrectly as 39 instead of 40. Changing it to 40 now would overwrite existing slot values,
     ///      resulting in the loss of state. Therefore, we will continue using 37 in this version.
     ///      For future versions, any new variables should be added by subtracting from 37.
-    uint256[37] private __gap;
+    uint256[36] private __gap;
 }

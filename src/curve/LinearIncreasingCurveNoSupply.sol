@@ -78,8 +78,6 @@ contract LinearIncreasingCurveNoSupply is
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     uint256 private immutable MAX_EPOCHS;
 
-    error UpgradeNotPossible();
-
     /*//////////////////////////////////////////////////////////////
                               INITIALIZATION
     //////////////////////////////////////////////////////////////*/

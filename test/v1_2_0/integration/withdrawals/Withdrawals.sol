@@ -55,6 +55,57 @@ contract TestWithdrawal is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage, 
         address delegatee;
     }
 
+    function testRevert_IfBeginWithdrawalSameBlockWithTwoTokens() public {
+        super.mintAndApproveEscrow();
+
+        vm.warp(1);
+        uint256 tokenId1 = escrow.createLock(10e18);
+
+        vm.warp(2);
+        uint256 tokenId2 = escrow.createLock(15e18);
+        
+        escrow.merge(tokenId2, tokenId1);
+        nftLock.approve(address(escrow), tokenId1);
+
+        vm.expectRevert(CannotWithdrawInSameBlock.selector);
+        escrow.beginWithdrawal(tokenId1);
+    }
+
+    function testRevert_IfBeginWithdrawalSameBlockWithThreeTokens() public {
+        super.mintAndApproveEscrow();
+
+        vm.warp(1);
+        uint256 tokenId1 = escrow.createLock(10e18);
+        uint256 tokenId2 = escrow.createLock(10e18);
+
+        vm.warp(2);
+        uint256 tokenId3 = escrow.createLock(15e18);
+        
+        escrow.merge(tokenId3, tokenId2);
+        escrow.merge(tokenId2, tokenId1);
+
+        vm.expectRevert(CannotWithdrawInSameBlock.selector);
+        escrow.beginWithdrawal(tokenId1);
+    }
+
+    function test_AllowBeginWithdrawalIfLockWasCreatedInPreviousBlock() public {
+        super.mintAndApproveEscrow();
+
+        vm.warp(1);
+        uint256 tokenId1 = escrow.createLock(10e18);
+        uint256 tokenId2 = escrow.createLock(10e18);
+        uint256 tokenId3 = escrow.createLock(15e18);
+
+        vm.warp(2);
+        
+        escrow.merge(tokenId3, tokenId2);
+        escrow.merge(tokenId2, tokenId1);
+
+        nftLock.approve(address(escrow), tokenId1);
+
+        escrow.beginWithdrawal(tokenId1);
+    }
+
     /// 20 users create locks. Each of them either delegates to themselves or someone else.
     /// This means that a single user could end up being delegated multiple times.
     function testFuzz_WithrawWithCancel(User[20] memory _users) public {
