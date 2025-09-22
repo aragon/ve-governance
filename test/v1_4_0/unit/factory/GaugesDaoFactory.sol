@@ -6,7 +6,7 @@ import {MockERC20} from "@solmate/test/utils/mocks/MockERC20.sol";
 import {MockPluginSetupProcessor} from "@mocks/osx/MockPSP.sol";
 import {MockPluginSetupProcessorMulti} from "@mocks/osx/MockPSPMulti.sol";
 import {MockPluginRepoRegistry} from "@mocks/osx/MockPluginRepoRegistry.sol";
-import {MockDAOFactory} from "@mocks/osx/MockDAOFactory.sol";
+import {MockNewDAOFactory as MockDAOFactory} from "@mocks/osx/MockNewDAOFactory.sol";
 import {PluginSetupProcessor} from "@aragon/osx/framework/plugin/setup/PluginSetupProcessor.sol";
 import {PluginRepoFactory} from "@aragon/osx/framework/plugin/repo/PluginRepoFactory.sol";
 import {PluginRepoRegistry} from "@aragon/osx/framework/plugin/repo/PluginRepoRegistry.sol";

@@ -23,11 +23,11 @@ import {MockPluginSetupProcessor as PluginSetupProcessor} from "./MockPSP.sol";
 
 // import {DAORegistry} from "./DAORegistry.sol";
 
-/// @title MockDAOFactory (uses old daofactory of osx)
+/// @title MockDAOFactory (uses new daofactory of osx 1.4)
 /// @dev spoof of DAOFactory with minimal dependencies
 /// Best to use with MockPSP: this allows setting of a single setup contract manually to avoid
 /// all the other logic, however means you cannot easily deploy the DAO with multiple plugins
-contract MockDAOFactory {
+contract MockNewDAOFactory {
     using ProxyLib for address;
 
     /// @notice The DAO base contract, to be used for creating new `DAO`s via `createERC1967Proxy` function.
@@ -39,6 +39,15 @@ contract MockDAOFactory {
     /// @notice The plugin setup processor for installing plugins on the newly created `DAO`s.
     PluginSetupProcessor public immutable pluginSetupProcessor;
 
+    // Cache permission IDs for optimized access
+    bytes32 internal immutable ROOT_PERMISSION_ID;
+    bytes32 internal immutable UPGRADE_DAO_PERMISSION_ID;
+    bytes32 internal immutable SET_TRUSTED_FORWARDER_PERMISSION_ID;
+    bytes32 internal immutable SET_METADATA_PERMISSION_ID;
+    bytes32 internal immutable REGISTER_STANDARD_CALLBACK_PERMISSION_ID;
+    bytes32 internal immutable EXECUTE_PERMISSION_ID;
+    bytes32 internal immutable APPLY_INSTALLATION_PERMISSION_ID;
+
     /// @notice The container for the DAO settings to be set during the DAO initialization.
     /// @param trustedForwarder The address of the trusted forwarder required for meta transactions.
     /// @param daoURI The DAO uri used with [EIP-4824](https://eips.ethereum.org/EIPS/eip-4824).
@@ -49,6 +58,14 @@ contract MockDAOFactory {
         string daoURI;
         string subdomain;
         bytes metadata;
+    }
+
+    /// @notice The container with the information about an installed plugin on a DAO.
+    /// @param plugin The address of the deployed plugin instance.
+    /// @param preparedSetupData The applied preparedSetupData which contains arrays of helpers and permissions.
+    struct InstalledPlugin {
+        address plugin;
+        IPluginSetup.PreparedSetupData preparedSetupData;
     }
 
     /// @notice The container with the information required to install a plugin on the DAO.
@@ -71,7 +88,17 @@ contract MockDAOFactory {
     constructor(PluginSetupProcessor _pluginSetupProcessor) {
         pluginSetupProcessor = _pluginSetupProcessor;
 
-        daoBase = address(new DAO());
+        DAO dao = new DAO();
+        daoBase = address(dao);
+
+        // Cache permission IDs for reduced gas usage in future function calls
+        ROOT_PERMISSION_ID = dao.ROOT_PERMISSION_ID();
+        UPGRADE_DAO_PERMISSION_ID = dao.UPGRADE_DAO_PERMISSION_ID();
+        SET_TRUSTED_FORWARDER_PERMISSION_ID = dao.SET_TRUSTED_FORWARDER_PERMISSION_ID();
+        SET_METADATA_PERMISSION_ID = dao.SET_METADATA_PERMISSION_ID();
+        REGISTER_STANDARD_CALLBACK_PERMISSION_ID = dao.REGISTER_STANDARD_CALLBACK_PERMISSION_ID();
+        EXECUTE_PERMISSION_ID = dao.EXECUTE_PERMISSION_ID();
+        APPLY_INSTALLATION_PERMISSION_ID = pluginSetupProcessor.APPLY_INSTALLATION_PERMISSION_ID();
     }
 
     // /// @notice Checks if this or the parent contract supports an interface by its ID.
@@ -83,88 +110,88 @@ contract MockDAOFactory {
     //         super.supportsInterface(_interfaceId);
     // }
 
-    /// @notice Creates a new DAO, registers it on the  DAO registry, and installs a list of plugins via the plugin setup processor.
-    /// @param _daoSettings The DAO settings to be set during the DAO initialization.
-    /// @param _pluginSettings The array containing references to plugins and their settings to be installed after the DAO has been created.
     function createDao(
         DAOSettings calldata _daoSettings,
         PluginSettings[] calldata _pluginSettings
-    ) external returns (DAO createdDao) {
-        // Check if no plugin is provided.
-        if (_pluginSettings.length == 0) {
-            revert NoPluginProvided();
-        }
-
+    ) external returns (DAO createdDao, InstalledPlugin[] memory installedPlugins) {
         // Create DAO.
         createdDao = _createDAO(_daoSettings);
 
-        // MOCK: SKIP
-        // // Register DAO.
-        // daoRegistry.register(createdDao, msg.sender, _daoSettings.subdomain);
-        emit DAORegistered(address(createdDao), msg.sender, _daoSettings.subdomain);
+        // Cache address to save gas
+        address daoAddress = address(createdDao);
 
-        // Get Permission IDs
-        bytes32 rootPermissionID = createdDao.ROOT_PERMISSION_ID();
-        bytes32 applyInstallationPermissionID = pluginSetupProcessor
-            .APPLY_INSTALLATION_PERMISSION_ID();
+        // Install plugins if plugin settings are provided.
+        if (_pluginSettings.length != 0) {
+            installedPlugins = new InstalledPlugin[](_pluginSettings.length);
 
-        // Grant the temporary permissions.
-        // Grant Temporarly `ROOT_PERMISSION` to `pluginSetupProcessor`.
-        createdDao.grant(address(createdDao), address(pluginSetupProcessor), rootPermissionID);
+            // Cache address to save gas
+            address pluginSetupProcessorAddress = address(pluginSetupProcessor);
 
-        // Grant Temporarly `APPLY_INSTALLATION_PERMISSION` on `pluginSetupProcessor` to this `DAOFactory`.
-        createdDao.grant(
-            address(pluginSetupProcessor),
-            address(this),
-            applyInstallationPermissionID
-        );
+            // Grant the temporary permissions.
+            // Grant Temporarily `ROOT_PERMISSION` to `pluginSetupProcessor`.
+            createdDao.grant(daoAddress, pluginSetupProcessorAddress, ROOT_PERMISSION_ID);
 
-        // Install plugins on the newly created DAO.
-        for (uint256 i; i < _pluginSettings.length; ++i) {
-            // Prepare plugin.
-            (
-                address plugin,
-                IPluginSetup.PreparedSetupData memory preparedSetupData
-            ) = pluginSetupProcessor.prepareInstallation(
-                    address(createdDao),
-                    PluginSetupProcessor.PrepareInstallationParams(
+            // Grant Temporarily `APPLY_INSTALLATION_PERMISSION` on `pluginSetupProcessor` to this `DAOFactory`.
+            createdDao.grant(
+                pluginSetupProcessorAddress,
+                address(this),
+                APPLY_INSTALLATION_PERMISSION_ID
+            );
+
+            // Install plugins on the newly created DAO.
+            for (uint256 i; i < _pluginSettings.length; ++i) {
+                // Prepare plugin.
+                (
+                    address plugin,
+                    IPluginSetup.PreparedSetupData memory preparedSetupData
+                ) = pluginSetupProcessor.prepareInstallation(
+                        daoAddress,
+                        PluginSetupProcessor.PrepareInstallationParams(
+                            _pluginSettings[i].pluginSetupRef,
+                            _pluginSettings[i].data
+                        )
+                    );
+
+                // Apply plugin.
+                pluginSetupProcessor.applyInstallation(
+                    daoAddress,
+                    PluginSetupProcessor.ApplyInstallationParams(
                         _pluginSettings[i].pluginSetupRef,
-                        _pluginSettings[i].data
+                        plugin,
+                        preparedSetupData.permissions,
+                        hashHelpers(preparedSetupData.helpers)
                     )
                 );
 
-            // Apply plugin.
-            pluginSetupProcessor.applyInstallation(
-                address(createdDao),
-                PluginSetupProcessor.ApplyInstallationParams(
-                    _pluginSettings[i].pluginSetupRef,
-                    plugin,
-                    preparedSetupData.permissions,
-                    hashHelpers(preparedSetupData.helpers)
-                )
+                installedPlugins[i] = InstalledPlugin(plugin, preparedSetupData);
+            }
+
+            // Revoke the temporarily granted permissions.
+            // Revoke Temporarily `ROOT_PERMISSION` from `pluginSetupProcessor`.
+            createdDao.revoke(daoAddress, pluginSetupProcessorAddress, ROOT_PERMISSION_ID);
+
+            // Revoke `APPLY_INSTALLATION_PERMISSION` on `pluginSetupProcessor` from this `DAOFactory` .
+            createdDao.revoke(
+                pluginSetupProcessorAddress,
+                address(this),
+                APPLY_INSTALLATION_PERMISSION_ID
             );
+        } else {
+            // if no plugin setting is provided, grant EXECUTE_PERMISSION_ID to msg.sender
+            createdDao.grant(daoAddress, msg.sender, EXECUTE_PERMISSION_ID);
         }
 
         // Set the rest of DAO's permissions.
-        _setDAOPermissions(createdDao);
+        _setDAOPermissions(daoAddress);
 
-        // Revoke the temporarly granted permissions.
-        // Revoke Temporarly `ROOT_PERMISSION` from `pluginSetupProcessor`.
-        createdDao.revoke(address(createdDao), address(pluginSetupProcessor), rootPermissionID);
-
-        // Revoke `APPLY_INSTALLATION_PERMISSION` on `pluginSetupProcessor` from this `DAOFactory` .
-        createdDao.revoke(
-            address(pluginSetupProcessor),
-            address(this),
-            applyInstallationPermissionID
-        );
-
-        // Revoke Temporarly `ROOT_PERMISSION_ID` from `pluginSetupProcessor` that implicitly granted to this `DaoFactory`
+        // Revoke Temporarily `ROOT_PERMISSION_ID` that implicitly granted to this `DaoFactory`
         // at the create dao step `address(this)` being the initial owner of the new created DAO.
-        createdDao.revoke(address(createdDao), address(this), rootPermissionID);
+        createdDao.revoke(daoAddress, address(this), ROOT_PERMISSION_ID);
+
+        return (createdDao, installedPlugins);
     }
 
-    /// @notice Deploys a new DAO `ERC1967` proxy, and initialize it with this contract as the intial owner.
+    /// @notice Deploys a new DAO `ERC1967` proxy, and initialize it with this contract as the initial owner.
     /// @param _daoSettings The trusted forwarder, name and metadata hash of the DAO it creates.
     function _createDAO(DAOSettings calldata _daoSettings) internal returns (DAO dao) {
         // Create a DAO proxy and initialize it with the DAOFactory (`address(this)`) as the initial owner.
@@ -187,8 +214,8 @@ contract MockDAOFactory {
     }
 
     /// @notice Sets the required permissions for the new DAO.
-    /// @param _dao The DAO instance just created.
-    function _setDAOPermissions(DAO _dao) internal {
+    /// @param _daoAddress The address of the DAO just created.
+    function _setDAOPermissions(address _daoAddress) internal {
         // set permissionIds on the dao itself.
         PermissionLib.SingleTargetPermission[]
             memory items = new PermissionLib.SingleTargetPermission[](5);
@@ -196,30 +223,30 @@ contract MockDAOFactory {
         // Grant DAO all the permissions required
         items[0] = PermissionLib.SingleTargetPermission(
             PermissionLib.Operation.Grant,
-            address(_dao),
-            _dao.ROOT_PERMISSION_ID()
+            _daoAddress,
+            ROOT_PERMISSION_ID
         );
         items[1] = PermissionLib.SingleTargetPermission(
             PermissionLib.Operation.Grant,
-            address(_dao),
-            _dao.UPGRADE_DAO_PERMISSION_ID()
+            _daoAddress,
+            UPGRADE_DAO_PERMISSION_ID
         );
         items[2] = PermissionLib.SingleTargetPermission(
             PermissionLib.Operation.Grant,
-            address(_dao),
-            _dao.SET_TRUSTED_FORWARDER_PERMISSION_ID()
+            _daoAddress,
+            SET_TRUSTED_FORWARDER_PERMISSION_ID
         );
         items[3] = PermissionLib.SingleTargetPermission(
             PermissionLib.Operation.Grant,
-            address(_dao),
-            _dao.SET_METADATA_PERMISSION_ID()
+            _daoAddress,
+            SET_METADATA_PERMISSION_ID
         );
         items[4] = PermissionLib.SingleTargetPermission(
             PermissionLib.Operation.Grant,
-            address(_dao),
-            _dao.REGISTER_STANDARD_CALLBACK_PERMISSION_ID()
+            _daoAddress,
+            REGISTER_STANDARD_CALLBACK_PERMISSION_ID
         );
 
-        _dao.applySingleTargetPermissions(address(_dao), items);
+        DAO(payable(_daoAddress)).applySingleTargetPermissions(_daoAddress, items);
     }
 }
