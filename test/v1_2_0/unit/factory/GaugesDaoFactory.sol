@@ -373,7 +373,7 @@ contract GaugesDaoFactoryTest is Test {
         );
     }
 
-    function test_111StandardDeployment_1() public {
+    function test_StandardDeployment_1() public {
         address[] memory multisigMembers = new address[](13);
         for (uint256 i = 0; i < 13; i++) {
             multisigMembers[i] = address(uint160(i + 5));
