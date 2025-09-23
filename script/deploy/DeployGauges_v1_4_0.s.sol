@@ -79,6 +79,8 @@ contract DeployGaugesV1_4_0 is Script {
         GaugeVoterSetup gaugeVoterPluginSetup = deployGaugeVoterPluginSetup();
 
         parameters = DeploymentParameters({
+            daoSubdomain: "",
+            daoMetadataURI: "",
             daoExecutor: address(0),
             // Multisig settings
             minApprovals: vm.envUint("MIN_APPROVALS").toUint8(),

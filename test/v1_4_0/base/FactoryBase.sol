@@ -76,6 +76,8 @@ contract FactoryBase is StdInvariant, Test, FixedPointBase {
         });
 
         DeploymentParameters memory parameters = DeploymentParameters({
+            daoSubdomain: "",
+            daoMetadataURI: "",
             daoExecutor: address(0),
             // Multisig settings
             minApprovals: 1,

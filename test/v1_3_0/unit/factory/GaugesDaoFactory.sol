@@ -77,6 +77,8 @@ contract GaugesDaoFactoryTest is Test {
         });
 
         DeploymentParameters memory creationParams = DeploymentParameters({
+            daoSubdomain: "",
+            daoMetadataURI: "",
             daoExecutor: address(0),
             // Multisig settings
             minApprovals: 2,
@@ -244,6 +246,8 @@ contract GaugesDaoFactoryTest is Test {
         });
 
         DeploymentParameters memory creationParams = DeploymentParameters({
+            daoSubdomain: "",
+            daoMetadataURI: "",
             daoExecutor: address(0),
             // Multisig settings
             minApprovals: 3,
@@ -431,6 +435,8 @@ contract GaugesDaoFactoryTest is Test {
         MockDAOFactory daoFactory = new MockDAOFactory(MockPluginSetupProcessor(address(psp)));
 
         DeploymentParameters memory creationParams = DeploymentParameters({
+            daoSubdomain: "test-subdomain",
+            daoMetadataURI: "ipfs://",
             daoExecutor: address(5),
             // Multisig settings
             minApprovals: 2,
@@ -818,6 +824,8 @@ contract GaugesDaoFactoryTest is Test {
         MockDAOFactory daoFactory = new MockDAOFactory(MockPluginSetupProcessor(address(psp)));
 
         DeploymentParameters memory creationParams = DeploymentParameters({
+            daoSubdomain: "",
+            daoMetadataURI: "",
             daoExecutor: address(0),
             // Multisig settings
             minApprovals: 5,
@@ -1293,6 +1301,8 @@ contract GaugesDaoFactoryTest is Test {
         MockDAOFactory daoFactory = new MockDAOFactory(MockPluginSetupProcessor(address(psp)));
 
         DeploymentParameters memory creationParams = DeploymentParameters({
+            daoSubdomain: "",
+            daoMetadataURI: "",
             daoExecutor: address(0),
             // Multisig settings
             minApprovals: 5,

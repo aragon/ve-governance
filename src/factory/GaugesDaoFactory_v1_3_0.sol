@@ -35,6 +35,8 @@ import {EscrowIVotesAdapter} from "@delegation/EscrowIVotesAdapter.sol";
 
 /// @notice The struct containing all the parameters to deploy the DAO
 /// @param daoExecutor Optional address with execute permission on the DAO in addition to the multisig
+/// @param daoMetadataURI The DAO Metadata(optional)
+/// @param daoSubdomain The ens subdomain(optional)
 /// @param minApprovals The amount of approvals required for the multisig to be able to execute a proposal on the DAO
 /// @param multisigMembers The list of addresses to be defined as the initial multisig signers
 /// @param tokenParameters A list with the tokens and metadata for which a plugin and a VE should be deployed
@@ -52,6 +54,8 @@ import {EscrowIVotesAdapter} from "@delegation/EscrowIVotesAdapter.sol";
 /// @param pluginRepoFactory The address of the OSx PluginRepoFactory contract on the target chain
 struct DeploymentParameters {
     address daoExecutor;
+    string daoMetadataURI;
+    string daoSubdomain;
     // Multisig settings
     uint16 minApprovals;
     address[] multisigMembers;
@@ -131,7 +135,10 @@ contract GaugesDaoFactoryV1_3_0 {
             }
         }
 
+        parameters.daoMetadataURI = _parameters.daoMetadataURI;
+        parameters.daoSubdomain = _parameters.daoSubdomain;
         parameters.daoExecutor = _parameters.daoExecutor;
+
         parameters.minDeposit = _parameters.minDeposit;
         parameters.feePercent = _parameters.feePercent;
         parameters.cooldownPeriod = _parameters.cooldownPeriod;
@@ -152,7 +159,7 @@ contract GaugesDaoFactoryV1_3_0 {
         if (address(deployment.dao) != address(0)) revert AlreadyDeployed();
 
         // Deploy the DAO (this contract is the interim owner)
-        DAO dao = prepareDao(parameters.daoExecutor);
+        DAO dao = prepareDao();
         deployment.dao = dao;
 
         // Deploy and install the plugins
@@ -225,12 +232,12 @@ contract GaugesDaoFactoryV1_3_0 {
         revokeOwnerPermission(deployment.dao);
     }
 
-    function prepareDao(address _daoExecutor) internal returns (DAO dao) {
+    function prepareDao() internal returns (DAO dao) {
         DAOFactory.DAOSettings memory daoSettings = DAOFactory.DAOSettings({
             trustedForwarder: address(0),
             daoURI: "",
-            subdomain: "",
-            metadata: ""
+            subdomain: parameters.daoSubdomain,
+            metadata: bytes(parameters.daoMetadataURI)
         });
 
         (dao, ) = DAOFactory(parameters.osxDaoFactory).createDao(
@@ -238,8 +245,10 @@ contract GaugesDaoFactoryV1_3_0 {
             new DAOFactory.PluginSettings[](0)
         );
 
+        address daoExecutor = parameters.daoExecutor;
+
         // Give this contract the ROOT on dao
-        Action[] memory actions = new Action[](_daoExecutor == address(0) ? 1 : 2);
+        Action[] memory actions = new Action[](daoExecutor == address(0) ? 1 : 2);
         actions[0].to = address(dao);
         actions[0].data = abi.encodeCall(
             PermissionManager.grant,
@@ -248,11 +257,11 @@ contract GaugesDaoFactoryV1_3_0 {
 
         // If daoExecutor is passed as non zero, give
         // execute permission to that address on the dao.
-        if (_daoExecutor != address(0)) {
+        if (daoExecutor != address(0)) {
             actions[1].to = address(dao);
             actions[1].data = abi.encodeCall(
                 PermissionManager.grant,
-                (address(dao), _daoExecutor, dao.EXECUTE_PERMISSION_ID())
+                (address(dao), daoExecutor, dao.EXECUTE_PERMISSION_ID())
             );
         }
 
