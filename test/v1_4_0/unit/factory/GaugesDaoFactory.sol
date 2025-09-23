@@ -77,6 +77,7 @@ contract GaugesDaoFactoryTest is Test {
         });
 
         DeploymentParameters memory creationParams = DeploymentParameters({
+            daoExecutor: address(0),
             // Multisig settings
             minApprovals: 2,
             multisigMembers: multisigMembers,
@@ -243,6 +244,7 @@ contract GaugesDaoFactoryTest is Test {
         });
 
         DeploymentParameters memory creationParams = DeploymentParameters({
+            daoExecutor: address(0),
             // Multisig settings
             minApprovals: 3,
             multisigMembers: multisigMembers,
@@ -429,6 +431,7 @@ contract GaugesDaoFactoryTest is Test {
         MockDAOFactory daoFactory = new MockDAOFactory(MockPluginSetupProcessor(address(psp)));
 
         DeploymentParameters memory creationParams = DeploymentParameters({
+            daoExecutor: address(5),
             // Multisig settings
             minApprovals: 2,
             multisigMembers: multisigMembers,
@@ -478,6 +481,16 @@ contract GaugesDaoFactoryTest is Test {
             ),
             true,
             "The DAO should be ROOT on itself"
+        );
+        assertEq(
+            deployment.dao.hasPermission(
+                address(deployment.dao),
+                address(5),
+                deployment.dao.EXECUTE_PERMISSION_ID(),
+                bytes("")
+            ),
+            true,
+            "address(5) should have execute on the dao"
         );
         assertEq(
             deployment.dao.hasPermission(
@@ -805,6 +818,7 @@ contract GaugesDaoFactoryTest is Test {
         MockDAOFactory daoFactory = new MockDAOFactory(MockPluginSetupProcessor(address(psp)));
 
         DeploymentParameters memory creationParams = DeploymentParameters({
+            daoExecutor: address(5),
             // Multisig settings
             minApprovals: 5,
             multisigMembers: multisigMembers,
@@ -854,6 +868,16 @@ contract GaugesDaoFactoryTest is Test {
             ),
             true,
             "The DAO should be ROOT on itself"
+        );
+        assertEq(
+            deployment.dao.hasPermission(
+                address(deployment.dao),
+                address(5),
+                deployment.dao.EXECUTE_PERMISSION_ID(),
+                bytes("")
+            ),
+            true,
+            "address(5) should have execute on the dao"
         );
         assertEq(
             deployment.dao.hasPermission(
@@ -1279,6 +1303,7 @@ contract GaugesDaoFactoryTest is Test {
         MockDAOFactory daoFactory = new MockDAOFactory(MockPluginSetupProcessor(address(psp)));
 
         DeploymentParameters memory creationParams = DeploymentParameters({
+            daoExecutor: address(0),
             // Multisig settings
             minApprovals: 5,
             multisigMembers: multisigMembers,

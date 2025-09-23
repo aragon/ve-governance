@@ -7,6 +7,7 @@ import {IWithdrawalQueueErrors} from "@escrow/IVotingEscrowIncreasing.sol";
 import {IAddressGaugeVote as IGaugeVote} from "@voting/IAddressGaugeVoter.sol";
 import {Action} from "@aragon/osx-commons-contracts/src/executors/IExecutor.sol";
 import {PermissionManager} from "@aragon/osx/core/permission/PermissionManager.sol";
+import {console2 as console} from "forge-std/console2.sol";
 
 import {
     VotingEscrow,
@@ -34,6 +35,7 @@ import {PermissionLib} from "@aragon/osx-commons-contracts/src/permission/Permis
 import {EscrowIVotesAdapter} from "@delegation/EscrowIVotesAdapter.sol";
 
 /// @notice The struct containing all the parameters to deploy the DAO
+/// @param daoExecutor Optional address with execute permission on the DAO in addition to the multisig
 /// @param minApprovals The amount of approvals required for the multisig to be able to execute a proposal on the DAO
 /// @param multisigMembers The list of addresses to be defined as the initial multisig signers
 /// @param tokenParameters A list with the tokens and metadata for which a plugin and a VE should be deployed
@@ -50,6 +52,7 @@ import {EscrowIVotesAdapter} from "@delegation/EscrowIVotesAdapter.sol";
 /// @param pluginSetupProcessor The address of the OSx PluginSetupProcessor contract on the target chain
 /// @param pluginRepoFactory The address of the OSx PluginRepoFactory contract on the target chain
 struct DeploymentParameters {
+    address daoExecutor;
     // Multisig settings
     uint16 minApprovals;
     address[] multisigMembers;
@@ -129,6 +132,7 @@ contract GaugesDaoFactoryV1_2_0 {
             }
         }
 
+        parameters.daoExecutor = _parameters.daoExecutor;
         parameters.minDeposit = _parameters.minDeposit;
         parameters.feePercent = _parameters.feePercent;
         parameters.cooldownPeriod = _parameters.cooldownPeriod;
@@ -149,7 +153,7 @@ contract GaugesDaoFactoryV1_2_0 {
         if (address(deployment.dao) != address(0)) revert AlreadyDeployed();
 
         // Deploy the DAO (this contract is the interim owner)
-        DAO dao = prepareDao();
+        DAO dao = prepareDao(parameters.daoExecutor);
         deployment.dao = dao;
 
         // Deploy and install the plugins
@@ -222,11 +226,11 @@ contract GaugesDaoFactoryV1_2_0 {
         revokeOwnerPermission(deployment.dao);
     }
 
-    function prepareDao() internal returns (DAO dao) {
+    function prepareDao(address _daoExecutor) internal returns (DAO dao) {
         DAOFactory.DAOSettings memory daoSettings = DAOFactory.DAOSettings({
             trustedForwarder: address(0),
             daoURI: "",
-            subdomain: "some-test-subdomain",
+            subdomain: "",
             metadata: ""
         });
 
@@ -235,9 +239,24 @@ contract GaugesDaoFactoryV1_2_0 {
             new DAOFactory.PluginSettings[](0)
         );
 
-        Action[] memory actions = new Action[](1);
+        // Give this contract the ROOT on dao
+        Action[] memory actions = new Action[](_daoExecutor == address(0) ? 1 : 2);
         actions[0].to = address(dao);
-        actions[0].data = abi.encodeCall(PermissionManager.grant, (address(dao), address(this), dao.ROOT_PERMISSION_ID()));
+        actions[0].data = abi.encodeCall(
+            PermissionManager.grant,
+            (address(dao), address(this), dao.ROOT_PERMISSION_ID())
+        );
+
+        // If daoExecutor is passed as non zero, give
+        // execute permission to that address on the dao.
+        if (_daoExecutor != address(0)) {
+            actions[1].to = address(dao);
+            actions[1].data = abi.encodeCall(
+                PermissionManager.grant,
+                (address(dao), _daoExecutor, dao.EXECUTE_PERMISSION_ID())
+            );
+        }
+
         dao.execute(bytes32(0), actions, 0);
     }
 
