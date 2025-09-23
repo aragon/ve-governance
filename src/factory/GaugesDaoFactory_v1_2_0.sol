@@ -7,7 +7,6 @@ import {IWithdrawalQueueErrors} from "@escrow/IVotingEscrowIncreasing.sol";
 import {IAddressGaugeVote as IGaugeVote} from "@voting/IAddressGaugeVoter.sol";
 import {Action} from "@aragon/osx-commons-contracts/src/executors/IExecutor.sol";
 import {PermissionManager} from "@aragon/osx/core/permission/PermissionManager.sol";
-import {console2 as console} from "forge-std/console2.sol";
 
 import {
     VotingEscrow,
