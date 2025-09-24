@@ -20,9 +20,7 @@ import {
     GaugeVoterSetupV1_4_0 as GaugeVoterSetup,
     IGaugeVoterSetupParams
 } from "@setup/GaugeVoterSetup_v1_4_0.sol";
-import {
-    MultisigSetup as MultisigPluginSetup
-} from "@aragon/multisig/src/MultisigSetup.sol";
+import {MultisigSetup as MultisigPluginSetup} from "@aragon/multisig/src/MultisigSetup.sol";
 
 import {PluginRepo} from "@aragon/osx/framework/plugin/repo/PluginRepo.sol";
 import {PluginRepoFactory} from "@aragon/osx/framework/plugin/repo/PluginRepoFactory.sol";
@@ -58,7 +56,7 @@ contract DeployGaugesV1_4_0 is Script {
         // Create the DAO
         GaugesDaoFactory factory = new GaugesDaoFactory(parameters);
         require(
-            keccak256(abi.encode(factory.version())) == keccak256(abi.encode("1.3.0")),
+            keccak256(abi.encode(factory.version())) == keccak256(abi.encode("1.4.0")),
             "Version mismatch"
         );
         factory.deployOnce();
