@@ -13,9 +13,7 @@ import {PluginRepoRegistry} from "@aragon/osx/framework/plugin/repo/PluginRepoRe
 import {PluginRepo} from "@aragon/osx/framework/plugin/repo/PluginRepo.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {IDAO} from "@aragon/osx-commons-contracts/src/dao/IDAO.sol";
-import {
-    MultisigSetup as MultisigPluginSetup
-} from "@aragon/multisig/src/MultisigSetup.sol";
+import {MultisigSetup as MultisigPluginSetup} from "@aragon/multisig/src/MultisigSetup.sol";
 
 import {
     SimpleGaugeVoterSetup,
@@ -77,6 +75,9 @@ contract GaugesDaoFactoryTest is Test {
         });
 
         DeploymentParameters memory creationParams = DeploymentParameters({
+            daoSubdomain: "",
+            daoMetadataURI: "",
+            daoExecutor: address(0),
             // Multisig settings
             minApprovals: 2,
             multisigMembers: multisigMembers,
@@ -243,6 +244,9 @@ contract GaugesDaoFactoryTest is Test {
         });
 
         DeploymentParameters memory creationParams = DeploymentParameters({
+            daoSubdomain: "",
+            daoMetadataURI: "",
+            daoExecutor: address(0),
             // Multisig settings
             minApprovals: 3,
             multisigMembers: multisigMembers,
@@ -429,6 +433,9 @@ contract GaugesDaoFactoryTest is Test {
         MockDAOFactory daoFactory = new MockDAOFactory(MockPluginSetupProcessor(address(psp)));
 
         DeploymentParameters memory creationParams = DeploymentParameters({
+            daoSubdomain: "test-subdomain",
+            daoMetadataURI: "ipfs://",
+            daoExecutor: address(5),
             // Multisig settings
             minApprovals: 2,
             multisigMembers: multisigMembers,
@@ -478,6 +485,16 @@ contract GaugesDaoFactoryTest is Test {
             ),
             true,
             "The DAO should be ROOT on itself"
+        );
+        assertEq(
+            deployment.dao.hasPermission(
+                address(deployment.dao),
+                address(5),
+                deployment.dao.EXECUTE_PERMISSION_ID(),
+                bytes("")
+            ),
+            true,
+            "address(5) should have execute on dao"
         );
         assertEq(
             deployment.dao.hasPermission(
@@ -807,6 +824,9 @@ contract GaugesDaoFactoryTest is Test {
         MockDAOFactory daoFactory = new MockDAOFactory(MockPluginSetupProcessor(address(psp)));
 
         DeploymentParameters memory creationParams = DeploymentParameters({
+            daoSubdomain: "",
+            daoMetadataURI: "",
+            daoExecutor: address(0),
             // Multisig settings
             minApprovals: 5,
             multisigMembers: multisigMembers,
@@ -1284,6 +1304,9 @@ contract GaugesDaoFactoryTest is Test {
         MockDAOFactory daoFactory = new MockDAOFactory(MockPluginSetupProcessor(address(psp)));
 
         DeploymentParameters memory creationParams = DeploymentParameters({
+            daoSubdomain: "",
+            daoMetadataURI: "",
+            daoExecutor: address(0),
             // Multisig settings
             minApprovals: 5,
             multisigMembers: multisigMembers,
