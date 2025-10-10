@@ -13,7 +13,6 @@ import {createTestDAO} from "@mocks/MockDAO.sol";
 
 import "@helpers/OSxHelpers.sol";
 import {ProxyLib} from "@libs/ProxyLib.sol";
-import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 
 import {PluginRepoFactory} from "@aragon/osx/framework/plugin/repo/PluginRepoFactory.sol";
 import {PluginSetupProcessor} from "@aragon/osx/framework/plugin/setup/PluginSetupProcessor.sol";
