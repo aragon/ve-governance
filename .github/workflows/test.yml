@@ -181,14 +181,14 @@ jobs:
         run: |
           forge test --match-path "test/v1_3_0/invariant/**/*.sol"
         id: test
-    
+
   test-fork:
     strategy:
       fail-fast: true
     name: Test Fork
     runs-on: ubuntu-latest
     env:
-      NETWORK: "sepolia"
+      NETWORK_NAME: "sepolia"
       FORK_TEST_MODE: "new-factory"
       DEPLOY_AS_PRODUCTION: false
       TOKEN_TEST_WHALE: "0x"

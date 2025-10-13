@@ -8,7 +8,7 @@ To get started, ensure that [Foundry](https://getfoundry.sh/) is installed on yo
 
 <details>
   <summary>Also make sure to install [GNU Make](https://www.gnu.org/software/make/).</summary>
-  
+
   ```sh
   # debian
   sudo apt install build-essential
@@ -178,22 +178,22 @@ RPC_URL="https://eth-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}"
 # Run the deployment script
 
 # If using Etherscan
-forge script --chain "$NETWORK" script/DeployGauges.s.sol:Deploy --rpc-url "$RPC_URL" --broadcast --verify
+forge script --chain "$NETWORK_NAME" script/DeployGauges.s.sol:Deploy --rpc-url "$RPC_URL" --broadcast --verify
 
 # If using BlockScout
-forge script --chain "$NETWORK" script/DeployGauges.s.sol:Deploy --rpc-url "$RPC_URL" --broadcast --verify --verifier blockscout --verifier-url "https://sepolia.explorer.mode.network/api\?"
+forge script --chain "$NETWORK_NAME" script/DeployGauges.s.sol:Deploy --rpc-url "$RPC_URL" --broadcast --verify --verifier blockscout --verifier-url "https://sepolia.explorer.mode.network/api\?"
 ```
 
 If you get the error Failed to get EIP-1559 fees, add `--legacy` to the command:
 
 ```sh
-forge script --chain "$NETWORK" script/DeployGauges.s.sol:Deploy --rpc-url "$RPC_URL" --broadcast --verify --legacy
+forge script --chain "$NETWORK_NAME" script/DeployGauges.s.sol:Deploy --rpc-url "$RPC_URL" --broadcast --verify --legacy
 ```
 
 If some contracts fail to verify on Etherscan, retry with this command:
 
 ```sh
-forge script --chain "$NETWORK" script/DeployGauges.s.sol:Deploy --rpc-url "$RPC_URL" --verify --legacy --private-key "$DEPLOYMENT_PRIVATE_KEY" --resume
+forge script --chain "$NETWORK_NAME" script/DeployGauges.s.sol:Deploy --rpc-url "$RPC_URL" --verify --legacy --private-key "$DEPLOYMENT_PRIVATE_KEY" --resume
 ```
 
 ## Contracts Overview
