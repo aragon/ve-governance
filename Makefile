@@ -1,32 +1,28 @@
 .DEFAULT_GOAL := help
 SHELL := /bin/bash
 
-# Import settings and constants
+# Load as "make" variables
 include .env
 
 # CONSTANTS
 
-VERSION := v1_4_0
-DEPLOYMENT_SCRIPT := DeployGauges_$(VERSION)
-# DEPLOYMENT_SCRIPT := DeployGaugesPluginSetup_$(VERSION)
-
-SOLC_VERSION := $(shell cat foundry.toml | grep solc | cut -d= -f2 | xargs echo || echo "0.8.28")
 SUPPORTED_VERIFIERS := etherscan blockscout sourcify zksync routescan-mainnet routescan-testnet
 ARTIFACTS_FOLDER := ./artifacts
 LOGS_FOLDER := ./logs
 
 # Remove quotes
-NETWORK_NAME:=$(strip $(subst ',, $(subst ",,$(NETWORK_NAME))))
-CHAIN_ID:=$(strip $(subst ',, $(subst ",,$(CHAIN_ID))))
-VERIFIER:=$(strip $(subst ',, $(subst ",,$(VERIFIER))))
-BLOCKSCOUT_HOST_NAME:=$(strip $(subst ',, $(subst ",,$(BLOCKSCOUT_HOST_NAME))))
+VERIFIER := $(strip $(subst ',, $(subst ",,$(VERIFIER))))
+CHAIN_ID := $(strip $(subst ',, $(subst ",,$(CHAIN_ID))))
+NETWORK_NAME := $(strip $(subst ',, $(subst ",,$(NETWORK_NAME))))
+BLOCKSCOUT_HOST_NAME := $(strip $(subst ',, $(subst ",,$(BLOCKSCOUT_HOST_NAME))))
 
-TEST_COVERAGE_SRC_FILES := $(wildcard test/*.sol test/**/*.sol src/*.sol src/**/*.sol)
+COVERAGE_SRC_FILES := $(wildcard test/*.sol test/**/*.sol src/*.sol src/**/*.sol)
+FORK_TEST_WILDCARD := './test/*/fork/*.sol'
 DEPLOYMENT_ADDRESS := $(shell cast wallet address --private-key $(DEPLOYMENT_PRIVATE_KEY) 2>/dev/null || echo "NOTE: DEPLOYMENT_PRIVATE_KEY is not properly set on .env" > /dev/stderr)
-DEPLOYMENT_SCRIPT_PARAM := script/$(DEPLOYMENT_SCRIPT).s.sol:$(DEPLOYMENT_SCRIPT)Script
+DEPLOYMENT_SCRIPT_PARAM := script/$(DEPLOYMENT_SCRIPT).s.sol:$(DEPLOYMENT_SCRIPT)
 DEPLOYMENT_LOG_FILE := $(LOGS_FOLDER)/deployment-$(NETWORK_NAME)-$(shell date +"%y-%m-%d-%H-%M").log
 
-# Check values
+# Validation
 
 ifeq ($(filter $(VERIFIER),$(SUPPORTED_VERIFIERS)),)
   $(error Unknown verifier: $(VERIFIER). It must be one of: $(SUPPORTED_VERIFIERS))
@@ -90,16 +86,15 @@ clean: ## Clean the build artifacts
 
 ## Testing:
 
-# Run tests faster, locally. Clear the variable for this target.
-test: export ETHERSCAN_API_KEY=
-
 .PHONY: test
 test: ## Run unit tests, locally
-	forge test $(FORGE_BUILD_CUSTOM_PARAMS) --no-match-path ./test/*/fork/*.sol
+	@# Run unit tests faster. Unsetting the API key.
+	ETHERSCAN_API_KEY="" ; \
+	forge test $(FORGE_BUILD_CUSTOM_PARAMS) --no-match-path $(FORK_TEST_WILDCARD)
 
 .PHONY: test-fork
 test-fork: ## Run fork tests, using RPC_URL
-	forge test $(FORGE_BUILD_CUSTOM_PARAMS) --match-path ./test/*/fork/*.sol
+	forge test $(FORGE_BUILD_CUSTOM_PARAMS) --match-path $(FORK_TEST_WILDCARD)
 
 test-coverage: report/index.html ## Generate an HTML coverage report under ./report
 	@which open > /dev/null && open report/index.html || true
@@ -108,17 +103,15 @@ test-coverage: report/index.html ## Generate an HTML coverage report under ./rep
 report/index.html: lcov.info
 	genhtml $^ -o report
 
-lcov.info: $(TEST_COVERAGE_SRC_FILES)
+lcov.info: $(COVERAGE_SRC_FILES)
 	forge coverage --report lcov
 
 ## Deployment:
 
-# Tell the deployment script that this is a simulation (skip writing artifacts)
-predeploy: export SIMULATION=true
-
 .PHONY: predeploy
 predeploy: ## Simulate a plugin deployment
 	@echo "Simulating the deployment (using $(DEPLOYMENT_SCRIPT).sol)"
+	SIMULATION=true ; \
 	forge script $(DEPLOYMENT_SCRIPT_PARAM) \
 		--rpc-url $(RPC_URL) \
 		$(FORGE_BUILD_CUSTOM_PARAMS) \

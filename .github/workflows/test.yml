@@ -188,7 +188,7 @@ jobs:
     name: Test Fork
     runs-on: ubuntu-latest
     env:
-      NETWORK: "sepolia"
+      NETWORK_NAME: "sepolia"
       FORK_TEST_MODE: "new-factory"
       DEPLOY_AS_PRODUCTION: false
       TOKEN_TEST_WHALE: "0x"

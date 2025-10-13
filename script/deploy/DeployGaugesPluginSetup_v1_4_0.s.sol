@@ -64,8 +64,8 @@ contract DeployGaugesPluginSetupV1_4_0 is Script {
             pluginRepoMaintainer: vm.envAddress("PLUGIN_REPO_MAINTAINER"),
             pluginRepoEnsSubdomain: vm.envOr("SIMPLE_GAUGE_VOTER_REPO_ENS_SUBDOMAIN", string("")),
             pluginRepoFactory: vm.envAddress("PLUGIN_REPO_FACTORY"),
-            releaseMetadata: vm.envOr("RELEASE_METADATA", string(" ")),
-            buildMetadata: vm.envOr("BUILD_METADATA", string(" "))
+            releaseMetadata: vm.envOr("RELEASE_METADATA_URI", string(" ")),
+            buildMetadata: vm.envOr("BUILD_METADATA_URI", string(" "))
         });
     }
 
