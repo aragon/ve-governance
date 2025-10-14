@@ -92,12 +92,13 @@ clean: ## Clean the build artifacts
 ## Testing:
 
 # Giving a default value to the inline filters:
-# make test           =>  v = "**"
-# make test v=v1_2_0  =>  v = "v1_2_0"
+# - make test             =>  v = "**"
+# - make test v="v1_2_0"  =>  v = "v1_2_0"
 
 test: v ?= **
 test-unint: v ?= **
 test-invariant: v ?= **
+test-upgrades: v ?= **
 
 .PHONY: test
 test: ## Run unit tests (locally)                    [options: v="v1_2_0"]
@@ -109,7 +110,13 @@ test-unint: ## Run unit + integration tests (locally)      [options: v="v1_2_0"]
 
 .PHONY: test-invariant
 test-invariant: ## Run integration tests (locally)             [options: v="v1_2_0"]
-	@make local-test-with-progress path="test/$(v)/{invariant}/**/*.sol"
+	@make local-test path="test/$(v)/invariant/**/*.sol" extra_params=--show-progress
+
+.PHONY: test-upgrades
+test-upgrades: ## Run regression/upgrade tests (locally)      [options: v="v1_2_0"]
+	@make local-test path="test/$(v)/upgrade/**/*.sol" extra_params=--force
+
+##
 
 .PHONY: test-fork
 test-fork: ## Run fork tests (using RPC_URL)
@@ -181,7 +188,8 @@ resume: test ## Retry pending deployment, verify the code and write to ./artifac
 		$(FORGE_SCRIPT_CUSTOM_PARAMS) \
 		2>&1 | tee -a $(DEPLOYMENT_LOG_FILE)
 
-## General:
+## Misc:
+
 
 .PHONY: get-deployment
 get-deployment: ## Show the addresses deployed by FACTORY_ADDRESS
@@ -213,6 +221,9 @@ refund: ## Transfer the balance left on the deployment account
 			--rpc-url $(RPC_URL) \
 			--value $$SPENDABLE \
 			$(REFUND_ADDRESS)
+
+anvil: ## Starts a local EVM, forking from RPC_URL   [optional: FORK_BLOCK_NUMBER]
+	anvil -f $(RPC_URL) $(FORK_TEST_PARAMS)
 
 ##
 
@@ -269,8 +280,4 @@ local-test-with-progress: export ETHERSCAN_API_KEY=""
 
 .PHONY: local-test
 local-test:
-	forge test $(FORGE_BUILD_CUSTOM_PARAMS) --match-path "$(path)"
-
-.PHONY: local-test-with-progress
-local-test-with-progress:
-	forge test $(FORGE_BUILD_CUSTOM_PARAMS) --match-path "$(path)" --show-progress
+	forge test $(FORGE_BUILD_CUSTOM_PARAMS) --match-path "$(path)" $(extra_params)
