@@ -403,7 +403,6 @@ contract VotingEscrowV1_2_0 is
 
         // If `_from` was created in this block, or if another token was merged into `_from` in this block,
         // record the current timestamp for `_to` so that withdrawals for it are blocked in the same block.
-        // IEscrowCurve.TokenPoint memory point = IEscrowCurve(curve).tokenPointHistory(_from, 1);
         if (withdrawalLock[_from] == block.timestamp) {
             withdrawalLock[_to] = block.timestamp;
         }
