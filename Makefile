@@ -15,12 +15,13 @@ VERIFIER := $(strip $(subst ',, $(subst ",,$(VERIFIER))))
 CHAIN_ID := $(strip $(subst ',, $(subst ",,$(CHAIN_ID))))
 NETWORK_NAME := $(strip $(subst ',, $(subst ",,$(NETWORK_NAME))))
 BLOCKSCOUT_HOST_NAME := $(strip $(subst ',, $(subst ",,$(BLOCKSCOUT_HOST_NAME))))
+FORK_BLOCK_NUMBER := $(strip $(subst ',, $(subst ",,$(FORK_BLOCK_NUMBER))))
 
-COVERAGE_SRC_FILES := $(wildcard test/*.sol test/**/*.sol src/*.sol src/**/*.sol)
-FORK_TEST_WILDCARD := './test/*/fork/*.sol'
 DEPLOYMENT_ADDRESS := $(shell cast wallet address --private-key $(DEPLOYMENT_PRIVATE_KEY) 2>/dev/null || echo "NOTE: DEPLOYMENT_PRIVATE_KEY is not properly set on .env" > /dev/stderr)
 DEPLOYMENT_SCRIPT_PARAM := script/$(DEPLOYMENT_SCRIPT).s.sol:$(DEPLOYMENT_SCRIPT)
 DEPLOYMENT_LOG_FILE := $(LOGS_FOLDER)/deployment-$(NETWORK_NAME)-$(shell date +"%y-%m-%d-%H-%M").log
+
+FORK_TEST_WILDCARD := './test/*/fork/*.sol'
 
 # Validation
 
@@ -30,6 +31,7 @@ endif
 
 # Conditional assignments
 
+# Verification backend
 ifeq ($(VERIFIER), etherscan)
 	VERIFIER_URL := https://api.etherscan.io/api
 	VERIFIER_API_KEY := $(ETHERSCAN_API_KEY)
@@ -59,7 +61,7 @@ else ifneq ($(filter $(VERIFIER), routescan-mainnet routescan-testnet),)
 	VERIFIER_PARAMS = --verifier $(VERIFIER) --verifier-url '$(VERIFIER_URL)' --etherscan-api-key $(VERIFIER_API_KEY)
 endif
 
-# Additional chain-dependent params (Foundry)
+# Chain-dependent parameters
 ifeq ($(CHAIN_ID),88888)
 	FORGE_SCRIPT_CUSTOM_PARAMS := --priority-gas-price 1000000000 --gas-price 5200000000000
 else ifeq ($(CHAIN_ID),300)
@@ -70,14 +72,19 @@ else ifeq ($(CHAIN_ID),324)
 	FORGE_BUILD_CUSTOM_PARAMS := --zksync
 endif
 
+# Fork testing parameters
+ifneq ($(FORK_BLOCK_NUMBER),)
+	FORK_TEST_PARAMS := --fork-block-number $(FORK_BLOCK_NUMBER)
+endif
+
 # TARGETS
 
 .PHONY: init
 init: ## Check the dependencies and prompt to install if needed
 	@which forge > /dev/null || curl -L https://foundry.paradigm.xyz | bash
 	@which lcov > /dev/null || echo "Note: lcov can be installed by running 'sudo apt install lcov'"
-	@git fetch --recurse-submodules=yes && git submodule update --init --recursive
-	@forge build $(FORGE_BUILD_CUSTOM_PARAMS) --sizes
+	git fetch --recurse-submodules=yes && git submodule update --init --recursive
+	forge build $(FORGE_BUILD_CUSTOM_PARAMS) --sizes
 
 .PHONY: clean
 clean: ## Clean the build artifacts
@@ -86,40 +93,43 @@ clean: ## Clean the build artifacts
 
 ## Testing:
 
+
 .PHONY: test
-test: ## Run unit tests, locally
+test: ## Run unit tests (locally)
 	@# Run unit tests faster. Unsetting the API key.
 	ETHERSCAN_API_KEY="" ; \
 	forge test $(FORGE_BUILD_CUSTOM_PARAMS) --no-match-path $(FORK_TEST_WILDCARD)
 
 .PHONY: test-fork
-test-fork: ## Run fork tests, using RPC_URL
-	forge test $(FORGE_BUILD_CUSTOM_PARAMS) --match-path $(FORK_TEST_WILDCARD)
+test-fork: ## Run fork test (RPC_URL)
+	forge test $(FORGE_BUILD_CUSTOM_PARAMS) --rpc-url $(RPC_URL) --match-path $(FORK_TEST_WILDCARD)
 
+.PHONY: test-coverage
 test-coverage: report/index.html ## Generate an HTML coverage report under ./report
+	@echo "Skipping test, script, src/escrow/increasing/delegation and proxylib from the coverage report"
+	forge coverage --match-path "test/v1_4_0/unit/escrow/queue/**/*.sol" --report lcov && \
+		lcov --remove ./lcov.info -o ./lcov.info.pruned \
+			'test/**/*.sol' 'script/**/*.sol' 'test/*.sol' \
+			'script/*.sol' 'src/escrow/increasing/delegation/*.sol' \
+			'src/libs/ProxyLib.sol' && \
+		genhtml lcov.info.pruned -o report --branch-coverage
 	@which open > /dev/null && open report/index.html || true
 	@which xdg-open > /dev/null && xdg-open report/index.html || true
-
-report/index.html: lcov.info
-	genhtml $^ -o report
-
-lcov.info: $(COVERAGE_SRC_FILES)
-	forge coverage --report lcov
 
 ## Deployment:
 
 .PHONY: predeploy
 predeploy: ## Simulate a plugin deployment
-	@echo "Simulating the deployment (using $(DEPLOYMENT_SCRIPT).sol)"
+	@echo "Simulating the deployment (using $(DEPLOYMENT_SCRIPT).s.sol)"
 	SIMULATION=true ; \
 	forge script $(DEPLOYMENT_SCRIPT_PARAM) \
 		--rpc-url $(RPC_URL) \
 		$(FORGE_BUILD_CUSTOM_PARAMS) \
-		$(FORGE_SCRIPT_CUSTOM_PARAMS) \
+		$(FORGE_SCRIPT_CUSTOM_PARAMS)
 
 .PHONY: deploy
 deploy: test ## Deploy the plugin, verify the source code and write to ./artifacts
-	@echo "Starting the deployment (using $(DEPLOYMENT_SCRIPT).sol)"
+	@echo "Starting the deployment (using $(DEPLOYMENT_SCRIPT).s.sol)"
 	@mkdir -p $(LOGS_FOLDER) $(ARTIFACTS_FOLDER)
 	forge script $(DEPLOYMENT_SCRIPT_PARAM) \
 		--rpc-url $(RPC_URL) \
@@ -165,12 +175,17 @@ resume: test ## Retry pending deployment transactions, verify code and write to 
 
 ## General:
 
+.PHONY: get-deployment
+get-deployment: ## Show the addresses deployed by FACTORY_ADDRESS
+	forge script script/utils/GetDeploymentValues_v1_2_0.sol:GetFactoryValuesV1_2_0 \
+        --rpc-url=$(RPC_URL) \
+        -vvvv
+
 .PHONY: refund
 refund: ## Refund the remaining balance left on the deployment account
 	@echo "Refunding the remaining balance on $(DEPLOYMENT_ADDRESS)"
 	@if [ -z $(REFUND_ADDRESS) -o $(REFUND_ADDRESS) = "0x0000000000000000000000000000000000000000" ]; then \
-		echo "- The refund address is empty" ; \
-		exit 1; \
+		echo "- The refund address is empty" ; exit 1; \
 	fi
 	@BALANCE=$(shell cast balance $(DEPLOYMENT_ADDRESS) --rpc-url $(RPC_URL)) && \
 		GAS_PRICE=$(shell cast gas-price --rpc-url $(RPC_URL)) && \
@@ -178,9 +193,9 @@ refund: ## Refund the remaining balance left on the deployment account
 		ENOUGH_BALANCE=$$(echo "$$SPENDABLE > 0" | bc) && \
 		\
 		if [ "$$ENOUGH_BALANCE" = "0" ]; then \
-			echo -e "- No balance can be refunded: $$BALANCE wei\n- Minimum balance: $${SPENDABLE:1} wei" ; \
-			exit 1; \
+			echo -e "- No balance can be refunded: $$BALANCE wei\n- Minimum balance: $${SPENDABLE:1} wei" ; exit 1; \
 		fi ; \
+		\
 		echo -n -e "Summary:\n- Refunding: $$SPENDABLE (wei)\n- Recipient: $(REFUND_ADDRESS)\n\nContinue? (y/N) " && \
 		\
 		read CONFIRM && \
@@ -193,6 +208,10 @@ refund: ## Refund the remaining balance left on the deployment account
 
 ##
 
+ACCENT := \e[33m
+LIGHTER := \e[37m
+NORMAL := \e[0m
+
 .PHONY: help
 help: ## Display the available recipes
 	@echo -e "Available recipes:\n"
@@ -202,11 +221,11 @@ help: ## Display the available recipes
 		elif [[ "$$line" =~ ^##\ (.*)$$ ]]; then \
 			printf "\n$${BASH_REMATCH[1]}\n\n" ; \
 		elif [[ "$$line" =~ ^([^:#]+):(.*)##\ (.*)$$ ]]; then \
-			printf "  make %-*s %s\n" 16 "$${BASH_REMATCH[1]}" "$${BASH_REMATCH[3]}" ; \
+			printf "  make $(ACCENT)%-*s$(LIGHTER) %s$(NORMAL)\n" 16 "$${BASH_REMATCH[1]}" "$${BASH_REMATCH[3]}" ; \
 		fi ; \
 	done
 
-# Other: Troubleshooting and helpers
+# Helpers and troubleshooting
 
 .PHONY: gas-price
 gas-price:
