@@ -149,43 +149,30 @@ test-coverage: report/index.html ## Generate an HTML test coverage report under 
 
 .PHONY: predeploy
 predeploy: ## Simulate a plugin deployment
-	@echo "Simulating the deployment (using $(DEPLOYMENT_SCRIPT).s.sol)"
-	SIMULATION=true ; \
-	forge script script/$(DEPLOYMENT_SCRIPT).s.sol:$(DEPLOYMENT_SCRIPT) \
-		--rpc-url $(RPC_URL) \
-		$(FORGE_BUILD_CUSTOM_PARAMS) \
-		$(FORGE_SCRIPT_CUSTOM_PARAMS)
+	@echo "Simulating the deployment"
+
+	@make simulate-script script="script/$(DEPLOYMENT_SCRIPT).s.sol:$(DEPLOYMENT_SCRIPT)"
 
 .PHONY: deploy
-deploy: test ## Deploy the plugin, verify the source code and write to ./artifacts
-	@echo "Starting the deployment (using $(DEPLOYMENT_SCRIPT).s.sol)"
+deploy: test ## Deploy the plugin, verify the code and write to ./artifacts
+	@echo "Starting the deployment"
 	@mkdir -p $(LOGS_FOLDER) $(ARTIFACTS_FOLDER)
-	forge script script/$(DEPLOYMENT_SCRIPT).s.sol:$(DEPLOYMENT_SCRIPT) \
-		--rpc-url $(RPC_URL) \
-		--retries 10 \
-		--delay 8 \
-		--broadcast \
-		--verify \
-		$(VERIFIER_PARAMS) \
-		$(FORGE_BUILD_CUSTOM_PARAMS) \
-		$(FORGE_SCRIPT_CUSTOM_PARAMS) \
-		2>&1 | tee -a $(DEPLOYMENT_LOG_FILE)
+
+	@make run-script script="script/$(DEPLOYMENT_SCRIPT).s.sol:$(DEPLOYMENT_SCRIPT)" \
+	    2>&1 | tee -a $(DEPLOYMENT_LOG_FILE)
+
+	echo "Logs saved in $(DEPLOYMENT_LOG_FILE)"
 
 .PHONY: resume
-resume: test ## Retry pending deployment, verify the code and write to ./artifacts
-	@echo "Retrying the deployment (using $(DEPLOYMENT_SCRIPT).sol)"
+resume: test ## Retry a pending deployment, verify the code and write to ./artifacts
+	@echo "Retrying the deployment"
 	@mkdir -p $(LOGS_FOLDER) $(ARTIFACTS_FOLDER)
-	forge script script/$(DEPLOYMENT_SCRIPT).s.sol:$(DEPLOYMENT_SCRIPT) \
-		--rpc-url $(RPC_URL) \
-		--retries 10 \
-		--delay 8 \
-		--broadcast \
-		--resume \
-		--verify \
-		$(VERIFIER_PARAMS) \
-		$(FORGE_BUILD_CUSTOM_PARAMS) \
-		$(FORGE_SCRIPT_CUSTOM_PARAMS) \
-		2>&1 | tee -a $(DEPLOYMENT_LOG_FILE)
+
+	@make run-script script="script/$(DEPLOYMENT_SCRIPT).s.sol:$(DEPLOYMENT_SCRIPT)" \
+		extra_params="--resume" \
+	    2>&1 | tee -a $(DEPLOYMENT_LOG_FILE)
+
+	echo "Logs saved in $(DEPLOYMENT_LOG_FILE)"
 
 ## Misc:
 
@@ -220,8 +207,28 @@ refund: ## Transfer the balance left on the deployment account
 			--value $$SPENDABLE \
 			$(REFUND_ADDRESS)
 
+##
+
 anvil: ## Starts a local EVM, forking from RPC_URL   [optional: FORK_BLOCK_NUMBER]
 	anvil -f $(RPC_URL) $(FORK_TEST_PARAMS)
+
+.PHONY: preseed
+preseed: ## Simulate a SeedState invokation
+	@echo "Simulating SeedState"
+
+	@make simulate-script script="SeedState"
+
+.PHONY: seed
+seed: test ## Submit a SeedState transaction
+	@echo "Starting SeedState"
+	@mkdir -p $(LOGS_FOLDER) $(ARTIFACTS_FOLDER)
+
+	@make run-script script="SeedState" \
+	    2>&1 | tee -a $(DEPLOYMENT_LOG_FILE)
+
+	echo "Logs saved in $(DEPLOYMENT_LOG_FILE)"
+
+##
 
 ACCENT := \e[33m
 LIGHTER := \e[37m
@@ -275,4 +282,35 @@ local-test: export ETHERSCAN_API_KEY=""
 
 .PHONY: local-test
 local-test:
+	@echo ETHERSCAN_API_KEY=\"\"
 	forge test $(FORGE_BUILD_CUSTOM_PARAMS) --match-path "$(path)" $(extra_params)
+
+
+# Set the SIMULATE variable so that launched scripts can skip writing deployment artifacts
+simulate-script: export SIMULATION=true
+
+# Example:
+# make simulate-script script="MyScript.s.sol:MyScript"
+.PHONY: simulate-script
+simulate-script:
+	@echo "SIMULATION=true"
+	forge script $(script) \
+		--rpc-url $(RPC_URL) \
+		$(FORGE_BUILD_CUSTOM_PARAMS) \
+		$(FORGE_SCRIPT_CUSTOM_PARAMS)
+
+# Example:
+# make run-script script="MyScript.s.sol:MyScript"
+# make run-script script="MyScript.s.sol:MyScript" extra_params="--resume"
+.PHONY: run-script
+run-script: test
+	forge script $(script) \
+		--rpc-url $(RPC_URL) \
+		--retries 10 \
+		--delay 8 \
+		--broadcast \
+		--verify \
+		$(VERIFIER_PARAMS) \
+		$(FORGE_BUILD_CUSTOM_PARAMS) \
+		$(FORGE_SCRIPT_CUSTOM_PARAMS) \
+		$(extra_params)
