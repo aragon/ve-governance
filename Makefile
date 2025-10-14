@@ -21,8 +21,6 @@ DEPLOYMENT_ADDRESS := $(shell cast wallet address --private-key $(DEPLOYMENT_PRI
 DEPLOYMENT_SCRIPT_PARAM := script/$(DEPLOYMENT_SCRIPT).s.sol:$(DEPLOYMENT_SCRIPT)
 DEPLOYMENT_LOG_FILE := $(LOGS_FOLDER)/deployment-$(NETWORK_NAME)-$(shell date +"%y-%m-%d-%H-%M").log
 
-FORK_TEST_WILDCARD := './test/*/fork/*.sol'
-
 # Validation
 
 ifeq ($(filter $(VERIFIER),$(SUPPORTED_VERIFIERS)),)
@@ -93,19 +91,44 @@ clean: ## Clean the build artifacts
 
 ## Testing:
 
+# Giving a default value to the inline filters:
+# make test           =>  v = "**"
+# make test v=v1_2_0  =>  v = "v1_2_0"
+
+test: v ?= **
+test-unint: v ?= **
+test-invariant: v ?= **
 
 .PHONY: test
-test: ## Run unit tests (locally)
-	@# Run unit tests faster. Unsetting the API key.
-	ETHERSCAN_API_KEY="" ; \
-	forge test $(FORGE_BUILD_CUSTOM_PARAMS) --no-match-path $(FORK_TEST_WILDCARD)
+test: ## Run unit tests (locally)                    [options: v="v1_2_0"]
+	@make local-test path="test/$(v)/unit/**/*.sol"
+
+.PHONY: test-unint
+test-unint: ## Run unit + integration tests (locally)      [options: v="v1_2_0"]
+	@make local-test path="test/$(v)/{unit,integration}/**/*.sol"
+
+.PHONY: test-invariant
+test-invariant: ## Run integration tests (locally)             [options: v="v1_2_0"]
+	@make local-test-with-progress path="test/$(v)/{invariant}/**/*.sol"
 
 .PHONY: test-fork
-test-fork: ## Run fork test (RPC_URL)
-	forge test $(FORGE_BUILD_CUSTOM_PARAMS) --rpc-url $(RPC_URL) --match-path $(FORK_TEST_WILDCARD)
+test-fork: ## Run fork tests (using RPC_URL)
+	forge test $(FORGE_BUILD_CUSTOM_PARAMS) --rpc-url $(RPC_URL) --match-path './test/*/fork/*.sol'
+
+.PHONY: test-fork-mint
+test-fork-mint: ## Run fork tests (minting tokens)
+	@MINT_TEST_TOKENS=true ; make test-fork
+
+.PHONY: test-fork-existing
+test-fork-existing: ## Run fork tests (existing factory)
+	@FORK_TEST_MODE='existing-factory' ; make test-fork
+
+.PHONY: test-fork-exmint
+test-fork-exmint: ## Run fork tests (existing factory + minting tokens)
+	@MINT_TEST_TOKENS=true; FORK_TEST_MODE='existing-factory' ; make test-fork
 
 .PHONY: test-coverage
-test-coverage: report/index.html ## Generate an HTML coverage report under ./report
+test-coverage: report/index.html ## Generate an HTML test coverage report under ./report
 	@echo "Skipping test, script, src/escrow/increasing/delegation and proxylib from the coverage report"
 	forge coverage --match-path "test/v1_4_0/unit/escrow/queue/**/*.sol" --report lcov && \
 		lcov --remove ./lcov.info -o ./lcov.info.pruned \
@@ -143,7 +166,7 @@ deploy: test ## Deploy the plugin, verify the source code and write to ./artifac
 		2>&1 | tee -a $(DEPLOYMENT_LOG_FILE)
 
 .PHONY: resume
-resume: test ## Retry pending deployment transactions, verify code and write to ./artifacts
+resume: test ## Retry pending deployment, verify the code and write to ./artifacts
 	@echo "Retrying the deployment (using $(DEPLOYMENT_SCRIPT).sol)"
 	@mkdir -p $(LOGS_FOLDER) $(ARTIFACTS_FOLDER)
 	forge script $(DEPLOYMENT_SCRIPT_PARAM) \
@@ -158,21 +181,6 @@ resume: test ## Retry pending deployment transactions, verify code and write to 
 		$(FORGE_SCRIPT_CUSTOM_PARAMS) \
 		2>&1 | tee -a $(DEPLOYMENT_LOG_FILE)
 
-# .PHONY: deploy-verify
-# deploy-verify: ## Deploy internal (dummy) contracts to force code verification
-# 	@echo "Starting the deployment"
-# 	@mkdir -p $(LOGS_FOLDER) $(ARTIFACTS_FOLDER)
-# 	forge script script/ForceVerification.s.sol:ForceVerificationScript \
-# 		--rpc-url $(RPC_URL) \
-# 		--retries 10 \
-# 		--delay 8 \
-# 		--broadcast \
-# 		--verify \
-# 		$(VERIFIER_PARAMS) \
-# 		$(FORGE_BUILD_CUSTOM_PARAMS) \
-# 		$(FORGE_SCRIPT_CUSTOM_PARAMS) \
-#
-
 ## General:
 
 .PHONY: get-deployment
@@ -182,8 +190,8 @@ get-deployment: ## Show the addresses deployed by FACTORY_ADDRESS
         -vvvv
 
 .PHONY: refund
-refund: ## Refund the remaining balance left on the deployment account
-	@echo "Refunding the remaining balance on $(DEPLOYMENT_ADDRESS)"
+refund: ## Transfer the balance left on the deployment account
+	@echo "Refunding the balance left on $(DEPLOYMENT_ADDRESS)"
 	@if [ -z $(REFUND_ADDRESS) -o $(REFUND_ADDRESS) = "0x0000000000000000000000000000000000000000" ]; then \
 		echo "- The refund address is empty" ; exit 1; \
 	fi
@@ -193,10 +201,10 @@ refund: ## Refund the remaining balance left on the deployment account
 		ENOUGH_BALANCE=$$(echo "$$SPENDABLE > 0" | bc) && \
 		\
 		if [ "$$ENOUGH_BALANCE" = "0" ]; then \
-			echo -e "- No balance can be refunded: $$BALANCE wei\n- Minimum balance: $${SPENDABLE:1} wei" ; exit 1; \
+			echo -e "- Cannot refund:   $$BALANCE wei\n- Minimum balance: $${SPENDABLE:1} wei" ; exit 1; \
 		fi ; \
 		\
-		echo -n -e "Summary:\n- Refunding: $$SPENDABLE (wei)\n- Recipient: $(REFUND_ADDRESS)\n\nContinue? (y/N) " && \
+		echo -n -e "Summary:\n- Refunding:  $$SPENDABLE (wei)\n- Recipient:  $(REFUND_ADDRESS)\n\nContinue? (y/N) " && \
 		\
 		read CONFIRM && \
 		if [ "$$CONFIRM" != "y" ]; then echo "Aborting" ; exit 1; fi ; \
@@ -211,6 +219,7 @@ refund: ## Refund the remaining balance left on the deployment account
 ACCENT := \e[33m
 LIGHTER := \e[37m
 NORMAL := \e[0m
+COLUMN_START := 20
 
 .PHONY: help
 help: ## Display the available recipes
@@ -221,7 +230,7 @@ help: ## Display the available recipes
 		elif [[ "$$line" =~ ^##\ (.*)$$ ]]; then \
 			printf "\n$${BASH_REMATCH[1]}\n\n" ; \
 		elif [[ "$$line" =~ ^([^:#]+):(.*)##\ (.*)$$ ]]; then \
-			printf "  make $(ACCENT)%-*s$(LIGHTER) %s$(NORMAL)\n" 16 "$${BASH_REMATCH[1]}" "$${BASH_REMATCH[3]}" ; \
+			printf "  make $(ACCENT)%-*s$(LIGHTER) %s$(NORMAL)\n" $(COLUMN_START) "$${BASH_REMATCH[1]}" "$${BASH_REMATCH[3]}" ; \
 		fi ; \
 	done
 
@@ -247,7 +256,21 @@ clean-nonces:
 .PHONY: clean-nonce
 clean-nonce:
 	cast send --private-key $(DEPLOYMENT_PRIVATE_KEY) \
- 			--rpc-url $(RPC_URL) \
- 			--value 0 \
- 			--nonce $(nonce) \
- 			$(DEPLOYMENT_ADDRESS)
+		--rpc-url $(RPC_URL) \
+		--value 0 \
+		--nonce $(nonce) \
+		$(DEPLOYMENT_ADDRESS)
+
+# Internal helpers
+
+# Running the following tests faster, unsetting the API key
+local-test: export ETHERSCAN_API_KEY=""
+local-test-with-progress: export ETHERSCAN_API_KEY=""
+
+.PHONY: local-test
+local-test:
+	forge test $(FORGE_BUILD_CUSTOM_PARAMS) --match-path "$(path)"
+
+.PHONY: local-test-with-progress
+local-test-with-progress:
+	forge test $(FORGE_BUILD_CUSTOM_PARAMS) --match-path "$(path)" --show-progress
