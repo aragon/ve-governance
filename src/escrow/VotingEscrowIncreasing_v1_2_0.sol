@@ -126,9 +126,8 @@ contract VotingEscrowV1_2_0 is
     /// @notice Whitelisted contracts that are allowed to split
     mapping(address => bool) public splitWhitelisted;
 
-    /// @notice Updates `to` token's timestamp if merge occurs from a token
-    ///         whose creation lock occured in the same timestamp as current tx.
-    mapping(uint256 => uint256) internal mergeWithdrawalLock;
+    /// @notice Prevent withdrawals in same creation block
+    mapping(uint256 => uint256) internal withdrawalLock;
 
     /// @notice Addess of the escrow ivotes adapter where delegations occur.
     address public ivotesAdapter;
@@ -348,6 +347,9 @@ contract VotingEscrowV1_2_0 is
         totalLocked += _value;
         uint256 newTokenId = ++lastLockId;
 
+        // Record the block timestamp for the new tokenId to prevent withdrawals in the same block.
+        withdrawalLock[newTokenId] = block.timestamp;
+
         // write the lock and checkpoint the voting power
         LockedBalance memory lock = LockedBalance(_value.toUint208(), startTime.toUint48());
         _locked[newTokenId] = lock;
@@ -402,8 +404,8 @@ contract VotingEscrowV1_2_0 is
         // If `_from` was created in this block, or if another token was merged into `_from` in this block,
         // record the current timestamp for `_to` so that withdrawals for it are blocked in the same block.
         IEscrowCurve.TokenPoint memory point = IEscrowCurve(curve).tokenPointHistory(_from, 1);
-        if (point.writtenTs == block.timestamp || mergeWithdrawalLock[_from] == block.timestamp) {
-            mergeWithdrawalLock[_to] = block.timestamp;
+        if (point.writtenTs == block.timestamp || withdrawalLock[_from] == block.timestamp) {
+            withdrawalLock[_to] = block.timestamp;
         }
 
         // We only allow merge when both tokens have the same owner.
@@ -484,6 +486,12 @@ contract VotingEscrowV1_2_0 is
         _locked[_from] = LockedBalance(amount1, locked_.start);
 
         uint256 newTokenId = ++lastLockId;
+
+        // preserve the withdrawal lock for `_from` if it exists.
+        if (withdrawalLock[_from] == block.timestamp) {
+            withdrawalLock[newTokenId] = block.timestamp;
+        }
+
         // owner gets minted a new tokenId. Since `split` function
         // just splits the same amount into two tokenIds, there's no need
         // to update voting power on ivotesAdapter, as total doesn't change.
@@ -567,9 +575,7 @@ contract VotingEscrowV1_2_0 is
         //    created in a previous block, the merged portion is "fresh" and
         //    would still be withdrawable without restriction.
         IEscrowCurve.TokenPoint memory point = IEscrowCurve(curve).tokenPointHistory(_tokenId, 1);
-        if (
-            block.timestamp == point.writtenTs || block.timestamp == mergeWithdrawalLock[_tokenId]
-        ) {
+        if (block.timestamp == point.writtenTs || block.timestamp == withdrawalLock[_tokenId]) {
             revert CannotWithdrawInSameBlock();
         }
 
