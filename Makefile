@@ -18,7 +18,6 @@ BLOCKSCOUT_HOST_NAME := $(strip $(subst ',, $(subst ",,$(BLOCKSCOUT_HOST_NAME)))
 FORK_BLOCK_NUMBER := $(strip $(subst ',, $(subst ",,$(FORK_BLOCK_NUMBER))))
 
 DEPLOYMENT_ADDRESS := $(shell cast wallet address --private-key $(DEPLOYMENT_PRIVATE_KEY) 2>/dev/null || echo "NOTE: DEPLOYMENT_PRIVATE_KEY is not properly set on .env" > /dev/stderr)
-DEPLOYMENT_SCRIPT_PARAM := script/$(DEPLOYMENT_SCRIPT).s.sol:$(DEPLOYMENT_SCRIPT)
 DEPLOYMENT_LOG_FILE := $(LOGS_FOLDER)/deployment-$(NETWORK_NAME)-$(shell date +"%y-%m-%d-%H-%M").log
 
 # Validation
@@ -152,7 +151,7 @@ test-coverage: report/index.html ## Generate an HTML test coverage report under 
 predeploy: ## Simulate a plugin deployment
 	@echo "Simulating the deployment (using $(DEPLOYMENT_SCRIPT).s.sol)"
 	SIMULATION=true ; \
-	forge script $(DEPLOYMENT_SCRIPT_PARAM) \
+	forge script script/$(DEPLOYMENT_SCRIPT).s.sol:$(DEPLOYMENT_SCRIPT) \
 		--rpc-url $(RPC_URL) \
 		$(FORGE_BUILD_CUSTOM_PARAMS) \
 		$(FORGE_SCRIPT_CUSTOM_PARAMS)
@@ -161,7 +160,7 @@ predeploy: ## Simulate a plugin deployment
 deploy: test ## Deploy the plugin, verify the source code and write to ./artifacts
 	@echo "Starting the deployment (using $(DEPLOYMENT_SCRIPT).s.sol)"
 	@mkdir -p $(LOGS_FOLDER) $(ARTIFACTS_FOLDER)
-	forge script $(DEPLOYMENT_SCRIPT_PARAM) \
+	forge script script/$(DEPLOYMENT_SCRIPT).s.sol:$(DEPLOYMENT_SCRIPT) \
 		--rpc-url $(RPC_URL) \
 		--retries 10 \
 		--delay 8 \
@@ -176,20 +175,19 @@ deploy: test ## Deploy the plugin, verify the source code and write to ./artifac
 resume: test ## Retry pending deployment, verify the code and write to ./artifacts
 	@echo "Retrying the deployment (using $(DEPLOYMENT_SCRIPT).sol)"
 	@mkdir -p $(LOGS_FOLDER) $(ARTIFACTS_FOLDER)
-	forge script $(DEPLOYMENT_SCRIPT_PARAM) \
+	forge script script/$(DEPLOYMENT_SCRIPT).s.sol:$(DEPLOYMENT_SCRIPT) \
 		--rpc-url $(RPC_URL) \
 		--retries 10 \
 		--delay 8 \
 		--broadcast \
-		--verify \
 		--resume \
+		--verify \
 		$(VERIFIER_PARAMS) \
 		$(FORGE_BUILD_CUSTOM_PARAMS) \
 		$(FORGE_SCRIPT_CUSTOM_PARAMS) \
 		2>&1 | tee -a $(DEPLOYMENT_LOG_FILE)
 
 ## Misc:
-
 
 .PHONY: get-deployment
 get-deployment: ## Show the addresses deployed by FACTORY_ADDRESS
@@ -225,15 +223,13 @@ refund: ## Transfer the balance left on the deployment account
 anvil: ## Starts a local EVM, forking from RPC_URL   [optional: FORK_BLOCK_NUMBER]
 	anvil -f $(RPC_URL) $(FORK_TEST_PARAMS)
 
-##
-
 ACCENT := \e[33m
 LIGHTER := \e[37m
 NORMAL := \e[0m
 COLUMN_START := 20
 
 .PHONY: help
-help: ## Display the available recipes
+help: ## Show the main recipes
 	@echo -e "Available recipes:\n"
 	@cat Makefile | while IFS= read -r line; do \
 		if [[ "$$line" == "##" ]]; then \
@@ -259,13 +255,13 @@ balance:
 		cast --to-unit $$BALANCE ether
 
 .PHONY: clean-nonces
-clean-nonces:
+clean-nonces: # make clean-nonces nonces="2 3 4 5"
 	for nonce in $(nonces); do \
 	  make clean-nonce nonce=$$nonce ; \
 	done
 
 .PHONY: clean-nonce
-clean-nonce:
+clean-nonce: # make clean-nonce nonce=3
 	cast send --private-key $(DEPLOYMENT_PRIVATE_KEY) \
 		--rpc-url $(RPC_URL) \
 		--value 0 \
@@ -276,7 +272,6 @@ clean-nonce:
 
 # Running the following tests faster, unsetting the API key
 local-test: export ETHERSCAN_API_KEY=""
-local-test-with-progress: export ETHERSCAN_API_KEY=""
 
 .PHONY: local-test
 local-test:
