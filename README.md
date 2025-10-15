@@ -80,7 +80,7 @@ Check the available make targets to simulate and deploy the smart contracts:
   - [ ] I have run `source /root/.bashrc && foundryup`
   - [ ] I have run `cd /deployment`
   - [ ] I have run `make init`
-  - [ ] I have printed the contents of `.env` and `.env.test` on the screen
+  - [ ] I have printed the contents of `.env` on the screen
 - [ ] I am opening an editor on the `/deployment` folder, within the Docker container
 - [ ] The `.env` file contains the correct parameters for the deployment
   - [ ] I have created a brand new burner wallet with `cast wallet new` and copied the private key to `DEPLOYMENT_PRIVATE_KEY` within `.env`
@@ -102,48 +102,30 @@ Check the available make targets to simulate and deploy the smart contracts:
   - The given OSx addresses:
     - [ ] Exist on the target network
     - [ ] Contain the latest stable official version of the OSx DAO implementation, the Plugin Setup Processor and the Plugin Repo Factory
-    - [ ] I have verified the values on https://www.npmjs.com/package/@aragon/osx-commons-configs?activeTab=code > `/@aragon/osx-commons-configs/dist/deployments/json/`
+    - [ ] I have verified the values on https://github.com/aragon/osx/blob/main/packages/artifacts/src/addresses.json
 - [ ] I have updated the `CurveConstantLib` and `Clock` with any new constants.
 - [ ] All my unit tests pass (`make test`)
-- **Target test network**
-  - [ ] I have defined `FORK_TESTNET_BLOCK_NUMBER` on `.env.test`, with the current block number
-  - [ ] I have run a fork test in `new-factory` mode with minted tokens against the official OSx contracts on the testnet
-    - `make test-fork-mint-testnet`
-  - [ ] I have deployed my contracts successfully to the target testnet
-    - `make deploy-testnet`
-  - [ ] I have updated `VE_FACTORY_ADDRESS` on `.env.test` with the address of the deployed factory
-  - If there is a live token with an address holding ≥ 3000 tokens on the testnet:
-    - [ ] I have defined `TEST_TOKEN_WHALE` on `.env.test`
-    - [ ] I have run a fork test in `new-factory` mode with the live token on the testnet
-      - `make test-fork-testnet`
-    - [ ] I have confirmed that tests still work in `existing-factory` mode with the live token(s) and the already deployed factory on the testnet.
-      - `make test-fork-factory-testnet`
 - **Target production network**
-  - [ ] I have defined `FORK_PRODNET_BLOCK_NUMBER` on `.env.test`, with the current block number
-  - [ ] I have run a fork test in `new-factory` mode with minted tokens against the official OSx contracts on the prodnet
-    - `make test-fork-mint-prodnet`
-  - If the live token has an address holding ≥ 3000 tokens on the prodnet:
-    - [ ] I have defined `TEST_TOKEN_WHALE` on `.env.test`
-    - [ ] I have updated `TOKEN1_ADDRESS` to have the address of the testnet token deployed above
-    - [ ] I have run a fork test in `new-factory` mode with the live token on the prodnet
-      - `make test-fork-prodnet`
-    - [ ] I have confirmed that tests still work in `existing-factory` mode with the live token(s) and the already deployed factory on the prodnet.
-      - `make test-fork-factory-prodnet`
-    - [ ] I have reverted `TOKEN1_ADDRESS` to the intended address of the token on the production network
+  - [ ] I have run a fork test in `new-factory` mode with minted tokens against the official OSx contracts
+    - `make test-fork-mint`
+  - If the live token has an address holding ≥ 3000 tokens:
+    - [ ] I have defined `TEST_TOKEN_WHALE` on `.env`
+    - [ ] I have run a fork test in `new-factory` mode with the live token
+      - `make test-fork`
 - [ ] My deployment wallet is a newly created account, ready for safe production deploys.
 - My computer:
   - [ ] Is running in a safe physical location and a trusted network
   - [ ] It exposes no services or ports
   - [ ] The wifi or wired network used does does not have open ports to a WAN
 - [ ] I have previewed my deploy without any errors
-  - `make pre-deploy-prodnet`
+  - `make predeploy`
 - [ ] My wallet has sufficient native token for gas
   - At least, 15% more than the estimated simulation
 - [ ] Unit tests still run clean
 - [ ] I have run `git status` and it reports no local changes
 - [ ] The current local git branch corresponds to its counterpart on `origin`
   - [ ] I confirm that the rest of members of the ceremony pulled the last commit of my branch and reported the same commit hash as my output for `git log -n 1`
-- [ ] I have initiated the production deployment with `make deploy-prodnet`
+- [ ] I have initiated the production deployment with `make deploy`
 
 ### Post deployment checklist
 
@@ -151,7 +133,7 @@ Check the available make targets to simulate and deploy the smart contracts:
 - [ ] The deployed factory was deployed by the deployment address
 - [ ] The reported contracts have been created created by the newly deployed factory
 - [ ] The smart contracts are correctly verified on Etherscan or the corresponding block explorer
-- [ ] The output of the latest `deployment-*.log` file corresponds to the console output
+- [ ] The output of the latest `logs/deployment-*.log` file corresponds to the console output
 - [ ] I have transferred the remaining funds of the deployment wallet to the address that originally funded it
   - `make refund`
 
