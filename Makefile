@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := help
 SHELL := /bin/bash
 
-# Load as "make" variables
+# Load .env as "make" variables
 include .env
 
 # CONSTANTS
@@ -100,19 +100,23 @@ test-invariant: v ?= **
 test-upgrades: v ?= **
 
 .PHONY: test
-test: ## Run unit tests (locally)                    [options: v="v1_2_0"]
+test: ## Run unit tests                       [optional: v="v1_2_0"]
 	@make local-test path="test/$(v)/unit/**/*.sol"
 
+.PHONY: test-integration
+test-integration: ## Run integration tests                [optional: v="v1_2_0"]
+	@make local-test path="test/$(v)/integration/**/*.sol"
+
 .PHONY: test-unint
-test-unint: ## Run unit + integration tests (locally)      [options: v="v1_2_0"]
+test-unint: ## Run unit + integration tests         [optional: v="v1_2_0"]
 	@make local-test path="test/$(v)/{unit,integration}/**/*.sol"
 
 .PHONY: test-invariant
-test-invariant: ## Run integration tests (locally)             [options: v="v1_2_0"]
+test-invariant: ## Run invariant tests                  [optional: v="v1_2_0"]
 	@make local-test path="test/$(v)/invariant/**/*.sol" extra_params=--show-progress
 
 .PHONY: test-upgrades
-test-upgrades: ## Run regression/upgrade tests (locally)      [options: v="v1_2_0"]
+test-upgrades: ## Run regression/upgrade tests         [optional: v="v1_2_0"]
 	@make local-test path="test/$(v)/upgrade/**/*.sol" extra_params=--force
 
 ##
@@ -151,7 +155,7 @@ test-coverage: report/index.html ## Generate an HTML test coverage report under 
 predeploy: ## Simulate a plugin deployment
 	@echo "Simulating the deployment"
 
-	@make simulate-script script="script/$(DEPLOYMENT_SCRIPT).s.sol:$(DEPLOYMENT_SCRIPT)"
+	@make simulate-script script="script/deploy/$(DEPLOYMENT_SCRIPT).s.sol:$(DEPLOYMENT_SCRIPT)"
 
 .PHONY: deploy
 deploy: test ## Deploy the plugin, verify the code and write to ./artifacts
@@ -177,7 +181,7 @@ resume: test ## Retry a pending deployment, verify the code and write to ./artif
 ## Misc:
 
 .PHONY: get-deployment
-get-deployment: ## Show the addresses deployed by FACTORY_ADDRESS
+get-deployment: ## Show the addresses deployed by .env/VE_FACTORY_ADDRESS
 	forge script script/utils/GetDeploymentValues_v1_2_0.sol:GetFactoryValuesV1_2_0 \
         --rpc-url=$(RPC_URL) \
         -vvvv
@@ -209,11 +213,11 @@ refund: ## Transfer the balance left on the deployment account
 
 ##
 
-anvil: ## Starts a local EVM, forking from RPC_URL   [optional: FORK_BLOCK_NUMBER]
+anvil: ## Starts a forked EVM, using RPC_URL   [optional: .env/FORK_BLOCK_NUMBER]
 	anvil -f $(RPC_URL) $(FORK_TEST_PARAMS)
 
 .PHONY: preseed
-preseed: ## Simulate a SeedState invokation
+preseed: ## Simulate a SeedState transaction
 	@echo "Simulating SeedState"
 
 	@make simulate-script script="SeedState"

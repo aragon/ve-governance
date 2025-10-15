@@ -87,7 +87,7 @@ contract RegressionV1_0_0__to__V1_3_0_Fork is
     address gauge = address(0x777);
 
     function setUp() public {
-        address factoryAddr = vm.envOr("FACTORY_ADDRESS", address(0));
+        address factoryAddr = vm.envOr("VE_FACTORY_ADDRESS", address(0));
 
         if (factoryAddr == address(0)) {
             revert("Factory address not provided");
