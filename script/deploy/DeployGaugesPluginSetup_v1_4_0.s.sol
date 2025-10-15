@@ -84,6 +84,14 @@ contract DeployGaugesPluginSetup_v1_4_0 is Script {
     }
 
     function preparePluginRepo(address maintainer) internal returns (PluginRepo) {
+        // Use a random value if empty
+        if (bytes(params.pluginRepoEnsSubdomain).length == 0) {
+            params.pluginRepoEnsSubdomain = string.concat(
+                "ve-governance-",
+                vm.toString(block.timestamp)
+            );
+        }
+
         // Publish repo
         return
             PluginRepoFactory(params.pluginRepoFactory).createPluginRepoWithFirstVersion(
@@ -100,8 +108,11 @@ contract DeployGaugesPluginSetup_v1_4_0 is Script {
         console.log("");
 
         console.log("- Plugin repository:", address(pluginRepo));
-        console.log("  - ENS:", string.concat(params.pluginRepoEnsSubdomain, ".plugin.dao.eth"));
-        console.log("  - Maintainer:", address(params.pluginRepoMaintainer));
-        console.log("- Plugin setup:", address(pluginSetup));
+        console.log(
+            "  - ENS:            ",
+            string.concat(params.pluginRepoEnsSubdomain, ".plugin.dao.eth")
+        );
+        console.log("  - Maintainer:     ", address(params.pluginRepoMaintainer));
+        console.log("- Plugin setup:     ", address(pluginSetup));
     }
 }
