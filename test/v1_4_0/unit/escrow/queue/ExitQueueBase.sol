@@ -48,7 +48,8 @@ contract MockEscrow {
 
 contract MockDynamicExitQueue is DynamicExitQueue {
     function getScaledTimeBasedFee(uint elapsed) external view returns (uint) {
-        return _getScaledTimeBasedFee(elapsed);
+        TicketV2 memory ticket = _globalTicket();
+        return _getScaledTimeBasedFee(elapsed, ticket);
     }
 
     function slope() external view returns (uint) {
