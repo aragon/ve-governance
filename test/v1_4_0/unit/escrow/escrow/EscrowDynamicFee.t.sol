@@ -91,7 +91,7 @@ contract TestDynamicExitQueueIntegration is
     function testFixedFeeEarlyExitEnabled() public {
         address user = address(0x123);
 
-        queue.setFixedExitFeePercent(1500, 7 days, true);
+        queue.setFixedExitFeePercent(1500, 0); // cooldown = 0 for early exit
 
         uint256 tokenId = _setupTokenAndQueue(user, 1000e18);
 
@@ -231,12 +231,12 @@ contract TestDynamicExitQueueIntegration is
         address user6 = address(0x666);
 
         // Phase 1: Fixed fee (no early exit)
-        queue.setFixedExitFeePercent(1000, 5 days, false);
+        queue.setFixedExitFeePercent(1000, 5 days); // cooldown = 5 days for no early exit
         uint256 tokenId1 = _setupTokenAndQueue(user1, 1000e18);
         uint256 tokenId2 = _setupTokenAndQueue(user2, 1000e18);
 
         // Phase 2: Fixed fee (early exit enabled)
-        queue.setFixedExitFeePercent(1500, 3 days, true);
+        queue.setFixedExitFeePercent(1500, 0); // cooldown = 0 for early exit
         uint256 tokenId3 = _setupTokenAndQueue(user3, 1000e18);
         uint256 tokenId4 = _setupTokenAndQueue(user4, 1000e18);
 

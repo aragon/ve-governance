@@ -59,7 +59,7 @@ contract TestWithdraw is IEscrowCurveTokenStorage, IGaugeVote, ITicketV2, Escrow
 
         if (_fee > 10_000) _fee = 10_000;
 
-        queue.setFixedExitFeePercent(_fee, 1 weeks, false);
+        queue.setFixedExitFeePercent(_fee, 1 weeks); // cooldown = 1 week for no early exit
 
         token.mint(_who, _dep);
         uint tokenId;

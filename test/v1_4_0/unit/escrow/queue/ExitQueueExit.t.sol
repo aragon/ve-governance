@@ -8,7 +8,7 @@ contract DynamicExitQueueExitTest is ExitQueueBase {
         super.setUp();
         vm.warp(1);
         queue.setMinLock(1);
-        queue.setFixedExitFeePercent(1000, 86400, true); // 10% fee, 1 day cooldown, early exit allowed
+        queue.setFixedExitFeePercent(1000, 0); // 10% fee, cooldown = 0 for early exit
     }
 
     /// @notice Test successful queue exit
@@ -256,7 +256,7 @@ contract DynamicExitQueueQueueExitTest is ExitQueueBase {
         super.setUp();
         vm.warp(1);
         queue.setMinLock(1);
-        queue.setFixedExitFeePercent(1000, 86400, true);
+        queue.setFixedExitFeePercent(1000, 0); // cooldown = 0 for early exit
     }
 
     /// @notice Test queue exit with different ticket holders
