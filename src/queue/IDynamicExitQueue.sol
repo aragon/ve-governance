@@ -14,9 +14,9 @@ interface ITicketV2 {
         uint48 queuedAt;
         uint48 minCooldown;
         uint48 cooldown;
-        uint256 slope;
         uint16 feePercent;
         uint16 minFeePercent;
+        uint256 slope;
     }
 
     event ExitQueuedV2(uint256 indexed tokenId, address indexed holder, uint48 queuedAt);

@@ -184,4 +184,52 @@ contract ExitQueueFeeSystemChangesTest is ExitQueueBase {
         // Step 6: Verify ticketHolder returns zero address
         assertEq(queue.ticketHolder(1), address(0));
     }
+
+    /// @notice Test that ticket state is properly cleared after cancel withdrawal
+    function test_TicketStateClearedAfterCancelWithdrawal() public {
+        // Step 1: Configure tiered fee system
+        uint256 baseFee = 800; // 8%
+        uint256 earlyFee = 2500; // 25%
+        uint48 cooldown = 172800; // 2 days
+        uint48 minCooldown = 43200; // 0.5 days
+        queue.setTieredExitFeePercent(baseFee, earlyFee, cooldown, minCooldown);
+
+        // Step 2: Queue exit
+        vm.prank(address(escrow));
+        queue.queueExit(1, address(this));
+        
+        // Verify ticket exists with correct parameters
+        TicketV2 memory ticket = queue.queue(1);
+        assertEq(ticket.holder, address(this));
+        assertEq(ticket.feePercent, earlyFee);
+        assertEq(ticket.minFeePercent, baseFee);
+        assertEq(ticket.cooldown, cooldown);
+        assertEq(ticket.minCooldown, minCooldown);
+        assertEq(ticket.slope, 0); // Tiered system has no slope
+        assertGt(ticket.queuedAt, 0);
+        
+        // Step 3: Cancel the exit
+        vm.prank(address(escrow));
+        queue.cancelExit(1);
+        
+        // Step 4: Verify ticket is completely cleared
+        TicketV2 memory clearedTicket = queue.queue(1);
+        assertEq(clearedTicket.holder, address(0));
+        assertEq(clearedTicket.queuedAt, 0);
+        assertEq(clearedTicket.feePercent, 0);
+        assertEq(clearedTicket.minFeePercent, 0);
+        assertEq(clearedTicket.cooldown, 0);
+        assertEq(clearedTicket.minCooldown, 0);
+        assertEq(clearedTicket.slope, 0);
+        
+        // Step 5: Verify canExit and isCool return false for cleared ticket
+        assertFalse(queue.canExit(1));
+        assertFalse(queue.isCool(1));
+        
+        // Step 6: Verify ticketHolder returns zero address
+        assertEq(queue.ticketHolder(1), address(0));
+        
+        // Step 7: Verify calculateFee returns 0 for cleared ticket
+        assertEq(queue.calculateFee(1), 0);
+    }
 }

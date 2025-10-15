@@ -41,7 +41,8 @@ contract MockEscrow {
     }
 
     function locked(uint tokenid) external view returns (LockedBalance memory) {
-        if (tokenid == 1) return lockedBalance;
+        // Return the same balance for all token IDs to support multiple tickets in tests
+        if (tokenid >= 1 && tokenid <= 10) return lockedBalance;
         else return LockedBalance(0, 0);
     }
 }

@@ -248,37 +248,40 @@ contract TestDynamicExitQueueIntegration is
         queue.setDynamicExitFeePercent(600, 2400, 10 days, 2 days);
         uint256 tokenId6 = _setupTokenAndQueue(user6, 1000e18);
 
-        // Wait long enough for all systems to reach minimum fees
+        // Wait long enough for all systems to reach their respective minimum fees
         vm.warp(block.timestamp + 12 days);
 
-        // All tokens should pay minimum fee (6% = 60e18) since they've all passed their cooldown periods
-        uint256 minFee = 60e18;
-
+        // Each token retains its original fee parameters
+        // tokenId1 & tokenId2: 10% fixed fee (100e18)
         uint256 fee1 = queue.calculateFee(tokenId1);
-        assertEq(fee1, minFee);
-        _withdrawAndVerify(user1, tokenId1, minFee);
+        assertEq(fee1, 100e18);
+        _withdrawAndVerify(user1, tokenId1, 100e18);
 
         uint256 fee2 = queue.calculateFee(tokenId2);
-        assertEq(fee2, minFee);
-        _withdrawAndVerify(user2, tokenId2, minFee);
+        assertEq(fee2, 100e18);
+        _withdrawAndVerify(user2, tokenId2, 100e18);
 
+        // tokenId3 & tokenId4: 15% fixed fee (150e18)
         uint256 fee3 = queue.calculateFee(tokenId3);
-        assertEq(fee3, minFee);
-        _withdrawAndVerify(user3, tokenId3, minFee);
+        assertEq(fee3, 150e18);
+        _withdrawAndVerify(user3, tokenId3, 150e18);
 
         uint256 fee4 = queue.calculateFee(tokenId4);
-        assertEq(fee4, minFee);
-        _withdrawAndVerify(user4, tokenId4, minFee);
+        assertEq(fee4, 150e18);
+        _withdrawAndVerify(user4, tokenId4, 150e18);
 
+        // tokenId5: 8% base fee for tiered system (80e18)
         uint256 fee5 = queue.calculateFee(tokenId5);
-        assertEq(fee5, minFee);
-        _withdrawAndVerify(user5, tokenId5, minFee);
+        assertEq(fee5, 80e18);
+        _withdrawAndVerify(user5, tokenId5, 80e18);
 
+        // tokenId6: 6% min fee for dynamic system (60e18)
         uint256 fee6 = queue.calculateFee(tokenId6);
-        assertEq(fee6, minFee);
-        _withdrawAndVerify(user6, tokenId6, minFee);
+        assertEq(fee6, 60e18);
+        _withdrawAndVerify(user6, tokenId6, 60e18);
 
-        assertEq(token.balanceOf(address(queue)), 360e18);
+        // Total fees: 100 + 100 + 150 + 150 + 80 + 60 = 640
+        assertEq(token.balanceOf(address(queue)), 640e18);
     }
 
     function testCannotExitBeforeMinCooldown() public {
