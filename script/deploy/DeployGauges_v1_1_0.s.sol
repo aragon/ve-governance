@@ -90,7 +90,7 @@ contract DeployGaugesV1_1_0 is Script {
             multisigPluginBuild: vm.envUint("MULTISIG_PLUGIN_BUILD").toUint16(),
             // Voter plugin setup and ENS
             voterPluginSetup: gaugeVoterPluginSetup,
-            voterEnsSubdomain: vm.envString("SIMPLE_GAUGE_VOTER_REPO_ENS_SUBDOMAIN"),
+            voterEnsSubdomain: vm.envString("PLUGIN_REPO_ENS_SUBDOMAIN"),
             // OSx addresses
             osxDaoFactory: vm.envAddress("DAO_FACTORY_v1.3.0"),
             pluginSetupProcessor: PluginSetupProcessor(vm.envAddress("PLUGIN_SETUP_PROCESSOR")),

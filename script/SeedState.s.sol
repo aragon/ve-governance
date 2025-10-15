@@ -36,7 +36,7 @@ contract SeedState is Script {
     /// @notice Runs the deployment flow, records the given parameters and artifacts, and it becomes read only
     function run() public broadcast {
         // fetch deploy
-        address factoryAddress = vm.envAddress("FACTORY_ADDRESS");
+        address factoryAddress = vm.envAddress("VE_FACTORY_ADDRESS");
         GaugesDaoFactory factory = GaugesDaoFactory(factoryAddress);
         Deployment memory deployment = factory.getDeployment();
         GaugePluginSet memory modePluginSet = deployment.gaugeVoterPluginSets[0];

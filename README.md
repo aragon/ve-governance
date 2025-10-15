@@ -111,7 +111,7 @@ Check the available make targets to simulate and deploy the smart contracts:
     - `make test-fork-mint-testnet`
   - [ ] I have deployed my contracts successfully to the target testnet
     - `make deploy-testnet`
-  - [ ] I have updated `FACTORY_ADDRESS` on `.env.test` with the address of the deployed factory
+  - [ ] I have updated `VE_FACTORY_ADDRESS` on `.env.test` with the address of the deployed factory
   - If there is a live token with an address holding ≥ 3000 tokens on the testnet:
     - [ ] I have defined `TEST_TOKEN_WHALE` on `.env.test`
     - [ ] I have run a fork test in `new-factory` mode with the live token on the testnet
