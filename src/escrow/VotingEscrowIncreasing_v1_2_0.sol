@@ -706,7 +706,7 @@ contract VotingEscrowV1_2_0 is
     /// @dev Reserved storage space to allow for layout changes in the future.
     ///      Please note that the reserved slot number in previous version(39) was set
     ///      incorrectly as 39 instead of 40. Changing it to 40 now would overwrite existing slot values,
-    ///      resulting in the loss of state. Therefore, we will continue using 37 in this version.
-    ///      For future versions, any new variables should be added by subtracting from 37.
+    ///      resulting in the loss of state. Therefore, we will continue using 36 in this version.
+    ///      For future versions, any new variables should be added by subtracting from 36.
     uint256[36] private __gap;
 }
