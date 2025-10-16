@@ -12,6 +12,11 @@ interface ITicketV2 {
     struct TicketV2 {
         address holder;
         uint48 queuedAt;
+        uint48 minCooldown;
+        uint48 cooldown;
+        uint16 feePercent;
+        uint16 minFeePercent;
+        uint256 slope;
     }
 
     event ExitQueuedV2(uint256 indexed tokenId, address indexed holder, uint48 queuedAt);
