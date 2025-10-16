@@ -205,4 +205,165 @@ contract TestWithdrawal is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage, 
         }
 
     }
+
+    /*//////////////////////////////////////////////////////////////
+                        ATOMIC WITHDRAWAL TESTS
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     *  | createLock | merge | split | beginWithdrawal | allowed |
+     *  | ---------- | ----- | ----- | --------------- | ------- |
+     *  | ✅         | ❌    | ❌    | ✅              | ❌      |
+     *  | ✅         | ✅    | ❌    | ✅              | ❌      |
+     *  | ✅         | ❌    | ✅    | ✅              | ❌      |
+     *  | ✅         | ✅    | ✅    | ✅              | ❌      |
+     *  | ❌         | ✅    | ❌    | ✅              | ✅      |
+     *  | ❌         | ❌    | ✅    | ✅              | ✅      |
+     *  | ❌         | ✅    | ✅    | ✅              | ✅      |
+     *
+     *  These are allowed but we are only checking withdrawals
+     *
+     *  | ✅         | ✅    | ❌    | ❌              | ✅      |
+     *  | ✅         | ❌    | ✅    | ❌              | ✅      |
+     *  | ✅         | ✅    | ✅    | ❌              | ✅      |
+     **/
+
+    // Row 1: createLock ✅, merge ❌, split ❌, beginWithdrawal ✅ => Should revert
+    function testRevert_AtomicWithdrawal_CreateLockOnly() public {
+        super.mintAndApproveEscrow();
+        
+        uint256 tokenId = escrow.createLock(10e18);
+        nftLock.approve(address(escrow), tokenId);
+        
+        vm.expectRevert(CannotWithdrawInSameBlock.selector);
+        escrow.beginWithdrawal(tokenId);
+    }
+
+    // Row 2: createLock ✅, merge ✅, split ❌, beginWithdrawal ✅ => Should revert
+    function testRevert_AtomicWithdrawal_CreateLockAndMerge() public {
+        super.mintAndApproveEscrow();
+        
+        // Create first token in previous block
+        vm.warp(1);
+        uint256 existingTokenId = escrow.createLock(5e18);
+        
+        // Create and merge in current block
+        vm.warp(2);
+        uint256 newTokenId = escrow.createLock(10e18);
+        escrow.merge(newTokenId, existingTokenId);
+        nftLock.approve(address(escrow), existingTokenId);
+        
+        vm.expectRevert(CannotWithdrawInSameBlock.selector);
+        escrow.beginWithdrawal(existingTokenId);
+    }
+
+    // Row 3: createLock ✅, merge ❌, split ✅, beginWithdrawal ✅ => Should revert
+    function testRevert_AtomicWithdrawal_CreateLockAndSplit() public {
+        super.mintAndApproveEscrow();
+        
+        uint256 tokenId = escrow.createLock(20e18);
+        uint256 splitTokenId = escrow.split(tokenId, 10e18);
+        nftLock.approve(address(escrow), tokenId);
+        
+        // Try to withdraw the original token
+        vm.expectRevert(CannotWithdrawInSameBlock.selector);
+        escrow.beginWithdrawal(tokenId);
+        
+        // Also try to withdraw the split token
+        nftLock.approve(address(escrow), splitTokenId);
+        vm.expectRevert(CannotWithdrawInSameBlock.selector);
+        escrow.beginWithdrawal(splitTokenId);
+    }
+
+    // Row 4: createLock ✅, merge ✅, split ✅, beginWithdrawal ✅ => Should revert
+    function testRevert_AtomicWithdrawal_CreateLockMergeAndSplit() public {
+        super.mintAndApproveEscrow();
+        
+        // Create first token in previous block
+        vm.warp(1);
+        uint256 existingTokenId = escrow.createLock(5e18);
+        
+        // Create, merge and split in current block
+        vm.warp(2);
+        uint256 newTokenId = escrow.createLock(20e18);
+        escrow.merge(newTokenId, existingTokenId);
+        uint256 splitTokenId = escrow.split(existingTokenId, 10e18);
+        
+        // Try to withdraw any of the tokens
+        nftLock.approve(address(escrow), existingTokenId);
+        vm.expectRevert(CannotWithdrawInSameBlock.selector);
+        escrow.beginWithdrawal(existingTokenId);
+        
+        nftLock.approve(address(escrow), splitTokenId);
+        vm.expectRevert(CannotWithdrawInSameBlock.selector);
+        escrow.beginWithdrawal(splitTokenId);
+    }
+
+    // Row 5: createLock ❌, merge ✅, split ❌, beginWithdrawal ✅ => Should allow
+    function test_AtomicWithdrawal_MergeOnly() public {
+        super.mintAndApproveEscrow();
+        
+        // Create tokens in previous block
+        vm.warp(1);
+        uint256 tokenId1 = escrow.createLock(10e18);
+        uint256 tokenId2 = escrow.createLock(5e18);
+        
+        // Merge and withdraw in current block
+        vm.warp(2);
+        escrow.merge(tokenId2, tokenId1);
+        nftLock.approve(address(escrow), tokenId1);
+        
+        // Should succeed - no createLock in current transaction
+        escrow.beginWithdrawal(tokenId1);
+        assertEq(escrow.votingPower(tokenId1), 0);
+    }
+
+    // Row 6: createLock ❌, merge ❌, split ✅, beginWithdrawal ✅ => Should allow
+    function test_AtomicWithdrawal_SplitOnly() public {
+        super.mintAndApproveEscrow();
+        
+        // Create token in previous block
+        vm.warp(1);
+        uint256 tokenId = escrow.createLock(20e18);
+        
+        // Split and withdraw in current block
+        vm.warp(2);
+        uint256 splitTokenId = escrow.split(tokenId, 10e18);
+        
+        // Should succeed - no createLock in current transaction
+        nftLock.approve(address(escrow), tokenId);
+        escrow.beginWithdrawal(tokenId);
+        assertEq(escrow.votingPower(tokenId), 0);
+        
+        // Also test withdrawing the split token
+        nftLock.approve(address(escrow), splitTokenId);
+        escrow.beginWithdrawal(splitTokenId);
+        assertEq(escrow.votingPower(splitTokenId), 0);
+    }
+
+    // Row 7: createLock ❌, merge ✅, split ✅, beginWithdrawal ✅ => Should allow
+    function test_AtomicWithdrawal_MergeAndSplit() public {
+        super.mintAndApproveEscrow();
+        
+        // Create tokens in previous block
+        vm.warp(1);
+        uint256 tokenId1 = escrow.createLock(15e18);
+        uint256 tokenId2 = escrow.createLock(5e18);
+        
+        // Merge, split and withdraw in current block
+        vm.warp(2);
+        escrow.merge(tokenId2, tokenId1);
+        uint256 splitTokenId = escrow.split(tokenId1, 10e18);
+        
+        nftLock.approve(address(escrow), tokenId1);
+        
+        // Should succeed - no createLock in current transaction
+        escrow.beginWithdrawal(tokenId1);
+        assertEq(escrow.votingPower(tokenId1), 0);
+        
+        // Also test withdrawing the split token
+        nftLock.approve(address(escrow), splitTokenId);
+        escrow.beginWithdrawal(splitTokenId);
+        assertEq(escrow.votingPower(splitTokenId), 0);
+    }
 }

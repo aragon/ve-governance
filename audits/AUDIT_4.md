@@ -26,7 +26,7 @@ A lot of work has been done to allow us to manange the different implementations
 
 5. Support for Dynamic Exit Queues
 
-The Dynamic Exit Queue contract has been added which adds functionality allowing for variable exit fees. The queue is better described in [DynamicExitQueue.spec.md](../src/queue/DynamicExitQueue.spec.md)
+The Dynamic Exit Queue contract has been added which adds functionality allowing for variable exit fees. The queue is better described in [DynamicExitQueue.spec.md](../src/specs/DynamicExitQueue.spec.md)
 
 6. Removal of the warmup period
 
