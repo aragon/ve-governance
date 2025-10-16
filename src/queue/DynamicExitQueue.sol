@@ -93,7 +93,7 @@ contract DynamicExitQueue is IDynamicExitQueue, IClockUser, DaoAuthorizable, UUP
 
         // Initialize with fixed fee system, no early exits
         if (_feePercent > MAX_FEE_PERCENT) revert FeePercentTooHigh(MAX_FEE_PERCENT);
-        _setFixedExitFeePercent(_feePercent, _cooldown, false);
+        _setFixedExitFeePercent(_feePercent, _cooldown);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -156,12 +156,11 @@ contract DynamicExitQueue is IDynamicExitQueue, IClockUser, DaoAuthorizable, UUP
     /// @inheritdoc IDynamicExitQueueFee
     function setFixedExitFeePercent(
         uint256 _feePercent,
-        uint48 _cooldown,
-        bool _allowEarlyExit
+        uint48 _minCooldown
     ) external auth(QUEUE_ADMIN_ROLE) {
         if (_feePercent > MAX_FEE_PERCENT) revert FeePercentTooHigh(MAX_FEE_PERCENT);
 
-        _setFixedExitFeePercent(_feePercent, _cooldown, _allowEarlyExit);
+        _setFixedExitFeePercent(_feePercent, _minCooldown);
     }
 
     function _setDynamicExitFeePercent(
@@ -204,19 +203,12 @@ contract DynamicExitQueue is IDynamicExitQueue, IClockUser, DaoAuthorizable, UUP
         );
     }
 
-    function _setFixedExitFeePercent(
-        uint256 _feePercent,
-        uint48 _cooldown,
-        bool _allowEarlyExit
-    ) internal {
+    function _setFixedExitFeePercent(uint256 _feePercent, uint48 _cooldown) internal {
         feePercent = _feePercent;
         minFeePercent = _feePercent;
         cooldown = _cooldown;
+        minCooldown = _cooldown;
         _slope = 0; // No decay in fixed system
-
-        // immediate or none
-        if (_allowEarlyExit) minCooldown = 0;
-        else minCooldown = _cooldown;
 
         emit ExitFeePercentAdjusted(_feePercent, _feePercent, minCooldown, ExitFeeType.Fixed);
     }

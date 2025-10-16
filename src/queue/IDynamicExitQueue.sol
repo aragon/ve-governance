@@ -100,13 +100,8 @@ interface IDynamicExitQueueFee is IDynamicExitQueueEventsAndErrors {
 
     /// @notice Configure single fee rate system with optional early exit control
     /// @param _feePercent Fee percent for all exits (basis points, 0-10000)
-    /// @param _cooldown Total cooldown period in seconds
-    /// @param _allowEarlyExit If true, allow exits after minCooldown=0; if false, require full cooldown
-    function setFixedExitFeePercent(
-        uint256 _feePercent,
-        uint48 _cooldown,
-        bool _allowEarlyExit
-    ) external;
+    /// @param _minCooldown Total cooldown period in seconds - can be zero for instant exits w. fee
+    function setFixedExitFeePercent(uint256 _feePercent, uint48 _minCooldown) external;
 
     /// @notice Minimum fee percent charged after full cooldown
     /// @return Fee percent in basis points (0-10000)

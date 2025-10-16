@@ -122,7 +122,7 @@ contract DynamicExitQueueCalculateFeeTest is ExitQueueBase {
         assertEq(tieredFee, (lockedAmount * 5000) / 10000);
 
         // Test with fixed fee system (early exit allowed)
-        queue.setFixedExitFeePercent(3000, 86400, true);
+        queue.setFixedExitFeePercent(3000, 0); // cooldown = 0 for early exit
 
         // Need to create a new ticket for the new fee system
         vm.prank(address(escrow));
@@ -132,7 +132,7 @@ contract DynamicExitQueueCalculateFeeTest is ExitQueueBase {
         assertEq(fixedFee, (lockedAmount * 3000) / 10000);
 
         // Test with fixed fee system (early exit disabled)
-        queue.setFixedExitFeePercent(2000, 86400, false);
+        queue.setFixedExitFeePercent(2000, 86400); // cooldown = 86400 for no early exit
 
         // Need to create a new ticket for the new fee system
         vm.prank(address(escrow));

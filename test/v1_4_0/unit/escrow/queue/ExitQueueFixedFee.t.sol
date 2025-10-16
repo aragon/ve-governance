@@ -11,19 +11,18 @@ contract DynamicExitQueueFixedFeeTest is ExitQueueBase {
 
     /// @notice Test valid fixed fee configuration with early exit allowed
     function testFuzz_ValidFixedFeeConfigurationWithEarlyExitAllowed(
-        uint256 _feePercent,
-        uint48 _cooldown
+        uint256 _feePercent
     ) public {
         // Bound inputs
         _feePercent = bound(_feePercent, 0, 10000);
 
-        // Configure fixed fee system with early exit allowed
-        queue.setFixedExitFeePercent(_feePercent, _cooldown, true);
+        // Configure fixed fee system with early exit allowed (cooldown = 0)
+        queue.setFixedExitFeePercent(_feePercent, 0);
 
         // Assert state variables match input parameters
         assertEq(queue.feePercent(), _feePercent);
         assertEq(queue.minFeePercent(), _feePercent);
-        assertEq(queue.cooldown(), _cooldown);
+        assertEq(queue.cooldown(), 0);
         assertEq(queue.minCooldown(), 0);
         assertEq(queue.slope(), 0);
     }
@@ -37,7 +36,7 @@ contract DynamicExitQueueFixedFeeTest is ExitQueueBase {
         _feePercent = bound(_feePercent, 0, 10000);
 
         // Configure fixed fee system with early exit disabled
-        queue.setFixedExitFeePercent(_feePercent, _cooldown, false);
+        queue.setFixedExitFeePercent(_feePercent, _cooldown);
 
         // Assert state variables match input parameters
         assertEq(queue.feePercent(), _feePercent);
@@ -51,19 +50,18 @@ contract DynamicExitQueueFixedFeeTest is ExitQueueBase {
     function test_FixedFeeValidation_FeeBounds() public {
         // Test feePercent = 10001
         vm.expectRevert(abi.encodeWithSelector(FeePercentTooHigh.selector, 10000));
-        queue.setFixedExitFeePercent(10001, 1000, true);
+        queue.setFixedExitFeePercent(10001, 0);
     }
 
     /// @notice Test ExitFeePercentAdjusted event emission for fixed fee with early exit
     function test_ExitFeePercentAdjustedEvent_FixedFeeWithEarlyExit() public {
         uint256 feePercent = 2000;
-        uint48 cooldown = 86400; // 1 day
 
         // Expect event emission
         vm.expectEmit(true, true, true, true);
         emit ExitFeePercentAdjusted(feePercent, feePercent, 0, ExitFeeType.Fixed);
 
-        queue.setFixedExitFeePercent(feePercent, cooldown, true);
+        queue.setFixedExitFeePercent(feePercent, 0);
     }
 
     /// @notice Test ExitFeePercentAdjusted event emission for fixed fee without early exit
@@ -75,7 +73,7 @@ contract DynamicExitQueueFixedFeeTest is ExitQueueBase {
         vm.expectEmit(true, true, true, true);
         emit ExitFeePercentAdjusted(feePercent, feePercent, cooldown, ExitFeeType.Fixed);
 
-        queue.setFixedExitFeePercent(feePercent, cooldown, false);
+        queue.setFixedExitFeePercent(feePercent, cooldown);
     }
 
     /// @notice Test getTimeBasedFee for fixed fee system
@@ -84,7 +82,7 @@ contract DynamicExitQueueFixedFeeTest is ExitQueueBase {
         uint48 cooldown = 86400; // 1 day
 
         // Configure fixed fee system
-        queue.setFixedExitFeePercent(feePercent, cooldown, true);
+        queue.setFixedExitFeePercent(feePercent, cooldown);
 
         // Test with various timeElapsed values
         assertEq(queue.getTimeBasedFee(0), 2000);
@@ -96,10 +94,9 @@ contract DynamicExitQueueFixedFeeTest is ExitQueueBase {
     /// @notice Test fixed fee system behavior with early exit allowed
     function test_FixedFeeSystemBehaviorWithEarlyExitAllowed() public {
         uint256 feePercent = 1000;
-        uint48 cooldown = 86400; // 1 day
 
         // Configure fixed fee system with early exit allowed
-        queue.setFixedExitFeePercent(feePercent, cooldown, true);
+        queue.setFixedExitFeePercent(feePercent, 0);
 
         // Mock escrow setup
         escrow.setMockLockedBalance(100e18, block.timestamp - 1);
@@ -116,7 +113,7 @@ contract DynamicExitQueueFixedFeeTest is ExitQueueBase {
         assertEq(queue.calculateFee(1), (100e18 * feePercent) / 10000);
 
         // Fast forward and test again
-        vm.warp(block.timestamp + cooldown);
+        vm.warp(block.timestamp + 86400);
         assertEq(queue.calculateFee(1), (100e18 * feePercent) / 10000);
     }
 
@@ -126,7 +123,7 @@ contract DynamicExitQueueFixedFeeTest is ExitQueueBase {
         uint48 cooldown = 172800; // 2 days
 
         // Configure fixed fee system with early exit disabled
-        queue.setFixedExitFeePercent(feePercent, cooldown, false);
+        queue.setFixedExitFeePercent(feePercent, cooldown);
 
         // Mock escrow setup
         uint lockTime = block.timestamp - 1;
@@ -152,10 +149,8 @@ contract DynamicExitQueueFixedFeeTest is ExitQueueBase {
 
     /// @notice Test fixed fee system with zero fee
     function test_FixedFeeSystemWithZeroFee() public {
-        uint48 cooldown = 86400; // 1 day
-
         // Configure fixed fee system with zero fee
-        queue.setFixedExitFeePercent(0, cooldown, true);
+        queue.setFixedExitFeePercent(0, 0);
 
         // Mock escrow setup
         escrow.setMockLockedBalance(100e18, block.timestamp - 1);
@@ -170,12 +165,50 @@ contract DynamicExitQueueFixedFeeTest is ExitQueueBase {
         assertEq(queue.getTimeBasedFee(86400), 0);
     }
 
+    /// @notice Test Case B: cooldown > 0, fee = 0 - must wait for no fee exit
+    function test_MustWaitForNoFeeExit_CooldownGt0_Fee0() public {
+        uint48 cooldown = 86400; // 1 day
+        
+        // Configure fixed fee system with cooldown > 0 but fee = 0
+        queue.setFixedExitFeePercent(0, cooldown);
+        
+        // Verify configuration
+        assertEq(queue.feePercent(), 0);
+        assertEq(queue.cooldown(), cooldown);
+        assertEq(queue.minCooldown(), cooldown);
+        
+        // Mock escrow setup
+        escrow.setMockLockedBalance(100e18, block.timestamp - 1);
+        
+        // Queue exit
+        uint256 queueTime = block.timestamp;
+        vm.prank(address(escrow));
+        queue.queueExit(1, address(this));
+        
+        // Should NOT be able to exit immediately
+        assertFalse(queue.canExit(1), "Should not be able to exit immediately");
+        
+        // Still can't exit before cooldown
+        vm.warp(queueTime + cooldown - 1);
+        assertFalse(queue.canExit(1), "Should not be able to exit before cooldown");
+        
+        // Can exit after cooldown
+        vm.warp(queueTime + cooldown);
+        assertTrue(queue.canExit(1), "Should be able to exit after cooldown");
+        
+        // Fee should still be zero after waiting
+        assertEq(queue.calculateFee(1), 0);
+        
+        // Exit and verify no fee
+        vm.prank(address(escrow));
+        uint256 returnedFee = queue.exit(1);
+        assertEq(returnedFee, 0, "No fee should be charged");
+    }
+
     /// @notice Test fixed fee system with maximum fee
     function test_FixedFeeSystemWithMaximumFee() public {
-        uint48 cooldown = 86400; // 1 day
-
         // Configure fixed fee system with maximum fee
-        queue.setFixedExitFeePercent(10000, cooldown, true);
+        queue.setFixedExitFeePercent(10000, 0);
 
         // Mock escrow setup
         escrow.setMockLockedBalance(100e18, block.timestamp - 1);
@@ -195,13 +228,13 @@ contract DynamicExitQueueFixedFeeTest is ExitQueueBase {
         uint256 feePercent = 500;
 
         // Configure fixed fee system with zero cooldown and early exit allowed
-        queue.setFixedExitFeePercent(feePercent, 0, true);
+        queue.setFixedExitFeePercent(feePercent, 0);
 
         assertEq(queue.cooldown(), 0);
         assertEq(queue.minCooldown(), 0);
 
         // Configure fixed fee system with zero cooldown and early exit disabled
-        queue.setFixedExitFeePercent(feePercent, 0, false);
+        queue.setFixedExitFeePercent(feePercent, 0);
 
         assertEq(queue.cooldown(), 0);
         assertEq(queue.minCooldown(), 0);
@@ -213,7 +246,7 @@ contract DynamicExitQueueFixedFeeTest is ExitQueueBase {
         uint48 cooldown = 86400; // 1 day
 
         // Configure fixed fee system
-        queue.setFixedExitFeePercent(feePercent, cooldown, true);
+        queue.setFixedExitFeePercent(feePercent, cooldown);
 
         // Mock escrow setup
         escrow.setMockLockedBalance(100e18, block.timestamp - 1);
@@ -237,23 +270,23 @@ contract DynamicExitQueueFixedFeeTest is ExitQueueBase {
     /// @notice Test fixed fee system state consistency after multiple reconfigurations
     function test_FixedFeeSystemStateConsistencyAfterReconfigurations() public {
         // Initial configuration
-        queue.setFixedExitFeePercent(1000, 86400, true);
+        queue.setFixedExitFeePercent(1000, 0);
         assertEq(queue.feePercent(), 1000);
         assertEq(queue.minFeePercent(), 1000);
         assertEq(queue.minCooldown(), 0);
 
         // Reconfigure with different parameters
-        queue.setFixedExitFeePercent(2000, 172800, false);
+        queue.setFixedExitFeePercent(2000, 172800);
         assertEq(queue.feePercent(), 2000);
         assertEq(queue.minFeePercent(), 2000);
         assertEq(queue.cooldown(), 172800);
         assertEq(queue.minCooldown(), 172800);
 
         // Reconfigure again
-        queue.setFixedExitFeePercent(500, 43200, true);
+        queue.setFixedExitFeePercent(500, 0);
         assertEq(queue.feePercent(), 500);
         assertEq(queue.minFeePercent(), 500);
-        assertEq(queue.cooldown(), 43200);
+        assertEq(queue.cooldown(), 0);
         assertEq(queue.minCooldown(), 0);
         assertEq(queue.slope(), 0);
     }
