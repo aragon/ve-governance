@@ -52,11 +52,11 @@ Fee %
 
 ### Fixed Fee System
 
-**Description**: A single fee rate applies to all exits (after minimum cooldown), with optional early exit control. Simplest configuration with consistent, predictable costs.
+**Description**: A single fee rate applies to all exits after the minimum cooldown period. Simplest configuration with consistent, predictable costs.
 
-**Example**: All users pay 2% regardless of timing (after 1-day minimum), OR all users must wait exactly 5 days and then pay 2%. Eliminates timing games and fee uncertainty.
+**Example**: Setting minCooldown=0 allows instant 2% fee exits, while minCooldown=5 days requires users to wait exactly 5 days before paying 2%. Eliminates timing games and fee uncertainty.
 
-**Use Case**: When you want simplicity and predictability, either allowing flexible timing at a fixed cost or enforcing a specific waiting period.
+**Use Case**: When you want simplicity and predictability, using the minCooldown parameter to control whether instant exits are allowed (minCooldown=0) or a specific waiting period is enforced (minCooldown>0).
 
 ```
 Fee %
@@ -177,14 +177,12 @@ interface IEarlyExitQueue is IEarlyExitQueueEventsAndErrors {
     uint48 _minCooldown
   ) external;
 
-  /// @notice Configure single fee rate system with optional early exit control
+  /// @notice Configure single fee rate system
   /// @param _feePercent Fee percent for all exits (basis points, 0-10000)
-  /// @param _cooldown Total cooldown period in seconds
-  /// @param _allowEarlyExit If true, allow exits after minCooldown=0; if false, require full cooldown
+  /// @param _minCooldown Total cooldown period in seconds - can be zero for instant exits w. fee
   function setFixedExitFeePercent(
     uint256 _feePercent,
-    uint48 _cooldown,
-    bool _allowEarlyExit
+    uint48 _minCooldown
   ) external;
 
   /// @return Fee percent in basis points (0-10000)
@@ -236,17 +234,17 @@ interface IEarlyExitQueue is IEarlyExitQueueEventsAndErrors {
 - Update cooldown and minCooldown parameters
 - Emit `ExitFeePercentAdjusted` event
 
-### 3. `setFixedExitFeePercent(uint256 _feePercent, uint48 _cooldown, bool _allowEarlyExit)`
+### 3. `setFixedExitFeePercent(uint256 _feePercent, uint48 _minCooldown)`
 
 **Purpose**: Configure single fee rate system
 **Requirements**:
 
 - Only callable by QUEUE_ADMIN_ROLE
 - Validate `_feePercent <= 10000` (100%)
-- If `_allowEarlyExit = true`: Set `minCooldown = 0` (immediate exit allowed)
-- If `_allowEarlyExit = false`: Set `minCooldown = _cooldown` (no early exit)
+- Set `minCooldown = _minCooldown` (if 0, immediate exit allowed; if > 0, must wait)
+- Set `cooldown = _minCooldown` (same as minCooldown for fixed fee system)
 - Set `maxFeePercent = minFeePercent = _feePercent`, `slope = 0`
-- **Note**: When `minCooldown == cooldown`, slope is automatically 0 (no decay period exists)
+- **Note**: Since `minCooldown == cooldown`, slope is automatically 0 (no decay period exists)
 - Emit `ExitFeePercentAdjusted` event
 
 ### 4. `calculateFee(uint256 _tokenId)`
@@ -421,10 +419,10 @@ This version removes the legacy requirement for `nextExitDate()` to align with w
 
 1. **Dynamic Decay**: `setDynamicExitFeePercent()` ✅
 2. **Tiered Penalty**: `setTieredExitFeePercent()` ✅
-3. **Fixed Rate with Early Exit**: `setFixedExitFeePercent(fee, cooldown, true)` ✅
-4. **Fixed Rate, No Early Exit**: `setFixedExitFeePercent(fee, cooldown, false)` ✅
-5. **Always-on Fee**: `setFixedExitFeePercent(fee, 0, true)` ✅
-6. **No Fee System**: `setFixedExitFeePercent(0, 0, true)` ✅
+3. **Fixed Rate with Early Exit**: `setFixedExitFeePercent(fee, 0)` ✅
+4. **Fixed Rate, No Early Exit**: `setFixedExitFeePercent(fee, cooldown)` ✅
+5. **Always-on Fee**: `setFixedExitFeePercent(fee, 0)` ✅
+6. **No Fee System**: `setFixedExitFeePercent(0, 0)` ✅
 
 All major fee configuration patterns are covered through the three setter functions.
 
