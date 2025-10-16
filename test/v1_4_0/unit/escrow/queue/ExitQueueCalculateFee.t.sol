@@ -114,19 +114,31 @@ contract DynamicExitQueueCalculateFeeTest is ExitQueueBase {
         // Test with tiered fee system
         queue.setTieredExitFeePercent(1000, 5000, 86400, 43200);
 
-        uint256 tieredFee = queue.calculateFee(1);
+        // Need to create a new ticket for the new fee system
+        vm.prank(address(escrow));
+        queue.queueExit(2, address(this));
+
+        uint256 tieredFee = queue.calculateFee(2);
         assertEq(tieredFee, (lockedAmount * 5000) / 10000);
 
         // Test with fixed fee system (early exit allowed)
         queue.setFixedExitFeePercent(3000, 0); // cooldown = 0 for early exit
 
-        uint256 fixedFee = queue.calculateFee(1);
+        // Need to create a new ticket for the new fee system
+        vm.prank(address(escrow));
+        queue.queueExit(3, address(this));
+
+        uint256 fixedFee = queue.calculateFee(3);
         assertEq(fixedFee, (lockedAmount * 3000) / 10000);
 
         // Test with fixed fee system (early exit disabled)
         queue.setFixedExitFeePercent(2000, 86400); // cooldown = 86400 for no early exit
 
-        uint256 fixedNoEarlyFee = queue.calculateFee(1);
+        // Need to create a new ticket for the new fee system
+        vm.prank(address(escrow));
+        queue.queueExit(4, address(this));
+
+        uint256 fixedNoEarlyFee = queue.calculateFee(4);
         assertEq(fixedNoEarlyFee, (lockedAmount * 2000) / 10000);
     }
 

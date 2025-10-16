@@ -263,7 +263,15 @@ contract DynamicExitQueue is IDynamicExitQueue, IClockUser, DaoAuthorizable, UUP
         }
 
         uint48 queuedAt = uint48(block.timestamp);
-        _queue[_tokenId] = TicketV2(_ticketHolder, queuedAt);
+        _queue[_tokenId] = TicketV2({
+            holder: _ticketHolder,
+            queuedAt: queuedAt,
+            feePercent: uint16(feePercent),
+            minFeePercent: uint16(minFeePercent),
+            cooldown: cooldown,
+            minCooldown: minCooldown,
+            slope: _slope
+        });
 
         emit ExitQueuedV2(_tokenId, _ticketHolder, queuedAt);
     }
@@ -277,7 +285,7 @@ contract DynamicExitQueue is IDynamicExitQueue, IClockUser, DaoAuthorizable, UUP
         fee = calculateFee(_tokenId);
 
         // reset the ticket for that tokenId
-        _queue[_tokenId] = TicketV2(address(0), 0);
+        delete _queue[_tokenId];
 
         emit Exit(_tokenId, fee);
     }
@@ -293,7 +301,7 @@ contract DynamicExitQueue is IDynamicExitQueue, IClockUser, DaoAuthorizable, UUP
             revert CannotCancelExit();
         }
 
-        _queue[_tokenId] = TicketV2(address(0), 0);
+        delete _queue[_tokenId];
         emit ExitCancelled(_tokenId, ticket.holder);
     }
 
@@ -308,32 +316,36 @@ contract DynamicExitQueue is IDynamicExitQueue, IClockUser, DaoAuthorizable, UUP
         if (underlyingBalance == 0) revert NoLockBalance();
 
         uint256 timeElapsed = block.timestamp - ticket.queuedAt;
-        uint256 scaledFeePercent = _getScaledTimeBasedFee(timeElapsed);
+        uint256 scaledFeePercent = _getScaledTimeBasedFee(timeElapsed, ticket);
         return (underlyingBalance * scaledFeePercent) / INTERNAL_PRECISION;
     }
 
     /// @notice Internal function to get time-based fee in 1e18 scale
     /// @param timeElapsed Time elapsed since ticket was queued
+    /// @param ticket The ticket to calculate fee for - ensures changes to global params don't affect existing tickets
     /// @return Fee percent in 1e18 scale (0 = 0%, 1e18 = 100%)
-    function _getScaledTimeBasedFee(uint256 timeElapsed) internal view returns (uint256) {
-        uint256 scaledMaxFee = (feePercent * INTERNAL_PRECISION) / MAX_FEE_PERCENT;
-        uint256 scaledMinFee = (minFeePercent * INTERNAL_PRECISION) / MAX_FEE_PERCENT;
+    function _getScaledTimeBasedFee(
+        uint256 timeElapsed,
+        TicketV2 memory ticket
+    ) internal view returns (uint256) {
+        uint256 scaledMaxFee = (ticket.feePercent * INTERNAL_PRECISION) / MAX_FEE_PERCENT;
+        uint256 scaledMinFee = (ticket.minFeePercent * INTERNAL_PRECISION) / MAX_FEE_PERCENT;
 
         // Fixed fee system (no decay, no tiers)
-        if (minFeePercent == feePercent) return scaledMaxFee;
+        if (ticket.minFeePercent == ticket.feePercent) return scaledMaxFee;
 
         // Tiered system (no slope) or fixed system
-        if (_slope == 0) {
-            return timeElapsed <= cooldown ? scaledMaxFee : scaledMinFee;
+        if (ticket.slope == 0) {
+            return timeElapsed <= ticket.cooldown ? scaledMaxFee : scaledMinFee;
         }
 
         // Dynamic system (linear decay using stored slope)
-        if (timeElapsed <= minCooldown) return scaledMaxFee;
-        if (timeElapsed >= cooldown) return scaledMinFee;
+        if (timeElapsed <= ticket.minCooldown) return scaledMaxFee;
+        if (timeElapsed >= ticket.cooldown) return scaledMinFee;
 
         // Calculate fee reduction using high-precision slope
-        uint256 timeInDecay = timeElapsed - minCooldown;
-        uint256 feeReduction = _slope * timeInDecay;
+        uint256 timeInDecay = timeElapsed - ticket.minCooldown;
+        uint256 feeReduction = ticket.slope * timeInDecay;
 
         // Ensure we don't go below minimum fee
         if (feeReduction >= (scaledMaxFee - scaledMinFee)) {
@@ -347,8 +359,22 @@ contract DynamicExitQueue is IDynamicExitQueue, IClockUser, DaoAuthorizable, UUP
     /// @param timeElapsed Time elapsed since ticket was queued
     /// @return Fee percent in basis points
     function getTimeBasedFee(uint256 timeElapsed) public view returns (uint256) {
-        uint256 scaledFee = _getScaledTimeBasedFee(timeElapsed);
+        uint256 scaledFee = _getScaledTimeBasedFee(timeElapsed, _globalTicket());
         return (scaledFee * MAX_FEE_PERCENT) / INTERNAL_PRECISION;
+    }
+
+    /// @dev global parameters as a ticket for fee calculation
+    function _globalTicket() internal view returns (TicketV2 memory) {
+        return
+            TicketV2({
+                holder: address(0),
+                queuedAt: 0,
+                feePercent: uint16(feePercent),
+                minFeePercent: uint16(minFeePercent),
+                cooldown: cooldown,
+                minCooldown: minCooldown,
+                slope: _slope
+            });
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -361,14 +387,14 @@ contract DynamicExitQueue is IDynamicExitQueue, IClockUser, DaoAuthorizable, UUP
     function isCool(uint256 _tokenId) public view returns (bool) {
         TicketV2 memory ticket = _queue[_tokenId];
         if (ticket.holder == address(0)) return false;
-        return block.timestamp - ticket.queuedAt >= cooldown;
+        return block.timestamp - ticket.queuedAt >= ticket.cooldown;
     }
 
     /// @return true if the tokenId corresponds to a valid ticket and the minimum cooldown period has passed
     function canExit(uint256 _tokenId) public view returns (bool) {
         TicketV2 memory ticket = _queue[_tokenId];
         if (ticket.holder == address(0)) return false;
-        return block.timestamp - ticket.queuedAt >= minCooldown;
+        return block.timestamp - ticket.queuedAt >= ticket.minCooldown;
     }
 
     /// @return holder of a ticket for a given tokenId

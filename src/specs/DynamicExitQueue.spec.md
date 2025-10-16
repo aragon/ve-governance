@@ -256,6 +256,7 @@ interface IEarlyExitQueue is IEarlyExitQueueEventsAndErrors {
 - Handle all three timeline phases correctly
 - Apply calculated fee percentage to token's locked amount
 - Use `ticket.queuedAt` for precise elapsed time calculation
+- **IMPORTANT**: Use fee parameters stored in the ticket (NOT global parameters) to ensure immutability of fee terms
 
 ### 5. `isCool(uint256 _tokenId)`
 
@@ -265,6 +266,7 @@ interface IEarlyExitQueue is IEarlyExitQueueEventsAndErrors {
 - Return `true` if full cooldown elapsed (Phase 3 - normal exit)
 - Return `false` if still in Phase 1 or 2
 - Clear indicator for "minimum fee applies" status
+- **IMPORTANT**: Use `ticket.cooldown` (NOT global `cooldown`) to determine if the ticket's specific cooldown period has elapsed
 
 ### 6. `cancelExit(uint256 _tokenId)`
 
@@ -289,8 +291,13 @@ The current `Ticket` struct in ExitQueue stores only the exit date (`exitDate`) 
 
 ```solidity
 struct TicketV2 {
-  address holder; // 160 bits - ticket holder address
-  uint48 queuedAt; // 48 bits - when ticket was queued (timestamp)
+  address holder;      // ticket holder address
+  uint48 queuedAt;     // when ticket was queued (timestamp)
+  uint48 minCooldown;  // minimum wait time at queue time
+  uint48 cooldown;     // total cooldown period at queue time
+  uint16 feePercent;   // max/early fee percent at queue time
+  uint16 minFeePercent;// min/base fee percent at queue time
+  uint256 slope;       // fee decay rate at queue time
 }
 ```
 
@@ -298,7 +305,8 @@ struct TicketV2 {
 
 - **`holder`**: Unchanged functionality - who owns the ticket
 - **`queuedAt`**: **New** - enables dynamic fee calculations based on elapsed time
-- **Gas Efficiency**: Packed into single 256-bit storage slot for optimal gas usage
+- **Fee Parameters**: **New** - preserves the exact fee configuration at queue time, ensuring existing ticket holders are protected from subsequent fee parameter changes
+- **Immutability**: Once a ticket is created, its fee terms are locked in and cannot be changed by admin actions
 
 ### Rationale for Breaking Change
 
@@ -309,6 +317,20 @@ Rather than maintaining backwards compatibility with a dual-system approach, we'
 3. **Performance**: Single code path without conditional logic overhead
 4. **Clarity**: Clear cutoff between old and new behavior
 
+### Fee Parameter Immutability
+
+A critical feature of the TicketV2 structure is that it preserves all fee parameters at the time of ticket creation. This ensures that:
+
+1. **Protection from Changes**: Existing ticket holders maintain their original fee terms even if administrators change the global fee parameters
+2. **Fair Treatment**: Users who queued under specific fee terms are guaranteed those terms throughout their exit process
+3. **No Retroactive Changes**: Admin cannot retroactively change fees for users who have already queued
+
+**Example Scenario**:
+- User A queues exit when fee is 10%
+- Admin changes global fee to 20%
+- User A still pays only 10% when they exit
+- New users (User B) who queue after the change will pay 20%
+
 ### Required Contract Changes
 
 #### IExitQueue Interface Updates
@@ -318,11 +340,16 @@ interface IExitQueue {
   struct TicketV2 {
     address holder;
     uint48 queuedAt;
+    uint48 minCooldown;
+    uint48 cooldown;
+    uint16 feePercent;
+    uint16 minFeePercent;
+    uint256 slope;
   }
 
   /// @notice Get ticket information for a token ID
   /// @param _tokenId The token ID to query
-  /// @return ticket The TicketV2 struct containing holder, queuedAt
+  /// @return ticket The TicketV2 struct containing holder, queuedAt, and all fee parameters
   function queue(
     uint256 _tokenId
   ) external view returns (TicketV2 memory ticket);
@@ -345,11 +372,29 @@ mapping(uint256 => TicketV2) internal _queue;
 **`queueExit(uint256 _tokenId, address _ticketHolder)`**
 
 - Store `queuedAt = block.timestamp` for dynamic fee calculations
-- Create `TicketV2` struct: `_queue[_tokenId] = TicketV2(_ticketHolder, block.timestamp)`
+- Capture current fee parameters to lock in terms for this ticket
+- Create `TicketV2` struct with all parameters:
+```solidity
+_queue[_tokenId] = TicketV2({
+  holder: _ticketHolder,
+  queuedAt: uint48(block.timestamp),
+  minCooldown: minCooldown,
+  cooldown: cooldown,
+  feePercent: uint16(feePercent),
+  minFeePercent: uint16(minFeePercent),
+  slope: _slope
+});
+```
 
-**`canExit(uint256 _tokenId)` & `calculateFee(uint256 _tokenId)`**
+**`canExit(uint256 _tokenId)`**
 
-- All fee calculations use `ticket.queuedAt` to determine elapsed time
+- Uses `ticket.minCooldown` (NOT global `minCooldown`) to determine if the minimum wait period has elapsed
+- Returns true only after `block.timestamp - ticket.queuedAt >= ticket.minCooldown`
+
+**`calculateFee(uint256 _tokenId)`**
+
+- All fee calculations use ticket parameters (feePercent, minFeePercent, slope, cooldown, minCooldown)
+- Elapsed time calculated as `block.timestamp - ticket.queuedAt`
 - No backwards compatibility - clean implementation using new structure
 
 ## Legacy Checkpoint Removal
