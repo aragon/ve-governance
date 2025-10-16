@@ -325,7 +325,7 @@ contract VotingEscrowV1_2_0 is
         return _createLockFor(_value, _msgSender());
     }
 
-    /// @notice Creates a lock on behalf of someone else. Restricted by default.
+    /// @notice Creates a lock on behalf of someone else.
     function createLockFor(
         uint256 _value,
         address _to
