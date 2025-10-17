@@ -2,7 +2,7 @@
 pragma solidity ^0.8.17;
 
 import {Script, console} from "forge-std/Script.sol";
-import {DAO} from "@aragon/osx/core/dao/DAO.sol";
+import {stdJson} from "forge-std/StdJson.sol";
 import {
     VotingEscrow,
     Clock,
@@ -17,7 +17,6 @@ import {
 
 import {PluginRepo} from "@aragon/osx/framework/plugin/repo/PluginRepo.sol";
 import {PluginRepoFactory} from "@aragon/osx/framework/plugin/repo/PluginRepoFactory.sol";
-import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 struct ScriptParameters {
     address pluginRepoMaintainer;
@@ -30,8 +29,6 @@ struct ScriptParameters {
 /// @author Aragon X 2025, v1.5.0
 /// @notice This script deploys a new plugin repo and publishes the current PluginSetup
 contract DeployNewPluginRepo is Script {
-    using SafeCast for uint256;
-
     ScriptParameters params;
     GaugeVoterPluginSetup pluginSetup;
     PluginRepo pluginRepo;
@@ -58,6 +55,10 @@ contract DeployNewPluginRepo is Script {
 
         // Done
         printDeploymentSummary();
+
+        if (!vm.envOr("SIMULATION", false)) {
+            writeJsonArtifacts();
+        }
     }
 
     function getScriptParameters() internal view returns (ScriptParameters memory) {
@@ -107,4 +108,20 @@ contract DeployNewPluginRepo is Script {
         console.log("  - Maintainer:     ", address(params.pluginRepoMaintainer));
         console.log("- Plugin setup:     ", address(pluginSetup));
     }
+
+    // function writeJsonArtifacts() internal {
+    //     string memory artifacts = "output";
+    //     artifacts.serialize("pluginRepo", address(pluginRepo));
+    //     artifacts.serialize("pluginRepoEns", string.concat(params.pluginRepoEnsSubdomain, ".plugin.dao.eth"));
+    //     artifacts.serialize("pluginRepoMaintainer", address(params.pluginRepoMaintainer));
+    //     artifacts = artifacts.serialize("pluginSetup", address(pluginSetup));
+
+    //     string memory networkName = vm.envString("NETWORK_NAME");
+    //     string memory filePath = string.concat(
+    //         vm.projectRoot(), "/artifacts/deployment-", networkName, "-", vm.toString(block.timestamp), ".json"
+    //     );
+    //     artifacts.write(filePath);
+
+    //     console.log("Deployment artifacts written to", filePath);
+    // }
 }
