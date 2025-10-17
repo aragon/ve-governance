@@ -50,14 +50,11 @@ contract EscrowIVotesAdapter is
     /// @notice The role used to call `setDelegateAddress` and delegate/undelegate for specific tokens.
     bytes32 public constant DELEGATION_TOKEN_ROLE = keccak256("DELEGATION_TOKEN_ROLE");
 
-    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
-    int256 public immutable SHARED_QUADRATIC_COEFFICIENT;
-    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
-    int256 public immutable SHARED_LINEAR_COEFFICIENT;
-    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
-    int256 public immutable SHARED_CONSTANT_COEFFICIENT;
-    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
-    uint256 public immutable MAX_EPOCHS;
+    int256 public curveConstantCoefficient;
+    int256 public curveLinearCoefficient;
+    int256 public curveQuadraticCoefficient;
+
+    uint256 public curveMaxEpochs;
     
     /// @notice Clock contract for epoch duration
     address public escrowClock;
@@ -75,14 +72,7 @@ contract EscrowIVotesAdapter is
                             Initialization
     //////////////////////////////////////////////////////////////*/
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(int256[3] memory _coefficients, uint256 _maxEpochs) {
-        SHARED_CONSTANT_COEFFICIENT = _coefficients[0];
-        SHARED_LINEAR_COEFFICIENT = _coefficients[1];
-        SHARED_QUADRATIC_COEFFICIENT = _coefficients[2];
-
-        MAX_EPOCHS = _maxEpochs;
-
+    constructor() {
         _disableInitializers();
     }
 
@@ -90,17 +80,24 @@ contract EscrowIVotesAdapter is
         address _dao,
         address _escrow,
         address _clock,
-        bool _startPaused
+        bool _startPaused,
+        int256[3] memory _coefficients,
+        uint256 _maxEpochs
     ) external initializer {
         __DaoAuthorizableUpgradeable_init(IDAO(_dao));
         __ReentrancyGuard_init();
         __DelegationHelper_init(_escrow);
 
+        curveConstantCoefficient = _coefficients[0];
+        curveLinearCoefficient = _coefficients[1];
+        // curveQuadraticCoefficient = _coefficients[2];
+
+        curveMaxEpochs = _maxEpochs;
         escrowClock = _clock;
 
         if (_startPaused) _pause();
 
-        maxTime = IClock(escrowClock).epochDuration() * MAX_EPOCHS;
+        maxTime = IClock(escrowClock).epochDuration() * curveMaxEpochs;
     }
 
     function pause() external auth(DELEGATION_ADMIN_ROLE) {
@@ -575,11 +572,11 @@ contract EscrowIVotesAdapter is
 
         int256 amount = uint256(_locked.amount).toInt256();
 
-        int256 slope = amount * SHARED_LINEAR_COEFFICIENT;
+        int256 slope = amount * curveLinearCoefficient;
         int256 bias = slope *
             int256(elapsed) +
             amount *
-            SHARED_CONSTANT_COEFFICIENT;
+            curveConstantCoefficient;
 
         if (bias < 0) bias = 0;
 
