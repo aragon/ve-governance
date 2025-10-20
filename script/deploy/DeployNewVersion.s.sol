@@ -111,7 +111,7 @@ contract DeployNewVersion is Script {
         console.log("Deployment artifacts written to", filePath);
     }
 
-    function printUpgradeProposalCommand() internal {
+    function printUpgradeProposalCommand() internal view {
         bytes memory actionData = abi.encodeCall(
             IPluginRepo.createVersion,
             (RELEASE, address(pluginSetup), bytes(params.buildMetadataUri), bytes(params.releaseMetadataUri))
