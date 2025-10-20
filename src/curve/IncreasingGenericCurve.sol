@@ -31,7 +31,7 @@ import {
 } from "@aragon/osx-commons-contracts/src/permission/auth/DaoAuthorizableUpgradeable.sol";
 
 /// @title Linear Increasing Escrow Curve
-contract LinearIncreasingCurve is
+contract IncreasingGenericCurve is
     IEscrowCurve,
     IClockUser,
     ReentrancyGuard,
@@ -69,15 +69,12 @@ contract LinearIncreasingCurve is
                                 MATH
     //////////////////////////////////////////////////////////////*/
 
-    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
-    int256 private immutable SHARED_QUADRATIC_COEFFICIENT;
-    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
-    int256 private immutable SHARED_LINEAR_COEFFICIENT;
-    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
-    int256 private immutable SHARED_CONSTANT_COEFFICIENT;
-    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
-    uint256 private immutable MAX_EPOCHS;
+    int256 public curveConstantCoefficient;
+    int256 public curveLinearCoefficient;
+    int256 public curveQuadraticCoefficient;
 
+    uint256 public curveMaxEpochs;
+    
     /*//////////////////////////////////////////////////////////////
                             ADDED: TOTAL SUPPLY(1.2.0)
     //////////////////////////////////////////////////////////////*/
@@ -95,22 +92,21 @@ contract LinearIncreasingCurve is
                               INITIALIZATION
     //////////////////////////////////////////////////////////////*/
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(int256[3] memory _coefficients, uint256 _maxEpochs) {
-        SHARED_CONSTANT_COEFFICIENT = _coefficients[0];
-        SHARED_LINEAR_COEFFICIENT = _coefficients[1];
-        SHARED_QUADRATIC_COEFFICIENT = _coefficients[2];
-
-        MAX_EPOCHS = _maxEpochs;
-
+    constructor() {
         _disableInitializers();
     }
 
     /// @param _escrow VotingEscrow contract address
-    function initialize(address _escrow, address _dao, address _clock) external initializer {
+    function initialize(address _escrow, address _dao, address _clock, int256[3] memory _coefficients, uint256 _maxEpochs) external initializer {
         escrow = _escrow;
         clock = _clock;
         
+        curveConstantCoefficient = _coefficients[0];
+        curveLinearCoefficient = _coefficients[1];
+        // curveQuadraticCoefficient = _coefficients[2];
+
+        curveMaxEpochs = _maxEpochs;
+
         __ReentrancyGuard_init();
         __DaoAuthorizableUpgradeable_init(IDAO(_dao));
 
@@ -123,13 +119,13 @@ contract LinearIncreasingCurve is
 
     /// @return The coefficient for the curve's linear term, for the given amount
     function _getLinearCoeff(uint256 amount) internal view virtual returns (int256) {
-        return amount.toInt256() * SHARED_LINEAR_COEFFICIENT;
+        return amount.toInt256() * curveLinearCoefficient;
     }
 
     /// @return The constant coefficient of the increasing curve, for the given amount
     /// @dev In this case, the constant term is 1 so we just case the amount
     function _getConstantCoeff(uint256 amount) internal view virtual returns (int256) {
-        return amount.toInt256() * SHARED_CONSTANT_COEFFICIENT;
+        return amount.toInt256() * curveQuadraticCoefficient;
     }
 
     /// @return The coefficients of the quadratic curve, for the given amount
@@ -198,7 +194,7 @@ contract LinearIncreasingCurve is
     }
 
     function maxTime() public view virtual returns (uint256) {
-        return IClock(clock).epochDuration() * MAX_EPOCHS;
+        return IClock(clock).epochDuration() * curveMaxEpochs;
     }
 
     function previewMaxBias(uint256 amount) external view returns (uint256) {

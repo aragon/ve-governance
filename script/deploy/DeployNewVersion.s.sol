@@ -67,7 +67,7 @@ contract DeployNewVersion is Script {
             pluginRepo: PluginRepo(vm.envAddress("PLUGIN_REPO")),
             releaseMetadata: vm.envOr("RELEASE_METADATA_URI", string(" ")),
             buildMetadata: vm.envOr("BUILD_METADATA_URI", string(" ")),
-            proposalTargetPlugin: IMultisig(vm.address("PROPOSAL_TARGET_PLUGIN")),
+            proposalTargetPlugin: IMultisig(vm.envAddress("PROPOSAL_TARGET_PLUGIN")),
             proposalMetadataUri: bytes(vm.envString("PROPOSAL_METADATA_URI"))
         });
     }
