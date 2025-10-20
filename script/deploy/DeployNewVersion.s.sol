@@ -56,7 +56,7 @@ contract DeployNewVersion is Script {
         printDeployment();
 
         if (!vm.envOr("SIMULATION", false)) {
-            // writeJsonArtifacts();
+            writeJsonArtifacts();
 
             printUpgradeProposalCommand();
         }
@@ -91,21 +91,25 @@ contract DeployNewVersion is Script {
         console.log("- Plugin setup:     ", address(pluginSetup));
     }
 
-    // function writeJsonArtifacts() internal {
-    //     string memory artifacts = "output";
-    //     artifacts.serialize("pluginRepo", address(pluginRepo));
-    //     artifacts.serialize("pluginRepoEns", string.concat(params.pluginRepoEnsSubdomain, ".plugin.dao.eth"));
-    //     artifacts.serialize("pluginRepoMaintainer", address(params.pluginRepoMaintainer));
-    //     artifacts = artifacts.serialize("pluginSetup", address(pluginSetup));
+    function writeJsonArtifacts() internal {
+        string memory artifacts = "main";
+        vm.serializeAddress(artifacts, "pluginRepo", address(params.pluginRepo));
+        vm.serializeAddress(artifacts, "pluginSetup", address(pluginSetup));
 
-    //     string memory networkName = vm.envString("NETWORK_NAME");
-    //     string memory filePath = string.concat(
-    //         vm.projectRoot(), "/artifacts/deployment-", networkName, "-", vm.toString(block.timestamp), ".json"
-    //     );
-    //     artifacts.write(filePath);
+        string memory proposal = "createVersionProposal";
+        vm.serializeAddress(proposal, "proposalPlugin", address(params.proposalTargetPlugin));
+        vm.serializeAddress(proposal, "proposalMetadataUri", address(params.proposalMetadataUri));
 
-    //     console.log("Deployment artifacts written to", filePath);
-    // }
+        string memory finalJson = vm.serializeString(artifacts, "createVersionProposal", proposal);
+
+        string memory networkName = vm.envString("NETWORK_NAME");
+        string memory filePath = string.concat(
+            vm.projectRoot(), "/artifacts/deployment-", networkName, "-", vm.toString(block.timestamp), ".json"
+        );
+        vm.writeJson(finalJson, filePath);
+
+        console.log("Deployment artifacts written to", filePath);
+    }
 
     function printUpgradeProposalCommand() internal {
         bytes memory actionData = abi.encodeCall(

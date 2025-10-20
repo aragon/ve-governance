@@ -109,19 +109,19 @@ contract DeployNewPluginRepo is Script {
         console.log("- Plugin setup:     ", address(pluginSetup));
     }
 
-    // function writeJsonArtifacts() internal {
-    //     string memory artifacts = "output";
-    //     artifacts.serialize("pluginRepo", address(pluginRepo));
-    //     artifacts.serialize("pluginRepoEns", string.concat(params.pluginRepoEnsSubdomain, ".plugin.dao.eth"));
-    //     artifacts.serialize("pluginRepoMaintainer", address(params.pluginRepoMaintainer));
-    //     artifacts = artifacts.serialize("pluginSetup", address(pluginSetup));
+    function writeJsonArtifacts() internal {
+        string memory artifacts = "output";
+        vm.serializeAddress(artifacts, "pluginRepo", address(pluginRepo));
+        vm.serializeString(artifacts, "pluginRepoEns", string.concat(params.pluginRepoEnsSubdomain, ".plugin.dao.eth"));
+        vm.serializeAddress(artifacts, "pluginRepoMaintainer", address(params.pluginRepoMaintainer));
+        string memory finalJson = vm.serializeAddress(artifacts, "pluginSetup", address(pluginSetup));
 
-    //     string memory networkName = vm.envString("NETWORK_NAME");
-    //     string memory filePath = string.concat(
-    //         vm.projectRoot(), "/artifacts/deployment-", networkName, "-", vm.toString(block.timestamp), ".json"
-    //     );
-    //     artifacts.write(filePath);
+        string memory networkName = vm.envString("NETWORK_NAME");
+        string memory filePath = string.concat(
+            vm.projectRoot(), "/artifacts/deployment-", networkName, "-", vm.toString(block.timestamp), ".json"
+        );
+        vm.writeJson(finalJson, filePath);
 
-    //     console.log("Deployment artifacts written to", filePath);
-    // }
+        console.log("Deployment artifacts written to", filePath);
+    }
 }
