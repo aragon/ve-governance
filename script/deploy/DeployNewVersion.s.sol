@@ -8,20 +8,20 @@ import {
     Lock,
     Curve,
     ExitQueue,
-    EscrowIVotesAdapter,
+    EscrowGenericIVotesAdapter,
     GaugeVoter,
     GaugeVoterPluginSetup,
     IGaugeVoterPluginSetupParams
 } from "@setup/GaugeVoterPluginSetup.sol";
 import {Action} from "@aragon/osx-commons-contracts/src/executors/Executor.sol";
 import {IPluginRepo, PluginRepo} from "@aragon/osx/framework/plugin/repo/PluginRepo.sol";
-import {IMultisig} from "@aragon/multisig/src/IMultisig.sol";
+import {IProposal} from "@aragon/multisig/src/Multisig.sol";
 
 struct ScriptParameters {
     PluginRepo pluginRepo;
-    string releaseMetadata;
-    string buildMetadata;
-    IMultisig proposalTargetPlugin;
+    string releaseMetadataUri;
+    string buildMetadataUri;
+    IProposal proposalTargetPlugin;
     string proposalMetadataUri;
 }
 
@@ -65,10 +65,10 @@ contract DeployNewVersion is Script {
     function getScriptParameters() internal view returns (ScriptParameters memory) {
         return ScriptParameters({
             pluginRepo: PluginRepo(vm.envAddress("PLUGIN_REPO")),
-            releaseMetadata: vm.envOr("RELEASE_METADATA_URI", string(" ")),
-            buildMetadata: vm.envOr("BUILD_METADATA_URI", string(" ")),
-            proposalTargetPlugin: IMultisig(vm.envAddress("PROPOSAL_TARGET_PLUGIN")),
-            proposalMetadataUri: bytes(vm.envString("PROPOSAL_METADATA_URI"))
+            releaseMetadataUri: vm.envOr("RELEASE_METADATA_URI", string(" ")),
+            buildMetadataUri: vm.envOr("BUILD_METADATA_URI", string(" ")),
+            proposalTargetPlugin: IProposal(vm.envAddress("PROPOSAL_TARGET_PLUGIN")),
+            proposalMetadataUri: string(vm.envString("PROPOSAL_METADATA_URI"))
         });
     }
 
@@ -80,7 +80,7 @@ contract DeployNewVersion is Script {
             address(new VotingEscrow()),
             address(new Clock()),
             address(new Lock()),
-            address(new EscrowIVotesAdapter())
+            address(new EscrowGenericIVotesAdapter())
         );
     }
 
@@ -98,7 +98,7 @@ contract DeployNewVersion is Script {
 
         string memory proposal = "createVersionProposal";
         vm.serializeAddress(proposal, "proposalPlugin", address(params.proposalTargetPlugin));
-        vm.serializeAddress(proposal, "proposalMetadataUri", address(params.proposalMetadataUri));
+        vm.serializeString(proposal, "proposalMetadataUri", string(params.proposalMetadataUri));
 
         string memory finalJson = vm.serializeString(artifacts, "createVersionProposal", proposal);
 
@@ -114,15 +114,17 @@ contract DeployNewVersion is Script {
     function printUpgradeProposalCommand() internal {
         bytes memory actionData = abi.encodeCall(
             IPluginRepo.createVersion,
-            (RELEASE, address(pluginSetup), params.buildMetadataUri, params.releaseMetadataUri)
+            (RELEASE, address(pluginSetup), bytes(params.buildMetadataUri), bytes(params.releaseMetadataUri))
         );
 
         Action[] memory actions = new Action[](1);
         actions[0].to = address(params.pluginRepo);
         actions[0].data = actionData;
         uint64 expirationDate = uint64(vm.envUint("TIMESTAMP")) + 3 weeks;
+        bytes memory _data =
+            abi.encode(0, /* allowFailureMap */ true, /* approve proposal */ false /* try execution */ );
         bytes memory createProposalData = abi.encodeCall(
-            IMultisig.createProposal, (params.proposalMetadataUri, actions, 0, true, false, 0, expirationDate)
+            IProposal.createProposal, (bytes(params.proposalMetadataUri), actions, 0, expirationDate, _data)
         );
 
         console.log("Proposal details:");
@@ -131,7 +133,9 @@ contract DeployNewVersion is Script {
         console.log("- Action[0].data:            ", vm.toString(actionData));
         console.log("");
         console.log("Action signature:");
-        console.log("- createVersion(uint8 release, address pluginSetup, bytes buildMetadata, bytes releaseMetadata)");
+        console.log(
+            "- createVersion(uint8 release, address pluginSetup, bytes buildMetadataUri, bytes releaseMetadataUri)"
+        );
         console.log("");
         console.log("");
         console.log("Creating the proposal with Foundry");

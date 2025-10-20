@@ -16,10 +16,10 @@ import {PluginSetup} from "@aragon/osx-commons-contracts/src/plugin/setup/Plugin
 import {AddressGaugeVoter as GaugeVoter} from "@voting/AddressGaugeVoter.sol";
 import {VotingEscrowV1_2_0 as VotingEscrow} from "@escrow/VotingEscrowIncreasing_v1_2_0.sol";
 import {DynamicExitQueue as ExitQueue} from "@queue/DynamicExitQueue.sol";
-import {LinearIncreasingCurve as Curve} from "@curve/LinearIncreasingCurve.sol";
+import {IncreasingGenericCurve as Curve} from "@curve/IncreasingGenericCurve.sol";
 import {ClockV1_2_0 as Clock} from "@clock/Clock_v1_2_0.sol";
 import {LockV1_2_0 as Lock} from "@lock/Lock_v1_2_0.sol";
-import {EscrowIVotesAdapter} from "@delegation/EscrowIVotesAdapter.sol";
+import {EscrowGenericIVotesAdapter} from "@delegation/EscrowGenericIVotesAdapter.sol";
 
 // function activateGaugeVoterInstallation(DAO dao, GaugePluginSet memory pluginSet) internal {
 //     dao.grant(address(pluginSet.votingEscrow), address(this), pluginSet.votingEscrow.ESCROW_ADMIN_ROLE());
@@ -142,7 +142,10 @@ contract GaugeVoterPluginSetup is PluginSetup {
         _curveCoefficients[1] = params.curveLinearCoefficient;
         _curveCoefficients[2] = params.curveQuadraticCoefficient;
         deps.ivotesAdapter = ivotesAdapterBase.deployUUPSProxy(
-            abi.encodeCall(EscrowIVotesAdapter.initialize, (_dao, deps.escrow, deps.clock, false, _curveCoefficients, params.curveMaxEpoch))
+            abi.encodeCall(
+                EscrowGenericIVotesAdapter.initialize,
+                (_dao, deps.escrow, deps.clock, false, _curveCoefficients, params.curveMaxEpoch)
+            )
         );
 
         // deploy the voting contract (plugin)
@@ -153,7 +156,9 @@ contract GaugeVoterPluginSetup is PluginSetup {
         );
 
         // deploy the curve
-        deps.curve = curveBase.deployUUPSProxy(abi.encodeCall(Curve.initialize, (deps.escrow, _dao, deps.clock, _curveCoefficients, params.curveMaxEpoch)));
+        deps.curve = curveBase.deployUUPSProxy(
+            abi.encodeCall(Curve.initialize, (deps.escrow, _dao, deps.clock, _curveCoefficients, params.curveMaxEpoch))
+        );
 
         // deploy the exit queue
         deps.exitQueue = queueBase.deployUUPSProxy(
@@ -293,7 +298,7 @@ contract GaugeVoterPluginSetup is PluginSetup {
         });
 
         permissions[7] = PermissionLib.MultiTargetPermission({
-            permissionId: EscrowIVotesAdapter(_ivotesAdapter).DELEGATION_ADMIN_ROLE(),
+            permissionId: EscrowGenericIVotesAdapter(_ivotesAdapter).DELEGATION_ADMIN_ROLE(),
             where: _ivotesAdapter,
             who: _dao,
             operation: _grantOrRevoke,
@@ -301,7 +306,7 @@ contract GaugeVoterPluginSetup is PluginSetup {
         });
 
         permissions[8] = PermissionLib.MultiTargetPermission({
-            permissionId: EscrowIVotesAdapter(_ivotesAdapter).DELEGATION_TOKEN_ROLE(),
+            permissionId: EscrowGenericIVotesAdapter(_ivotesAdapter).DELEGATION_TOKEN_ROLE(),
             where: _ivotesAdapter,
             who: _dao,
             operation: _grantOrRevoke,
@@ -337,38 +342,5 @@ contract GaugeVoterPluginSetup is PluginSetup {
 
     function encodeSetupData(IGaugeVoterPluginSetupParams calldata _params) external pure returns (bytes memory) {
         return abi.encode(_params);
-    }
-
-    /// @notice  utility for external applications create the encoded setup data.
-    function encodeSetupData(
-        bool isPaused,
-        string calldata veTokenName,
-        string calldata veTokenSymbol,
-        address token,
-        uint48 cooldown,
-        uint256 feePercent,
-        uint48 minLock,
-        uint256 minDeposit,
-        int256 curveConstantCoefficient,
-        int256 curveLinearCoefficient,
-        int256 curveQuadraticCoefficient,
-        uint256 curveMaxEpoch
-    ) external pure returns (bytes memory) {
-        return abi.encode(
-            IGaugeVoterPluginSetupParams({
-                isPaused: isPaused,
-                token: token,
-                veTokenName: veTokenName,
-                veTokenSymbol: veTokenSymbol,
-                cooldown: cooldown,
-                feePercent: feePercent,
-                minLock: minLock,
-                minDeposit: minDeposit,
-                curveConstantCoefficient: curveConstantCoefficient,
-                curveLinearCoefficient: curveLinearCoefficient,
-                curveQuadraticCoefficient: curveQuadraticCoefficient,
-                curveMaxEpoch: curveMaxEpoch
-            })
-        );
     }
 }

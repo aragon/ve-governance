@@ -9,7 +9,7 @@ import {
     Lock,
     Curve,
     ExitQueue,
-    EscrowIVotesAdapter,
+    EscrowGenericIVotesAdapter,
     GaugeVoter,
     GaugeVoterPluginSetup,
     IGaugeVoterPluginSetupParams
@@ -79,7 +79,7 @@ contract DeployNewPluginRepo is Script {
             address(new VotingEscrow()),
             address(new Clock()),
             address(new Lock()),
-            address(new EscrowIVotesAdapter())
+            address(new EscrowGenericIVotesAdapter())
         );
     }
 
