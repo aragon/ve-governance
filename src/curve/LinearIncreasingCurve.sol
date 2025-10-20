@@ -110,7 +110,7 @@ contract LinearIncreasingCurve is
     function initialize(address _escrow, address _dao, address _clock) external initializer {
         escrow = _escrow;
         clock = _clock;
-        
+
         __ReentrancyGuard_init();
         __DaoAuthorizableUpgradeable_init(IDAO(_dao));
 
