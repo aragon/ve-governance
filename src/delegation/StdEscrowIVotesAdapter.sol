@@ -34,7 +34,7 @@ import {IEscrowIVotesAdapter, IDelegateMoveVoteRecipient} from "./IEscrowIVotesA
 import {SignedFixedPointMath} from "@libs/SignedFixedPointMathLib.sol";
 import {DelegationHelper} from "./DelegationHelper.sol";
 
-contract EscrowGenericIVotesAdapter is
+contract StdEscrowIVotesAdapter is
     IERC6372,
     ReentrancyGuard,
     Pausable,

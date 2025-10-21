@@ -30,6 +30,7 @@ interface IVotingEscrowCoreErrors {
     error OnlyLockNFT();
     error OnlyIVotesAdapter();
     error AddressAlreadySet();
+    error OnlyDeployer();
 }
 
 interface IVotingEscrowCoreEvents {

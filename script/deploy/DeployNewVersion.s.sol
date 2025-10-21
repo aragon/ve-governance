@@ -8,7 +8,7 @@ import {
     Lock,
     Curve,
     ExitQueue,
-    EscrowGenericIVotesAdapter,
+    StdEscrowIVotesAdapter,
     GaugeVoter,
     GaugeVoterPluginSetup,
     IGaugeVoterPluginSetupParams
@@ -80,7 +80,7 @@ contract DeployNewVersion is Script {
             address(new VotingEscrow()),
             address(new Clock()),
             address(new Lock()),
-            address(new EscrowGenericIVotesAdapter())
+            address(new StdEscrowIVotesAdapter())
         );
     }
 

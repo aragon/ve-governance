@@ -16,21 +16,10 @@ import {PluginSetup} from "@aragon/osx-commons-contracts/src/plugin/setup/Plugin
 import {AddressGaugeVoter as GaugeVoter} from "@voting/AddressGaugeVoter.sol";
 import {VotingEscrowV1_2_0 as VotingEscrow} from "@escrow/VotingEscrowIncreasing_v1_2_0.sol";
 import {DynamicExitQueue as ExitQueue} from "@queue/DynamicExitQueue.sol";
-import {IncreasingGenericCurve as Curve} from "@curve/IncreasingGenericCurve.sol";
+import {StdCurve as Curve} from "@curve/StdCurve.sol";
 import {ClockV1_2_0 as Clock} from "@clock/Clock_v1_2_0.sol";
 import {LockV1_2_0 as Lock} from "@lock/Lock_v1_2_0.sol";
-import {EscrowGenericIVotesAdapter} from "@delegation/EscrowGenericIVotesAdapter.sol";
-
-// function activateGaugeVoterInstallation(DAO dao, GaugePluginSet memory pluginSet) internal {
-//     dao.grant(address(pluginSet.votingEscrow), address(this), pluginSet.votingEscrow.ESCROW_ADMIN_ROLE());
-
-//     pluginSet.votingEscrow.setCurve(address(pluginSet.curve));
-//     pluginSet.votingEscrow.setQueue(address(pluginSet.exitQueue));
-//     pluginSet.votingEscrow.setVoter(address(pluginSet.plugin));
-//     pluginSet.votingEscrow.setLockNFT(address(pluginSet.nftLock));
-//     pluginSet.votingEscrow.setIVotesAdapter(address(pluginSet.delegationAdapter));
-//     dao.revoke(address(pluginSet.votingEscrow), address(this), pluginSet.votingEscrow.ESCROW_ADMIN_ROLE());
-// }
+import {StdEscrowIVotesAdapter} from "@delegation/StdEscrowIVotesAdapter.sol";
 
 /// @param isPaused Whether the voter contract is deployed in a paused state
 /// @param veTokenName The name of the voting escrow token
@@ -143,7 +132,7 @@ contract GaugeVoterPluginSetup is PluginSetup {
         _curveCoefficients[2] = params.curveQuadraticCoefficient;
         deps.ivotesAdapter = ivotesAdapterBase.deployUUPSProxy(
             abi.encodeCall(
-                EscrowGenericIVotesAdapter.initialize,
+                StdEscrowIVotesAdapter.initialize,
                 (_dao, deps.escrow, deps.clock, false, _curveCoefficients, params.curveMaxEpoch)
             )
         );
@@ -172,6 +161,14 @@ contract GaugeVoterPluginSetup is PluginSetup {
         deps.nftLock = nftBase.deployUUPSProxy(
             abi.encodeCall(Lock.initialize, (deps.escrow, params.veTokenName, params.veTokenSymbol, _dao))
         );
+
+        /// @dev Post deployment setters, can only be called once
+
+        VotingEscrow(deps.escrow).setCurve(address(deps.curve));
+        VotingEscrow(deps.escrow).setQueue(address(deps.exitQueue));
+        VotingEscrow(deps.escrow).setVoter(address(deps.plugin));
+        VotingEscrow(deps.escrow).setLockNFT(address(deps.nftLock));
+        VotingEscrow(deps.escrow).setIVotesAdapter(address(deps.ivotesAdapter));
 
         // encode our setup data with permissions and helpers
         PermissionLib.MultiTargetPermission[] memory permissions = getPermissions(
@@ -298,7 +295,7 @@ contract GaugeVoterPluginSetup is PluginSetup {
         });
 
         permissions[7] = PermissionLib.MultiTargetPermission({
-            permissionId: EscrowGenericIVotesAdapter(_ivotesAdapter).DELEGATION_ADMIN_ROLE(),
+            permissionId: StdEscrowIVotesAdapter(_ivotesAdapter).DELEGATION_ADMIN_ROLE(),
             where: _ivotesAdapter,
             who: _dao,
             operation: _grantOrRevoke,
@@ -306,7 +303,7 @@ contract GaugeVoterPluginSetup is PluginSetup {
         });
 
         permissions[8] = PermissionLib.MultiTargetPermission({
-            permissionId: EscrowGenericIVotesAdapter(_ivotesAdapter).DELEGATION_TOKEN_ROLE(),
+            permissionId: StdEscrowIVotesAdapter(_ivotesAdapter).DELEGATION_TOKEN_ROLE(),
             where: _ivotesAdapter,
             who: _dao,
             operation: _grantOrRevoke,

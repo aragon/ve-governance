@@ -31,7 +31,7 @@ import {
 } from "@aragon/osx-commons-contracts/src/permission/auth/DaoAuthorizableUpgradeable.sol";
 
 /// @title Linear Increasing Escrow Curve
-contract IncreasingGenericCurve is
+contract StdCurve is
     IEscrowCurve,
     IClockUser,
     ReentrancyGuard,
