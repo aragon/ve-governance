@@ -132,6 +132,9 @@ contract VotingEscrowV1_2_0 is
 
     /// @notice Addess of the escrow ivotes adapter where delegations occur.
     address public ivotesAdapter;
+    
+    /// @notice The address that deployed this plugin.
+    address private deployer;
 
     /*//////////////////////////////////////////////////////////////
                               Initialization
@@ -151,6 +154,8 @@ contract VotingEscrowV1_2_0 is
         __ReentrancyGuard_init();
         __Pausable_init();
         __DaoAuthorizableUpgradeable_init(IDAO(_dao));
+        
+        deployer = _msgSender();
 
         if (IERC20Metadata(_token).decimals() != 18) revert MustBe18Decimals();
         token = _token;
@@ -159,9 +164,10 @@ contract VotingEscrowV1_2_0 is
         emit MinDepositSet(_initialMinDeposit);
     }
 
-    /// @notice Used to revert if admin tries to change the contract address 2nd time.
-    modifier contractAlreadySet(address _contract) {
-        if (_contract != address(0)) revert AddressAlreadySet();
+    /// @notice Ensures that the value can only be set by the plugin deployer, when the value is still empty
+    modifier onlyDeployerAndEmpty(address _storedAddress) {
+        if (_msgSender() != deployer) revert OnlyDeployer();
+        else if (_storedAddress != address(0)) revert AddressAlreadySet();
 
         _;
     }
@@ -170,37 +176,37 @@ contract VotingEscrowV1_2_0 is
                               Admin Setters
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Added in 1.2.0 to set the ivotes adapter
+    /// @notice Added in 1.2.0 to set the IVotes adapter
     function setIVotesAdapter(
         address _ivotesAdapter
-    ) external auth(ESCROW_ADMIN_ROLE) contractAlreadySet(ivotesAdapter) {
+    ) external onlyDeployerAndEmpty(ivotesAdapter) {
         ivotesAdapter = _ivotesAdapter;
     }
 
     /// @notice Sets the curve contract that calculates the voting power
-    function setCurve(address _curve) external auth(ESCROW_ADMIN_ROLE) contractAlreadySet(curve) {
+    function setCurve(address _curve) external onlyDeployerAndEmpty(curve) {
         curve = _curve;
     }
 
     /// @notice Sets the voter contract that tracks votes
-    function setVoter(address _voter) external auth(ESCROW_ADMIN_ROLE) {
+    function setVoter(address _voter) external onlyDeployerAndEmpty(curve) {
         voter = _voter;
     }
 
     /// @notice Sets the exit queue contract that manages withdrawal eligibility
-    function setQueue(address _queue) external auth(ESCROW_ADMIN_ROLE) contractAlreadySet(queue) {
+    function setQueue(address _queue) external onlyDeployerAndEmpty(queue) {
         queue = _queue;
     }
 
     /// @notice Sets the clock contract that manages epoch and voting periods
-    function setClock(address _clock) external auth(ESCROW_ADMIN_ROLE) contractAlreadySet(clock) {
+    function setClock(address _clock) external onlyDeployerAndEmpty(clock) {
         clock = _clock;
     }
 
     /// @notice Sets the NFT contract that is the lock
     /// @dev By default this can only be set once due to the high risk of changing the lock
     /// and having the ability to steal user funds.
-    function setLockNFT(address _nft) external auth(ESCROW_ADMIN_ROLE) {
+    function setLockNFT(address _nft) external onlyDeployerAndEmpty(lockNFT) {
         if (_lockNFTSet) revert LockNFTAlreadySet();
         lockNFT = _nft;
         _lockNFTSet = true;
@@ -708,5 +714,5 @@ contract VotingEscrowV1_2_0 is
     ///      incorrectly as 39 instead of 40. Changing it to 40 now would overwrite existing slot values,
     ///      resulting in the loss of state. Therefore, we will continue using 37 in this version.
     ///      For future versions, any new variables should be added by subtracting from 37.
-    uint256[36] private __gap;
+    uint256[35] private __gap;
 }
