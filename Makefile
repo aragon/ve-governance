@@ -16,6 +16,7 @@ CHAIN_ID := $(strip $(subst ',, $(subst ",,$(CHAIN_ID))))
 NETWORK_NAME := $(strip $(subst ',, $(subst ",,$(NETWORK_NAME))))
 BLOCKSCOUT_HOST_NAME := $(strip $(subst ',, $(subst ",,$(BLOCKSCOUT_HOST_NAME))))
 FORK_BLOCK_NUMBER := $(strip $(subst ',, $(subst ",,$(FORK_BLOCK_NUMBER))))
+DEPLOYMENT_SCRIPT := $(strip $(subst ',, $(subst ",,$(DEPLOYMENT_SCRIPT))))
 
 DEPLOYMENT_ADDRESS := $(shell cast wallet address --private-key $(DEPLOYMENT_PRIVATE_KEY) 2>/dev/null || echo "NOTE: DEPLOYMENT_PRIVATE_KEY is not properly set on .env" > /dev/stderr)
 DEPLOYMENT_LOG_FILE := $(LOGS_FOLDER)/deployment-$(NETWORK_NAME)-$(shell date +"%y-%m-%d-%H-%M").log
