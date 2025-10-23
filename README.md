@@ -2,6 +2,8 @@
 
 Welcome to Aragon's veGovernance Plugin - a flexible, modular and secure system which can be used to create custom DAOs that foster a strong alignment between token holders and capital flows.
 
+This repository can be deployed as a full DAO setup using a factory. The PluginSetup is also available as a standalone deployment option.
+
 ## Setup
 
 To get started, ensure that [Foundry](https://getfoundry.sh/) is installed on your computer.
@@ -43,6 +45,13 @@ End to end DAO deployments are done using a factory. This is a singleton contrac
 - Set permissions
 - Transfer ownership to a freshly deployed multisig
 - Store the addresses of the deployment in a single source of truth that can be queried at any time.
+
+### PluginSetup deployment
+
+If you don't need a full DAO deployment, set the `DEPLOYMENT_SCRIPT` variable so that the deployment script used is either:
+
+- `DeployNewVersion_v1_5_0`: If you need to deploy a new PluginRepo with a first version
+- `DeployPluginRepo_v1_5_0`: If you need to deploy a new version for an existing PluginRepo
 
 Check the available make targets to simulate and deploy the smart contracts:
 
@@ -157,6 +166,18 @@ If some contracts fail to verify on Etherscan, retry with this command:
 
 ```sh
 forge script --chain "$NETWORK_NAME" script/DeployGauges.s.sol:Deploy --rpc-url "$RPC_URL" --verify --legacy --private-key "$DEPLOYMENT_PRIVATE_KEY" --resume
+```
+
+## Installing the plugin set
+
+After calling `pluginSetup.prepareInstallation()` and `psp.applyInstallation()`, make sure that the DAO executes the following actions to complete the setup:
+
+```solidity
+escrow.setCurve(curve);
+escrow.setQueue(exitQueue);
+escrow.setVoter(plugin);
+escrow.setLockNFT(nftLock);
+escrow.setIVotesAdapter(ivotesAdapter);
 ```
 
 ## Contracts Overview
