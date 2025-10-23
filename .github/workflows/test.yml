@@ -155,7 +155,7 @@ jobs:
 
       - name: Run Forge tests
         run: |
-          forge test --match-path "test/**/upgrade/**/*.sol" --force
+          forge test --match-path "test/**/upgrade/**/*.sol" --force --ffi
         id: test
 
   # Run invariants only on v1-3-0 to avoid huge downtimes for actions.
