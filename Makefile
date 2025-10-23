@@ -113,11 +113,11 @@ test-unint: ## Run unit + integration tests         [optional: v="v1_2_0"]
 
 .PHONY: test-invariant
 test-invariant: ## Run invariant tests                  [optional: v="v1_2_0"]
-	@make local-test path="test/$(v)/invariant/**/*.sol" extra_params=--show-progress
+	@make local-test path="test/$(v)/invariant/**/*.sol" extra_params="--show-progress"
 
 .PHONY: test-upgrades
 test-upgrades: ## Run regression/upgrade tests         [optional: v="v1_2_0"]
-	@make local-test path="test/$(v)/upgrade/**/*.sol" extra_params=--force
+	@make local-test path="test/$(v)/upgrade/**/*.sol" extra_params="--force --ffi"
 
 ##
 

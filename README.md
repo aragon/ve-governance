@@ -9,9 +9,9 @@ To get started, ensure that [Foundry](https://getfoundry.sh/) is installed on yo
 <details>
   <summary>Also make sure to install [GNU Make](https://www.gnu.org/software/make/).</summary>
 
-  ```sh
-  # debian
-  sudo apt install build-essential
+```sh
+# debian
+sudo apt install build-essential
 
 # arch
 
@@ -29,29 +29,15 @@ brew install make
 
 </details>
 
-### Using the Makefile
+Copy `.env.example` into a file named `.env` and define your settings in it.
 
-The `Makefile` as the target launcher of the project. It's the recommended way to work with it. It manages the env variables of common tasks and executes only the steps that require being run.
-
-### Understanding `.env.example`
-
-The env.example file contains descriptions for all the initial settings. You don't need all of these right away but should review prior to fork tests and deployments
-
-## Running fork tests
-
-Fork testing has 2 modes:
-
-1. "new-factory" will run against the live network fork, deploying new contracts via a new instance of the factory. See `make test-fork-testnet`, `make test-fork-prodnet` and simmilar
-
-2. "existing-factory" will run against the live network fork, using the existing factory & therefore the existing contracts. See `make test-fork-factory-testnet`, `make test-fork-factory-prodnet` and simmilar
-
-In both cases, you will need to find the correct Aragon OSx contracts for the chain you wish to fork against. These can be found in the [OSx commons repo](https://github.com/aragon/osx-commons/tree/main/configs/src/deployments/json)
-
-> If running frequent fork tests it's recommended to pass a block number to enable caching
+The `Makefile` acts as the target launcher of the project. It's the recommended way to work with it. It manages the env variables of common tasks and executes only the steps that require being run.
 
 ## Deployment
 
-Deployments are done using the deployment factory. This is a singleton contract that will:
+### Full DAO deployment
+
+End to end DAO deployments are done using a factory. This is a singleton contract that will:
 
 - Deploy all contracts
 - Set permissions
@@ -61,16 +47,11 @@ Deployments are done using the deployment factory. This is a singleton contract 
 Check the available make targets to simulate and deploy the smart contracts:
 
 ```
-
-- make pre-deploy-testnet Simulate a deployment to the defined testnet
-- make pre-deploy-prodnet Simulate a deployment to the defined production network
-- make deploy-testnet Deploy to the defined testnet network and verify
-- make deploy-prodnet Deploy to the production network and verify
-
+- make predeploy            Simulate a plugin deployment
+- make deploy               Deploy the plugin and verify the code
 ````
 
 ### Deployment Checklist
-
 
 - [ ] I have cloned the official repository on my computer and I have checked out the corresponding branch
 - [ ] I am using the latest official docker engine, running a Debian Linux (stable) image
@@ -268,6 +249,18 @@ The main workflow in the Aragon VE Governance build is as follows:
 ## Curve design
 
 To build a flexible approach to curve design, we reviewed implementations such as seen in Curve and Aerodrome and attempted to generalise [Details on the curve design research can be found here](https://github.com/jordaniza/ve-explainer/blob/main/README.md)
+
+## Running fork tests
+
+Fork testing has 2 modes:
+
+1. "new-factory" will run against the live network fork, deploying new contracts via a new instance of the factory. See `make test-fork-testnet`, `make test-fork-prodnet` and simmilar
+
+2. "existing-factory" will run against the live network fork, using the existing factory & therefore the existing contracts. See `make test-fork-factory-testnet`, `make test-fork-factory-prodnet` and simmilar
+
+In both cases, you will need to find the correct Aragon OSx contracts for the chain you wish to fork against. These can be found in the [OSx commons repo](https://github.com/aragon/osx-commons/tree/main/configs/src/deployments/json)
+
+> If running frequent fork tests it's recommended to pass a block number to enable caching
 
 # Important note on upgrades and warmups
 
