@@ -155,14 +155,14 @@ test-coverage: report/index.html ## Generate an HTML test coverage report under 
 predeploy: ## Simulate a plugin deployment
 	@echo "Simulating the deployment"
 
-	@make simulate-script script="script/deploy/$(DEPLOYMENT_SCRIPT).s.sol:$(DEPLOYMENT_SCRIPT)"
+	@make simulate-script script="$(DEPLOYMENT_SCRIPT)"
 
 .PHONY: deploy
 deploy: test ## Deploy the plugin, verify the code and write to ./artifacts
 	@echo "Starting the deployment"
 	@mkdir -p $(LOGS_FOLDER) $(ARTIFACTS_FOLDER)
 
-	@make run-script script="script/$(DEPLOYMENT_SCRIPT).s.sol:$(DEPLOYMENT_SCRIPT)" \
+	@make run-script script="$(DEPLOYMENT_SCRIPT)" \
 	    2>&1 | tee -a $(DEPLOYMENT_LOG_FILE)
 
 	echo "Logs saved in $(DEPLOYMENT_LOG_FILE)"
