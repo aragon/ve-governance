@@ -3,11 +3,13 @@
   "version": "1.0.0",
   "devDependencies": {
     "@aragon/osx-commons-configs": "^0.8.0",
+    "fs-extra": "^11.3.1",
+    "glob": "^11.0.3",
     "lodash.startcase": "^4.4.0",
     "prettier": "^3.3.3",
     "prettier-plugin-solidity": "^1.4.1",
-    "solidity-docgen": "^0.6.0-beta.36",
-    "solc": "0.8.17"
+    "solc": "0.8.17",
+    "solidity-docgen": "^0.6.0-beta.36"
   },
   "scripts": {
     "docs": "script/prepare-docs.sh && bun ./script/prepare-docs.js"
@@ -15,5 +17,6 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/aragon/ve-governance"
-  }
+  },
+  "packageManager": "yarn@4.9.1+sha512.f95ce356460e05be48d66401c1ae64ef84d163dd689964962c6888a9810865e39097a5e9de748876c2e0bf89b232d583c33982773e9903ae7a76257270986538"
 }

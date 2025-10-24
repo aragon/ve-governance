@@ -1,2 +1,2 @@
 .API
-* xref:ve-governance.adoc[Ve Governance]
+* xref:README.adoc[README]

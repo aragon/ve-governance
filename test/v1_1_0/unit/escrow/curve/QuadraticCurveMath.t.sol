@@ -12,7 +12,7 @@ import {
 } from "../../../versions.sol";
 
 contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
-    function test_votingPowerComputesCorrect() public {
+    function test_votingPowerComputesCorrect() public view {
         /**
             Period	Result
           1	1

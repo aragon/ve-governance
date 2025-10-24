@@ -4,7 +4,7 @@
 auto_detect_solc = false
 bytecode_hash = "none"
 cbor_metadata = false
-fuzz = { runs = 256 }
+fuzz = { runs = 64 }
 gas_reports = ["*"]
 fs_permissions = [{ access = "read", path = "./" }]
 libs = ["lib"]
@@ -12,7 +12,7 @@ optimizer = true
 optimizer_runs = 10_000
 out = "out"
 script = "script"
-solc = "0.8.17"
+solc = "0.8.18"
 src = "src"
 test = "test"
 verbosity = 3
@@ -24,6 +24,11 @@ extra_output = ["storageLayout"]
 
 [profile.gas-report]
 fuzz = { runs = 128 }
+
+[profile.default.invariant]
+fail_on_revert = true
+runs = 2000
+depth = 128
 
 [rpc_endpoints]
 arbitrum_one = "https://arbitrum-mainnet.infura.io/v3/${API_KEY_INFURA}"

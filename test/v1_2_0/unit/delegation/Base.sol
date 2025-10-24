@@ -6,7 +6,7 @@ import {console2 as console} from "forge-std/console2.sol";
 
 // aragon contracts
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
-import {DaoUnauthorized} from "@aragon/osx/core/utils/auth.sol";
+import {DaoUnauthorized} from "@aragon/osx-commons-contracts/src/permission/auth/auth.sol";
 
 import {createTestDAO} from "@mocks/MockDAO.sol";
 import {
@@ -31,6 +31,11 @@ contract EscrowVotingPowerMock is IDelegateUpdateVotingPower {
 }
 
 contract EscrowIVotesAdapterA is EscrowIVotesAdapter {
+    constructor(
+        int256[3] memory coefficients,
+        uint256 maxEpoch
+    ) EscrowIVotesAdapter(coefficients, maxEpoch) {}
+
     function pointHistory_(
         address _account,
         uint256 _index
@@ -85,6 +90,12 @@ contract Base is
             _permissionId: dg.DELEGATION_ADMIN_ROLE()
         });
 
+        dao.grant({
+            _who: address(type(uint160).max),
+            _where: address(dg),
+            _permissionId: dg.DELEGATION_TOKEN_ROLE()
+        });
+
         // almost all tests need delegation to be disabled by default 
         // to test thoroughly the behaviour of the functions.
         // So we set it to true.
@@ -133,7 +144,8 @@ contract Base is
         address _clock,
         address _escrow
     ) public returns (EscrowIVotesAdapterA) {
-        EscrowIVotesAdapterA impl = new EscrowIVotesAdapterA();
+        (int256[3] memory coefficients, uint256 maxEpochs) = CurveConstantLib.getCoefficients();
+        EscrowIVotesAdapterA impl = new EscrowIVotesAdapterA(coefficients, maxEpochs);
         bool startPaused = false;
 
         bytes memory initCalldata = abi.encodeCall(

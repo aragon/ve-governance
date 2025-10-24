@@ -4,6 +4,9 @@
 !.env.example
 !.env.test.example
 
+# yarn
+.yarn/*
+
 # Logs
 *.log
 
@@ -38,3 +41,6 @@ lcov*
 # multisig addresses
 script/multisig-*.json
 ^script/multisig-members.json
+
+# llm
+*.prompt

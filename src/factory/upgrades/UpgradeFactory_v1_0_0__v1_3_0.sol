@@ -2,20 +2,19 @@
 pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
-import "test/constants.sol";
+import "@test/constants.sol";
 import {PluginSetupProcessor} from "@aragon/osx/framework/plugin/setup/PluginSetupProcessor.sol";
 import {PluginRepoFactory} from "@aragon/osx/framework/plugin/repo/PluginRepoFactory.sol";
 import {PluginRepoRegistry} from "@aragon/osx/framework/plugin/repo/PluginRepoRegistry.sol";
 import {PluginRepo} from "@aragon/osx/framework/plugin/repo/PluginRepo.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
-import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
-import {Addresslist} from "@aragon/osx/plugins/utils/Addresslist.sol";
-import {IPluginSetup} from "@aragon/osx/framework/plugin/setup/IPluginSetup.sol";
-import {PermissionLib} from "@aragon/osx/core/permission/PermissionLib.sol";
+import {IDAO} from "@aragon/osx-commons-contracts/src/dao/IDAO.sol";
+import {IPluginSetup} from "@aragon/osx-commons-contracts/src/plugin/setup/IPluginSetup.sol";
+import {PermissionLib} from "@aragon/osx-commons-contracts/src/permission/PermissionLib.sol";
 import {
     Multisig,
     MultisigSetup as MultisigPluginSetup
-} from "@aragon/osx/plugins/governance/multisig/MultisigSetup.sol";
+} from "@aragon/multisig/src/MultisigSetup.sol";
 import {
     hashHelpers,
     PluginSetupRef
@@ -54,8 +53,8 @@ import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {ERC165Checker} from "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
-import {Upgrades} from "@foundry-upgrades/LegacyUpgrades.sol";
-import {Options} from "@foundry-upgrades/Options.sol";
+import {Upgrades} from "@foundry-upgrades/src/LegacyUpgrades.sol";
+import {Options} from "@foundry-upgrades/src/Options.sol";
 
 import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 
@@ -243,11 +242,11 @@ contract UpgradeGaugesFactoryV1_0_0__V1_3_0 {
                 // as the curve that was already deployed prior.
                 int256[3] memory coefficients = pluginSet.curve.getCoefficients(1);
                 require(
-                    CurveConstantLib.SHARED_CONSTANT_COEFFICIENT == coefficients[0],
+                    ivotesAdapter.SHARED_CONSTANT_COEFFICIENT() == coefficients[0],
                     "invalid constant coefficient"
                 );
                 require(
-                    CurveConstantLib.SHARED_LINEAR_COEFFICIENT == coefficients[1],
+                    ivotesAdapter.SHARED_LINEAR_COEFFICIENT() == coefficients[1],
                     "invalid linear coefficient"
                 );
             }

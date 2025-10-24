@@ -4,7 +4,9 @@ utils/=test/utils/
 
 @aragon/osx/=lib/osx/packages/contracts/src/
 @aragon/admin/=lib/osx/packages/contracts/src/plugins/governance/admin/
-@aragon/multisig/=lib/osx/packages/contracts/src/plugins/governance/multisig/
+@aragon/multisig/=lib/multisig-plugin/packages/contracts/
+@aragon/osx-commons-contracts/=lib/osx-commons/contracts/
+@aragon/protocol-factory/=lib/protocol-factory/
 
 @interfaces/=src/interfaces/
 @libs/=src/libs/
@@ -21,13 +23,13 @@ utils/=test/utils/
 @helpers/=test/helpers/
 @factory/=src/factory/
 @mocks/=test/mocks/
+@test/=test/
   
-@ensdomains/ens-contracts/=lib/ens-contracts/
 ens-contracts/=lib/ens-contracts/contracts/
 
 @openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/
 @openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/
-@foundry-upgrades/=lib/openzeppelin-foundry-upgrades/src/
+@foundry-upgrades/=lib/openzeppelin-foundry-upgrades/
 openzeppelin-contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/
 openzeppelin-contracts/=lib/openzeppelin-contracts/
 erc4626-tests/=lib/openzeppelin-contracts-upgradeable/lib/erc4626-tests/

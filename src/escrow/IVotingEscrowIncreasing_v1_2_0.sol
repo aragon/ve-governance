@@ -2,10 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "./IVotingEscrowIncreasing.sol";
-import {IEscrowIVotesAdapter} from "@delegation/IEscrowIVotesAdapter.sol";
-import {
-    IDelegateUpdateVotingPower
-} from "../delegation/IEscrowIVotesAdapter.sol";
+import {IEscrowIVotesAdapter, IDelegateUpdateVotingPower} from "@delegation/IEscrowIVotesAdapter.sol";
 
 interface IVotingEscrowExiting {
     /// @notice How much amount has been exiting.

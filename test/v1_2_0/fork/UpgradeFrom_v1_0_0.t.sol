@@ -8,9 +8,9 @@ import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {
     Multisig,
     MultisigSetup as MultisigPluginSetup
-} from "@aragon/osx/plugins/governance/multisig/MultisigSetup.sol";
+} from "@aragon/multisig/src/MultisigSetup.sol";
 import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
-import {PermissionLib} from "@aragon/osx/core/permission/PermissionLib.sol";
+import {PermissionLib} from "@aragon/osx-commons-contracts/src/permission/PermissionLib.sol";
 
 import {
     GaugeVoterSetup,
@@ -46,8 +46,9 @@ import {
     GaugePluginSet as GaugePluginSetUpgrade
 } from "@factory/upgrades/UpgradeFactory_v1_0_0__v1_2_0.sol";
 
-import {Upgrades} from "@foundry-upgrades/LegacyUpgrades.sol";
-import {Options} from "@foundry-upgrades/Options.sol";
+import {Upgrades} from "@foundry-upgrades/src/LegacyUpgrades.sol";
+import {Options} from "@foundry-upgrades/src/Options.sol";
+
 
 import {console2 as console} from "forge-std/console2.sol";
 
@@ -274,13 +275,14 @@ contract RegressionV1_0_0__to__V1_2_0_Fork is
             dao.applyMultiTargetPermissions(grant0);
             dao.applyMultiTargetPermissions(grant1);
 
+            (int256[3] memory coefficients, uint256 maxEpoch) = CurveConstantLib.getCoefficients();
             upgradeFactory.upgrade(
                 false,
                 new ClockV1_2_0(),
-                new LinearEscrowCurve(),
+                new LinearEscrowCurve(coefficients, maxEpoch),
                 new VotingEscrowV1_2_0(),
                 new LockV1_2_0(),
-                new EscrowIVotesAdapter(),
+                new EscrowIVotesAdapter(coefficients, maxEpoch),
                 new AddressGaugeVoter()
             );
 

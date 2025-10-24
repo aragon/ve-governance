@@ -6,7 +6,7 @@ import {console2 as console} from "forge-std/console2.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
 import {DAO, createTestDAO} from "@mocks/MockDAO.sol";
-import {DaoUnauthorized} from "@aragon/osx/core/utils/auth.sol";
+import {DaoUnauthorized} from "@aragon/osx-commons-contracts/src/permission/auth/auth.sol";
 import {MockERC20} from "@mocks/MockERC20.sol";
 
 import {
@@ -14,7 +14,8 @@ import {
     ExitQueue,
     IExitQueue,
     ITicket,
-    IExitQueueErrorsAndEvents
+    IExitQueueErrorsAndEvents,
+    IExitQueueCancelErrorsAndEvents
 } from "../../../versions.sol";
 
 contract MockEscrow {

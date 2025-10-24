@@ -1,7 +1,7 @@
 /// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
-import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
+import {IDAO} from "@aragon/osx-commons-contracts/src/dao/IDAO.sol";
 import {IVotingEscrowIncreasing as IVotingEscrow} from "@escrow/IVotingEscrowIncreasing.sol";
 import {IClockUser, IClock, IClockSeason} from "@clock/ClockSeason.sol";
 import {ITokenGaugeVoter} from "./ITokenGaugeVoter.sol";
@@ -12,7 +12,7 @@ import {
 import {
     PausableUpgradeable as Pausable
 } from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
-import {PluginUUPSUpgradeable} from "@aragon/osx/core/plugin/PluginUUPSUpgradeable.sol";
+import {PluginUUPSUpgradeable} from "@aragon/osx-commons-contracts/src/plugin/PluginUUPSUpgradeable.sol";
 
 contract TokenGaugeVoterSeason is
     ITokenGaugeVoter,

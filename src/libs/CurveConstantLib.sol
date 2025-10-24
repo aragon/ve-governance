@@ -24,4 +24,14 @@ library CurveConstantLib {
     /// @dev the maxiumum number of epochs the cure can keep increasing
     /// 26 epochs in a year, 2 years = 52 epochs
     uint256 internal constant MAX_EPOCHS = 52;
+
+    function getCoefficients() internal pure returns (int256[3] memory, uint256) {
+        int256[3] memory coefficients;
+        coefficients[0] = SHARED_CONSTANT_COEFFICIENT;
+        coefficients[1] = SHARED_LINEAR_COEFFICIENT;
+        coefficients[2] = SHARED_QUADRATIC_COEFFICIENT;
+        uint256 maxEpoch = MAX_EPOCHS;
+
+        return (coefficients, maxEpoch);
+    }
 }

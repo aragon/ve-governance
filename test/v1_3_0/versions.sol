@@ -36,7 +36,8 @@ import {
     IExitQueue,
     ITicket,
     IExitQueueErrorsAndEvents,
-    IExitMinLockCooldownErrorsAndEvents
+    IExitMinLockCooldownErrorsAndEvents,
+    IExitQueueCancelErrorsAndEvents
 } from "@queue/IExitQueue.sol";
 import {ILock, IWhitelistErrors, IWhitelistEvents} from "@lock/ILock.sol";
 import {
@@ -51,6 +52,7 @@ import {
     ISplitEventsAndErrors,
     IVotingEscrowCore
 } from "@escrow/IVotingEscrowIncreasing_v1_2_0.sol";
+
 import {
     IAddressGaugeVote as IGaugeVote,
     IAddressGaugeVoterStorageEventsErrors as IGaugeVoterStorageEventsErrors

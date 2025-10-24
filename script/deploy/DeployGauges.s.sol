@@ -11,7 +11,7 @@ import {
 } from "@factory/GaugesDaoFactory.sol";
 import {
     MultisigSetup as MultisigPluginSetup
-} from "@aragon/osx/plugins/governance/multisig/MultisigSetup.sol";
+} from "@aragon/multisig/src/MultisigSetup.sol";
 import {
     VotingEscrow,
     Clock,
@@ -92,7 +92,7 @@ contract DeployGauges is Script {
             voterPluginSetup: gaugeVoterPluginSetup,
             voterEnsSubdomain: vm.envString("SIMPLE_GAUGE_VOTER_REPO_ENS_SUBDOMAIN"),
             // OSx addresses
-            osxDaoFactory: vm.envAddress("DAO_FACTORY"),
+            osxDaoFactory: vm.envAddress("DAO_FACTORY_v1.3.0"),
             pluginSetupProcessor: PluginSetupProcessor(vm.envAddress("PLUGIN_SETUP_PROCESSOR")),
             pluginRepoFactory: PluginRepoFactory(vm.envAddress("PLUGIN_REPO_FACTORY"))
         });

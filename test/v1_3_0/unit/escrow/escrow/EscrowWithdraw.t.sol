@@ -3,9 +3,9 @@ pragma solidity ^0.8.17;
 import {EscrowBase} from "../../../base/EscrowBase.sol";
 
 import {console2 as console} from "forge-std/console2.sol";
-import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
+import {IDAO} from "@aragon/osx-commons-contracts/src/dao/IDAO.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
-import {Multisig, MultisigSetup} from "@aragon/multisig/MultisigSetup.sol";
+import {Multisig, MultisigSetup} from "@aragon/multisig/src/MultisigSetup.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
@@ -51,7 +51,7 @@ contract TestWithdraw is IEscrowCurveTokenStorage, IGaugeVote, ITicket, EscrowBa
         vm.warp(block.timestamp + 1);
         escrow.beginWithdrawal(tokenId);
     }
-
+    
     // setup a fee withdrawal
     function testFuzz_feeWithdrawal(uint64 _fee, uint128 _dep, address _who) public {
         vm.assume(_who != address(0) && address(_who).code.length == 0);

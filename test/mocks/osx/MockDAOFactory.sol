@@ -4,11 +4,11 @@ pragma solidity ^0.8.8;
 
 import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 
-import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
-import {IProtocolVersion} from "@aragon/osx/utils/protocol/IProtocolVersion.sol";
-import {ProtocolVersion} from "@aragon/osx/utils/protocol/ProtocolVersion.sol";
-import {IPluginSetup} from "@aragon/osx/framework/plugin/setup/IPluginSetup.sol";
-import {PermissionLib} from "@aragon/osx/core/permission/PermissionLib.sol";
+import {IDAO} from "@aragon/osx-commons-contracts/src/dao/IDAO.sol";
+import {IProtocolVersion} from "@aragon/osx-commons-contracts/src/utils/versioning/IProtocolVersion.sol";
+import {ProtocolVersion} from "@aragon/osx-commons-contracts/src/utils/versioning/ProtocolVersion.sol";
+import {IPluginSetup} from "@aragon/osx-commons-contracts/src/plugin/setup/IPluginSetup.sol";
+import {PermissionLib} from "@aragon/osx-commons-contracts/src/permission/PermissionLib.sol";
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
@@ -23,7 +23,7 @@ import {MockPluginSetupProcessor as PluginSetupProcessor} from "./MockPSP.sol";
 
 // import {DAORegistry} from "./DAORegistry.sol";
 
-/// @title MockDAOFactory
+/// @title MockDAOFactory (uses old daofactory of osx)
 /// @dev spoof of DAOFactory with minimal dependencies
 /// Best to use with MockPSP: this allows setting of a single setup contract manually to avoid
 /// all the other logic, however means you cannot easily deploy the DAO with multiple plugins

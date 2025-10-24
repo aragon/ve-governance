@@ -11,7 +11,7 @@ import {
 import {IERC721EnumerableMintableBurnable as IERC721EMB} from "@lock/IERC721EMB.sol";
 
 // veGovernance
-import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
+import {IDAO} from "@aragon/osx-commons-contracts/src/dao/IDAO.sol";
 import {IAddressGaugeVoter} from "@voting/IAddressGaugeVoter.sol";
 import {
     IEscrowCurveIncreasingV1_2_0 as IEscrowCurve
@@ -23,9 +23,8 @@ import {
     IMerge,
     ISplit,
     IDelegateMoveVoteCaller
-} from "./IVotingEscrowIncreasing_v1_2_0.sol";
+} from "@escrow/IVotingEscrowIncreasing_v1_2_0.sol";
 import {IClockV1_2_0 as IClock} from "@clock/IClock_v1_2_0.sol";
-import {ExitQueue} from "@queue/ExitQueue.sol";
 
 // libraries
 import {
@@ -45,10 +44,11 @@ import {
 } from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import {
     DaoAuthorizableUpgradeable as DaoAuthorizable
-} from "@aragon/osx/core/plugin/dao-authorizable/DaoAuthorizableUpgradeable.sol";
+} from "@aragon/osx-commons-contracts/src/permission/auth/DaoAuthorizableUpgradeable.sol";
 import {
     IDelegateUpdateVotingPower,
-    IEscrowIVotesAdapter
+    IEscrowIVotesAdapter,
+    IDelegateMoveVoteRecipient
 } from "../delegation/IEscrowIVotesAdapter.sol";
 
 contract VotingEscrowV1_2_0 is
@@ -126,9 +126,11 @@ contract VotingEscrowV1_2_0 is
     /// @notice Whitelisted contracts that are allowed to split
     mapping(address => bool) public splitWhitelisted;
 
-    address public ivotesAdapter;
+    /// @notice Prevent withdrawals in same creation block
+    mapping(uint256 => uint256) internal withdrawalLock;
 
-    error UpgradeNotPossible();
+    /// @notice Addess of the escrow ivotes adapter where delegations occur.
+    address public ivotesAdapter;
 
     /*//////////////////////////////////////////////////////////////
                               Initialization
@@ -156,17 +158,26 @@ contract VotingEscrowV1_2_0 is
         emit MinDepositSet(_initialMinDeposit);
     }
 
+    /// @notice Used to revert if admin tries to change the contract address 2nd time.
+    modifier contractAlreadySet(address _contract) {
+        if (_contract != address(0)) revert AddressAlreadySet();
+
+        _;
+    }
+
     /*//////////////////////////////////////////////////////////////
                               Admin Setters
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Added in 1.2.0 to set the ivotes adapter
-    function setIVotesAdapter(address _ivotesAdapter) external auth(ESCROW_ADMIN_ROLE) {
+    function setIVotesAdapter(
+        address _ivotesAdapter
+    ) external auth(ESCROW_ADMIN_ROLE) contractAlreadySet(ivotesAdapter) {
         ivotesAdapter = _ivotesAdapter;
     }
 
     /// @notice Sets the curve contract that calculates the voting power
-    function setCurve(address _curve) external auth(ESCROW_ADMIN_ROLE) {
+    function setCurve(address _curve) external auth(ESCROW_ADMIN_ROLE) contractAlreadySet(curve) {
         curve = _curve;
     }
 
@@ -176,12 +187,12 @@ contract VotingEscrowV1_2_0 is
     }
 
     /// @notice Sets the exit queue contract that manages withdrawal eligibility
-    function setQueue(address _queue) external auth(ESCROW_ADMIN_ROLE) {
+    function setQueue(address _queue) external auth(ESCROW_ADMIN_ROLE) contractAlreadySet(queue) {
         queue = _queue;
     }
 
     /// @notice Sets the clock contract that manages epoch and voting periods
-    function setClock(address _clock) external auth(ESCROW_ADMIN_ROLE) {
+    function setClock(address _clock) external auth(ESCROW_ADMIN_ROLE) contractAlreadySet(clock) {
         clock = _clock;
     }
 
@@ -264,13 +275,11 @@ contract VotingEscrowV1_2_0 is
     }
 
     /// @return The total voting power at the current block
-    /// @dev Currently unsupported
     function totalVotingPower() external view returns (uint256) {
         return totalVotingPowerAt(block.timestamp);
     }
 
     /// @return The total voting power at a specific timestamp
-    /// @dev Currently unsupported
     function totalVotingPowerAt(uint256 _timestamp) public view returns (uint256) {
         return IEscrowCurve(curve).supplyAt(_timestamp);
     }
@@ -316,7 +325,7 @@ contract VotingEscrowV1_2_0 is
         return _createLockFor(_value, _msgSender());
     }
 
-    /// @notice Creates a lock on behalf of someone else. Restricted by default.
+    /// @notice Creates a lock on behalf of someone else.
     function createLockFor(
         uint256 _value,
         address _to
@@ -338,6 +347,9 @@ contract VotingEscrowV1_2_0 is
         totalLocked += _value;
         uint256 newTokenId = ++lastLockId;
 
+        // Record the block timestamp for the new tokenId to prevent withdrawals in the same block.
+        withdrawalLock[newTokenId] = block.timestamp;
+
         // write the lock and checkpoint the voting power
         LockedBalance memory lock = LockedBalance(_value.toUint208(), startTime.toUint48());
         _locked[newTokenId] = lock;
@@ -354,11 +366,11 @@ contract VotingEscrowV1_2_0 is
         if (IERC20(token).balanceOf(address(this)) != balanceBefore + _value)
             revert TransferBalanceIncorrect();
 
-        // mint the NFT before and emit the event to complete the lock
-        IERC721EMB(lockNFT).mint(_to, newTokenId);
-
         // Update `_to`'s delegate power.
         _moveDelegateVotes(address(0), _to, newTokenId, lock);
+
+        // mint the NFT before and emit the event to complete the lock
+        IERC721EMB(lockNFT).mint(_to, newTokenId);
 
         emit Deposit(_to, newTokenId, startTime, _value, totalLocked);
 
@@ -389,14 +401,21 @@ contract VotingEscrowV1_2_0 is
             revert CannotMerge(_from, _to);
         }
 
+        // If `_from` was created in this block, or if another token was merged into `_from` in this block,
+        // record the current timestamp for `_to` so that withdrawals for it are blocked in the same block.
+        if (withdrawalLock[_from] == block.timestamp) {
+            withdrawalLock[_to] = block.timestamp;
+        }
+
         // We only allow merge when both tokens have the same owner.
         // After the merge, owner still should have the same voting power
         // as one token gets merged into another. For this reason,
         // We call `_moveDelegateVotes` with empty locked, so it doesn't
         // reduce/increase the same voting power for gas efficiency.
-        // Note that we still decrease owner's delegated token count
-        // as `_from` token is destroyed.
-        _moveDelegateVotes(ownerFrom, address(0), _from, LockedBalance(0, 0));
+        IEscrowIVotesAdapter(ivotesAdapter).mergeDelegateVotes(
+            IDelegateMoveVoteRecipient.TokenLock(ownerFrom, _from, oldLockedFrom),
+            IDelegateMoveVoteRecipient.TokenLock(ownerFrom, _to, oldLockedTo)
+        );
 
         // Update for `_from`.
         // Note that on the checkpoint, we still don't
@@ -465,16 +484,26 @@ contract VotingEscrowV1_2_0 is
         _checkpoint(_from, locked_, LockedBalance(amount1, locked_.start));
         _locked[_from] = LockedBalance(amount1, locked_.start);
 
-        // update for `newTokenId`.
-        locked_.amount = amount2;
-        uint256 newTokenId = _createSplitNFT(owner, locked_);
+        uint256 newTokenId = ++lastLockId;
+
+        // preserve the withdrawal lock for `_from` if it exists.
+        if (withdrawalLock[_from] == block.timestamp) {
+            withdrawalLock[newTokenId] = block.timestamp;
+        }
 
         // owner gets minted a new tokenId. Since `split` function
         // just splits the same amount into two tokenIds, there's no need
         // to update voting power on ivotesAdapter, as total doesn't change.
         // We still call `_moveDelegateVotes` with zero LockedBalance to
         // make sure we update delegatee's token count due to newtokenId.
-        _moveDelegateVotes(address(0), owner, newTokenId, LockedBalance(0, 0));
+        IEscrowIVotesAdapter(ivotesAdapter).splitDelegateVotes(
+            IDelegateMoveVoteRecipient.TokenLock(owner, _from, LockedBalance(0, 0)),
+            IDelegateMoveVoteRecipient.TokenLock(owner, newTokenId, LockedBalance(0, 0))
+        );
+
+        // update for `newTokenId`.
+        locked_.amount = amount2;
+        _createSplitNFT(owner, newTokenId, locked_);
 
         emit Split(_from, newTokenId, sender, amount1, amount2);
 
@@ -483,13 +512,13 @@ contract VotingEscrowV1_2_0 is
 
     /// @notice creates a new token in checkpoint and mint.
     /// @param _to The address to which new token id will be minted
+    /// @param _tokenId The id of the token that will be minted.
     /// @param _newLocked New locked amount / start lock time for the new token
-    /// @return _tokenId The id of the newly created token.
     function _createSplitNFT(
         address _to,
+        uint256 _tokenId,
         LockedBalance memory _newLocked
-    ) private returns (uint256 _tokenId) {
-        _tokenId = ++lastLockId;
+    ) private {
         _locked[_tokenId] = _newLocked;
         _checkpoint(_tokenId, LockedBalance(0, 0), _newLocked);
         IERC721EMB(lockNFT).mint(_to, _tokenId);
@@ -538,10 +567,14 @@ contract VotingEscrowV1_2_0 is
         // in the event of an increasing curve, 0 voting power means voting isn't active
         if (votingPower(_tokenId) == 0) revert CannotExit();
 
-        // Make sure creating lock and begin withdrawal
-        // doesn't occur in the same tx.
+        // Safety checks:
+        // 1. Prevent creating a lock and starting withdrawal in the same block.
+        // 2. Prevent withdrawals if another token created in the same block
+        //    was merged into `_tokenId`. Even though `_tokenId` itself was
+        //    created in a previous block, the merged portion is "fresh" and
+        //    would still be withdrawable without restriction.
         IEscrowCurve.TokenPoint memory point = IEscrowCurve(curve).tokenPointHistory(_tokenId, 1);
-        if (block.timestamp == point.writtenTs) {
+        if (block.timestamp == withdrawalLock[_tokenId]) {
             revert CannotWithdrawInSameBlock();
         }
 
@@ -554,6 +587,23 @@ contract VotingEscrowV1_2_0 is
         // transfer NFT to this and queue the exit
         IERC721EMB(lockNFT).transferFrom(_msgSender(), address(this), _tokenId);
         IExitQueue(queue).queueExit(_tokenId, owner);
+    }
+
+    /// @notice Allows cancellation of a pending withdrawal request
+    /// @dev The caller must be one that also called `beginWithdrawal`.
+    /// @param _tokenId The tokenId to cancel the withdrawal request for.
+    function cancelWithdrawalRequest(uint256 _tokenId) public nonReentrant whenNotPaused {
+        address owner = IExitQueue(queue).ticketHolder(_tokenId);
+        address sender = _msgSender();
+
+        if (owner != sender) {
+            revert NotTicketHolder();
+        }
+
+        _checkpoint(_tokenId, LockedBalance(0, _locked[_tokenId].start), _locked[_tokenId]);
+
+        IExitQueue(queue).cancelExit(_tokenId);
+        IERC721EMB(lockNFT).transferFrom(address(this), sender, _tokenId);
     }
 
     /// @notice Withdraws tokens from the contract
@@ -634,12 +684,11 @@ contract VotingEscrowV1_2_0 is
         address _from,
         address _to,
         uint256 _tokenId,
-        LockedBalance memory _locked
+        LockedBalance memory _lockedBalance
     ) private {
-        IEscrowIVotesAdapter(ivotesAdapter).moveDelegateVotes(_from, _to, _tokenId, _locked);
+        IEscrowIVotesAdapter(ivotesAdapter).moveDelegateVotes(_from, _to, _tokenId, _lockedBalance);
     }
 
-    /// @inheritdoc IDelegateUpdateVotingPower
     function updateVotingPower(address _from, address _to) public whenNotPaused {
         if (msg.sender != ivotesAdapter) revert OnlyIVotesAdapter();
 
@@ -662,7 +711,7 @@ contract VotingEscrowV1_2_0 is
     /// @dev Reserved storage space to allow for layout changes in the future.
     ///      Please note that the reserved slot number in previous version(39) was set
     ///      incorrectly as 39 instead of 40. Changing it to 40 now would overwrite existing slot values,
-    ///      resulting in the loss of state. Therefore, we will continue using 37 in this version.
-    ///      For future versions, any new variables should be added by subtracting from 37.
-    uint256[37] private __gap;
+    ///      resulting in the loss of state. Therefore, we will continue using 36 in this version.
+    ///      For future versions, any new variables should be added by subtracting from 36.
+    uint256[36] private __gap;
 }

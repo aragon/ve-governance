@@ -4,7 +4,10 @@ pragma solidity ^0.8.17;
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {DAOFactory} from "@aragon/osx/framework/dao/DAOFactory.sol";
 import {IWithdrawalQueueErrors} from "@escrow/IVotingEscrowIncreasing.sol";
-import {IAddressGaugeVote as IGaugeVote} from "src/voting/IAddressGaugeVoter.sol";
+import {IAddressGaugeVote as IGaugeVote} from "@voting/IAddressGaugeVoter.sol";
+import {Action} from "@aragon/osx-commons-contracts/src/executors/IExecutor.sol";
+import {PermissionManager} from "@aragon/osx/core/permission/PermissionManager.sol";
+
 import {
     VotingEscrow,
     Clock,
@@ -22,16 +25,18 @@ import {
 } from "@aragon/osx/framework/plugin/setup/PluginSetupProcessorHelpers.sol";
 import {PluginRepoFactory} from "@aragon/osx/framework/plugin/repo/PluginRepoFactory.sol";
 import {PluginRepo} from "@aragon/osx/framework/plugin/repo/PluginRepo.sol";
-import {IPluginSetup} from "@aragon/osx/framework/plugin/setup/IPluginSetup.sol";
-import {Multisig} from "@aragon/osx/plugins/governance/multisig/Multisig.sol";
-import {
-    MultisigSetup as MultisigPluginSetup
-} from "@aragon/osx/plugins/governance/multisig/MultisigSetup.sol";
-import {createERC1967Proxy} from "@aragon/osx/utils/Proxy.sol";
-import {PermissionLib} from "@aragon/osx/core/permission/PermissionLib.sol";
+import {IPluginSetup} from "@aragon/osx-commons-contracts/src/plugin/setup/IPluginSetup.sol";
+import {IPlugin} from "@aragon/osx-commons-contracts/src/plugin/IPlugin.sol";
+import {Multisig} from "@aragon/multisig/src/Multisig.sol";
+import {MultisigSetup as MultisigPluginSetup} from "@aragon/multisig/src/MultisigSetup.sol";
+import {ProxyLib} from "@aragon/osx-commons-contracts/src/utils/deployment/ProxyLib.sol";
+import {PermissionLib} from "@aragon/osx-commons-contracts/src/permission/PermissionLib.sol";
 import {EscrowIVotesAdapter} from "@delegation/EscrowIVotesAdapter.sol";
 
 /// @notice The struct containing all the parameters to deploy the DAO
+/// @param daoExecutor Optional address with execute permission on the DAO in addition to the multisig
+/// @param daoMetadataURI The DAO Metadata(optional)
+/// @param daoSubdomain The ens subdomain(optional)
 /// @param minApprovals The amount of approvals required for the multisig to be able to execute a proposal on the DAO
 /// @param multisigMembers The list of addresses to be defined as the initial multisig signers
 /// @param tokenParameters A list with the tokens and metadata for which a plugin and a VE should be deployed
@@ -48,9 +53,13 @@ import {EscrowIVotesAdapter} from "@delegation/EscrowIVotesAdapter.sol";
 /// @param pluginSetupProcessor The address of the OSx PluginSetupProcessor contract on the target chain
 /// @param pluginRepoFactory The address of the OSx PluginRepoFactory contract on the target chain
 struct DeploymentParameters {
+    address daoExecutor;
+    string daoMetadataURI;
+    string daoSubdomain;
     // Multisig settings
     uint16 minApprovals;
     address[] multisigMembers;
+    bytes multisigMetadata;
     // Gauge Voter
     TokenParameters[] tokenParameters;
     uint16 feePercent;
@@ -99,6 +108,8 @@ struct Deployment {
 
 /// @notice A singleton contract designed to run the deployment once and become a read-only store of the contracts deployed
 contract GaugesDaoFactoryV1_2_0 {
+    using ProxyLib for address;
+
     function version() external pure returns (string memory) {
         return "1.2.0";
     }
@@ -114,6 +125,7 @@ contract GaugesDaoFactoryV1_2_0 {
     constructor(DeploymentParameters memory _parameters) {
         parameters.minApprovals = _parameters.minApprovals;
         parameters.multisigMembers = _parameters.multisigMembers;
+        parameters.multisigMetadata = _parameters.multisigMetadata;
 
         for (uint i = 0; i < _parameters.tokenParameters.length; ) {
             parameters.tokenParameters.push(_parameters.tokenParameters[i]);
@@ -122,6 +134,10 @@ contract GaugesDaoFactoryV1_2_0 {
                 i++;
             }
         }
+
+        parameters.daoMetadataURI = _parameters.daoMetadataURI;
+        parameters.daoSubdomain = _parameters.daoSubdomain;
+        parameters.daoExecutor = _parameters.daoExecutor;
 
         parameters.minDeposit = _parameters.minDeposit;
         parameters.feePercent = _parameters.feePercent;
@@ -217,45 +233,39 @@ contract GaugesDaoFactoryV1_2_0 {
     }
 
     function prepareDao() internal returns (DAO dao) {
-        address daoBase = DAOFactory(parameters.osxDaoFactory).daoBase();
+        DAOFactory.DAOSettings memory daoSettings = DAOFactory.DAOSettings({
+            trustedForwarder: address(0),
+            daoURI: "",
+            subdomain: parameters.daoSubdomain,
+            metadata: bytes(parameters.daoMetadataURI)
+        });
 
-        dao = DAO(
-            payable(
-                createERC1967Proxy(
-                    address(daoBase),
-                    abi.encodeCall(
-                        DAO.initialize,
-                        (
-                            "", // Metadata URI
-                            address(this), // initialOwner
-                            address(0x0), // Trusted forwarder
-                            "" // DAO URI
-                        )
-                    )
-                )
-            )
+        (dao, ) = DAOFactory(parameters.osxDaoFactory).createDao(
+            daoSettings,
+            new DAOFactory.PluginSettings[](0)
         );
 
-        // Grant DAO all the needed permissions on itself
-        PermissionLib.SingleTargetPermission[]
-            memory items = new PermissionLib.SingleTargetPermission[](3);
-        items[0] = PermissionLib.SingleTargetPermission(
-            PermissionLib.Operation.Grant,
-            address(dao),
-            dao.ROOT_PERMISSION_ID()
-        );
-        items[1] = PermissionLib.SingleTargetPermission(
-            PermissionLib.Operation.Grant,
-            address(dao),
-            dao.UPGRADE_DAO_PERMISSION_ID()
-        );
-        items[2] = PermissionLib.SingleTargetPermission(
-            PermissionLib.Operation.Grant,
-            address(dao),
-            dao.REGISTER_STANDARD_CALLBACK_PERMISSION_ID()
+        address daoExecutor = parameters.daoExecutor;
+
+        // Give this contract the ROOT on dao
+        Action[] memory actions = new Action[](daoExecutor == address(0) ? 1 : 2);
+        actions[0].to = address(dao);
+        actions[0].data = abi.encodeCall(
+            PermissionManager.grant,
+            (address(dao), address(this), dao.ROOT_PERMISSION_ID())
         );
 
-        dao.applySingleTargetPermissions(address(dao), items);
+        // If daoExecutor is passed as non zero, give
+        // execute permission to that address on the dao.
+        if (daoExecutor != address(0)) {
+            actions[1].to = address(dao);
+            actions[1].data = abi.encodeCall(
+                PermissionManager.grant,
+                (address(dao), daoExecutor, dao.EXECUTE_PERMISSION_ID())
+            );
+        }
+
+        dao.execute(bytes32(0), actions, 0);
     }
 
     function prepareMultisig(
@@ -267,7 +277,9 @@ contract GaugesDaoFactoryV1_2_0 {
             Multisig.MultisigSettings(
                 true, // onlyListed
                 parameters.minApprovals
-            )
+            ),
+            IPlugin.TargetConfig({target: address(dao), operation: IPlugin.Operation.Call}),
+            parameters.multisigMetadata
         );
 
         (address plugin, IPluginSetup.PreparedSetupData memory preparedSetupData) = parameters
@@ -405,6 +417,7 @@ contract GaugesDaoFactoryV1_2_0 {
     }
 
     function revokeOwnerPermission(DAO dao) internal {
+        dao.revoke(address(dao), address(this), dao.EXECUTE_PERMISSION_ID());
         dao.revoke(address(dao), address(this), dao.ROOT_PERMISSION_ID());
     }
 

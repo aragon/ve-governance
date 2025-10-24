@@ -2,8 +2,9 @@ pragma solidity ^0.8.17;
 import {Script} from "forge-std/Script.sol";
 import {Test, console2 as console} from "forge-std/Test.sol";
 
-import {Multisig} from "@aragon/multisig/Multisig.sol";
-import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
+import {Multisig} from "@aragon/multisig/src/Multisig.sol";
+import {IDAO} from "@aragon/osx-commons-contracts/src/dao/IDAO.sol";
+import {Action} from "@aragon/osx-commons-contracts/src/executors/IExecutor.sol";
 
 import {
     GaugesDaoFactory,
@@ -25,8 +26,8 @@ import {
 } from "@setup/GaugeVoterSetup.sol";
 import {TokenGaugeVoterV1_1_0 as GaugeVoterV1_1_0} from "@voting/TokenGaugeVoter_v1_1_0.sol";
 
-import {Upgrades} from "@foundry-upgrades/LegacyUpgrades.sol";
-import {Options} from "@foundry-upgrades/Options.sol";
+import {Upgrades} from "@foundry-upgrades/src/LegacyUpgrades.sol";
+import {Options} from "@foundry-upgrades/src/Options.sol";
 
 contract UpgradeModeTo110 is Script, Test {
     /////////////////////////////////////////////
@@ -52,21 +53,21 @@ contract UpgradeModeTo110 is Script, Test {
     }
 
     /// @dev We can't know the mode proposal in advance from tests, so this is pinned
-    function getInternalProposalId(string memory _network) public view returns (uint256) {
+    function getInternalProposalId(string memory _network) public pure returns (uint256) {
         if (isMainnet(_network)) return 47;
         else if (isTestnet(_network)) return 1;
         else revert("Invalid network");
     }
 
     // hardcoded staker, may or may not be voting at block
-    function getStaker(string memory _network) public view returns (address staker) {
+    function getStaker(string memory _network) public pure returns (address staker) {
         if (isMainnet(_network)) return 0xE28842dAF2cDe94EecC81b26A436eB043454F010;
         else if (isTestnet(_network)) return 0xE8375Ae2CaB4A9AB59097c500dD4b923c239ec01;
         else revert("Invalid network");
     }
 
     /// @dev the aragon multisig that will submit the proposal on mode
-    function getAragonMultisig(string memory _network) public view returns (Multisig) {
+    function getAragonMultisig(string memory _network) public pure returns (Multisig) {
         if (isMainnet(_network)) return Multisig(0x4315B4D2C707981f7fA51DBE91079Ea8c44e2e95);
         else if (isTestnet(_network)) return Multisig(0x14b1812260CB993bca69f204bC43586322d246d0);
         else revert("Invalid network");
@@ -116,7 +117,7 @@ contract UpgradeModeTo110 is Script, Test {
 
         _startBroadcastOrPrank(isTestMode);
         {
-            IDAO.Action[] memory actions;
+            Action[] memory actions;
             (actions, voterImplNew) = buildActions();
             aragonProposalId = _createAragonMsigProposal(actions);
         }
@@ -137,19 +138,19 @@ contract UpgradeModeTo110 is Script, Test {
         Upgrades.validateUpgrade("GaugeVoter_v1_1_0.sol:GaugeVoterV1_1_0", options);
     }
 
-    function buildActions() internal returns (IDAO.Action[] memory, address) {
+    function buildActions() internal returns (Action[] memory, address) {
         // action 1: deploy new impls
         address voterImplNew = address(new GaugeVoterV1_1_0());
 
         // action 2: upgradeTo
-        IDAO.Action[] memory actions = new IDAO.Action[](2);
-        actions[0] = IDAO.Action({
+        Action[] memory actions = new Action[](2);
+        actions[0] = Action({
             to: address(voterMode),
             value: 0,
             data: abi.encodeCall(voterMode.upgradeTo, (voterImplNew))
         });
 
-        actions[1] = IDAO.Action({
+        actions[1] = Action({
             to: address(voterBPT),
             value: 0,
             data: abi.encodeCall(voterBPT.upgradeTo, (voterImplNew))
@@ -297,16 +298,22 @@ contract UpgradeModeTo110 is Script, Test {
     }
 
     function _createAragonMsigProposal(
-        IDAO.Action[] memory _actions
+        Action[] memory _actions
     ) internal returns (uint256 proposalId) {
-        IDAO.Action[] memory outerAction = new IDAO.Action[](1);
+        Action[] memory outerAction = new Action[](1);
 
-        outerAction[0] = IDAO.Action({
+        outerAction[0] = Action({
             to: address(modeMultisig),
             value: 0,
-            data: abi.encodeCall(
-                modeMultisig.createProposal,
-                (ipfsURI, _actions, 0, true, false, 0, uint64(block.timestamp) + 1 weeks)
+            data: abi.encodeWithSignature(
+                "createProposal(string,(address,uint256,bytes)[],uint256,bool,bool,uint256,uint64)",
+                ipfsURI,
+                _actions,
+                0,
+                true,
+                false,
+                0,
+                uint64(block.timestamp) + 1 weeks
             )
         });
 
@@ -321,7 +328,7 @@ contract UpgradeModeTo110 is Script, Test {
     }
 
     function _buildMsigProposal(
-        IDAO.Action[] memory _actions,
+        Action[] memory _actions,
         Multisig _multisig,
         bool _tryExecution
     ) internal returns (uint256 proposalId) {
