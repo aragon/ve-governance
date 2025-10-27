@@ -74,13 +74,16 @@ Check the available make targets to simulate and deploy the smart contracts:
 - [ ] I am opening an editor on the `/deployment` folder, within the Docker container
 - [ ] The `.env` file contains the correct parameters for the deployment
   - [ ] I have created a brand new burner wallet with `cast wallet new` and copied the private key to `DEPLOYMENT_PRIVATE_KEY` within `.env`
-  - [ ] I have reviewed the target network and RPC URL
-  - [ ] I have checked that the JSON file under `MULTISIG_MEMBERS_JSON_FILE_NAME` contains the correct list of signers
-  - [ ] I have ensured all multisig members have undergone a proper security review and are aware of the security implications of being on said multisig
-  - [ ] I have checked that `MIN_APPROVALS` and `MULTISIG_PROPOSAL_EXPIRATION_PERIOD` are correct
+  - [ ] I have reviewed the target network and `RPC_URL`
+  - [ ] I have checked that `DEPLOYMENT_SCRIPT` contains the name of the intended deployment script
+  - If doing a full DAO deployment:
+    - [ ] I have checked that the JSON file under `MULTISIG_MEMBERS_JSON_FILE_NAME` contains the correct list of signers
+    - [ ] I have ensured all multisig members have undergone a proper security review and are aware of the security implications of being on said multisig
+    - [ ] I have checked that `MIN_APPROVALS` and `MULTISIG_PROPOSAL_EXPIRATION_PERIOD` are correct
+    - [ ] I have updated `CurveConstantLib` and `Clock` with any new constants.
   - [ ] I have verified that `TOKEN1_ADDRESS` corresponds to an ERC20 contract on the target chain (same for TOKEN2 if applicable)
   - [ ] I have checked that `VE_TOKEN1_NAME` and `VE_TOKEN1_SYMBOL` are correct (same for TOKEN2 if applicable)
-  - I have checked that fee percent, warmup period, cooldown period, min lock duration, and min deposit:
+  - I have checked that `FEE_PERCENT`, `WARMUP_PERIOD`, `COOLDOWN_PERIOD`, `MIN_LOCK_DURATION`, and `MIN_DEPOSIT`:
     - [ ] Have the expected values
     - [ ] Cannot leave the voting contract or user tokens locked out
   - [ ] I have checked that `VOTING_PAUSED` is true, should voting not be active right away
@@ -89,11 +92,10 @@ Check the available make targets to simulate and deploy the smart contracts:
     - [ ] Point to the latest stable release available
   - The plugin ENS subdomain
     - [ ] Contains a meaningful and unique value
-  - The given OSx addresses:
-    - [ ] Exist on the target network
-    - [ ] Contain the latest stable official version of the OSx DAO implementation, the Plugin Setup Processor and the Plugin Repo Factory
-    - [ ] I have verified the values on https://github.com/aragon/osx/blob/main/packages/artifacts/src/addresses.json
-- [ ] I have updated the `CurveConstantLib` and `Clock` with any new constants.
+  - The addresses of `DAO_FACTORY`, `PLUGIN_REPO_FACTORY`, `PLUGIN_SETUP_PROCESSOR`:
+    - [ ] I have verified their values on https://github.com/aragon/osx/blob/main/packages/artifacts/src/addresses.json
+    - [ ] They contain the latest stable official version of the OSx DAO implementation, the Plugin Setup Processor and the Plugin Repo Factory
+    - [ ] They exist on the target network
 - [ ] All my unit tests pass (`make test`)
 - **Target production network**
   - [ ] I have run a fork test in `new-factory` mode with minted tokens against the official OSx contracts
