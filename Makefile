@@ -182,10 +182,31 @@ resume: test ## Retry a pending deployment, verify the code and write to ./artif
 ## Misc:
 
 .PHONY: get-deployment
-get-deployment: ## Show the addresses deployed by .env/VE_FACTORY_ADDRESS
+get-deployment: ## Show the addresses deployed by .env VE_FACTORY_ADDRESS
 	forge script script/utils/GetDeploymentValues_v1_2_0.sol:GetFactoryValuesV1_2_0 \
         --rpc-url=$(RPC_URL) \
         -vvvv
+
+.PHONY: preseed
+preseed: ## Simulate a SeedState transaction
+	@echo "Simulating SeedState"
+
+	@make simulate-script script="SeedState"
+
+.PHONY: seed
+seed: test ## Submit a SeedState transaction
+	@echo "Starting SeedState"
+	@mkdir -p $(LOGS_FOLDER) $(ARTIFACTS_FOLDER)
+
+	@make run-script script="SeedState" \
+	    2>&1 | tee -a $(DEPLOYMENT_LOG_FILE)
+
+	@echo "Logs saved in $(DEPLOYMENT_LOG_FILE)"
+
+##
+
+anvil: ## Starts a forked EVM, using RPC_URL   [optional: .env FORK_BLOCK_NUMBER]
+	anvil -f $(RPC_URL) $(FORK_TEST_PARAMS)
 
 .PHONY: refund
 refund: ## Transfer the balance left on the deployment account
@@ -214,27 +235,6 @@ refund: ## Transfer the balance left on the deployment account
 
 ##
 
-anvil: ## Starts a forked EVM, using RPC_URL   [optional: .env/FORK_BLOCK_NUMBER]
-	anvil -f $(RPC_URL) $(FORK_TEST_PARAMS)
-
-.PHONY: preseed
-preseed: ## Simulate a SeedState transaction
-	@echo "Simulating SeedState"
-
-	@make simulate-script script="SeedState"
-
-.PHONY: seed
-seed: test ## Submit a SeedState transaction
-	@echo "Starting SeedState"
-	@mkdir -p $(LOGS_FOLDER) $(ARTIFACTS_FOLDER)
-
-	@make run-script script="SeedState" \
-	    2>&1 | tee -a $(DEPLOYMENT_LOG_FILE)
-
-	echo "Logs saved in $(DEPLOYMENT_LOG_FILE)"
-
-##
-
 ACCENT := \e[33m
 LIGHTER := \e[37m
 NORMAL := \e[0m
@@ -253,7 +253,7 @@ help: ## Show the main recipes
 		fi ; \
 	done
 
-# Helpers and troubleshooting
+# Troubleshooting helpers
 
 .PHONY: gas-price
 gas-price:
