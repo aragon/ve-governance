@@ -85,13 +85,13 @@ contract TestIncreasingCurveLogic is CurveBase {
     }
 
     // bias functions use the 1e18 multiplier on the amount, so
-    // passing higher than uint192 will result in an overflow.
+    // passing higher than uint184 will result in an overflow.
     // This is not a problem in curve because in createLock:
     // amount.toUint208() * 1e18 is used and if overflow occurs,
     // lock would not be created in the first place, meaning that
     // only those locks are created that fit in, hence bias functions
     // on those amounts later on will be valid.
-    function testFuzz_previewMaxBias(uint192 _amount) public view {
+    function testFuzz_previewMaxBias(uint184 _amount) public view {
         assertEq(curve.previewMaxBias(_amount), bias(_amount, maxTime));
     }
 
