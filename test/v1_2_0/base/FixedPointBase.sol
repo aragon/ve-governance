@@ -10,7 +10,7 @@ contract FixedPointBase {
 
     uint256 maxTime;
     uint256 checkpointInterval;
-    uint256 multiplier = 11;
+    uint256 multiplier = 1;
 
     function setMultiplier(int256 _linearCoefficient) public {
         uint base = (1e18 / maxTime);
