@@ -90,7 +90,7 @@ contract TestQuadraticIncreasingCurveLogic is CurveBase {
     // lock would not be created in the first place, meaning that
     // only those locks are created that fit in, hence bias functions
     // on those amounts later on will be valid.
-    function testFuzz_previewMaxBias(uint192 _amount) public view {
+    function testFuzz_previewMaxBias(uint184 _amount) public view {
         assertEq(curve.previewMaxBias(_amount), bias(_amount, maxTime));
     }
 

@@ -64,7 +64,7 @@ contract FactoryBase is StdInvariant, Test, FixedPointBase {
             .build();
         protocolFactory.deployOnce();
         protocolDeployment = protocolFactory.getDeployment();
-        
+
         address[] memory members = new address[](1);
         members[0] = address(this);
 

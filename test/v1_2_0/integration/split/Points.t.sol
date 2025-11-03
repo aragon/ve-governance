@@ -98,8 +98,8 @@ contract TestSplit_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage
     }
 
     function testFuzz_Split(
-        uint192 _lock1Amount,
-        uint192 _splitValue,
+        uint184 _lock1Amount,
+        uint184 _splitValue,
         uint48 _fromLockTime,
         uint192 _splitTime
     ) public {

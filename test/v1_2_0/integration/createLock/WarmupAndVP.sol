@@ -38,15 +38,20 @@ contract TestCreateLock_WarmUpAndVotingPower is
     }
 
     function test_CreateLock() public {
+        console.log("Lock", Lock_1_Amount / 1e18);
         uint256 tokenId = escrow.createLock(Lock_1_Amount);
+        int early = biasFP(Lock_1_Amount, block.timestamp - weekStart);
+        console.log("biasFP:", early / 1e36);
+
+        console.log("max bias ", curve.previewMaxBias(Lock_1_Amount) / 1e18);
 
         assertVotingPower(tokenId, biasFP(Lock_1_Amount, block.timestamp - weekStart));
 
         uint256 endTs = getEndTimestamp(weekStart, block.timestamp);
-
+        //
         int256 maxVotingPower = biasFP(Lock_1_Amount, maxTime);
+        console.log("maxVotingPower:", maxVotingPower / 1e36);
         assertVotingPower(tokenId, endTs, maxVotingPower);
         assertVotingPower(tokenId, endTs + 10, maxVotingPower);
     }
 }
-

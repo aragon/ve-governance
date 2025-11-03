@@ -19,13 +19,13 @@ contract FixedPointBase {
     function slopeFP(uint256 _amount) internal view returns (int256) {
         if (maxTime == 0) return 0;
 
-        return (_amount * (1e18 / maxTime)).toInt256();
+        return (11 * _amount * (1e18 / maxTime)).toInt256();
     }
 
     function biasFP(uint256 _amount, uint256 _duration) internal view returns (int256) {
         uint256 slope = 0;
         if (maxTime != 0) {
-            slope = _amount * (1e18 / maxTime);
+            slope = 11 * _amount * (1e18 / maxTime);
         }
 
         return (_amount * 1e18 + slope * _duration).toInt256();

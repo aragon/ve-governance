@@ -96,7 +96,7 @@ contract Base is
             _permissionId: dg.DELEGATION_TOKEN_ROLE()
         });
 
-        // almost all tests need delegation to be disabled by default 
+        // almost all tests need delegation to be disabled by default
         // to test thoroughly the behaviour of the functions.
         // So we set it to true.
         dg.setAutoDelegationDisabled(true);
