@@ -97,9 +97,9 @@ contract DeployGaugesV1_2_0 is Script {
             voterPluginSetup: gaugeVoterPluginSetup,
             voterEnsSubdomain: vm.envString("PLUGIN_REPO_ENS_SUBDOMAIN"),
             // OSx addresses
-            osxDaoFactory: vm.envAddress("DAO_FACTORY"),
-            pluginSetupProcessor: PluginSetupProcessor(vm.envAddress("PLUGIN_SETUP_PROCESSOR")),
-            pluginRepoFactory: PluginRepoFactory(vm.envAddress("PLUGIN_REPO_FACTORY"))
+            osxDaoFactory: vm.envAddress("DAO_FACTORY_ADDRESS"),
+            pluginSetupProcessor: PluginSetupProcessor(vm.envAddress("PLUGIN_SETUP_PROCESSOR_ADDRESS")),
+            pluginRepoFactory: PluginRepoFactory(vm.envAddress("PLUGIN_REPO_FACTORY_ADDRESS"))
         });
     }
 
