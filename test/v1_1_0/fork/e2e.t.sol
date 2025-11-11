@@ -146,7 +146,7 @@ contract TestE2EV1_1_0 is AragonTest, IWithdrawalQueueErrors, IGaugeVote, IEscro
         }
         // connect to the existing factory to fetch the contract addresses
         else if (_getTestMode() == TestMode.ForkExisting) {
-            address factoryAddress = vm.envOr("FACTORY_ADDRESS", address(0));
+            address factoryAddress = vm.envOr("VE_FACTORY_ADDRESS", address(0));
             if (factoryAddress == address(0)) {
                 revert("Factory address not set");
             }

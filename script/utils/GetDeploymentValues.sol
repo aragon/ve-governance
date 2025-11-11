@@ -9,7 +9,7 @@ contract GetFactoryValues is Script {
     GaugesDaoFactory public factory;
 
     function run() public {
-        factory = GaugesDaoFactory(vm.envAddress("FACTORY_ADDRESS"));
+        factory = GaugesDaoFactory(vm.envAddress("VE_FACTORY_ADDRESS"));
 
         console.log("Deployment address (and implementation):");
         console.log(

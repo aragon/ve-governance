@@ -34,9 +34,9 @@ contract UpgradeModeTo110 is Script, Test {
     // ----------- FIXED CONSTANTS ------------//
     /////////////////////////////////////////////
 
-    string network = vm.envString("NETWORK");
+    string network = vm.envString("NETWORK_NAME");
 
-    address factoryAddress = vm.envAddress("FACTORY_ADDRESS");
+    address factoryAddress = vm.envAddress("VE_FACTORY_ADDRESS");
 
     address signer = vm.envAddress("SIGNER_ADDRESS");
 

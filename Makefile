@@ -1,222 +1,81 @@
-# include .env file and export its env vars
-# (-include to ignore error if it does not exist)
--include .env
+# base.mk will import the local .env
+include lib/foundry-env/base.mk
 
-# linux: allow shell scripts to be executed
-allow-scripts:; chmod +x ./coverage.sh
+# The (contract) name of your deployment script
+DEPLOYMENT_SCRIPT ?= DeployGaugesV1_4_0
 
-# init the repo
-install :; make allow-scripts && forge build
+## VE test commands:
 
-# create an HTML coverage report in ./report (requires lcov & genhtml)
-coverage:; ./coverage.sh
+# Giving a default value to the inline filters:
+# - make test             =>  v = "**"
+# - make test v="v1_2_0"  =>  v = "v1_2_0"
 
-# retrieve the deployment values from a factory
-get-deployment-values :; forge script script/utils/GetDeploymentValues.sol:GetFactoryValues \
-    --rpc-url=$(RPC_URL) \
-    -vvvv
+test-unit: v ?= **
+test-integration: v ?= **
+test-unint: v ?= **
+test-invariant: v ?= **
+test-upgrades: v ?= **
 
-# run unit and integration tests
-test-ui :; forge test --match-path "test/**/{unit,integration}/**/*.sol"
+.PHONY: test-unit
+test-unit: ## Run unit tests                       [optional: v="v1_2_0"]
+	@make run-test-local args='--match-path "test/$(v)/unit/**/*.sol"'
 
-# run invariant tests
-test-invariant :; forge test --match-path "test/**/invariant/**/*.sol" --show-progress
-test-invariant-v1-2-0 :; forge test --match-path "test/v1_2_0/invariant/**/*.sol" --show-progress
-test-invariant-v1-3-0 :; forge test --match-path "test/v1_3_0/invariant/**/*.sol" --show-progress
-test-invariant-v1-4-0 :; forge test --match-path "test/v1_4_0/invariant/**/*.sol" --show-progress
+.PHONY: test-integration
+test-integration: ## Run integration tests                [optional: v="v1_2_0"]
+	@make run-test-local args='--match-path "test/$(v)/integration/**/*.sol"'
 
-# run unit tests for specific version
-test-ui-100 :; forge test --match-path "test/v1_0_0/{unit,integration}/**/*.sol" 
-test-ui-110 :; forge test --match-path "test/v1_1_0/{unit,integration}/**/*.sol" 
-test-ui-120 :; forge test --match-path "test/v1_2_0/{unit,integration}/**/*.sol" 
-test-ui-130 :; forge test --match-path "test/v1_3_0/{unit,integration}/**/*.sol"
-test-ui-140 :; forge test --match-path "test/v1_4_0/{unit,integration}/**/*.sol"
-test-ui-season :; forge test --match-path "test/season/{unit,integration}/**/*.sol"
+.PHONY: test-unint
+test-unint: ## Run unit + integration tests         [optional: v="v1_2_0"]
+	@make run-test-local args='--match-path "test/$(v)/{unit,integration}/**/*.sol"'
 
-# run unit tests
-test-unit :; forge test --match-path "test/**/unit/**/*.sol"
+.PHONY: test-invariant
+test-invariant: ## Run invariant tests                  [optional: v="v1_2_0"]
+	@make run-test-local args='--match-path "test/$(v)/invariant/**/*.sol" --show-progress'
 
-# run unit tests for specific version
-test-unit-100 :; forge test --match-path "test/v1_0_0/unit/**/*.sol" 
-test-unit-110 :; forge test --match-path "test/v1_1_0/unit/**/*.sol" 
-test-unit-120 :; forge test --match-path "test/v1_2_0/unit/**/*.sol" 
-test-unit-130 :; forge test --match-path "test/v1_3_0/unit/**/*.sol" 
-test-unit-140 :; forge test --match-path "test/v1_4_0/unit/**/*.sol" 
-test-unit-season :; forge test --match-path "test/season/unit/**/*.sol" 
+.PHONY: test-upgrades
+test-upgrades: ## Run regression/upgrade tests         [optional: v="v1_2_0"]
+	@make run-test-local args='--match-path "test/$(v)/upgrade/**/*.sol" --force --ffi'
 
-# regression and upgrade tests
-test-upgrade-110 :; forge test --match-path "test/v1_1_0/upgrade/**/*.sol" --force
-test-upgrade-120 :; forge test --match-path "test/v1_2_0/upgrade/**/*.sol" --force
-test-upgrade-130 :; forge test --match-path "test/v1_3_0/upgrade/**/*.sol" --force
-test-upgrade-140 :; forge test --match-path "test/v1_4_0/upgrade/**/*.sol" --force
-test-upgrade-season :; forge test --match-path "test/season/upgrade/**/*.sol" --force
+##
 
-#### Fork testing ####
+.PHONY: test-fork-all
+test-fork-all: ## Run fork tests (using RPC_URL)
+	@make run-test \
+	    args='--match-path "./test/*/fork/*.sol" --rpc-url $(RPC_URL)'
 
-# Fork testing - mode sepolia
+.PHONY: test-fork-mint
+test-fork-mint: ## Run fork tests (minting tokens)
+	@MINT_TEST_TOKENS=true ; make test-fork-all
 
-ft-mode-sepolia-fork-100 :; forge test --match-contract TestE2E \
-	--rpc-url https://sepolia.mode.network \
-	-vv
+.PHONY: test-fork-existing
+test-fork-existing: ## Run fork tests (existing factory)
+	@FORK_TEST_MODE='existing-factory' ; make test-fork-all
 
-ft-mode-sepolia-fork-110 :; forge test --match-contract TestE2EV1_1_0 \
-	--rpc-url https://sepolia.mode.network \
-	-vvvvv
+.PHONY: test-fork-exmint
+test-fork-exmint: ## Run fork tests (existing factory + minting tokens)
+	@MINT_TEST_TOKENS=true; FORK_TEST_MODE='existing-factory' ; make test-fork-all
 
-ft-mode-sepolia-fork-120 :; forge test --match-contract TestE2EV1_2_0 \
-	--rpc-url https://sepolia.mode.network \
-	-vvvvv
+## Scripts:
 
-# Fork testing - mode mainnet
-ft-mode-fork-100 :;  forge test --match-contract TestE2E \
-	--rpc-url https://mainnet.mode.network/ \
-	-vvvvv
+.PHONY: get-deployment
+get-deployment: ## Show the addresses deployed by .env VE_FACTORY_ADDRESS
+	make run-script name="script/utils/GetDeploymentValues_v1_2_0.sol:GetFactoryValuesV1_2_0"
+	# forge script script/utils/GetDeploymentValues_v1_2_0.sol:GetFactoryValuesV1_2_0 \
+ #        --rpc-url=$(RPC_URL) \
+ #        -vvvv
 
-ft-mode-fork-110 :; forge test --match-contract TestE2EV1_1_0 \
-	--rpc-url https://mainnet.mode.network/ \
-	-vvvvv
+.PHONY: preseed
+preseed: ## Simulate a SeedState transaction
+	@echo "Simulating SeedState"
 
-ft-mode-fork-120 :; forge test --match-contract TestE2EV1_2_0 \
-	--rpc-url https://mainnet.mode.network/ \
-	-vvvvv
+	@make simulate-script name="SeedState"
 
-# Fork testing - sepolia
-ft-sepolia-fork-100 :;  forge test --match-contract TestE2E \
-	--rpc-url $(RPC_URL) \
-	-vvvvv
+.PHONY: seed
+seed: test ## Submit a SeedState transaction
+	@echo "Starting SeedState"
+	@mkdir -p $(LOGS_FOLDER) $(ARTIFACTS_FOLDER)
 
-ft-sepolia-fork-110 :; forge test --match-contract TestE2EV1_1_0 \
-	--rpc-url $(RPC_URL) \
-	-vvvvv
+	@make run-script name="SeedState" \
+	    2>&1 | tee -a $(DEPLOYMENT_LOG_FILE)
 
-ft-sepolia-fork-120 :; forge test --match-contract TestE2EV1_2_0 \
-	--rpc-url $(RPC_URL) \
-	-vvvvv
-
-## Upgrade testing
-ft-mode-upgrade-fork :; forge test --match-contract UpgradeModeTo110 \
-	--rpc-url https://mainnet.mode.network/ \
-	--fork-block-number 18697900 \
-	-vvvv
-
-ft-mode-sepolia-upgrade-fork :; forge test --match-contract UpgradeModeTo110 \
-	--rpc-url https://sepolia.mode.network/ \
-	--fork-block-number 26050695 \
-	--force \
-	-vvvv
-
-upgrade-preview-mode-sepolia :; forge script UpgradeModeTo110 \
-	--rpc-url https://sepolia.mode.network \
-	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
-	-vvvvv
-
-upgrade-mode-sepolia :; forge script UpgradeModeTo110 \
-	--rpc-url https://sepolia.mode.network \
-	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
-	--broadcast \
-	--verify \
-	--verifier blockscout \
-	--verifier-url https://sepolia.explorer.mode.network/api\? \
-	-vvvvv
-
-# on an anvil fork will run the upgrade script
-anvil-fork-mode :; anvil -f https://mainnet.mode.network --fork-block-number 18697900 # --auto-impersonate
-upgrade-fork-mode :; forge script UpgradeModeTo110 \
-	--rpc-url http://localhost:8545 \
-	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
-	--broadcast \
-	-vvvvv
-
-upgrade-preview-mode :; forge script UpgradeModeTo110 \
-	--rpc-url https://mainnet.mode.network \
-	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
-	-vvvvv
-
-upgrade-mode :; forge script UpgradeModeTo110 \
-	--rpc-url https://mainnet.mode.network \
-	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
-	--broadcast \
-	--verify \
-	--verifier blockscout \
-	--verifier-url https://explorer.mode.network/api\? \
-	-vvvvv
-
-#### Deployments ####
-deploy-preview-mode-sepolia-110 :; forge script DeployGaugesV1_1_0 \
-  --rpc-url https://sepolia.mode.network \
-	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
-	-vvvvv	
-
-deploy-mode-sepolia :; forge script DeployGauges \
-	--rpc-url https://sepolia.mode.network \
-	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
-	--broadcast \
-	--verify \
-	--verifier blockscout \
-	--verifier-url https://sepolia.explorer.mode.network/api\? \
-	-vvvvv
-
-
-
-deploy-preview-1-3-sepolia :; forge script script/deploy/DeployGauges_v1_3_0.s.sol:DeployGaugesV1_3_0 \
-	--rpc-url $(RPC_URL) \
-	-vvvvv
-
-deploy-1-3-sepolia :; forge script script/deploy/DeployGauges_v1_3_0.s.sol:DeployGaugesV1_3_0 \
-	--rpc-url $(RPC_URL) \
-	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
-	--broadcast \
-	--verify \
-	--slow \
-	--etherscan-api-key $(ETHERSCAN_API_KEY) \
-	-vvvvv
-
-
-
-deploy-preview-1-4-sepolia :; forge script script/deploy/DeployGauges_v1_4_0.s.sol:DeployGaugesV1_4_0 \
-	--rpc-url $(RPC_URL) \
-	-vvvvv
-
-deploy-1-4-sepolia :; forge script script/deploy/DeployGauges_v1_4_0.s.sol:DeployGaugesV1_4_0 \
-	--rpc-url $(RPC_URL) \
-	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
-	--broadcast \
-	--verify \
-	--slow \
-	--etherscan-api-key $(ETHERSCAN_API_KEY) \
-	-vvvvv
-
-
-
-
-### Other scripts ###
-seed-preview-mode-sepolia :; forge script SeedState \
-	--rpc-url https://sepolia.mode.network \
-	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
-	-vvvvv
-
-seed-mode-sepolia :; forge script SeedState \
-	--rpc-url https://sepolia.mode.network \
-	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
-	--broadcast \
-	--verify \
-	--etherscan-api-key $(ETHERSCAN_API_KEY) \
-	-vvvvv
-
-deploy-preview-ethereum-sepolia :; forge script DeployGauges \
-  --rpc-url $(RPC_URL) \
-	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
-	-vvvvv	
-
-deploy-ethereum-sepolia :; forge script DeployGauges \
-	--rpc-url $(RPC_URL) \
-	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
-	--broadcast \
-	--verify \
-	--verifier blockscout \
-	--etherscan-api-key $(ETHERSCAN_API_KEY) \
-	-vvvvv
-
-get-deployment-values-sepolia-1-2 :; forge script script/utils/GetDeploymentValues_v1_2_0.sol:GetFactoryValuesV1_2_0 \
-	--rpc-url $(RPC_URL) \
-	-vvvvv
+	@echo "Logs saved in $(DEPLOYMENT_LOG_FILE)"

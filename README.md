@@ -8,10 +8,10 @@ To get started, ensure that [Foundry](https://getfoundry.sh/) is installed on yo
 
 <details>
   <summary>Also make sure to install [GNU Make](https://www.gnu.org/software/make/).</summary>
-  
-  ```sh
-  # debian
-  sudo apt install build-essential
+
+```sh
+# debian
+sudo apt install build-essential
 
 # arch
 
@@ -29,29 +29,15 @@ brew install make
 
 </details>
 
-### Using the Makefile
+Copy `.env.example` into a file named `.env` and define your settings in it.
 
-The `Makefile` as the target launcher of the project. It's the recommended way to work with it. It manages the env variables of common tasks and executes only the steps that require being run.
-
-### Understanding `.env.example`
-
-The env.example file contains descriptions for all the initial settings. You don't need all of these right away but should review prior to fork tests and deployments
-
-## Running fork tests
-
-Fork testing has 2 modes:
-
-1. "new-factory" will run against the live network fork, deploying new contracts via a new instance of the factory. See `make test-fork-testnet`, `make test-fork-prodnet` and simmilar
-
-2. "existing-factory" will run against the live network fork, using the existing factory & therefore the existing contracts. See `make test-fork-factory-testnet`, `make test-fork-factory-prodnet` and simmilar
-
-In both cases, you will need to find the correct Aragon OSx contracts for the chain you wish to fork against. These can be found in the [OSx commons repo](https://github.com/aragon/osx-commons/tree/main/configs/src/deployments/json)
-
-> If running frequent fork tests it's recommended to pass a block number to enable caching
+The `Makefile` acts as the target launcher of the project. It's the recommended way to work with it. It manages the env variables of common tasks and executes only the steps that require being run.
 
 ## Deployment
 
-Deployments are done using the deployment factory. This is a singleton contract that will:
+### Full DAO deployment
+
+End to end DAO deployments are done using a factory. This is a singleton contract that will:
 
 - Deploy all contracts
 - Set permissions
@@ -61,16 +47,11 @@ Deployments are done using the deployment factory. This is a singleton contract 
 Check the available make targets to simulate and deploy the smart contracts:
 
 ```
-
-- make pre-deploy-testnet Simulate a deployment to the defined testnet
-- make pre-deploy-prodnet Simulate a deployment to the defined production network
-- make deploy-testnet Deploy to the defined testnet network and verify
-- make deploy-prodnet Deploy to the production network and verify
-
+- make predeploy            Simulate a plugin deployment
+- make deploy               Deploy the plugin and verify the code
 ````
 
 ### Deployment Checklist
-
 
 - [ ] I have cloned the official repository on my computer and I have checked out the corresponding branch
 - [ ] I am using the latest official docker engine, running a Debian Linux (stable) image
@@ -80,7 +61,7 @@ Check the available make targets to simulate and deploy the smart contracts:
   - [ ] I have run `source /root/.bashrc && foundryup`
   - [ ] I have run `cd /deployment`
   - [ ] I have run `make init`
-  - [ ] I have printed the contents of `.env` and `.env.test` on the screen
+  - [ ] I have printed the contents of `.env` on the screen
 - [ ] I am opening an editor on the `/deployment` folder, within the Docker container
 - [ ] The `.env` file contains the correct parameters for the deployment
   - [ ] I have created a brand new burner wallet with `cast wallet new` and copied the private key to `DEPLOYMENT_PRIVATE_KEY` within `.env`
@@ -102,48 +83,30 @@ Check the available make targets to simulate and deploy the smart contracts:
   - The given OSx addresses:
     - [ ] Exist on the target network
     - [ ] Contain the latest stable official version of the OSx DAO implementation, the Plugin Setup Processor and the Plugin Repo Factory
-    - [ ] I have verified the values on https://www.npmjs.com/package/@aragon/osx-commons-configs?activeTab=code > `/@aragon/osx-commons-configs/dist/deployments/json/`
+    - [ ] I have verified the values on https://github.com/aragon/osx/blob/main/packages/artifacts/src/addresses.json
 - [ ] I have updated the `CurveConstantLib` and `Clock` with any new constants.
 - [ ] All my unit tests pass (`make test`)
-- **Target test network**
-  - [ ] I have defined `FORK_TESTNET_BLOCK_NUMBER` on `.env.test`, with the current block number
-  - [ ] I have run a fork test in `new-factory` mode with minted tokens against the official OSx contracts on the testnet
-    - `make test-fork-mint-testnet`
-  - [ ] I have deployed my contracts successfully to the target testnet
-    - `make deploy-testnet`
-  - [ ] I have updated `FACTORY_ADDRESS` on `.env.test` with the address of the deployed factory
-  - If there is a live token with an address holding ≥ 3000 tokens on the testnet:
-    - [ ] I have defined `TEST_TOKEN_WHALE` on `.env.test`
-    - [ ] I have run a fork test in `new-factory` mode with the live token on the testnet
-      - `make test-fork-testnet`
-    - [ ] I have confirmed that tests still work in `existing-factory` mode with the live token(s) and the already deployed factory on the testnet.
-      - `make test-fork-factory-testnet`
 - **Target production network**
-  - [ ] I have defined `FORK_PRODNET_BLOCK_NUMBER` on `.env.test`, with the current block number
-  - [ ] I have run a fork test in `new-factory` mode with minted tokens against the official OSx contracts on the prodnet
-    - `make test-fork-mint-prodnet`
-  - If the live token has an address holding ≥ 3000 tokens on the prodnet:
-    - [ ] I have defined `TEST_TOKEN_WHALE` on `.env.test`
-    - [ ] I have updated `TOKEN1_ADDRESS` to have the address of the testnet token deployed above
-    - [ ] I have run a fork test in `new-factory` mode with the live token on the prodnet
-      - `make test-fork-prodnet`
-    - [ ] I have confirmed that tests still work in `existing-factory` mode with the live token(s) and the already deployed factory on the prodnet.
-      - `make test-fork-factory-prodnet`
-    - [ ] I have reverted `TOKEN1_ADDRESS` to the intended address of the token on the production network
+  - [ ] I have run a fork test in `new-factory` mode with minted tokens against the official OSx contracts
+    - `make test-fork-mint`
+  - If the live token has an address holding ≥ 3000 tokens:
+    - [ ] I have defined `TEST_TOKEN_WHALE` on `.env`
+    - [ ] I have run a fork test in `new-factory` mode with the live token
+      - `make test-fork`
 - [ ] My deployment wallet is a newly created account, ready for safe production deploys.
 - My computer:
   - [ ] Is running in a safe physical location and a trusted network
   - [ ] It exposes no services or ports
   - [ ] The wifi or wired network used does does not have open ports to a WAN
 - [ ] I have previewed my deploy without any errors
-  - `make pre-deploy-prodnet`
+  - `make predeploy`
 - [ ] My wallet has sufficient native token for gas
   - At least, 15% more than the estimated simulation
 - [ ] Unit tests still run clean
 - [ ] I have run `git status` and it reports no local changes
 - [ ] The current local git branch corresponds to its counterpart on `origin`
   - [ ] I confirm that the rest of members of the ceremony pulled the last commit of my branch and reported the same commit hash as my output for `git log -n 1`
-- [ ] I have initiated the production deployment with `make deploy-prodnet`
+- [ ] I have initiated the production deployment with `make deploy`
 
 ### Post deployment checklist
 
@@ -151,7 +114,7 @@ Check the available make targets to simulate and deploy the smart contracts:
 - [ ] The deployed factory was deployed by the deployment address
 - [ ] The reported contracts have been created created by the newly deployed factory
 - [ ] The smart contracts are correctly verified on Etherscan or the corresponding block explorer
-- [ ] The output of the latest `deployment-*.log` file corresponds to the console output
+- [ ] The output of the latest `logs/deployment-*.log` file corresponds to the console output
 - [ ] I have transferred the remaining funds of the deployment wallet to the address that originally funded it
   - `make refund`
 
@@ -178,22 +141,22 @@ RPC_URL="https://eth-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}"
 # Run the deployment script
 
 # If using Etherscan
-forge script --chain "$NETWORK" script/DeployGauges.s.sol:Deploy --rpc-url "$RPC_URL" --broadcast --verify
+forge script --chain "$NETWORK_NAME" script/DeployGauges.s.sol:Deploy --rpc-url "$RPC_URL" --broadcast --verify
 
 # If using BlockScout
-forge script --chain "$NETWORK" script/DeployGauges.s.sol:Deploy --rpc-url "$RPC_URL" --broadcast --verify --verifier blockscout --verifier-url "https://sepolia.explorer.mode.network/api\?"
+forge script --chain "$NETWORK_NAME" script/DeployGauges.s.sol:Deploy --rpc-url "$RPC_URL" --broadcast --verify --verifier blockscout --verifier-url "https://sepolia.explorer.mode.network/api\?"
 ```
 
 If you get the error Failed to get EIP-1559 fees, add `--legacy` to the command:
 
 ```sh
-forge script --chain "$NETWORK" script/DeployGauges.s.sol:Deploy --rpc-url "$RPC_URL" --broadcast --verify --legacy
+forge script --chain "$NETWORK_NAME" script/DeployGauges.s.sol:Deploy --rpc-url "$RPC_URL" --broadcast --verify --legacy
 ```
 
 If some contracts fail to verify on Etherscan, retry with this command:
 
 ```sh
-forge script --chain "$NETWORK" script/DeployGauges.s.sol:Deploy --rpc-url "$RPC_URL" --verify --legacy --private-key "$DEPLOYMENT_PRIVATE_KEY" --resume
+forge script --chain "$NETWORK_NAME" script/DeployGauges.s.sol:Deploy --rpc-url "$RPC_URL" --verify --legacy --private-key "$DEPLOYMENT_PRIVATE_KEY" --resume
 ```
 
 ## Contracts Overview
@@ -286,6 +249,18 @@ The main workflow in the Aragon VE Governance build is as follows:
 ## Curve design
 
 To build a flexible approach to curve design, we reviewed implementations such as seen in Curve and Aerodrome and attempted to generalise [Details on the curve design research can be found here](https://github.com/jordaniza/ve-explainer/blob/main/README.md)
+
+## Running fork tests
+
+Fork testing has 2 modes:
+
+1. "new-factory" will run against the live network fork, deploying new contracts via a new instance of the factory. See `make test-fork-testnet`, `make test-fork-prodnet` and simmilar
+
+2. "existing-factory" will run against the live network fork, using the existing factory & therefore the existing contracts. See `make test-fork-factory-testnet`, `make test-fork-factory-prodnet` and simmilar
+
+In both cases, you will need to find the correct Aragon OSx contracts for the chain you wish to fork against. These can be found in the [OSx commons repo](https://github.com/aragon/osx-commons/tree/main/configs/src/deployments/json)
+
+> If running frequent fork tests it's recommended to pass a block number to enable caching
 
 # Important note on upgrades and warmups
 
