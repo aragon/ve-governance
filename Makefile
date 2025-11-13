@@ -220,3 +220,42 @@ deploy-ethereum-sepolia :; forge script DeployGauges \
 get-deployment-values-sepolia-1-2 :; forge script script/utils/GetDeploymentValues_v1_2_0.sol:GetFactoryValuesV1_2_0 \
 	--rpc-url $(RPC_URL) \
 	-vvvvv
+
+
+## Learning
+DEPLOY_SCRIPT:=DeployGaugesV1_4_0
+DEPLOYMENT_LOG_FILE:=base-xmaquina-prod.log
+RESUME_LOG_FILE:=base-xmaquina-resume-prod.log
+VERBOSITY:=-vvv
+
+.PHONY: deploy-preview-base
+deploy-preview-base: # deploy to the base network
+	@echo "previewing to base"
+	forge script $(DEPLOY_SCRIPT) \
+		--rpc-url $(RPC_URL) \
+		$(VERBOSITY)
+
+.PHONY: deploy-base
+deploy-base: # deploy to the base network
+	@echo "deploying to base"
+	forge script $(DEPLOY_SCRIPT) \
+		--rpc-url $(RPC_URL) \
+		--broadcast \
+		--verify \
+		--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+		--etherscan-api-key $(ETHERSCAN_API_KEY) \
+		$(VERBOSITY) | tee $(DEPLOYMENT_LOG_FILE)
+
+.PHONY: deploy-resume-base
+deploy-resume-base: # resume deploy to the base network
+	@echo "resuming to base"
+	forge script $(DEPLOY_SCRIPT) \
+		--rpc-url $(RPC_URL) \
+		--broadcast \
+		--verify \
+		--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+		--etherscan-api-key $(ETHERSCAN_API_KEY) \
+		--resume \
+		$(VERBOSITY) | tee $(RESUME_LOG_FILE)
+
+
