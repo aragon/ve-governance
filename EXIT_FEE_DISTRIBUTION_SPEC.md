@@ -193,6 +193,80 @@ Setup: Smit has 2 NFTs (tokens #1: 60 VP, #2: 40 VP), self-delegates both. Jorda
 
 ---
 
+### Edge Cases
+
+#### Edge Case 1: Re-delegation Mid-Epoch
+
+```
+T0: Alice delegates to Bob
+T1: Bob votes for Gauge A (includes Alice's VP)
+T2: Alice re-delegates to Carol
+T3: Carol votes for Gauge B
+T4: Snapshot
+```
+
+**Behavior depends on `enableUpdateVotingPowerHook`**:
+
+- **When `false` (secure mode)**: Voting power is snapshot at epoch start via `getPastVotes(_account, currentEpochStart())`. Alice's re-delegation at T2 does NOT affect this epoch — Bob's vote still includes Alice's VP from epoch start. Carol does NOT get Alice's VP for this epoch.
+- **When `true`**: `getVotes()` is used (live balance). Bob's `_updateVotingPower` fires when Alice undelegates — Bob's votes are auto-decreased. Carol gets Alice's VP if Carol re-votes. If Carol already voted before T2, Carol would need to re-vote to pick up Alice's power (increases are NOT auto-applied).
+
+**For the indexer**: In secure mode, resolve delegation state at **epoch start**, not at snapshot time, to determine whose VP contributed to each voter's vote.
+
+#### Edge Case 2: Late Delegation (after delegate already voted)
+
+```
+T1: Bob votes for Gauge A (Bob's VP: 1000)
+T2: Alice delegates to Bob (Alice's VP: 500)
+T3: Snapshot
+```
+
+Late delegation does **NOT** retroactively increase Bob's vote. From `AddressGaugeVoter.sol:279-301`:
+
+```solidity
+// decrease → auto-adjust gauges; increase → ignored
+if (voteData.usedVotingPower < votingPower) return;
+```
+
+Bob would need to call `vote()` again to include Alice's power. If Bob doesn't re-vote, Alice's contribution = 0 for this epoch.
+
+**For the indexer**: Late delegators whose power wasn't included in the delegate's vote get **zero credit** for that epoch. Only credit VP that was part of an actual `Voted` event.
+
+#### Edge Case 3: Multiple Votes in One Epoch
+
+```
+T1: Bob votes for [Gauge A: 60%, Gauge B: 40%] with 1000 VP
+T2: Bob votes for [Gauge A: 30%, Gauge C: 70%] with 1000 VP
+T3: Snapshot
+```
+
+Only the **last vote** counts. `vote()` calls `_reset()` first if already voting, then re-casts. The indexer sees a sequence of Reset events followed by Voted events — only the final Voted batch matters.
+
+**For the indexer**: Process events chronologically. The active vote state is always determined by the latest Voted batch (after any intermediate Resets).
+
+#### Edge Case 4: Vote Persistence Across Epochs
+
+**Votes do NOT persist across epochs** (when `enableUpdateVotingPowerHook = false`, the secure mode).
+
+Votes are stored per-epoch via `getWriteEpochId()` which returns `epochId()`. If Bob voted in epoch N but not N+1, `epochVoteData[N+1][Bob]` is empty — Bob has zero contribution for epoch N+1.
+
+```solidity
+function getWriteEpochId() public view returns (uint256) {
+    return enableUpdateVotingPowerHook ? 0 : epochId();
+}
+```
+
+**When `enableUpdateVotingPowerHook = true` (legacy mode)**: Votes use epoch 0 as global storage and DO persist. The indexer must check `epochVoteData[0]` for persisted votes.
+
+**For the indexer**: Never assume previous votes carry over. Check the current epoch's vote data independently.
+
+#### Edge Case 5: Delegation Persistence Across Epochs
+
+Unlike votes, **delegations DO persist** across epochs. If Alice delegates to Bob in epoch N, her delegation remains active in N+1, N+2, etc. until she explicitly calls `delegate()` or `undelegate()`.
+
+**For the indexer**: Delegation state is cumulative — built from all historical `TokensDelegated`, `TokensUndelegated`, and `DelegateChanged` events. No need to re-check per epoch unless new events appear.
+
+---
+
 ## 6. Exit Fee Tracking Per Epoch
 
 Fees accumulate in the `ExitQueue` contract when users call `VotingEscrowIncreasing.withdraw()`:
