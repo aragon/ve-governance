@@ -26,6 +26,7 @@ Delegation is **NFT-based, not amount-based**. Each lock creates an NFT (token I
 - **Voting power source**: `getVotes(account)` returns the total VP of all tokens delegated **TO** that account (from self and from others).
 
 ### Scenarios
+A has 500 VP and B has 300 VP. The following cases then entail:
 
 | Setup | A's getVotes() | B's getVotes() | Can A vote? | Can B vote? |
 |-------|---------------|---------------|-------------|-------------|
@@ -208,38 +209,59 @@ Before distribution, the DAO (via `WITHDRAW_ROLE`) calls `ExitQueue.withdraw(amo
 
 ## 7. Multi-Epoch Reward Accumulation
 
-### Cumulative Merkle Trees
+### New Campaign Per Epoch with Cumulative Merkle Tree
 
-Each epoch, the backend publishes a new Merkle root containing **cumulative total** amounts per address:
+A **new Capital Distributor campaign** is created each epoch. Its Merkle tree contains **cumulative** reward amounts — the sum of all rewards earned across all epochs, minus what the user has already claimed from previous campaigns.
 
 ```
-leaf = keccak256(abi.encodePacked(address, cumulative_amount))
+leaf = keccak256(abi.encodePacked(address, adjusted_cumulative_amount))
 ```
 
-When a user claims, the Capital Distributor pays out:
-```
-payout = cumulative_amount - alreadyClaimed[user]
+Where: `adjusted_cumulative_amount = cumulative_rewards_all_epochs - total_claimed_from_past_campaigns`
+
+This lets users claim all unclaimed rewards across all past epochs in a **single `claimCampaignPayout()` call** on the latest campaign.
+
+### Per-Epoch Flow
+
+```python
+def publish_epoch(epoch_id, epoch_rewards):
+    # 1. End the previous campaign (freezes its claim state)
+    if prev_campaign_id := get_previous_campaign_id():
+        capital_distributor.endCampaign(prev_campaign_id)
+
+    # 2. Update cumulative rewards
+    for addr, amount in epoch_rewards.items():
+        cumulative[addr] = cumulative.get(addr, 0) + amount
+
+    # 3. Read total already claimed per user across ALL past campaigns
+    #    (from indexed PayoutClaimed events)
+    total_claimed = get_total_claimed_all_campaigns()
+
+    # 4. Build adjusted tree: what each user is still owed
+    leaves = {}
+    for addr, cum in cumulative.items():
+        owed = cum - total_claimed.get(addr, 0)
+        if owed > 0:
+            leaves[addr] = owed
+
+    # 5. Create new campaign with adjusted cumulative tree
+    tree = build_merkle_tree(leaves)
+    create_epoch_campaign(epoch_id, tree.root)
 ```
 
-Users who miss multiple epochs claim once and receive all accumulated rewards in a single transaction.
+**Why end the previous campaign first**: Ending freezes claim state, so no user can claim from the old campaign after the backend reads `total_claimed`. This prevents a race where a claim between reading state and creating the new campaign would cause double-payment.
+
+There is a brief unavailability window between ending the old campaign and creating the new one. Keep this to seconds.
 
 ### Handling Unclaimed Epochs
 
-```python
-def compute_cumulative(epoch_id, epoch_rewards):
-    prev = load_cumulative(epoch_id - 1)  # previous epoch's cumulative totals
-    new_cumulative = {}
-    for addr in set(prev.keys()) | set(epoch_rewards.keys()):
-        new_cumulative[addr] = prev.get(addr, 0) + epoch_rewards.get(addr, 0)
-    return new_cumulative
-```
-
 | Case | Handling |
 |------|----------|
-| User never claims | Cumulative grows each epoch. No expiry (optional: add 6-month / ~13-epoch expiry). |
-| User voted epoch 5, not epoch 6 | Epoch 5 reward added to cumulative. Epoch 6 adds 0. |
-| Zero exit fees in an epoch | No new rewards. Cumulative unchanged. |
-| User claims mid-epoch | Gets everything up to last published root. Current epoch not yet included. |
+| User misses several epochs | Claim once from the latest campaign — leaf contains all accumulated owed rewards. |
+| User voted epoch 5, not epoch 6 | Epoch 5 reward included in cumulative. Epoch 6 adds 0. Latest campaign leaf reflects total. |
+| Zero exit fees in an epoch | Still create campaign (cumulative may have unclaimed amounts from prior epochs). Skip only if no user has any unclaimed amount. |
+| User claims mid-epoch | Gets everything owed up to the last published campaign. Current epoch not yet included. |
+| User claimed from campaign N-1, now campaign N exists | Campaign N's leaf already subtracts what was claimed from N-1. User claims the remainder. |
 
 ---
 
@@ -247,80 +269,73 @@ def compute_cumulative(epoch_id, epoch_rewards):
 
 Using the [Capital Distributor](https://github.com/aragon/osx-capital-distributor/tree/feat/katana-locks-distrib) with `MerkleDistributorStrategy`.
 
-### 8.1 One-Time Setup: Create Campaign
+### 8.1 Per-Epoch: Create Campaign
+
+Each epoch, the backend ends the previous campaign and creates a new one with an adjusted cumulative Merkle tree (see Section 7):
 
 ```python
-# StrategyConfig
-strategy_config = {
-    "strategyId": MERKLE_DISTRIBUTOR_STRATEGY_ID,  # registered type bytes32
-    "strategyParams": b"",                          # clone identity
-    "initData": encode(["bytes32"], [initial_merkle_root])
-}
+def create_epoch_campaign(epoch_id, merkle_root):
+    strategy_config = {
+        "strategyId": MERKLE_DISTRIBUTOR_STRATEGY_ID,
+        "strategyParams": b"",
+        "initData": encode(["bytes32"], [merkle_root])
+    }
 
-# PayoutConfig (simple KAT transfer, no action encoder)
-payout_config = {
-    "token": KAT_TOKEN_ADDRESS,
-    "actionEncoderId": bytes32(0),      # simple transfer
-    "actionEncoderInitData": b""
-}
+    payout_config = {
+        "token": KAT_TOKEN_ADDRESS,
+        "actionEncoderId": bytes32(0),      # simple KAT transfer
+        "actionEncoderInitData": b""
+    }
 
-# Create via CapitalDistributorPlugin.createCampaign(metadata, strategy, payout, settings)
+    settings = {
+        "startTime": 0,   # claimable immediately
+        "endTime": 0       # no expiry
+    }
+
+    campaign_id = capital_distributor.createCampaign(
+        epoch_metadata_uri, strategy_config, payout_config, settings
+    )
+    return campaign_id
 ```
 
 The DAO treasury must hold sufficient KAT. The plugin executes payouts through `dao().execute()`.
 
-### 8.2 Per-Epoch: Update Merkle Root
+The backend must store the mapping of `epoch_id → campaign_id` for the frontend to resolve the latest active campaign.
 
-The Merkle root update requires the campaign to be paused:
-
-```python
-def publish_epoch(campaign_id, new_root):
-    # 1. Pause campaign
-    capital_distributor.pauseCampaign(campaign_id)
-
-    # 2. Update root (requires PAUSED state)
-    strategy = get_strategy_for_campaign(campaign_id)
-    strategy.updateCampaignMerkleRoot(campaign_id, encode(["bytes32"], [new_root]))
-
-    # 3. Resume campaign
-    capital_distributor.resumeCampaign(campaign_id)
-```
-
-### 8.3 Merkle Tree Construction
+### 8.2 Merkle Tree Construction
 
 Leaf format matches `MerkleDistributorStrategy`:
 ```
-leaf = keccak256(abi.encodePacked(address account, uint256 cumulative_amount))
+leaf = keccak256(abi.encodePacked(address account, uint256 adjusted_cumulative_amount))
 ```
-Where `abi.encodePacked` produces 52 bytes (20 address + 32 uint256).
+Where `abi.encodePacked` produces 52 bytes (20 address + 32 uint256), and `adjusted_cumulative_amount = cumulative_rewards - total_claimed_from_past_campaigns`.
 
 Sort leaves by address for deterministic tree generation.
 
-### 8.4 User Claiming
+### 8.3 User Claiming
 
-Users call `CapitalDistributorPlugin.claimCampaignPayout()`:
+Users only need to claim from the **latest active campaign**. One call covers all unclaimed rewards across all past epochs:
+
 ```solidity
 claimCampaignPayout(
-    campaignId,
-    recipient,                                          // address to verify + receive payout
-    abi.encode(merkleProof, cumulativeAmount),           // strategyAuxData
-    bytes("")                                           // encoderAuxData (none for simple transfer)
+    latestCampaignId,
+    recipient,
+    abi.encode(merkleProof, adjustedCumulativeAmount),  // strategyAuxData
+    bytes("")                                           // encoderAuxData
 )
 ```
 
-Contract computes: `payout = cumulativeAmount - alreadyClaimed[recipient]`
-
-### 8.5 API Endpoints (for frontend)
+### 8.4 API Endpoints (for frontend)
 
 ```
 GET /api/rewards/:address
-  → { claimable, cumulativeAmount, merkleProof[], campaignId, epoch }
+  → { campaignId, claimable, adjustedCumulativeAmount, merkleProof[] }
 
 GET /api/rewards/:address/history
-  → [{ epoch, credited_vp, reward_amount, claimed }]
+  → [{ epoch, credited_vp, reward_amount }]
 
 GET /api/epochs/:epoch_id/summary
-  → { total_fees, total_vp, num_recipients, merkle_root }
+  → { campaignId, total_fees, total_vp, num_recipients, merkle_root }
 ```
 
 ---
@@ -342,8 +357,8 @@ GET /api/epochs/:epoch_id/summary
 │  ┌──────────────┐                  ┌────────────────────┐ │
 │  │   Database   │                  │ Capital Distributor│ │
 │  │  (events +   │                  │ Publisher          │ │
-│  │  snapshots)  │                  │ (pause→update→     │ │
-│  └──────────────┘                  │  resume)           │ │
+│  │  snapshots)  │                  │ (endCampaign →     │ │
+│  └──────────────┘                  │  createCampaign)   │ │
 │                                    └────────────────────┘ │
 └───────────────────────────────────────────────────────────┘
 ```
@@ -355,6 +370,7 @@ Indexes continuously from deployment block:
 - `TokensDelegated`, `TokensUndelegated`, `DelegateChanged` from EscrowIVotesAdapter
 - `Transfer` from Lock NFT
 - KAT `Transfer` to ExitQueue (fee tracking)
+- `PayoutClaimed` from CapitalDistributorPlugin (to track total claimed per user across all campaigns)
 
 **Performance optimization**: Store latest snapshot state at each epoch boundary. Subsequent epochs only need to crawl events after the last snapshot.
 
@@ -398,11 +414,20 @@ CREATE TABLE epoch_rewards (
     recipient     TEXT,       -- token owner (not necessarily voter)
     credited_vp   NUMERIC,
     reward_amount NUMERIC,
-    cumulative    NUMERIC     -- running total for Merkle tree
+    cumulative    NUMERIC     -- running total across all epochs
 );
 
-CREATE TABLE epoch_snapshots (
+CREATE TABLE user_claims (
+    recipient     TEXT,
+    campaign_id   BIGINT,
+    amount        NUMERIC,    -- amount paid out
+    block_number  BIGINT,
+    PRIMARY KEY (recipient, campaign_id)
+);
+
+CREATE TABLE epoch_campaigns (
     epoch         BIGINT PRIMARY KEY,
+    campaign_id   BIGINT,     -- Capital Distributor campaign ID
     merkle_root   TEXT,
     total_fees    NUMERIC,
     total_vp      NUMERIC,
@@ -416,6 +441,7 @@ CREATE TABLE epoch_snapshots (
 |------|----------|---------|
 | `votingPowerAt(tokenId, ts)` | VotingEscrowIncreasing | VP per token at snapshot |
 | `epochTotalVotingPowerCast(epoch)` | AddressGaugeVoter | Invariant verification |
+| `getClaimedAmount(campaignId, addr)` | CapitalDistributorPlugin | Verify indexed claim totals |
 
 All other state is reconstructed from indexed events. RPC calls at snapshot block are used for VP computation and invariant checks.
 
@@ -432,14 +458,14 @@ T+6d23h     Voting closes                    ← SNAPSHOT TRIGGER
 T+6d23h05m  Snapshot: run Steps 1-4, verify invariants
 T+6d23h15m  Generate Merkle tree
 T+7d        DAO withdraws fees from ExitQueue to treasury
-T+7d+       Publish: pause → updateMerkleRoot → resume
+T+7d+       Publish: endCampaign(prev) → createCampaign with cumulative Merkle root
 T+14d       Epoch N+1 starts
 ```
 
 ### Recovery
 
 - **Missed snapshot**: Re-compute from archived node at deterministic block height.
-- **Bad Merkle root**: Publish corrected root. Cumulative model means the new root supersedes. Users who already claimed have `alreadyClaimed` recorded on-chain — the corrected cumulative just needs to be accurate.
+- **Bad Merkle root**: End the faulty campaign (`endCampaign`), create a corrected one. Users who already claimed from the faulty campaign have `alreadyClaimed` recorded — the corrected campaign must account for this (or use a fresh campaign and reconcile off-chain).
 - **Invariant failure**: Halt, investigate root cause (re-org, missed event, RPC error), re-index if needed.
 
 ---
@@ -449,8 +475,9 @@ T+14d       Epoch N+1 starts
 1. **Snapshot timing**: Always after voting closes. The 5-minute buffer ensures finality.
 2. **Delegation gaming**: Rewards go to original token owners. Receiving delegations doesn't inflate your reward share — the delegator gets credit for their own VP.
 3. **Vote-then-reset**: Correctly excluded at Step 1 (no active votes at snapshot).
-4. **Merkle replay**: Cumulative `alreadyClaimed` tracking prevents double-claims.
-5. **Campaign pause window**: Merkle root updates require pausing. Keep pause duration minimal to avoid blocking claims.
+4. **Merkle replay**: Each campaign has its own `alreadyClaimed` tracking. A user can only claim their adjusted cumulative amount once per campaign.
+5. **Claim race condition**: The previous campaign MUST be ended before reading `total_claimed` and building the new tree. This prevents a user from claiming on the old campaign after the backend has already factored in their unclaimed balance.
+6. **Brief unavailability**: There is a short window between `endCampaign(prev)` and `createCampaign(new)` where no campaign is active. Keep this to seconds.
 
 ---
 
@@ -463,7 +490,7 @@ T+14d       Epoch N+1 starts
 | **Undelegated tokens** | Zero VP, zero rewards |
 | **Partial voting** | Not possible — `vote()` uses 100% of `getVotes()` |
 | **Snapshot timing** | `epochStart + 6d23h + 5min` |
-| **Multi-epoch claims** | Cumulative Merkle tree — single claim for all unclaimed epochs |
+| **Multi-epoch claims** | New campaign per epoch with cumulative Merkle tree — single `claimCampaignPayout()` on latest campaign |
 | **Distribution contract** | Capital Distributor + MerkleDistributorStrategy |
 | **Fee source** | ExitQueue → DAO treasury → Capital Distributor payout |
 | **Invariants** | 4 checkpoints, each verified before proceeding |
