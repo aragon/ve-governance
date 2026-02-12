@@ -20,7 +20,9 @@ Rewards are attributed to the **original token owner**, not the address that cas
 
 Delegation is **NFT-based, not amount-based**. Each lock creates an NFT (token ID) with voting power derived from its locked KAT amount and lock duration. Key constraints:
 
+
 - **Single delegatee per account**: `delegates(account)` returns one address. All delegated tokens from that account go to the same delegatee.
+> Correction: partial delegation is possible and `delegates(account)` can be set but some/all of the tokenIds will be undelegated. Split delegation not possible so delegates always returns a single address or `0x0`
 - **Per-NFT delegation**: You choose which of your NFTs to delegate via `delegate(uint256[] tokenIds)`. Non-delegated NFTs contribute **zero** voting power to anyone.
 - **No partial voting**: `vote()` always uses 100% of `getVotes(account)`, distributed across gauges by weight.
 - **Voting power source**: `getVotes(account)` returns the total VP of all tokens delegated **TO** that account (from self and from others).
@@ -28,11 +30,13 @@ Delegation is **NFT-based, not amount-based**. Each lock creates an NFT (token I
 ### Scenarios
 A has 500 VP and B has 300 VP. The following cases then entail:
 
-| Setup | A's getVotes() | B's getVotes() | Can A vote? | Can B vote? |
-|-------|---------------|---------------|-------------|-------------|
-| A (500 VP) self-delegates all, B (300 VP) self-delegates all | 500 | 300 | Yes | Yes |
-| A sets delegatee=B, delegates NFTs worth 100 to B | 0 | 400 (300+100) | No | Yes |
-| A self-delegates 3 of 5 NFTs (300 VP), 2 idle | 300 | 300 | Yes (300) | Yes (300) |
+| Setup                                                        | A's getVotes() | B's getVotes() | Can A vote? | Can B vote? |
+| ------------------------------------------------------------ | -------------- | -------------- | ----------- | ----------- |
+| A (500 VP) self-delegates all, B (300 VP) self-delegates all | 500            | 300            | Yes         | Yes         |
+| A sets delegatee=B, delegates NFTs worth 100 to B            | 0              | 400 (300+100)  | No          | Yes         |
+| A self-delegates 3 of 5 NFTs (300 VP), 2 idle                | 300            | 300            | Yes (300)   | Yes (300)   |
+
+> Comment: yep it's probably worth noting that by default delegation will delegate *all* voting power, unless you explicitly disable the behaviour. This is only really needed if gas limits would prevent delegation changes
 
 ---
 
@@ -40,8 +44,8 @@ A has 500 VP and B has 300 VP. The following cases then entail:
 
 ### 3.1 Epoch Structure (from `Clock.sol`)
 
-| Constant             | Value      |
-|----------------------|------------|
+| Constant             | Value                |
+|----------------------|----------------------|
 | `EPOCH_DURATION`     | 2 weeks (1,209,600s) |
 | `VOTE_DURATION`      | 1 week (604,800s)    |
 | `VOTE_WINDOW_BUFFER` | 1 hour (3,600s)      |
@@ -62,10 +66,12 @@ Three timestamps govern reward computation. The algorithm references them by nam
 
 **1. `vp_ts[V]`** — Voting Power Resolution Timestamp (per voter V). The moment the contract evaluated V's voting power. VP balances and delegation state must both be resolved at this timestamp.
 
-| `enableUpdateVotingPowerHook` | `vp_ts[V]` | Scope | Source |
-|-------------------------------|------------|-------|--------|
-| `false` (secure mode) | `epochStart` | Global — same for all voters | `getPastVotes(account, currentEpochStart())` |
-| `true` (live mode) | `block.timestamp` of V's latest `vote()` tx | Per-voter — each voter has their own | `getVotes(account)` |
+| `enableUpdateVotingPowerHook` | `vp_ts[V]`                                  | Scope                                | Source                                       |
+| ----------------------------- | ------------------------------------------- | ------------------------------------ | -------------------------------------------- |
+| `false` (secure mode)         | `epochStart`                                | Global — same for all voters         | `getPastVotes(account, currentEpochStart())` |
+| `true` (live mode)            | `block.timestamp` of V's latest `vote()` tx | Per-voter — each voter has their own | `getVotes(account)`                          |
+
+> Comment: not about secure mode, it's just about supporting ERC20Votes
 
 Source — `AddressGaugeVoter.sol:144-146`:
 ```solidity
@@ -75,6 +81,8 @@ uint256 votingPower = enableUpdateVotingPowerHook
 ```
 
 In secure mode every voter shares the same `vp_ts` (epoch start). In live mode each voter's `vp_ts` is the block of their latest `vote()` call — any delegation that happened after that block was never picked up by the contract and must be excluded.
+
+> Comment: an implication of this that's very important: if someone delegates to a voter AFTER they have voted, the voter must re-vote to update the vote count. Thus we need to know who delegated to the voter before the last vote taken at the snapshot.
 
 **2. `vote_finalization_ts`** — Vote Finalization. After this no more votes can be cast; all `Voted`/`Reset` events have been emitted and tallies are final.
 
@@ -114,6 +122,8 @@ For epoch N: `backend_snapshot_ts = (N * 1_209_600) + 601_500`
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
+> Comment: no need IMO for the finality gap. Safe window is fine.
+
 **Summary for the indexer / algorithm**:
 - Query VP and resolve delegation state at **`vp_ts[V]`** (epoch start in secure mode; block of V's latest vote in live mode)
 - Index vote events up to **`vote_finalization_ts`**
@@ -137,6 +147,8 @@ event Reset(
     uint256 totalVotingPowerInContract, uint256 timestamp
 );
 ```
+
+> Nit: Formatting of multiline index args on same lines is kinda hard to read. I'd do one or the other.
 
 ### From `EscrowIVotesAdapter`
 
@@ -218,6 +230,7 @@ for voter in active_voters:
 
 > **Note on VP computation**: Use `votingPowerAt(tokenId, vp_ts[V])` RPC calls for accuracy, since the escrow curve (`bias = constant * amount + linear * amount * elapsed`) makes VP depend on both locked amount and lock age. Using raw `locked(tokenId).amount` would be inaccurate when tokens have different ages.
 
+> Comment: yes but permit rounding errors as voting power is split according to the weights vector. 
 ---
 
 ### Step 3: Attribute VP to Original Token Owners
@@ -260,12 +273,13 @@ Carry rounding dust to the next epoch or add to the largest recipient.
 
 Setup: Smit has 2 NFTs (tokens #1: 60 VP, #2: 40 VP), self-delegates both. Jordan has 1 NFT (token #3: 50 VP), delegates to Smit. Smit votes. Exit fees for epoch = 150 KAT.
 
-| Step | Computation | Invariant Check |
-|------|-------------|-----------------|
-| 1 | Active voters: {Smit}. `usedVP[Smit] = 150` | 150 == `epochTotalVotingPowerCast` |
-| 2 | `delegated_tokens[Smit] = {#1, #2, #3}`. Owners: Smit→{#1,#2}, Jordan→{#3} | VP(#1)+VP(#2)+VP(#3) = 60+40+50 = 150 == usedVP[Smit] |
-| 3 | `credit[Smit] = 100`, `credit[Jordan] = 50` | 100+50 = 150 == epochTotalVotingPowerCast |
-| 4 | `reward[Smit] = 100/150 * 150 = 100 KAT`, `reward[Jordan] = 50/150 * 150 = 50 KAT` | 100+50 = 150 == total_fees |
+
+| Step | Computation                                                                        | Invariant Check                                       |
+| ---- | ---------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| 1    | Active voters: {Smit}. `usedVP[Smit] = 150`                                        | 150 == `epochTotalVotingPowerCast`                    |
+| 2    | `delegated_tokens[Smit] = {#1, #2, #3}`. Owners: Smit→{#1,#2}, Jordan→{#3}         | VP(#1)+VP(#2)+VP(#3) = 60+40+50 = 150 == usedVP[Smit] |
+| 3    | `credit[Smit] = 100`, `credit[Jordan] = 50`                                        | 100+50 = 150 == epochTotalVotingPowerCast             |
+| 4    | `reward[Smit] = 100/150 * 150 = 100 KAT`, `reward[Jordan] = 50/150 * 150 = 50 KAT` | 100+50 = 150 == total_fees                            |
 
 ---
 
@@ -284,6 +298,9 @@ T4: vote_finalization_ts
 **Behavior depends on `enableUpdateVotingPowerHook`**:
 
 - **When `false` (secure mode)**: VP is locked at `vp_ts[V]` (= epoch start for all voters) via `getPastVotes(_account, currentEpochStart())`. Alice's re-delegation at T2 does NOT affect this epoch — Bob's vote still includes Alice's VP from epoch start. Carol does NOT get Alice's VP for this epoch.
+
+> Comment: yes on the assumption that T0 < the snapshot
+
 - **When `true`**: `getVotes()` is used (live balance). Bob's `_updateVotingPower` fires when Alice undelegates — Bob's votes are auto-decreased. Carol gets Alice's VP if Carol re-votes. If Carol already voted before T2, Carol would need to re-vote to pick up Alice's power (increases are NOT auto-applied).
 
 **For the indexer**:
@@ -343,11 +360,15 @@ function getWriteEpochId() public view returns (uint256) {
 
 **For the indexer**: Never assume previous votes carry over. Check the current epoch's vote data independently.
 
+> Comment: Legacy mode? I think the NEVER is too strong a word. Likely the hook is not changed. 
+
 #### Edge Case 5: Delegation Persistence Across Epochs
 
 Unlike votes, **delegations DO persist** across epochs. If Alice delegates to Bob in epoch N, her delegation remains active in N+1, N+2, etc. until she explicitly calls `delegate()` or `undelegate()`.
 
 **For the indexer**: Delegation state is cumulative — built from all historical `TokensDelegated`, `TokensUndelegated`, and `DelegateChanged` events. No need to re-check per epoch unless new events appear.
+
+> Comment: In general I recommend the indexer writes the latest state rather than recomputing every time. 
 
 ---
 
@@ -360,6 +381,8 @@ if (fee > 0) { IERC20(token).safeTransfer(address(queue), fee); }
 ```
 
 Track fees per epoch by indexing KAT `Transfer` events where `to == ExitQueue_address`, bucketed by epoch based on block timestamp.
+
+> Comment: may not be necessary. Just clear the queue as you wish and distribute that epoch. 
 
 Before distribution, the DAO (via `WITHDRAW_ROLE`) calls `ExitQueue.withdraw(amount)` to transfer accumulated KAT to the DAO treasury, which the Capital Distributor pays out from.
 
@@ -378,6 +401,8 @@ leaf = keccak256(abi.encodePacked(address, adjusted_cumulative_amount))
 Where: `adjusted_cumulative_amount = cumulative_rewards_all_epochs - total_claimed_from_past_campaigns`
 
 This lets users claim all unclaimed rewards across all past epochs in a **single `claimCampaignPayout()` call** on the latest campaign.
+
+> Comment: nice
 
 ### Per-Epoch Flow
 
