@@ -22,8 +22,8 @@ Delegation is **NFT-based, not amount-based**. Each lock creates an NFT (token I
 
 
 - **Single delegatee per account**: `delegates(account)` returns one address. All delegated tokens from that account go to the same delegatee.
-> Correction: partial delegation is possible and `delegates(account)` can be set but some/all of the tokenIds will be undelegated. Split delegation not possible so delegates always returns a single address or `0x0`
 - **Per-NFT delegation**: You choose which of your NFTs to delegate via `delegate(uint256[] tokenIds)`. Non-delegated NFTs contribute **zero** voting power to anyone.
+- **Partial delegation**: it is possible and `delegates(account)` can be set but some/all of the tokenIds will be undelegated. _Split delegation_ not possible so delegates always returns a single address or `0x0`
 - **No partial voting**: `vote()` always uses 100% of `getVotes(account)`, distributed across gauges by weight.
 - **Voting power source**: `getVotes(account)` returns the total VP of all tokens delegated **TO** that account (from self and from others).
 
@@ -36,7 +36,7 @@ A has 500 VP and B has 300 VP. The following cases then entail:
 | A sets delegatee=B, delegates NFTs worth 100 to B            | 0              | 400 (300+100)  | No          | Yes         |
 | A self-delegates 3 of 5 NFTs (300 VP), 2 idle                | 300            | 300            | Yes (300)   | Yes (300)   |
 
-> Comment: yep it's probably worth noting that by default delegation will delegate *all* voting power, unless you explicitly disable the behaviour. This is only really needed if gas limits would prevent delegation changes
+**NOTE:** by default delegation will delegate *all* voting power `(EscrowIVotesAdapter.delegate(address))`, unless you explicitly disable the behaviour. This is only really needed if gas limits would prevent delegation changes
 
 ---
 
@@ -71,7 +71,7 @@ Three timestamps govern reward computation. The algorithm references them by nam
 | `false` (secure mode)         | `epochStart`                                | Global — same for all voters         | `getPastVotes(account, currentEpochStart())` |
 | `true` (live mode)            | `block.timestamp` of V's latest `vote()` tx | Per-voter — each voter has their own | `getVotes(account)`                          |
 
-> Comment: not about secure mode, it's just about supporting ERC20Votes
+**NOTE:** secure mode is less about security and more about supporting ERC20Votes.
 
 Source — `AddressGaugeVoter.sol:144-146`:
 ```solidity
@@ -81,8 +81,6 @@ uint256 votingPower = enableUpdateVotingPowerHook
 ```
 
 In secure mode every voter shares the same `vp_ts` (epoch start). In live mode each voter's `vp_ts` is the block of their latest `vote()` call — any delegation that happened after that block was never picked up by the contract and must be excluded.
-
-> Comment: an implication of this that's very important: if someone delegates to a voter AFTER they have voted, the voter must re-vote to update the vote count. Thus we need to know who delegated to the voter before the last vote taken at the snapshot.
 
 **2. `vote_finalization_ts`** — Vote Finalization. After this no more votes can be cast; all `Voted`/`Reset` events have been emitted and tallies are final.
 
@@ -122,8 +120,6 @@ For epoch N: `backend_snapshot_ts = (N * 1_209_600) + 601_500`
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
-> Comment: no need IMO for the finality gap. Safe window is fine.
-
 **Summary for the indexer / algorithm**:
 - Query VP and resolve delegation state at **`vp_ts[V]`** (epoch start in secure mode; block of V's latest vote in live mode)
 - Index vote events up to **`vote_finalization_ts`**
@@ -137,18 +133,24 @@ For epoch N: `backend_snapshot_ts = (N * 1_209_600) + 601_500`
 
 ```solidity
 event Voted(
-    address indexed voter, address indexed gauge, uint256 indexed epoch,
-    uint256 votingPowerCastForGauge, uint256 totalVotingPowerInGauge,
-    uint256 totalVotingPowerInContract, uint256 timestamp
+    address indexed voter, 
+    address indexed gauge, 
+    uint256 indexed epoch,
+    uint256 votingPowerCastForGauge, 
+    uint256 totalVotingPowerInGauge,
+    uint256 totalVotingPowerInContract, 
+    uint256 timestamp
 );
 event Reset(
-    address indexed voter, address indexed gauge, uint256 indexed epoch,
-    uint256 votingPowerRemovedFromGauge, uint256 totalVotingPowerInGauge,
-    uint256 totalVotingPowerInContract, uint256 timestamp
+    address indexed voter, 
+    address indexed gauge, 
+    uint256 indexed epoch,
+    uint256 votingPowerRemovedFromGauge, 
+    uint256 totalVotingPowerInGauge,
+    uint256 totalVotingPowerInContract, 
+    uint256 timestamp
 );
 ```
-
-> Nit: Formatting of multiline index args on same lines is kinda hard to read. I'd do one or the other.
 
 ### From `EscrowIVotesAdapter`
 
@@ -228,9 +230,7 @@ for voter in active_voters:
         seen.add(token_id)
 ```
 
-> **Note on VP computation**: Use `votingPowerAt(tokenId, vp_ts[V])` RPC calls for accuracy, since the escrow curve (`bias = constant * amount + linear * amount * elapsed`) makes VP depend on both locked amount and lock age. Using raw `locked(tokenId).amount` would be inaccurate when tokens have different ages.
-
-> Comment: yes but permit rounding errors as voting power is split according to the weights vector. 
+> **Note on VP computation**: Use `votingPowerAt(tokenId, vp_ts[V])` RPC calls for accuracy, since the escrow curve (`bias = constant * amount + linear * amount * elapsed`) makes VP depend on both locked amount and lock age. Using raw `locked(tokenId).amount` would be inaccurate when tokens have different ages. But do permit rounding errors as voting power is split according to the weights vector. 
 ---
 
 ### Step 3: Attribute VP to Original Token Owners
@@ -289,6 +289,7 @@ Setup: Smit has 2 NFTs (tokens #1: 60 VP, #2: 40 VP), self-delegates both. Jorda
 
 ```
 T0: Alice delegates to Bob
+SNAPSHOT <---
 T1: Bob votes for Gauge A (includes Alice's VP)
 T2: Alice re-delegates to Carol
 T3: Carol votes for Gauge B
@@ -298,8 +299,6 @@ T4: vote_finalization_ts
 **Behavior depends on `enableUpdateVotingPowerHook`**:
 
 - **When `false` (secure mode)**: VP is locked at `vp_ts[V]` (= epoch start for all voters) via `getPastVotes(_account, currentEpochStart())`. Alice's re-delegation at T2 does NOT affect this epoch — Bob's vote still includes Alice's VP from epoch start. Carol does NOT get Alice's VP for this epoch.
-
-> Comment: yes on the assumption that T0 < the snapshot
 
 - **When `true`**: `getVotes()` is used (live balance). Bob's `_updateVotingPower` fires when Alice undelegates — Bob's votes are auto-decreased. Carol gets Alice's VP if Carol re-votes. If Carol already voted before T2, Carol would need to re-vote to pick up Alice's power (increases are NOT auto-applied).
 
@@ -356,11 +355,9 @@ function getWriteEpochId() public view returns (uint256) {
 }
 ```
 
-**When `enableUpdateVotingPowerHook = true` (legacy mode)**: Votes use epoch 0 as global storage and DO persist. The indexer must check `epochVoteData[0]` for persisted votes.
+**When `enableUpdateVotingPowerHook = true` **: Votes use epoch 0 as global storage and DO persist. The indexer must check `epochVoteData[0]` for persisted votes.
 
-**For the indexer**: Never assume previous votes carry over. Check the current epoch's vote data independently.
-
-> Comment: Legacy mode? I think the NEVER is too strong a word. Likely the hook is not changed. 
+**For the indexer**: Don't assume previous votes carry over. Check the current epoch's vote data independently, depending on the value of `enableUpdateVotingPowerHook` (i.e. if true => carried over, if false => not carried over).
 
 #### Edge Case 5: Delegation Persistence Across Epochs
 
@@ -368,11 +365,11 @@ Unlike votes, **delegations DO persist** across epochs. If Alice delegates to Bo
 
 **For the indexer**: Delegation state is cumulative — built from all historical `TokensDelegated`, `TokensUndelegated`, and `DelegateChanged` events. No need to re-check per epoch unless new events appear.
 
-> Comment: In general I recommend the indexer writes the latest state rather than recomputing every time. 
+NOTE: In general it's recommended for the indexer to write the latest state rather than recomputing every time. 
 
 ---
 
-## 6. Exit Fee Tracking Per Epoch
+## 6. Exit Fee Tracking Per Epoch (Optional)
 
 Fees accumulate in the `ExitQueue` contract when users call `VotingEscrowIncreasing.withdraw()`:
 ```solidity
@@ -380,9 +377,7 @@ uint256 fee = IExitQueue(queue).exit(_tokenId);
 if (fee > 0) { IERC20(token).safeTransfer(address(queue), fee); }
 ```
 
-Track fees per epoch by indexing KAT `Transfer` events where `to == ExitQueue_address`, bucketed by epoch based on block timestamp.
-
-> Comment: may not be necessary. Just clear the queue as you wish and distribute that epoch. 
+Track fees per epoch by indexing KAT `Transfer` events where `to == ExitQueue_address`, bucketed by epoch based on block timestamp, if required for historical tracking / frontend representation, otherwise just clear the queue as you wish and distribute that epoch.
 
 Before distribution, the DAO (via `WITHDRAW_ROLE`) calls `ExitQueue.withdraw(amount)` to transfer accumulated KAT to the DAO treasury, which the Capital Distributor pays out from.
 
@@ -401,8 +396,6 @@ leaf = keccak256(abi.encodePacked(address, adjusted_cumulative_amount))
 Where: `adjusted_cumulative_amount = cumulative_rewards_all_epochs - total_claimed_from_past_campaigns`
 
 This lets users claim all unclaimed rewards across all past epochs in a **single `claimCampaignPayout()` call** on the latest campaign.
-
-> Comment: nice
 
 ### Per-Epoch Flow
 
