@@ -167,9 +167,19 @@ For each active voter, compute their total used VP:
 usedVP[voter] = SUM(votingPowerCastForGauge) across all gauges in their latest vote batch
 ```
 
-**INVARIANT 1**: `SUM(usedVP[v] for all active voters v) == epochTotalVotingPowerCast[epoch]`
+**INVARIANT 1a**: `SUM(usedVP[v] for all active voters v) == epochTotalVotingPowerCast[epoch]`
 
 Verify by reading `epochTotalVotingPowerCast[epoch]` on-chain, or by using the `totalVotingPowerInContract` value from the chronologically last `Voted` or `Reset` event in the epoch.
+
+**INVARIANT 1b (per gauge)**: For each gauge G with active votes:
+```
+SUM(votingPowerCastForGauge[v][G] for all active voters v) == totalVotingPowerInGauge from the last Voted/Reset event for G in the epoch
+```
+This catches per-gauge indexing errors that may cancel out at the aggregate level in INVARIANT 1a.
+
+**INVARIANT 1c (non-voter exclusion)**: Every address whose chronologically last event in the epoch is `Reset` must not appear in `active_voters`.
+
+This is true by construction from the event-processing logic above, but verify it explicitly as a sanity check. Note: a reset voter's **tokens** may still contribute VP through another active voter's delegation — the owner gets reward credit via Step 3, not as a voter.
 
 ---
 
@@ -193,9 +203,18 @@ For each token, determine the owner from the latest `Transfer` event on the Lock
 
 Result: `delegation_map[V]` = `{ owner_address: [tokenId, ...], ... }`
 
-**INVARIANT 2 (per voter)**: `SUM(votingPowerAt(tokenId, vp_ts[V]) for all tokenIds in delegated_tokens[V]) == usedVP[V]`
+**INVARIANT 2a (per voter)**: `SUM(votingPowerAt(tokenId, vp_ts[V]) for all tokenIds in delegated_tokens[V]) == usedVP[V]`
 
 Verify by calling `VotingEscrowIncreasing.votingPowerAt(tokenId, vp_ts[V])` via RPC for each token. A mismatch means delegation was resolved at the wrong timestamp — the most common cause is using a time after a late delegation that the voter never picked up (see Edge Case 2).
+
+**INVARIANT 2b (no double counting)**: Each veNFT token ID must appear in exactly one voter's `delegated_tokens[V]` set across all active voters. No token may be attributed to two voters in the same epoch.
+```python
+seen = set()
+for voter in active_voters:
+    for token_id in delegated_tokens[voter]:
+        assert token_id not in seen
+        seen.add(token_id)
+```
 
 > **Note on VP computation**: Use `votingPowerAt(tokenId, vp_ts[V])` RPC calls for accuracy, since the escrow curve (`bias = constant * amount + linear * amount * elapsed`) makes VP depend on both locked amount and lock age. Using raw `locked(tokenId).amount` would be inaccurate when tokens have different ages.
 
@@ -216,7 +235,7 @@ for voter in active_voters:
 
 **INVARIANT 3**: `SUM(credit[owner] for all owners) == epochTotalVotingPowerCast[epoch]`
 
-This must equal Invariant 1's value. Every unit of VP that was used in voting is now attributed to exactly one token owner.
+This must equal INVARIANT 1a's value. Every unit of VP that was used in voting is now attributed to exactly one token owner.
 
 ---
 
@@ -290,11 +309,11 @@ Bob would need to call `vote()` again to include Alice's power. If Bob doesn't r
 
 **How Steps 1–4 handle this**:
 - **Step 1**: `usedVP[Bob] = 1000` (from Voted event at T1).
-- **Step 2**: `vp_ts[Bob]` = epoch start (secure mode) or block of T1 (live mode). In both cases, Alice had NOT yet delegated at that timestamp → `delegated_tokens[Bob]` contains only Bob's own tokens → VP sum = 1000 → INVARIANT 2 holds (1000 == 1000).
+- **Step 2**: `vp_ts[Bob]` = epoch start (secure mode) or block of T1 (live mode). In both cases, Alice had NOT yet delegated at that timestamp → `delegated_tokens[Bob]` contains only Bob's own tokens → VP sum = 1000 → INVARIANT 2a holds (1000 == 1000).
 - **Step 3**: `credit[Bob] = 1000`. Alice appears nowhere → `credit[Alice]` does not exist.
 - **Step 4**: Bob gets 100% of fees. Alice gets nothing.
 
-If the indexer mistakenly resolved delegation at `vote_finalization_ts` (after T2), Alice's tokens would appear delegated to Bob, VP sum would be 1500 ≠ `usedVP[Bob]` = 1000, and **INVARIANT 2 would fail** — catching the error.
+If the indexer mistakenly resolved delegation at `vote_finalization_ts` (after T2), Alice's tokens would appear delegated to Bob, VP sum would be 1500 ≠ `usedVP[Bob]` = 1000, and **INVARIANT 2a would fail** — catching the error.
 
 #### Edge Case 3: Multiple Votes in One Epoch
 
@@ -632,4 +651,4 @@ T+14d       Epoch N+1 starts
 | **Multi-epoch claims** | New campaign per epoch with cumulative Merkle tree — single `claimCampaignPayout()` on latest campaign |
 | **Distribution contract** | Capital Distributor + MerkleDistributorStrategy |
 | **Fee source** | ExitQueue → DAO treasury → Capital Distributor payout |
-| **Invariants** | 4 checkpoints, each verified before proceeding |
+| **Invariants** | 7 checks across 4 steps: total VP (1a), per-gauge VP (1b), non-voter exclusion (1c), delegation VP (2a), no double counting (2b), attribution sum (3), reward bounds (4) |
