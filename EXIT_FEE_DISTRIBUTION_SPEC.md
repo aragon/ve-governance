@@ -60,12 +60,12 @@ A has 500 VP and B has 300 VP. The following cases then entail:
 
 Three timestamps govern reward computation. The algorithm references them by name throughout this spec.
 
-**1. `vp_snapshot_ts`** — Voting Power Snapshot. When each delegate's voting power is locked in for the epoch.
+**1. `vp_ts[V]`** — Voting Power Resolution Timestamp (per voter V). The moment the contract evaluated V's voting power. VP balances and delegation state must both be resolved at this timestamp.
 
-| `enableUpdateVotingPowerHook` | `vp_snapshot_ts` | Source |
-|-------------------------------|------------------|--------|
-| `false` (secure mode) | `epochStart` | `getPastVotes(account, currentEpochStart())` |
-| `true` (live mode) | `block.timestamp` at time of vote | `getVotes(account)` |
+| `enableUpdateVotingPowerHook` | `vp_ts[V]` | Scope | Source |
+|-------------------------------|------------|-------|--------|
+| `false` (secure mode) | `epochStart` | Global — same for all voters | `getPastVotes(account, currentEpochStart())` |
+| `true` (live mode) | `block.timestamp` of V's latest `vote()` tx | Per-voter — each voter has their own | `getVotes(account)` |
 
 Source — `AddressGaugeVoter.sol:144-146`:
 ```solidity
@@ -74,7 +74,7 @@ uint256 votingPower = enableUpdateVotingPowerHook
     : IVotes(ivotesAdapter).getPastVotes(_account, currentEpochStart());
 ```
 
-In secure mode the indexer must resolve both VP balances and delegation state at `vp_snapshot_ts` (= epoch start), not at any later point.
+In secure mode every voter shares the same `vp_ts` (epoch start). In live mode each voter's `vp_ts` is the block of their latest `vote()` call — any delegation that happened after that block was never picked up by the contract and must be excluded.
 
 **2. `vote_finalization_ts`** — Vote Finalization. After this no more votes can be cast; all `Voted`/`Reset` events have been emitted and tallies are final.
 
@@ -98,9 +98,9 @@ For epoch N: `backend_snapshot_ts = (N * 1_209_600) + 601_500`
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │                            EPOCH TIMELINE                                    │
 │                                                                              │
-│  vp_snapshot_ts              vote_finalization_ts   backend_snapshot_ts       │
-│  (epoch start,               (epochStart+601200)   (vote_finalization_ts     │
-│   secure mode)                                      + 300)                   │
+│  vp_ts[V]                    vote_finalization_ts   backend_snapshot_ts       │
+│  (epoch start in secure;     (epochStart+601200)   (vote_finalization_ts     │
+│   vote block in live)                               + 300)                   │
 │       │                             │                  │                     │
 │       ▼                             ▼                  ▼                     │
 │  ─────●──────┬─────────────────────●──────────────────●─────────────────── │
@@ -115,7 +115,7 @@ For epoch N: `backend_snapshot_ts = (N * 1_209_600) + 601_500`
 ```
 
 **Summary for the indexer / algorithm**:
-- Query VP and resolve delegation state at **`vp_snapshot_ts`**
+- Query VP and resolve delegation state at **`vp_ts[V]`** (epoch start in secure mode; block of V's latest vote in live mode)
 - Index vote events up to **`vote_finalization_ts`**
 - Run reward computation at **`backend_snapshot_ts`**
 
@@ -175,22 +175,29 @@ Verify by reading `epochTotalVotingPowerCast[epoch]` on-chain, or by using the `
 
 ### Step 2: Resolve Delegation Sources Per Voter
 
-For each active voter V, determine which token IDs are currently delegated to V at `vp_snapshot_ts` (see Section 3.2). Build this from:
+For each active voter V, determine which token IDs were delegated to V **at the moment the contract evaluated V's voting power**. The resolution timestamp depends on the mode:
 
-1. All `TokensDelegated(sender, delegatee=V, tokenIds)` events up to `vp_snapshot_ts`
-2. Minus all `TokensUndelegated(sender, delegatee=V, tokenIds)` events up to `vp_snapshot_ts`
+- **Secure mode (`hook = false`)**: Use `epochStart` (single global timestamp for all voters). The contract called `getPastVotes(V, currentEpochStart())`, so delegation and VP are both locked at epoch start.
+- **Live mode (`hook = true`)**: Use the `block.timestamp` of V's **latest `vote()` transaction** in the epoch. The contract called `getVotes(V)` at that block, so delegation and VP reflect that exact moment. Each voter has its own resolution timestamp.
 
-Result: `delegated_tokens[V]` = set of tokenIds currently delegated to V.
+Let `vp_ts[V]` denote this per-voter resolution timestamp.
+
+Build the delegation set from:
+
+1. All `TokensDelegated(sender, delegatee=V, tokenIds)` events up to `vp_ts[V]`
+2. Minus all `TokensUndelegated(sender, delegatee=V, tokenIds)` events up to `vp_ts[V]`
+
+Result: `delegated_tokens[V]` = set of tokenIds delegated to V at `vp_ts[V]`.
 
 For each token, determine the owner from the latest `Transfer` event on the Lock NFT.
 
 Result: `delegation_map[V]` = `{ owner_address: [tokenId, ...], ... }`
 
-**INVARIANT 2 (per voter)**: `SUM(votingPowerAt(tokenId, vp_snapshot_ts) for all tokenIds in delegated_tokens[V]) == usedVP[V]`
+**INVARIANT 2 (per voter)**: `SUM(votingPowerAt(tokenId, vp_ts[V]) for all tokenIds in delegated_tokens[V]) == usedVP[V]`
 
-Verify by calling `VotingEscrowIncreasing.votingPowerAt(tokenId, vp_snapshot_ts)` via RPC for each token.
+Verify by calling `VotingEscrowIncreasing.votingPowerAt(tokenId, vp_ts[V])` via RPC for each token. A mismatch means delegation was resolved at the wrong timestamp — the most common cause is using a time after a late delegation that the voter never picked up (see Edge Case 2).
 
-> **Note on VP computation**: Use `votingPowerAt(tokenId, vp_snapshot_ts)` RPC calls for accuracy, since the escrow curve (`bias = constant * amount + linear * amount * elapsed`) makes VP depend on both locked amount and lock age. Using raw `locked(tokenId).amount` would be inaccurate when tokens have different ages.
+> **Note on VP computation**: Use `votingPowerAt(tokenId, vp_ts[V])` RPC calls for accuracy, since the escrow curve (`bias = constant * amount + linear * amount * elapsed`) makes VP depend on both locked amount and lock age. Using raw `locked(tokenId).amount` would be inaccurate when tokens have different ages.
 
 ---
 
@@ -203,7 +210,7 @@ credit = {}  # owner_address => total VP credited
 for voter in active_voters:
     for owner, token_ids in delegation_map[voter].items():
         for token_id in token_ids:
-            vp = voting_power_at(token_id, vp_snapshot_ts)
+            vp = voting_power_at(token_id, vp_ts[voter])
             credit[owner] = credit.get(owner, 0) + vp
 ```
 
@@ -257,10 +264,12 @@ T4: vote_finalization_ts
 
 **Behavior depends on `enableUpdateVotingPowerHook`**:
 
-- **When `false` (secure mode)**: VP is locked at `vp_snapshot_ts` (= epoch start) via `getPastVotes(_account, currentEpochStart())`. Alice's re-delegation at T2 does NOT affect this epoch — Bob's vote still includes Alice's VP from `vp_snapshot_ts`. Carol does NOT get Alice's VP for this epoch.
+- **When `false` (secure mode)**: VP is locked at `vp_ts[V]` (= epoch start for all voters) via `getPastVotes(_account, currentEpochStart())`. Alice's re-delegation at T2 does NOT affect this epoch — Bob's vote still includes Alice's VP from epoch start. Carol does NOT get Alice's VP for this epoch.
 - **When `true`**: `getVotes()` is used (live balance). Bob's `_updateVotingPower` fires when Alice undelegates — Bob's votes are auto-decreased. Carol gets Alice's VP if Carol re-votes. If Carol already voted before T2, Carol would need to re-vote to pick up Alice's power (increases are NOT auto-applied).
 
-**For the indexer**: In secure mode, resolve both VP balances and delegation state at `vp_snapshot_ts`, not at `vote_finalization_ts` or `backend_snapshot_ts`.
+**For the indexer**:
+- **Secure mode (`hook = false`)**: `vp_ts[V] = epochStart` (= `epoch_id * 1_209_600`) for all voters. Resolve both VP balances and delegation state at epoch start. Do NOT use `vote_finalization_ts` or `backend_snapshot_ts` — those are later and would reflect changed delegation state.
+- **Live mode (`hook = true`)**: `vp_ts[V]` = `block.timestamp` of V's **latest** `vote()` call. Resolve delegation state at that block to determine which token owners contributed to V's VP at the moment they voted.
 
 #### Edge Case 2: Late Delegation (after delegate already voted)
 
@@ -279,7 +288,13 @@ if (voteData.usedVotingPower < votingPower) return;
 
 Bob would need to call `vote()` again to include Alice's power. If Bob doesn't re-vote, Alice's contribution = 0 for this epoch.
 
-**For the indexer**: Late delegators whose power wasn't included in the delegate's vote get **zero credit** for that epoch. Only credit VP that was part of an actual `Voted` event.
+**How Steps 1–4 handle this**:
+- **Step 1**: `usedVP[Bob] = 1000` (from Voted event at T1).
+- **Step 2**: `vp_ts[Bob]` = epoch start (secure mode) or block of T1 (live mode). In both cases, Alice had NOT yet delegated at that timestamp → `delegated_tokens[Bob]` contains only Bob's own tokens → VP sum = 1000 → INVARIANT 2 holds (1000 == 1000).
+- **Step 3**: `credit[Bob] = 1000`. Alice appears nowhere → `credit[Alice]` does not exist.
+- **Step 4**: Bob gets 100% of fees. Alice gets nothing.
+
+If the indexer mistakenly resolved delegation at `vote_finalization_ts` (after T2), Alice's tokens would appear delegated to Bob, VP sum would be 1500 ≠ `usedVP[Bob]` = 1000, and **INVARIANT 2 would fail** — catching the error.
 
 #### Edge Case 3: Multiple Votes in One Epoch
 
@@ -563,11 +578,11 @@ CREATE TABLE epoch_campaigns (
 
 | Call | Contract | Purpose |
 |------|----------|---------|
-| `votingPowerAt(tokenId, vp_snapshot_ts)` | VotingEscrowIncreasing | VP per token at `vp_snapshot_ts` |
+| `votingPowerAt(tokenId, vp_ts[V])` | VotingEscrowIncreasing | VP per token at `vp_ts[V]` (see Section 3.2) |
 | `epochTotalVotingPowerCast(epoch)` | AddressGaugeVoter | Invariant verification |
 | `getClaimedAmount(campaignId, addr)` | CapitalDistributorPlugin | Verify indexed claim totals |
 
-All other state is reconstructed from indexed events. RPC calls use `vp_snapshot_ts` for VP computation and invariant checks (see Section 3.2).
+All other state is reconstructed from indexed events. RPC calls use `vp_ts[V]` for VP computation and invariant checks (see Section 3.2).
 
 ---
 
@@ -576,7 +591,7 @@ All other state is reconstructed from indexed events. RPC calls use `vp_snapshot
 ### Epoch Lifecycle
 
 ```
-T+0h        Epoch N starts (= vp_snapshot_ts in secure mode)
+T+0h        Epoch N starts (= vp_ts[V] for all V in secure mode)
 T+1h        Voting window opens
 T+6d23h     vote_finalization_ts: voting closes
 T+6d23h05m  backend_snapshot_ts: run Steps 1-4, verify invariants
@@ -596,7 +611,7 @@ T+14d       Epoch N+1 starts
 
 ## 11. Security Considerations
 
-1. **Snapshot timing**: The backend runs at `backend_snapshot_ts`, strictly after `vote_finalization_ts`. The 5-minute buffer ensures block finality. VP and delegation state are always read at `vp_snapshot_ts`.
+1. **Snapshot timing**: The backend runs at `backend_snapshot_ts`, strictly after `vote_finalization_ts`. The 5-minute buffer ensures block finality. VP and delegation state are read at `vp_ts[V]` per voter (epoch start in secure mode; block of V's latest vote in live mode).
 2. **Delegation gaming**: Rewards go to original token owners. Receiving delegations doesn't inflate your reward share — the delegator gets credit for their own VP.
 3. **Vote-then-reset**: Correctly excluded at Step 1 (no active votes at `vote_finalization_ts`).
 4. **Merkle replay**: Each campaign has its own `alreadyClaimed` tracking. A user can only claim their adjusted cumulative amount once per campaign.
@@ -613,7 +628,7 @@ T+14d       Epoch N+1 starts
 | **Delegation handling** | Delegator gets rewards for their own VP, even if someone else voted with it |
 | **Undelegated tokens** | Zero VP, zero rewards |
 | **Partial voting** | Not possible — `vote()` uses 100% of `getVotes()` |
-| **VP snapshot** | `vp_snapshot_ts` = epoch start (secure mode). Backend runs at `backend_snapshot_ts` = `vote_finalization_ts` + 300s |
+| **VP resolution** | `vp_ts[V]` = epoch start (secure) or block of V's latest vote (live). Backend runs at `backend_snapshot_ts` = `vote_finalization_ts` + 300s |
 | **Multi-epoch claims** | New campaign per epoch with cumulative Merkle tree — single `claimCampaignPayout()` on latest campaign |
 | **Distribution contract** | Capital Distributor + MerkleDistributorStrategy |
 | **Fee source** | ExitQueue → DAO treasury → Capital Distributor payout |
