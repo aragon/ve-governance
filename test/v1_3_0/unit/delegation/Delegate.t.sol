@@ -3,6 +3,7 @@ pragma solidity ^0.8.17;
 import {Base} from "./Base.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {DaoUnauthorized} from "@aragon/osx-commons-contracts/src/permission/auth/auth.sol";
+import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
 contract TestDelegate is Base {
     function setUp() public override {
@@ -151,13 +152,34 @@ contract TestDelegate is Base {
         dg.delegate(multiIds);
     }
 
-    function testRevert_IfNotApprovedOrOwner() public {
+    function testRevert_IfNotOwner() public {
         dg.setDelegateAddress(alice);
 
-        _mockApprovedOwner(false);
+        // Mock that someone else (alice) is the owner, not this contract
+        _mockOwner(alice);
 
-        vm.expectRevert(NotApprovedOrOwner.selector);
+        vm.expectRevert(NotOwner.selector);
         dg.delegate(singleId);
+    }
+
+    function testRevert_IfNotOwnerOfOneTokenButOwnerOfAnother() public {
+        dg.setDelegateAddress(alice);
+
+        // sender (address(this)) owns token 1 but not token 2
+        // token 2 is owned by alice but approved to address(this)
+        _mockOwnerOf(multiIds[0], address(this));
+        _mockOwnerOf(multiIds[1], alice);
+        _mockGetApproved(multiIds[1], address(this));
+
+        // Verify that token 2 is approved to address(this)
+        assertEq(IERC721(address(lockNFT)).getApproved(multiIds[1]), address(this));
+
+        _mockLocked(multiIds[0], 10, weekStartTs(block.timestamp));
+        _mockLocked(multiIds[1], 10, weekStartTs(block.timestamp));
+
+        // Should fail because sender doesn't own token 2, even though it's approved
+        vm.expectRevert(NotOwner.selector);
+        dg.delegate(multiIds);
     }
 
     function testRevert_IfTokenAlreadyDelegated() public {

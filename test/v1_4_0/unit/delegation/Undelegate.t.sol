@@ -45,10 +45,11 @@ contract TestUndelegate is Base {
         dg.undelegate(getIds(1));
     }
 
-    function testRevert_IfNotApprovedOrOwner() public givenDelegatedTokens {
-        _mockApprovedOwner(false);
+    function testRevert_IfNotOwner() public givenDelegatedTokens {
+        // Mock that someone else (alice) is the owner, not this contract
+        _mockOwner(alice);
 
-        vm.expectRevert(NotApprovedOrOwner.selector);
+        vm.expectRevert(NotOwner.selector);
         dg.undelegate(multiIds);
     }
 
