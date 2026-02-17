@@ -437,8 +437,17 @@ contract EscrowIVotesAdapter is
         if (lastPoint.slope < 0) lastPoint.slope = 0;
         if (lastPoint.bias < 0) lastPoint.bias = 0;
 
-        latestPointIndex[_delegatee] = ++latestPointIndex_;
-        pointHistory[_delegatee][latestPointIndex_] = lastPoint;
+        // If the timestamp of last stored token point is the same as
+        // current timestamp, overwrite it, otherwise store a new one.
+        if(
+            latestPointIndex_ != 0 && 
+            pointHistory[_delegatee][latestPointIndex_].writtenTs == block.timestamp
+        ) {
+            pointHistory[_delegatee][latestPointIndex_] = lastPoint;
+        } else {
+            latestPointIndex[_delegatee] = ++latestPointIndex_;
+            pointHistory[_delegatee][latestPointIndex_] = lastPoint;
+        }
     }
 
     /// @notice Proxies a call to the ERC721 contract
