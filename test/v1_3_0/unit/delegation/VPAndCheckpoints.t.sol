@@ -319,14 +319,17 @@ contract TestVPAndCheckpoints is Base {
         // First delegation - creates checkpoint index 1
         dg.delegate(getIds(tokenId1));
         assertEq(dg.latestPointIndex(alice), 1);
+        assertEq(dg.getVotes(alice), amount1);
 
         // Second delegation at same timestamp - should overwrite checkpoint index 1
         dg.delegate(getIds(tokenId2, tokenId3));
         assertEq(dg.latestPointIndex(alice), 1); // Still index 1, not 2
+        assertEq(dg.getVotes(alice), amount1 + amount2 + amount3);
 
         // Undelegate at same timestamp - should still overwrite checkpoint index 1
         dg.undelegate(getIds(tokenId2, tokenId3));
         assertEq(dg.latestPointIndex(alice), 1); // Still index 1, not 3
+        assertEq(dg.getVotes(alice), amount1);
 
         // Verify final state: only token1 is delegated
         uint256 expectedVP = bias(amount1, delegateTs - start);
