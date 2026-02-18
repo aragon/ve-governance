@@ -226,12 +226,14 @@ contract EscrowIVotesAdapter is
     ) internal virtual {
         (int256 totalBias, int256 totalSlope) = (0, 0);
 
+        address lockNFT = IVotingEscrow(escrow).lockNFT();
+
         for (uint256 i = 0; i < _tokenIds.length; i++) {
             uint256 tokenId = _tokenIds[i];
 
             if (_validate) {
-                if (!IVotingEscrow(escrow).isApprovedOrOwner(_sender, tokenId)) {
-                    revert NotApprovedOrOwner();
+                if (IERC721EMB(lockNFT).ownerOf(tokenId) != _sender) {
+                    revert NotOwner();
                 }
 
                 if (tokenIsDelegated(tokenId)) {
@@ -276,13 +278,15 @@ contract EscrowIVotesAdapter is
         bool _validate
     ) internal virtual {
         (int256 totalBias, int256 totalSlope) = (0, 0);
+        
+        address lockNFT = IVotingEscrow(escrow).lockNFT();
 
         for (uint256 i = 0; i < _tokenIds.length; i++) {
             uint256 tokenId = _tokenIds[i];
 
             if (_validate) {
-                if (!IVotingEscrow(escrow).isApprovedOrOwner(_sender, tokenId)) {
-                    revert NotApprovedOrOwner();
+                if (IERC721EMB(lockNFT).ownerOf(tokenId) != _sender) {
+                    revert NotOwner();
                 }
 
                 if (!tokenIsDelegated(tokenId)) {

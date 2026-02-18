@@ -131,6 +131,7 @@ contract TestVPAndCheckpoints is Base {
             ids[0] = 1;
             vm.startPrank(bob);
             _mockLocked(ids[0], bobAmount, bobDelegateStart);
+            _mockOwnerOf(ids[0], bob);
             dg.setDelegateAddress(alice);
             dg.delegate(ids);
             dg.undelegate(ids);
@@ -150,6 +151,7 @@ contract TestVPAndCheckpoints is Base {
             ids[0] = 2;
             vm.startPrank(carol);
             _mockLocked(ids[0], carolAmount, carolDelegateStart);
+            _mockOwnerOf(ids[0], carol);
             dg.setDelegateAddress(alice);
             dg.delegate(ids);
             vm.stopPrank();
