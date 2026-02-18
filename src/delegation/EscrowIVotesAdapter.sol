@@ -439,7 +439,7 @@ contract EscrowIVotesAdapter is
 
         // If the timestamp of last stored token point is the same as
         // current timestamp, overwrite it, otherwise store a new one.
-        if(
+        if (
             latestPointIndex_ != 0 && 
             pointHistory[_delegatee][latestPointIndex_].writtenTs == block.timestamp
         ) {
