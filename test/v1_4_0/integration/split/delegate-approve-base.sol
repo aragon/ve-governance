@@ -19,7 +19,7 @@ import {
     IEscrowCurveGlobalStorage
 } from "../../versions.sol";
 
-contract TestSplit_ApproveDelegateAndSplit is
+abstract contract TestSplit_ApproveDelegateBase is
     IEscrowCurveTokenStorage,
     IEscrowCurveGlobalStorage,
     EscrowBase
@@ -31,7 +31,7 @@ contract TestSplit_ApproveDelegateAndSplit is
     uint256 aliceAmount = 30e18;
     uint256 checkpointTs;
 
-    function setUp() public override {
+    function setUp() public virtual override {
         super.setUp();
         super.mintAndApproveEscrow();
 
@@ -69,23 +69,17 @@ contract TestSplit_ApproveDelegateAndSplit is
         assertEq(ivotesAdapter.getVotes(alice), 0);
     }
 
-    function _undelegateAndAssert(uint256[] memory _tokenIds) internal {
-        vm.prank(alice);
-        ivotesAdapter.undelegate(_tokenIds);
+    function _removeDelegationAndAssert(uint256[] memory _tokenIds) internal virtual;
 
-        for (uint256 i = 0; i < _tokenIds.length; i++) {
-            assertEq(ivotesAdapter.tokenIsDelegated(_tokenIds[i]), false);
-        }
-        assertEq(ivotesAdapter.numberOfDelegatedTokens(alice), 0);
-        // Bob loses delegated voting power, Alice has none either (tokens are undelegated, not self-delegated)
-        assertEq(ivotesAdapter.getVotes(bob), 0);
-        assertEq(ivotesAdapter.getVotes(alice), 0);
+    function _singleVote(address _gauge) internal pure returns (IAddressGaugeVote.GaugeVote[] memory votes) {
+        votes = new IAddressGaugeVote.GaugeVote[](1);
+        votes[0] = IAddressGaugeVote.GaugeVote(100, _gauge);
     }
 
     /// @notice Alice creates a lock, delegates to Bob, approves Charlie,
     ///         then Charlie splits Alice's veNFT.
     ///         Both resulting tokens must remain delegated to Bob.
-    ///         Alice then undelegates successfully.
+    ///         Alice then removes delegation successfully.
     function test_Split_ByApprovedThirdParty_MaintainsDelegation() public {
         _approveCharlieAndSplit(1, 5e18);
 
@@ -94,12 +88,12 @@ contract TestSplit_ApproveDelegateAndSplit is
         tokenIds[1] = 2;
 
         _assertDelegatedToBob(tokenIds);
-        _undelegateAndAssert(tokenIds);
+        _removeDelegationAndAssert(tokenIds);
     }
 
     /// @notice Same as above but Bob votes on a gauge after receiving delegation.
     ///         The recorded vote on the gauge must remain unchanged after split.
-    ///         Alice then undelegates successfully.
+    ///         Alice then removes delegation successfully.
     function test_Split_ByApprovedThirdParty_MaintainsDelegationAndVotes() public {
         address gauge = address(0x777);
         voter.createGauge(gauge, "metadata");
@@ -121,12 +115,12 @@ contract TestSplit_ApproveDelegateAndSplit is
         // Bob's gauge vote unchanged (split doesn't change total amount)
         assertEq(voter.votes(bob, gauge), bias(aliceAmount, block.timestamp - checkpointTs));
 
-        _undelegateAndAssert(tokenIds);
+        _removeDelegationAndAssert(tokenIds);
     }
 
     /// @notice Charlie splits Alice's delegated veNFT multiple times.
     ///         All resulting tokens must remain delegated to Bob.
-    ///         Alice then undelegates successfully.
+    ///         Alice then removes delegation successfully.
     function test_Split_ByApprovedThirdParty_MultipleSplits_MaintainsDelegation() public {
         // Charlie splits: tokenId 1 (30e18) -> tokenId 1 (20e18) + tokenId 2 (10e18)
         _approveCharlieAndSplit(1, 10e18);
@@ -140,11 +134,6 @@ contract TestSplit_ApproveDelegateAndSplit is
         tokenIds[2] = 3;
 
         _assertDelegatedToBob(tokenIds);
-        _undelegateAndAssert(tokenIds);
-    }
-
-    function _singleVote(address _gauge) internal pure returns (IAddressGaugeVote.GaugeVote[] memory votes) {
-        votes = new IAddressGaugeVote.GaugeVote[](1);
-        votes[0] = IAddressGaugeVote.GaugeVote(100, _gauge);
+        _removeDelegationAndAssert(tokenIds);
     }
 }
