@@ -19,7 +19,7 @@ import {
     IEscrowCurveGlobalStorage
 } from "../../versions.sol";
 
-contract TestMerge_ApproveDelegateAndMerge is
+abstract contract TestMerge_ApproveDelegateBase is
     IEscrowCurveTokenStorage,
     IEscrowCurveGlobalStorage,
     EscrowBase
@@ -35,7 +35,7 @@ contract TestMerge_ApproveDelegateAndMerge is
     uint256 checkpointTs;
     uint256 writtenTs;
 
-    function setUp() public override {
+    function setUp() public virtual override {
         super.setUp();
         super.mintAndApproveEscrow();
 
@@ -71,23 +71,17 @@ contract TestMerge_ApproveDelegateAndMerge is
         escrow.merge(_from, _to);
     }
 
-    function _undelegateAndAssert(uint256 _survivingTokenId) internal {
-        uint256[] memory tokenIds = new uint256[](1);
-        tokenIds[0] = _survivingTokenId;
+    function _removeDelegationAndAssert(uint256 _survivingTokenId) internal virtual;
 
-        vm.prank(alice);
-        ivotesAdapter.undelegate(tokenIds);
-
-        assertEq(ivotesAdapter.tokenIsDelegated(_survivingTokenId), false);
-        assertEq(ivotesAdapter.numberOfDelegatedTokens(alice), 0);
-        assertEq(ivotesAdapter.getVotes(bob), 0);
-        assertEq(ivotesAdapter.getVotes(alice), 0);
+    function _singleVote(address _gauge) internal pure returns (IAddressGaugeVote.GaugeVote[] memory votes) {
+        votes = new IAddressGaugeVote.GaugeVote[](1);
+        votes[0] = IAddressGaugeVote.GaugeVote(100, _gauge);
     }
 
     /// @notice Alice has token 1 undelegated and token 2 delegated to Bob.
     ///         Charlie (approved) merges token 1 into token 2.
     ///         The surviving token 2 must remain delegated to Bob with combined voting power.
-    ///         Alice then undelegates successfully.
+    ///         Alice then removes delegation successfully.
     function test_Merge_UndelegatedInto_Delegated_ByApprovedThirdParty() public {
         // Alice sets Bob as delegatee and only delegates token 2
         uint256[] memory delegateIds = new uint256[](1);
@@ -113,13 +107,64 @@ contract TestMerge_ApproveDelegateAndMerge is
         // Bob's voting power should reflect the combined amount
         assertEq(ivotesAdapter.getVotes(bob), bias(totalAmount, maxTime));
 
-        _undelegateAndAssert(2);
+        _removeDelegationAndAssert(2);
+    }
+
+    /// @notice Alice has token 1 undelegated and token 2 delegated to Bob.
+    ///         Bob votes on a gauge with his delegated power.
+    ///         Charlie (approved) merges token 1 into token 2.
+    ///         The surviving token 2 must remain delegated to Bob with combined voting power.
+    ///         Bob's gauge vote must remain unchanged after merge.
+    ///         Alice then removes delegation successfully.
+    function test_Merge_UndelegatedInto_Delegated_ByApprovedThirdParty_WithVote() public {
+        // Alice sets Bob as delegatee and only delegates token 2
+        uint256[] memory delegateIds = new uint256[](1);
+        delegateIds[0] = 2;
+        vm.startPrank(alice);
+        ivotesAdapter.setDelegateAddress(bob);
+        ivotesAdapter.delegate(delegateIds);
+        vm.stopPrank();
+
+        assertEq(ivotesAdapter.tokenIsDelegated(1), false);
+        assertEq(ivotesAdapter.tokenIsDelegated(2), true);
+        assertEq(ivotesAdapter.numberOfDelegatedTokens(alice), 1);
+
+        // Bob votes on a gauge with his delegated voting power
+        address gauge = address(0x777);
+        voter.createGauge(gauge, "metadata");
+
+        vm.prank(bob);
+        voter.vote(_singleVote(gauge));
+
+        uint256 bobVoteAtGauge = voter.votes(bob, gauge);
+        assertEq(bobVoteAtGauge, ivotesAdapter.getVotes(bob));
+
+        // Both locks have the same start time, so merge is allowed without maturation
+        _approveCharlieAndMerge(1, 2);
+
+        // Token 1 is burned, token 2 survives and remains delegated
+        assertEq(ivotesAdapter.tokenIsDelegated(2), true);
+        assertEq(ivotesAdapter.numberOfDelegatedTokens(alice), 1);
+        // Bob's voting power should reflect the combined amount
+        assertEq(ivotesAdapter.getVotes(bob), bias(totalAmount, block.timestamp - checkpointTs));
+
+        // Bob's gauge vote unchanged from when he voted (pre-merge, only amount2 delegated)
+        assertEq(voter.votes(bob, gauge), bobVoteAtGauge);
+
+        // Bob revotes to use his increased voting power from the merge
+        vm.prank(bob);
+        voter.vote(_singleVote(gauge));
+
+        // Bob's gauge vote now reflects the combined amount
+        assertEq(voter.votes(bob, gauge), bias(totalAmount, block.timestamp - checkpointTs));
+
+        _removeDelegationAndAssert(2);
     }
 
     /// @notice Alice has token 1 delegated to Bob and token 2 undelegated.
     ///         Charlie (approved) merges token 1 into token 2.
     ///         The surviving token 2 must become delegated to Bob with combined voting power.
-    ///         Alice then undelegates successfully.
+    ///         Alice then removes delegation successfully.
     function test_Merge_DelegatedInto_Undelegated_ByApprovedThirdParty() public {
         // Alice sets Bob as delegatee and only delegates token 1
         uint256[] memory delegateIds = new uint256[](1);
@@ -144,13 +189,13 @@ contract TestMerge_ApproveDelegateAndMerge is
         assertEq(ivotesAdapter.numberOfDelegatedTokens(alice), 1);
         assertEq(ivotesAdapter.getVotes(bob), bias(totalAmount, maxTime));
 
-        _undelegateAndAssert(2);
+        _removeDelegationAndAssert(2);
     }
 
     /// @notice Both of Alice's tokens are delegated to Bob.
     ///         Charlie (approved) merges token 1 into token 2.
     ///         The surviving token 2 must remain delegated to Bob with combined voting power.
-    ///         Alice then undelegates successfully.
+    ///         Alice then removes delegation successfully.
     function test_Merge_BothDelegated_ByApprovedThirdParty() public {
         // Alice delegates to Bob (both tokens get delegated)
         vm.prank(alice);
@@ -171,6 +216,6 @@ contract TestMerge_ApproveDelegateAndMerge is
         assertEq(ivotesAdapter.numberOfDelegatedTokens(alice), 1);
         assertEq(ivotesAdapter.getVotes(bob), bias(totalAmount, maxTime));
 
-        _undelegateAndAssert(2);
+        _removeDelegationAndAssert(2);
     }
 }
