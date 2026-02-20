@@ -36,4 +36,45 @@ contract TestSplit_ApproveDelegateAndTransfer is TestSplit_ApproveDelegateBase {
         assertEq(ivotesAdapter.getVotes(dave), 0);
         assertEq(ivotesAdapter.getVotes(alice), 0);
     }
+
+    /// @notice After split, Alice transfers only the split-off token to Dave.
+    ///         Bob retains voting power from the remaining token.
+    function test_Split_PartialTransfer_BobRetainsRemainingPower() public {
+        uint256 splitAmount = 5e18;
+        _approveCharlieAndSplit(1, splitAmount);
+
+        vm.prank(alice);
+        nftLock.transferFrom(alice, dave, 2);
+
+        uint256 elapsed = block.timestamp - checkpointTs;
+        assertEq(ivotesAdapter.numberOfDelegatedTokens(alice), 1);
+        assertEq(ivotesAdapter.numberOfDelegatedTokens(dave), 1);
+        assertEq(ivotesAdapter.getVotes(bob), bias(aliceAmount - splitAmount, elapsed));
+        assertEq(ivotesAdapter.getVotes(eve), bias(splitAmount, elapsed));
+    }
+
+    /// @notice After split + partial transfer, Bob's gauge vote decreases automatically
+    ///         to reflect only the remaining token's voting power.
+    function test_Split_PartialTransfer_BobGaugeVoteDecreases() public {
+        uint256 splitAmount = 5e18;
+
+        address gauge = address(0x777);
+        voter.createGauge(gauge, "metadata");
+
+        vm.prank(bob);
+        voter.vote(_singleVote(gauge));
+
+        uint256 elapsed = block.timestamp - checkpointTs;
+        assertEq(voter.votes(bob, gauge), bias(aliceAmount, elapsed));
+
+        _approveCharlieAndSplit(1, splitAmount);
+
+        vm.prank(alice);
+        nftLock.transferFrom(alice, dave, 2);
+
+        // Bob's gauge vote auto-decreases without revoting
+        assertEq(voter.votes(bob, gauge), bias(aliceAmount - splitAmount, elapsed));
+        assertEq(ivotesAdapter.getVotes(bob), bias(aliceAmount - splitAmount, elapsed));
+        assertEq(ivotesAdapter.getVotes(eve), bias(splitAmount, elapsed));
+    }
 }
