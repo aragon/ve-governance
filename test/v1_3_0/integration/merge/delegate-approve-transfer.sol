@@ -34,4 +34,60 @@ contract TestMerge_ApproveDelegateAndTransfer is TestMerge_ApproveDelegateBase {
         assertEq(ivotesAdapter.getVotes(dave), 0);
         assertEq(ivotesAdapter.getVotes(alice), 0);
     }
+
+    /// @notice Alice has 3 tokens all delegated to Bob. Charlie merges token 1 into token 2.
+    ///         Alice transfers only the merged token to Dave.
+    ///         Bob retains voting power from token 3.
+    function test_Merge_PartialTransfer_BobRetainsRemainingPower() public {
+        uint256 amount3 = 10e18;
+        token.transfer(alice, amount3);
+        vm.startPrank(alice);
+        token.approve(address(escrow), amount3);
+        escrow.createLock(amount3); // tokenId 3
+        ivotesAdapter.delegate(bob);
+        vm.stopPrank();
+
+        // Same start time — merge allowed without maturation
+        _approveCharlieAndMerge(1, 2);
+
+        vm.prank(alice);
+        nftLock.transferFrom(alice, dave, 2);
+
+        uint256 elapsed = block.timestamp - checkpointTs;
+        assertEq(ivotesAdapter.numberOfDelegatedTokens(alice), 1);
+        assertEq(ivotesAdapter.numberOfDelegatedTokens(dave), 1);
+        assertEq(ivotesAdapter.getVotes(bob), bias(amount3, elapsed));
+        assertEq(ivotesAdapter.getVotes(eve), bias(totalAmount, elapsed));
+    }
+
+    /// @notice Same as above but Bob votes on a gauge first.
+    ///         After merge + partial transfer, Bob's gauge vote auto-decreases.
+    function test_Merge_PartialTransfer_BobGaugeVoteDecreases() public {
+        uint256 amount3 = 10e18;
+        token.transfer(alice, amount3);
+        vm.startPrank(alice);
+        token.approve(address(escrow), amount3);
+        escrow.createLock(amount3);
+        ivotesAdapter.delegate(bob);
+        vm.stopPrank();
+
+        address gauge = address(0x777);
+        voter.createGauge(gauge, "metadata");
+
+        vm.prank(bob);
+        voter.vote(_singleVote(gauge));
+
+        uint256 elapsed = block.timestamp - checkpointTs;
+        assertEq(voter.votes(bob, gauge), bias(totalAmount + amount3, elapsed));
+
+        _approveCharlieAndMerge(1, 2);
+
+        vm.prank(alice);
+        nftLock.transferFrom(alice, dave, 2);
+
+        // Bob's gauge vote auto-decreases without revoting
+        assertEq(voter.votes(bob, gauge), bias(amount3, elapsed));
+        assertEq(ivotesAdapter.getVotes(bob), bias(amount3, elapsed));
+        assertEq(ivotesAdapter.getVotes(eve), bias(totalAmount, elapsed));
+    }
 }
