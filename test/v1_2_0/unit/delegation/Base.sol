@@ -17,7 +17,8 @@ import {
     EscrowIVotesAdapter,
     IEscrowIVotesAdapterStorage,
     IEscrowIVotesAdapterErrorsAndEvents,
-    SimpleGaugeVoter
+    SimpleGaugeVoter,
+    IVotingEscrowCore
 } from "../../versions.sol";
 
 import {ProxyLib} from "@libs/ProxyLib.sol";
@@ -28,6 +29,10 @@ import {FixedPointBase} from "../../base/FixedPointBase.sol";
 
 contract EscrowVotingPowerMock is IDelegateUpdateVotingPower {
     function updateVotingPower(address a, address b) external {}
+}
+
+contract MockLockNFT {
+    // This is a mock - actual ownerOf calls will be mocked via vm.mockCall
 }
 
 contract EscrowIVotesAdapterA is EscrowIVotesAdapter {
@@ -57,6 +62,7 @@ contract Base is
     using ProxyLib for address;
 
     EscrowVotingPowerMock public escrow;
+    MockLockNFT public lockNFT;
     SimpleGaugeVoter public voter;
     EscrowIVotesAdapterA public dg;
     DAO dao;
@@ -74,10 +80,12 @@ contract Base is
         _deployDAO();
         clock = _deployClock(address(dao));
         escrow = new EscrowVotingPowerMock();
+        lockNFT = new MockLockNFT();
         dg = _deployEscrowIVotesAdapter(address(dao), address(clock), address(escrow));
         voter = _deployVoter(address(dao), address(clock), address(escrow), address(dg));
 
-        _mockApprovedOwner(true);
+        _mockLockNFT();
+        _mockOwner(address(this));
 
         uint256 maxTime = IClock(clock).epochDuration() * CurveConstantLib.MAX_EPOCHS;
 
@@ -188,10 +196,34 @@ contract Base is
         assertEq(dg.slopeChanges_(_account, _end), slopeFP(_amount));
     }
 
-    function _mockApprovedOwner(bool _approved) internal {
+    function _mockLockNFT() internal {
         vm.mockCall(
             address(escrow),
-            abi.encodeWithSelector(VotingEscrow.isApprovedOrOwner.selector),
+            abi.encodeWithSelector(IVotingEscrowCore.lockNFT.selector),
+            abi.encode(address(lockNFT))
+        );
+    }
+
+    function _mockOwner(address _owner) internal {
+        vm.mockCall(
+            address(lockNFT),
+            abi.encodeWithSelector(bytes4(keccak256("ownerOf(uint256)"))),
+            abi.encode(_owner)
+        );
+    }
+
+    function _mockOwnerOf(uint256 _tokenId, address _owner) internal {
+        vm.mockCall(
+            address(lockNFT),
+            abi.encodeWithSelector(bytes4(keccak256("ownerOf(uint256)")), _tokenId),
+            abi.encode(_owner)
+        );
+    }
+
+    function _mockGetApproved(uint256 _tokenId, address _approved) internal {
+        vm.mockCall(
+            address(lockNFT),
+            abi.encodeWithSelector(bytes4(keccak256("getApproved(uint256)")), _tokenId),
             abi.encode(_approved)
         );
     }
