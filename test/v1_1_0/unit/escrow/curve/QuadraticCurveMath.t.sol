@@ -111,14 +111,14 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
 
         assertEq(
             curve.votingPowerAt(tokenIdFirst, block.timestamp),
-            bias(depositFirst, block.timestamp - checkpointTs),
+            curve.getBias(block.timestamp - checkpointTs, depositFirst),
             "Balance incorrect after warmup"
         );
         assertEq(curve.isWarm(tokenIdFirst), true, "Still warming up");
 
         assertEq(
             curve.votingPowerAt(tokenIdSecond, block.timestamp),
-            bias(depositSecond, block.timestamp - checkpointTs),
+            curve.getBias(block.timestamp - checkpointTs, depositSecond),
             "Balance incorrect after warmup II"
         );
 
@@ -126,20 +126,20 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
         vm.warp(start + clock.epochDuration());
         assertEq(
             curve.votingPowerAt(tokenIdFirst, block.timestamp),
-            bias(depositFirst, block.timestamp - checkpointTs),
+            curve.getBias(block.timestamp - checkpointTs, depositFirst),
             "Balance incorrect after p1"
         );
 
         uint256 endTs = getEndTimestamp(checkpointTs, writtenTs);
 
-        uint256 expectedMaxI = bias(depositFirst, endTs - checkpointTs);
-        uint256 expectedMaxII = bias(depositSecond, endTs - checkpointTs);
+        uint256 expectedMaxI = curve.getBias(endTs - checkpointTs, depositFirst);
+        uint256 expectedMaxII = curve.getBias(endTs - checkpointTs, depositSecond);
 
         if (endTs >= writtenTs + curve.warmupPeriod() + 1) {
             // warp to the final period
             // TECHNICALLY, this should round to a whole max
             // but FP arithmetic has a small rounding error and it finishes just below
-            vm.warp(start + clock.epochDuration() * 52);
+            vm.warp(endTs);
             assertEq(
                 curve.votingPowerAt(tokenIdFirst, block.timestamp),
                 expectedMaxI,

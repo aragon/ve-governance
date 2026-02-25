@@ -81,6 +81,6 @@ contract CurveBase is TestHelpers, FixedPointBase, ILockedBalanceIncreasing {
 
         escrow.setCurve(curve);
 
-        FixedPointBase.initialize(curve.maxTime(), clock.checkpointInterval());
+        FixedPointBase.initialize(curve.maxTime(), clock.checkpointInterval(), coefficients[1]);
     }
 }

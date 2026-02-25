@@ -73,9 +73,11 @@ contract QuadraticCurveBase is TestHelpers, ILockedBalanceIncreasing, FixedPoint
 
         escrow.setCurve(curve);
 
+        (int256[3] memory coefficients, ) = CurveConstantLib.getCoefficients();
         FixedPointBase.initialize(
             clock.epochDuration() * CurveConstantLib.MAX_EPOCHS,
-            clock.checkpointInterval()
+            clock.checkpointInterval(),
+            coefficients[1]
         );
     }
 }
