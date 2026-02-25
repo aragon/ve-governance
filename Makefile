@@ -19,6 +19,9 @@ get-deployment-values :; forge script script/utils/GetDeploymentValues.sol:GetFa
 # run unit and integration tests
 test-ui :; forge test --match-path "test/**/{unit,integration}/**/*.sol"
 
+# curve sanity check (run before deploys)
+check-curve :; python3 test/python/crosscheck.py
+
 # run invariant tests
 test-invariant :; forge test --match-path "test/**/invariant/**/*.sol" --show-progress
 test-invariant-v1-2-0 :; forge test --match-path "test/v1_2_0/invariant/**/*.sol" --show-progress
