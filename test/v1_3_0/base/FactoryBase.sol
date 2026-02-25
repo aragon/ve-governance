@@ -123,7 +123,8 @@ contract FactoryBase is StdInvariant, Test, FixedPointBase {
         );
         vm.stopPrank();
 
-        FixedPointBase.initialize(curve.maxTime(), clock.checkpointInterval());
+        (int256[3] memory coefficients, ) = CurveConstantLib.getCoefficients();
+        FixedPointBase.initialize(curve.maxTime(), clock.checkpointInterval(), coefficients[1]);
     }
 
     function createTestToken(address[] memory holders) internal returns (address) {

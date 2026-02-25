@@ -11,11 +11,10 @@ contract FixedPointBase {
 
     uint256 maxTime;
     uint256 checkpointInterval;
-    uint256 multiplier = 11;
+    int256 linearCoefficient;
 
     function setMultiplier(int256 _linearCoefficient) public {
-        uint base = (1e18 / maxTime);
-        multiplier = uint(_linearCoefficient) / base;
+        linearCoefficient = _linearCoefficient;
     }
 
     function initialize(
@@ -31,16 +30,12 @@ contract FixedPointBase {
     function slopeFP(uint256 _amount) internal view returns (int256) {
         if (maxTime == 0) return 0;
 
-        return (multiplier * _amount * (1e18 / maxTime)).toInt256();
+        return _amount.toInt256() * linearCoefficient;
     }
 
     function biasFP(uint256 _amount, uint256 _duration) internal view returns (int256) {
-        uint256 slope = 0;
-        if (maxTime != 0) {
-            slope = multiplier * _amount * (1e18 / maxTime);
-        }
-
-        return (_amount * 1e18 + slope * _duration).toInt256();
+        int256 slope = maxTime == 0 ? int256(0) : _amount.toInt256() * linearCoefficient;
+        return _amount.toInt256() * int256(1e18) + slope * _duration.toInt256();
     }
 
     function bias(uint256 _amount, uint256 _duration) internal view returns (uint256 bias_) {
