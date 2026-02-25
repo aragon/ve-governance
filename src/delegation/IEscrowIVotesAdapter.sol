@@ -16,7 +16,7 @@ interface IEscrowIVotesAdapterErrorsAndEvents {
 
     error DelegateBySigNotSupported();
 
-    error NotApprovedOrOwner();
+    error NotOwner();
     error InvalidTokenId();
     error DelegationNotAllowed();
     error DelegateeNotSet();
