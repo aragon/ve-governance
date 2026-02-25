@@ -193,6 +193,13 @@ def format_duration(seconds: int) -> str:
     return f"{weeks}w {days}d {hours}h {minutes}m {secs}s"
 
 
+def format_totals(seconds: int) -> str:
+    weeks = ratio_to_str(seconds, WEEK, decimals=1)
+    months = ratio_to_str(seconds, 30 * DAY, decimals=1)
+    days = ratio_to_str(seconds, DAY, decimals=1)
+    return f"{weeks}w, {months} months, {days} days"
+
+
 def fp_to_str(fp_value: int, decimals: int = 9) -> str:
     sign = "-" if fp_value < 0 else ""
     x = abs(fp_value)
@@ -254,7 +261,7 @@ def print_stats(
     print("=== Curve Stats ===")
     print(f"maxEpochs           : {max_epochs}")
     print(f"epochDuration       : {epoch_duration} sec ({format_duration(epoch_duration)})")
-    print(f"maxTime             : {max_time} sec ({format_duration(max_time)})")
+    print(f"maxTime             : {max_time} sec ({format_totals(max_time)})")
     print()
     print("shared coefficients (fixed-point, 1e18 scale):")
     print(f"  constant          : {constant_fp}")
