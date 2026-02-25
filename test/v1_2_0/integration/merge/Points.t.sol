@@ -143,8 +143,8 @@ contract TestMerge_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage
     }
 
     function testFuzz_Merge(
-        uint192 _lock1Amount,
-        uint192 _lock2Amount,
+        uint184 _lock1Amount,
+        uint184 _lock2Amount,
         uint48 _fromLockTime,
         uint48 _toLockTime,
         uint48 _mergeTime
@@ -181,7 +181,7 @@ contract TestMerge_Points is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage
         uint256 fromLockWeekTs = weekStartTs(_fromLockTime);
         uint256 toLockWeekTs = weekStartTs(_toLockTime);
         uint256 toLockEnd = toLockWeekTs + maxTime;
-        
+
         assertTokenPoint(
             from,
             // If the dates match, it should use

@@ -124,9 +124,11 @@ contract RegressionV1_0_0__to__V1_2_0 is Test, IGaugeVote, FixedPointBase {
         multisig = Multisig(deployment.multisigPlugin);
         token = MockERC20(escrow.token());
 
+        int256[3] memory coefficients = curve.getCoefficients(1e18);
         super.initialize(
             clock.epochDuration() * CurveConstantLib.MAX_EPOCHS,
-            clock.checkpointInterval()
+            clock.checkpointInterval(),
+            coefficients[1]
         );
 
         // setup gauge and unpause the voter

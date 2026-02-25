@@ -107,7 +107,8 @@ contract EscrowBase is
         nftLock = _deployLock(address(escrow), name, symbol, address(dao));
         ivotesAdapter = _deployEscrowIVotesAdapter(address(dao), address(escrow), address(clock));
 
-        FixedPointBase.initialize(curve.maxTime(), clock.checkpointInterval());
+        (int256[3] memory coefficients, ) = CurveConstantLib.getCoefficients();
+        FixedPointBase.initialize(curve.maxTime(), clock.checkpointInterval(), coefficients[1]);
 
         // to be added as proxies
         voter = _deployVoter(

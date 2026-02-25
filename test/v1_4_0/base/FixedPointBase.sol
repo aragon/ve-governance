@@ -2,6 +2,7 @@
 pragma solidity ^0.8.17;
 
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {console2 as console} from "forge-std/console2.sol";
 
 // TODO: come up with better name..
 contract FixedPointBase {
@@ -10,25 +11,31 @@ contract FixedPointBase {
 
     uint256 maxTime;
     uint256 checkpointInterval;
+    int256 linearCoefficient;
 
-    function initialize(uint256 _maxTime, uint256 _checkpointInterval) public {
+    function setMultiplier(int256 _linearCoefficient) public {
+        linearCoefficient = _linearCoefficient;
+    }
+
+    function initialize(
+        uint256 _maxTime,
+        uint256 _checkpointInterval,
+        int256 _linearCoefficient
+    ) public {
         maxTime = _maxTime;
         checkpointInterval = _checkpointInterval;
+        setMultiplier(_linearCoefficient);
     }
 
     function slopeFP(uint256 _amount) internal view returns (int256) {
         if (maxTime == 0) return 0;
 
-        return (_amount * (1e18 / maxTime)).toInt256();
+        return _amount.toInt256() * linearCoefficient;
     }
 
     function biasFP(uint256 _amount, uint256 _duration) internal view returns (int256) {
-        uint256 slope = 0;
-        if (maxTime != 0) {
-            slope = _amount * (1e18 / maxTime);
-        }
-
-        return (_amount * 1e18 + slope * _duration).toInt256();
+        int256 slope = maxTime == 0 ? int256(0) : _amount.toInt256() * linearCoefficient;
+        return _amount.toInt256() * int256(1e18) + slope * _duration.toInt256();
     }
 
     function bias(uint256 _amount, uint256 _duration) internal view returns (uint256 bias_) {

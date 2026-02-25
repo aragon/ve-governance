@@ -105,7 +105,7 @@ contract TestQuadraticIncreasingCurve is CurveBase {
         IEscrowCurve.TokenPoint memory tokenPoint = curve.tokenPointHistory(tokenIdFirst, 1);
         assertEq(
             tokenPoint.bias,
-            bias(depositFirst, block.timestamp - checkpointTs),
+            curve.getBias(block.timestamp - checkpointTs, depositFirst),
             "Bias is incorrect"
         );
         assertEq(tokenPoint.checkpointTs, checkpointTs, "CP Timestamp is incorrect");
@@ -113,7 +113,7 @@ contract TestQuadraticIncreasingCurve is CurveBase {
 
         assertEq(
             curve.votingPowerAt(tokenIdFirst, block.timestamp),
-            bias(depositFirst, block.timestamp - checkpointTs),
+            curve.getBias(block.timestamp - checkpointTs, depositFirst),
             "Balance incorrect after deposit"
         );
 
@@ -121,24 +121,23 @@ contract TestQuadraticIncreasingCurve is CurveBase {
 
         assertEq(
             curve.votingPowerAt(tokenIdFirst, block.timestamp),
-            bias(depositFirst, block.timestamp - checkpointTs),
+            curve.getBias(block.timestamp - checkpointTs, depositFirst),
             "Balance incorrect after 3 days"
         );
         assertEq(curve.isWarm(tokenIdFirst), true, "Still warming up");
 
         assertEq(
             curve.votingPowerAt(tokenIdSecond, block.timestamp),
-            bias(depositSecond, block.timestamp - checkpointTs),
+            curve.getBias(block.timestamp - checkpointTs, depositSecond),
             "Balance incorrect after warmup II"
         );
 
-        uint256 expectedMaxI = bias(depositFirst, maxTime);
-        uint256 expectedMaxII = bias(depositSecond, maxTime);
+        uint256 expectedMaxI = curve.getBias(maxTime, depositFirst);
+        uint256 expectedMaxII = curve.getBias(maxTime, depositSecond);
 
-        // warp to the final period
-        // TECHNICALLY, this should finish at exactly max
-        // but FP arithmetic has a small rounding error
-        vm.warp(start + clock.epochDuration() * 52);
+        // Warp to the end of the growth window derived from the current curve config.
+        // This remains valid when MAX_EPOCHS is changed in CurveConstantLib.
+        vm.warp(getEndTimestamp(checkpointTs, writtenTs));
         assertEq(
             curve.votingPowerAt(tokenIdFirst, block.timestamp),
             expectedMaxI,

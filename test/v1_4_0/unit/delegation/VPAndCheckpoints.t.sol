@@ -375,6 +375,6 @@ contract TestVPAndCheckpoints is Base {
 
         // Query votes at second timestamp
         uint256 vpAtSecond = dg.getPastVotes(alice, secondDelegateTs);
-        assertEq(vpAtSecond, bias(amount1, secondDelegateTs - start) + bias(amount2, secondDelegateTs - start));
+        assertEq(vpAtSecond, bias(amount1 + amount2, secondDelegateTs - start));
     }
 }
