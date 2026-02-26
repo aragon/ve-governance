@@ -180,7 +180,8 @@ contract TestE2EV1_3_0 is
         dao = DAO(deployment.dao);
         token = IERC20Mint(escrow.token());
 
-        FixedPointBase.initialize(curve.maxTime(), clock.checkpointInterval());
+        int256[3] memory coefficients = curve.getCoefficients(1e18);
+        FixedPointBase.initialize(curve.maxTime(), clock.checkpointInterval(), coefficients[1]);
 
         require(_resolveMintTokens(), "Failed to mint tokens");
 

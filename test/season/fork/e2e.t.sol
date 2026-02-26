@@ -179,9 +179,11 @@ contract TestE2EWithSeason is
         dao = DAO(deployment.dao);
         token = IERC20Mint(escrow.token());
 
+        int256[3] memory coefficients = curve.getCoefficients(1e18);
         FixedPointBase.initialize(
             clock.epochDuration() * CurveConstantLib.MAX_EPOCHS,
-            clock.checkpointInterval()
+            clock.checkpointInterval(),
+            coefficients[1]
         );
 
         require(_resolveMintTokens(), "Failed to mint tokens");

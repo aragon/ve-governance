@@ -169,7 +169,7 @@ contract TestSplit_DelegationAndVoter is
         assertEq(vpBefore, vpAfter);
     }
     
-    function testFuzz_Split_WhenTokenIsNotDelegated(uint192 _amount, uint192 _splitAmount, uint192 _minDeposit) public {
+    function testFuzz_Split_WhenTokenIsNotDelegated(uint184 _amount, uint184 _splitAmount, uint184 _minDeposit) public {
         super.mintAndApproveEscrow(type(uint256).max);
 
         vm.assume(_minDeposit != 0);
@@ -198,7 +198,7 @@ contract TestSplit_DelegationAndVoter is
         vm.stopPrank();
     }
 
-    function testFuzz_Split_WhenTokenIsDelegated(uint192 _amount, uint192 _splitAmount, uint192 _minDeposit) public {
+    function testFuzz_Split_WhenTokenIsDelegated(uint184 _amount, uint184 _splitAmount, uint184 _minDeposit) public {
         super.mintAndApproveEscrow(type(uint256).max);
 
         vm.assume(_minDeposit != 0);

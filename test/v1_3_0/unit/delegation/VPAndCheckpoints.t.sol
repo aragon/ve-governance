@@ -109,7 +109,7 @@ contract TestVPAndCheckpoints is Base {
         dg.undelegate(singleId);
 
         // asserts latest global point.
-        assertGlobalPoint(alice, 2, 0, 0, block.timestamp);
+        assertGlobalPoint(alice, 1, 0, 0, block.timestamp);
 
         // slope must reflect the change as alice was undelegated.
         assertSlopeChange(alice, start + maxTime, 0);
@@ -131,6 +131,7 @@ contract TestVPAndCheckpoints is Base {
             ids[0] = 1;
             vm.startPrank(bob);
             _mockLocked(ids[0], bobAmount, bobDelegateStart);
+            _mockOwnerOf(ids[0], bob);
             dg.setDelegateAddress(alice);
             dg.delegate(ids);
             dg.undelegate(ids);
@@ -150,6 +151,7 @@ contract TestVPAndCheckpoints is Base {
             ids[0] = 2;
             vm.startPrank(carol);
             _mockLocked(ids[0], carolAmount, carolDelegateStart);
+            _mockOwnerOf(ids[0], carol);
             dg.setDelegateAddress(alice);
             dg.delegate(ids);
             vm.stopPrank();
@@ -286,5 +288,153 @@ contract TestVPAndCheckpoints is Base {
         uint256 expectedTs = block.timestamp;
 
         assertGlobalPoint(alice, 2, biasFP(amount, maxTime), 0, expectedTs);
+    }
+
+     /*//////////////////////////////////////////////////////////////
+                  Same Timestamp Checkpoint Overwrite
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Tests that multiple delegate/undelegate operations at the same timestamp
+    ///         overwrite the same checkpoint instead of creating multiple checkpoints.
+    ///         This ensures binary search returns the correct final state.
+    function test_SameTimestampCheckpointOverwrite() public {
+        dg.setDelegateAddress(alice);
+
+        uint256 amount1 = 10;
+        uint256 amount2 = 20;
+        uint256 amount3 = 30;
+        uint256 start = weekStartTs(block.timestamp);
+        uint256 delegateTs = block.timestamp;
+
+        // Setup three tokens with different amounts
+        uint256 tokenId1 = 1;
+        uint256 tokenId2 = 2;
+        uint256 tokenId3 = 3;
+
+        _mockLocked(tokenId1, amount1, start);
+        _mockLocked(tokenId2, amount2, start);
+        _mockLocked(tokenId3, amount3, start);
+        _mockVotingPower(tokenId1, 1);
+        _mockVotingPower(tokenId2, 1);
+        _mockVotingPower(tokenId3, 1);
+
+        // First delegation - creates checkpoint index 1
+        dg.delegate(getIds(tokenId1));
+        assertEq(dg.latestPointIndex(alice), 1);
+        assertEq(dg.getVotes(alice), amount1);
+
+        // Second delegation at same timestamp - should overwrite checkpoint index 1
+        dg.delegate(getIds(tokenId2, tokenId3));
+        assertEq(dg.latestPointIndex(alice), 1); // Still index 1, not 2
+        assertEq(dg.getVotes(alice), amount1 + amount2 + amount3);
+
+        // Undelegate at same timestamp - should still overwrite checkpoint index 1
+        dg.undelegate(getIds(tokenId2, tokenId3));
+        assertEq(dg.latestPointIndex(alice), 1); // Still index 1, not 3
+        assertEq(dg.getVotes(alice), amount1);
+
+        // Verify final state: only token1 is delegated
+        uint256 expectedVP = bias(amount1, delegateTs - start);
+        assertEq(dg.getVotes(alice), expectedVP);
+
+        // Verify the checkpoint has the correct final values
+        GlobalPoint memory p = dg.pointHistory_(alice, 1);
+        assertEq(p.writtenTs, delegateTs);
+        assertEq(p.bias, biasFP(amount1, delegateTs - start));
+        assertEq(p.slope, slopeFP(amount1));
+    }
+
+    /// @notice Tests that binary search correctly returns the final checkpoint state
+    ///         when querying historical votes after checkpoint overwrite.
+    function test_BinarySearchReturnsCorrectStateAfterOverwrite() public {
+        dg.setDelegateAddress(alice);
+
+        uint256 amount1 = 10;
+        uint256 amount2 = 20;
+        uint256 amount3 = 30;
+        uint256 start = weekStartTs(block.timestamp);
+        uint256 delegateTs = block.timestamp;
+
+        uint256 tokenId1 = 1;
+        uint256 tokenId2 = 2;
+        uint256 tokenId3 = 3;
+
+        _mockLocked(tokenId1, amount1, start);
+        _mockLocked(tokenId2, amount2, start);
+        _mockLocked(tokenId3, amount3, start);
+        _mockVotingPower(tokenId1, 1);
+        _mockVotingPower(tokenId2, 1);
+        _mockVotingPower(tokenId3, 1);
+
+        // Multiple operations at same timestamp
+        dg.delegate(getIds(tokenId1));
+        dg.delegate(getIds(tokenId2, tokenId3));
+        dg.undelegate(getIds(tokenId2, tokenId3));
+
+        // Only checkpoint index 1 should exist with final state
+        assertEq(dg.latestPointIndex(alice), 1);
+
+        // Move to future and create a new checkpoint to force binary search path
+        vm.warp(block.timestamp + 1 weeks);
+        dg.checkpointTransition(alice, 1);
+
+        // Now we have checkpoint index 2 at a later timestamp
+        assertEq(dg.latestPointIndex(alice), 2);
+
+        // Query historical votes at the original timestamp
+        // This will use binary search since we're querying a past timestamp
+        uint256 historicalVP = dg.getPastVotes(alice, delegateTs);
+
+        // Should return the final state (only token1 delegated), not inflated value
+        uint256 expectedVP = bias(amount1, delegateTs - start);
+        assertEq(historicalVP, expectedVP);
+
+        // Verify it's NOT returning the inflated value (all three tokens)
+        uint256 inflatedVP = bias(amount1 + amount2 + amount3, delegateTs - start);
+        assertTrue(historicalVP != inflatedVP);
+    }
+
+    /// @notice Tests that checkpoints at different timestamps still create separate indices.
+    function test_DifferentTimestampsCreateSeparateCheckpoints() public {
+        dg.setDelegateAddress(alice);
+
+        uint256 amount1 = 10;
+        uint256 amount2 = 20;
+        uint256 start = weekStartTs(block.timestamp);
+        uint256 firstDelegateTs = block.timestamp;
+
+        uint256 tokenId1 = 1;
+        uint256 tokenId2 = 2;
+
+        _mockLocked(tokenId1, amount1, start);
+        _mockLocked(tokenId2, amount2, start);
+        _mockVotingPower(tokenId1, 1);
+        _mockVotingPower(tokenId2, 1);
+
+        // First delegation at timestamp T
+        dg.delegate(getIds(tokenId1));
+        assertEq(dg.latestPointIndex(alice), 1);
+
+        // Move to a different timestamp
+        vm.warp(block.timestamp + 1 weeks);
+        uint256 secondDelegateTs = block.timestamp;
+
+        // Second delegation at timestamp T+1week - should create new checkpoint
+        dg.delegate(getIds(tokenId2));
+        assertEq(dg.latestPointIndex(alice), 2);
+
+        // Verify both checkpoints exist with correct timestamps
+        GlobalPoint memory p1 = dg.pointHistory_(alice, 1);
+        GlobalPoint memory p2 = dg.pointHistory_(alice, 2);
+        assertEq(p1.writtenTs, firstDelegateTs);
+        assertEq(p2.writtenTs, secondDelegateTs);
+
+        // Query historical votes at first timestamp
+        uint256 vpAtFirst = dg.getPastVotes(alice, firstDelegateTs);
+        assertEq(vpAtFirst, bias(amount1, firstDelegateTs - start));
+
+        // Query votes at second timestamp
+        uint256 vpAtSecond = dg.getPastVotes(alice, secondDelegateTs);
+        assertEq(vpAtSecond, bias(amount1 + amount2, secondDelegateTs - start));
     }
 }
