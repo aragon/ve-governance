@@ -144,6 +144,37 @@ upgrade-mode :; forge script UpgradeModeTo110 \
 	--verifier-url https://explorer.mode.network/api\? \
 	-vvvvv
 
+#### xmaquina upgrade scripts ####
+
+XMAQUINA_UPGRADE_ACTIONS_SCRIPT:=script/upgrade/xmaquina/UpgradeIVotesAdapterActions.s.sol:UpgradeIVotesAdapterActions
+XMAQUINA_VERIFY_UPGRADE_SCRIPT:=script/upgrade/xmaquina/VerifyIVotesAdapterUpgrade.s.sol:VerifyIVotesAdapterUpgrade
+
+.PHONY: xmaquina-upgrade-actions-preview
+xmaquina-upgrade-actions-preview: # simulate xmaquina IVotesAdapter action generation (writes upgrade-{NETWORK}.json)
+	@echo "xmaquina actions preview (NETWORK=$(NETWORK), RPC_URL=$(RPC_URL))"
+	forge script $(XMAQUINA_UPGRADE_ACTIONS_SCRIPT) \
+		--rpc-url $(RPC_URL) \
+		--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+		-vvv
+
+.PHONY: xmaquina-upgrade-actions
+xmaquina-upgrade-actions: # broadcast xmaquina IVotesAdapter implementation deploy + action generation
+	@echo "xmaquina actions broadcast (NETWORK=$(NETWORK), RPC_URL=$(RPC_URL))"
+	forge script $(XMAQUINA_UPGRADE_ACTIONS_SCRIPT) \
+		--rpc-url $(RPC_URL) \
+		--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+		--broadcast \
+		--verify \
+		--etherscan-api-key $(ETHERSCAN_API_KEY) \
+		-vvv
+
+.PHONY: xmaquina-verify-upgrade
+xmaquina-verify-upgrade: # run xmaquina upgrade verification flow (intended for fork/simulation)
+	@echo "xmaquina verify upgrade (NETWORK=$(NETWORK), RPC_URL=$(RPC_URL))"
+	forge script $(XMAQUINA_VERIFY_UPGRADE_SCRIPT) \
+		--rpc-url $(RPC_URL) \
+		-vvv
+
 #### Deployments ####
 deploy-preview-mode-sepolia-110 :; forge script DeployGaugesV1_1_0 \
   --rpc-url https://sepolia.mode.network \
@@ -260,5 +291,4 @@ deploy-resume-base: # resume deploy to the base network
 		--etherscan-api-key $(ETHERSCAN_API_KEY) \
 		--resume \
 		$(VERBOSITY) | tee $(RESUME_LOG_FILE)
-
 

@@ -70,7 +70,7 @@ abstract contract BaseScript is Script {
     address internal TEAM_MEMBER_5;
 
     // Aragon Team Members Multisig (same for both networks)
-    address internal constant ARAGON_MEMBER_1 = 0xd953216D672218db55cAb06c2406D5f8af89D720;
+    address internal constant ARAGON_MEMBER_1 = 0x9395e6b95afFee7d7b2b107127Fcc9e4167A336f;
     address internal constant ARAGON_MEMBER_2 = 0xbC86D5E5F41B9D23BD2511d1CdbB9DcF1d4E2b38;
     address internal constant ARAGON_MEMBER_3 = 0x946138B088524414EEDaf0699BA10d7Fb5673A34;
 
@@ -237,6 +237,12 @@ abstract contract BaseScript is Script {
         proposalId = getLatestProposalId();
 
         vm.prank(ARAGON_DAO);
+        IMultisig(MULTISIG_PLUGIN).approve(proposalId, false);
+
+        vm.prank(TEAM_MEMBER_1);
+        IMultisig(MULTISIG_PLUGIN).approve(proposalId, false);
+
+        vm.prank(TEAM_MEMBER_2);
         IMultisig(MULTISIG_PLUGIN).approve(proposalId, false);
 
         // Actions are executed from the xmaquina multisig proposal.
