@@ -9,13 +9,13 @@ int256 constant INITIAL_BIAS_MULTIPLIER = 1;
 /// @title CurveConstantLib
 /// @notice Precomputed coefficients for escrow curve
 /// Below are the shared coefficients for the linear and quadratic terms
-/// @dev This curve goes from 1x -> 12x voting power over a ~90d time horizon
+/// @dev This curve goes from 1x -> 4x voting power over a ~90d time horizon
 /// Epochs are still 2 weeks long
 library CurveConstantLib {
     int256 internal constant SHARED_CONSTANT_COEFFICIENT = INITIAL_BIAS_MULTIPLIER * 1e18;
 
     /// @dev straight line so the curve is increasing only in the linear term
-    int256 internal constant SHARED_LINEAR_COEFFICIENT = 11e18 / (int256(MAX_EPOCHS) * 2 weeks);
+    int256 internal constant SHARED_LINEAR_COEFFICIENT = 3e18 / (int256(MAX_EPOCHS) * 2 weeks);
 
     /// @dev this curve is linear
     int256 internal constant SHARED_QUADRATIC_COEFFICIENT = 0;

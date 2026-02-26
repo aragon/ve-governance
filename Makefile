@@ -176,18 +176,18 @@ deploy-1-3-sepolia :; forge script script/deploy/DeployGauges_v1_3_0.s.sol:Deplo
 
 
 
-deploy-preview-1-4-sepolia :; forge script script/deploy/DeployGauges_v1_4_0.s.sol:DeployGaugesV1_4_0 \
+deploy-preview-1-4:; forge script script/deploy/DeployGauges_v1_4_0.s.sol:DeployGaugesV1_4_0 \
 	--rpc-url $(RPC_URL) \
-	-vvvvv
+	-vvv
 
-deploy-1-4-sepolia :; forge script script/deploy/DeployGauges_v1_4_0.s.sol:DeployGaugesV1_4_0 \
+deploy-1-4:; forge script script/deploy/DeployGauges_v1_4_0.s.sol:DeployGaugesV1_4_0 \
 	--rpc-url $(RPC_URL) \
 	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
 	--broadcast \
 	--verify \
 	--slow \
 	--etherscan-api-key $(ETHERSCAN_API_KEY) \
-	-vvvvv
+	-vvv
 
 
 
