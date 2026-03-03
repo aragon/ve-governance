@@ -220,7 +220,7 @@ abstract contract BaseScript is Script {
             false, // approveProposal - approve with Aragon DAO's signature
             false, // tryExecution - don't try to execute immediately
             uint64(0), // startDate - 0 means now
-            uint64(block.timestamp + 5 days) // endDate - 5 days from now
+            uint64(block.timestamp + 7 days) // endDate - 1 week from now
         );
 
         vm.prank(ARAGON_MEMBER_1);

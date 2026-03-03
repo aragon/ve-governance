@@ -6,7 +6,10 @@ bytecode_hash = "none"
 cbor_metadata = false
 fuzz = { runs = 64 }
 gas_reports = ["*"]
-fs_permissions = [{ access = "read", path = "./" }]
+fs_permissions = [
+  { access = "read", path = "./" },
+  { access = "write", path = "./script/upgrade/xmaquina" }
+]
 libs = ["lib"]
 optimizer = true
 optimizer_runs = 10_000
@@ -21,6 +24,9 @@ ffi = true
 ast = true
 build_info = true
 extra_output = ["storageLayout"]
+
+[profile.peaq]
+evm_version = "london"
 
 [profile.gas-report]
 fuzz = { runs = 128 }
@@ -41,5 +47,4 @@ mainnet = "https://mainnet.infura.io/v3/${API_KEY_INFURA}"
 optimism = "https://optimism-mainnet.infura.io/v3/${API_KEY_INFURA}"
 polygon = "https://polygon-mainnet.infura.io/v3/${API_KEY_INFURA}"
 sepolia = "https://sepolia.infura.io/v3/${API_KEY_INFURA}"
-
 
