@@ -149,7 +149,7 @@ abstract contract BaseScript is Script {
                 false, // approveProposal - don't auto-approve
                 false, // tryExecution - don't try to execute immediately
                 uint64(0), // startDate - 0 means now
-                uint64(block.timestamp + 5 days) // endDate
+                uint64(block.timestamp + 7 days) // endDate
             );
     }
 
