@@ -357,6 +357,42 @@ contract RegressionV1_0_0__to__V1_3_0 is Test, IGaugeVote, FixedPointBase {
         assertEq(vpBeforeUpgrade, vpAfterUpgradeAndSplit);
     }
 
+    function test_upgradeSetBaseURI() public {
+        _upgrade();
+
+        lockUpgrade = LockV1_2_0(address(lock));
+
+        // pre-upgrade tokens should have empty tokenURI by default
+        assertEq(lockUpgrade.tokenURI(aliceToken), "");
+        assertEq(lockUpgrade.tokenURI(bobToken), "");
+
+        // governance sets the base URI
+        vm.prank(address(dao));
+        lockUpgrade.setBaseURI("https://metadata.example.com/token/");
+
+        // pre-upgrade tokens should now return the correct tokenURI
+        assertEq(
+            lockUpgrade.tokenURI(aliceToken),
+            string.concat("https://metadata.example.com/token/", vm.toString(aliceToken))
+        );
+        assertEq(
+            lockUpgrade.tokenURI(bobToken),
+            string.concat("https://metadata.example.com/token/", vm.toString(bobToken))
+        );
+
+        // new tokens minted after upgrade also get the base URI
+        uint256 newToken = escrow.createLockFor(1_000 ether, ALICE_ADDRESS);
+        assertEq(
+            lockUpgrade.tokenURI(newToken),
+            string.concat("https://metadata.example.com/token/", vm.toString(newToken))
+        );
+
+        // unauthorized caller cannot set base URI
+        vm.prank(ALICE_ADDRESS);
+        vm.expectRevert();
+        lockUpgrade.setBaseURI("https://evil.com/");
+    }
+
     function _compareCurveState() internal view {
         CachedView memory vLatest = fetchState(curve, args);
 
