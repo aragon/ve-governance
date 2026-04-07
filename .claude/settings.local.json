@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -E \"\\\\.sol$|\\\\.json$\")",
+      "Bash(gh api:*)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(grep -E \"\\\\.\\(sol|ts|js\\)$\")",
+      "Bash(git log:*)"
+    ]
+  }
+}
