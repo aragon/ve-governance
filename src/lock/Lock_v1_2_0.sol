@@ -19,6 +19,7 @@ import {
 
 /// @title NFT representation of an escrow locking mechanism
 contract LockV1_2_0 is ILock, ERC721Enumerable, UUPSUpgradeable, DaoAuthorizable, ReentrancyGuard {
+    event BaseURISet(string baseURI);
     /// @dev enables transfers without whitelisting
     address public constant WHITELIST_ANY_ADDRESS =
         address(uint160(uint256(keccak256("WHITELIST_ANY_ADDRESS"))));
@@ -31,6 +32,9 @@ contract LockV1_2_0 is ILock, ERC721Enumerable, UUPSUpgradeable, DaoAuthorizable
 
     /// @notice Whitelisted contracts that are allowed to transfer
     mapping(address => bool) public whitelisted;
+
+    /// @notice Base URI for token metadata
+    string private _baseURIValue;
 
     /*//////////////////////////////////////////////////////////////
                               Modifiers
@@ -127,6 +131,21 @@ contract LockV1_2_0 is ILock, ERC721Enumerable, UUPSUpgradeable, DaoAuthorizable
     }
 
     /*//////////////////////////////////////////////////////////////
+                          Token Metadata
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Set the base URI for all token metadata
+    function setBaseURI(string calldata __baseURI) external auth(LOCK_ADMIN_ROLE) {
+        _baseURIValue = __baseURI;
+        emit BaseURISet(__baseURI);
+    }
+
+    /// @dev Override the base URI used by tokenURI
+    function _baseURI() internal view override returns (string memory) {
+        return _baseURIValue;
+    }
+
+    /*//////////////////////////////////////////////////////////////
                               UUPS Upgrade
     //////////////////////////////////////////////////////////////*/
 
@@ -140,5 +159,5 @@ contract LockV1_2_0 is ILock, ERC721Enumerable, UUPSUpgradeable, DaoAuthorizable
     function _authorizeUpgrade(address) internal virtual override auth(LOCK_ADMIN_ROLE) {}
 
     /// @dev Reserved storage space to allow for layout changes in the future.
-    uint256[48] private __gap;
+    uint256[47] private __gap;
 }

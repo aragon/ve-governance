@@ -357,6 +357,221 @@ contract RegressionV1_0_0__to__V1_3_0 is Test, IGaugeVote, FixedPointBase {
         assertEq(vpBeforeUpgrade, vpAfterUpgradeAndSplit);
     }
 
+    // ----- Helpers for the upgrade-state-preservation test -----
+    // Stored as contract state to keep stack depth low.
+    address constant CUSTOM_WHITELIST = address(0xBEEF);
+    address constant NOT_WHITELISTED = address(0xCAFE);
+
+    struct LockSnapshot {
+        // Lock-specific
+        address escrowAddr;
+        bool escrowWhitelisted;
+        bool customWhitelisted;
+        bool notWhitelisted;
+        bool anyAddressWhitelisted;
+        bytes32 lockAdminRole;
+        // DaoAuthorizable
+        address daoAddr;
+        // ERC721Enumerable
+        string name;
+        string symbol;
+        uint256 totalSupply;
+        // UUPSUpgradeable
+        address impl;
+    }
+
+    LockSnapshot snap;
+    uint256[] tokenIdsBefore;
+    address[] tokenOwnersBefore;
+    address[] holders;
+    uint256[] balancesBefore;
+    uint256[][] ownerTokensBefore;
+
+    function _captureLockSnapshot() internal {
+        snap.escrowAddr = lock.escrow();
+        snap.escrowWhitelisted = lock.whitelisted(address(escrow));
+        snap.customWhitelisted = lock.whitelisted(CUSTOM_WHITELIST);
+        snap.notWhitelisted = lock.whitelisted(NOT_WHITELISTED);
+        snap.anyAddressWhitelisted = lock.whitelisted(lock.WHITELIST_ANY_ADDRESS());
+        snap.lockAdminRole = lock.LOCK_ADMIN_ROLE();
+        snap.daoAddr = address(lock.dao());
+        snap.name = lock.name();
+        snap.symbol = lock.symbol();
+        snap.totalSupply = lock.totalSupply();
+        snap.impl = lock.implementation();
+
+        // Snapshot every token's owner via the enumerable index. This
+        // captures both ownership and the enumerable index storage at once.
+        for (uint256 i = 0; i < snap.totalSupply; i++) {
+            uint256 id = lock.tokenByIndex(i);
+            tokenIdsBefore.push(id);
+            tokenOwnersBefore.push(lock.ownerOf(id));
+        }
+
+        // Snapshot per-owner balances and the per-owner enumerable index
+        // for each known holder (escrow holds carol's & david's exiting tokens).
+        holders.push(ALICE_ADDRESS);
+        holders.push(BOB_ADDRESS);
+        holders.push(CAROL_ADDRESS);
+        holders.push(DAVID_ADDRESS);
+        holders.push(address(escrow));
+
+        for (uint256 i = 0; i < holders.length; i++) {
+            uint256 bal = lock.balanceOf(holders[i]);
+            balancesBefore.push(bal);
+            uint256[] memory ownerTokens = new uint256[](bal);
+            for (uint256 j = 0; j < bal; j++) {
+                ownerTokens[j] = lock.tokenOfOwnerByIndex(holders[i], j);
+            }
+            ownerTokensBefore.push(ownerTokens);
+        }
+    }
+
+    function _assertLockSnapshotPreserved() internal {
+        // Lock-specific state variables
+        assertEq(lockUpgrade.escrow(), snap.escrowAddr, "escrow address changed");
+        assertEq(
+            lockUpgrade.whitelisted(address(escrow)),
+            snap.escrowWhitelisted,
+            "escrow whitelist changed"
+        );
+        assertTrue(lockUpgrade.whitelisted(address(escrow)), "escrow must remain whitelisted");
+        assertEq(
+            lockUpgrade.whitelisted(CUSTOM_WHITELIST),
+            snap.customWhitelisted,
+            "custom whitelist entry lost"
+        );
+        assertTrue(
+            lockUpgrade.whitelisted(CUSTOM_WHITELIST),
+            "custom whitelisted address must remain whitelisted"
+        );
+        assertEq(
+            lockUpgrade.whitelisted(NOT_WHITELISTED),
+            snap.notWhitelisted,
+            "non-whitelisted address became whitelisted"
+        );
+        assertFalse(
+            lockUpgrade.whitelisted(NOT_WHITELISTED),
+            "non-whitelisted address must remain non-whitelisted"
+        );
+        assertEq(
+            lockUpgrade.whitelisted(lockUpgrade.WHITELIST_ANY_ADDRESS()),
+            snap.anyAddressWhitelisted,
+            "WHITELIST_ANY_ADDRESS entry changed"
+        );
+        assertEq(lockUpgrade.LOCK_ADMIN_ROLE(), snap.lockAdminRole, "LOCK_ADMIN_ROLE changed");
+
+        // DaoAuthorizable state
+        assertEq(address(lockUpgrade.dao()), snap.daoAddr, "dao address changed");
+
+        // ERC721Enumerable state
+        assertEq(lockUpgrade.name(), snap.name, "ERC721 name changed");
+        assertEq(lockUpgrade.symbol(), snap.symbol, "ERC721 symbol changed");
+        assertEq(lockUpgrade.totalSupply(), snap.totalSupply, "totalSupply changed");
+
+        for (uint256 i = 0; i < snap.totalSupply; i++) {
+            assertEq(
+                lockUpgrade.tokenByIndex(i),
+                tokenIdsBefore[i],
+                "tokenByIndex changed across upgrade"
+            );
+            assertEq(
+                lockUpgrade.ownerOf(tokenIdsBefore[i]),
+                tokenOwnersBefore[i],
+                "ownerOf changed across upgrade"
+            );
+        }
+
+        for (uint256 i = 0; i < holders.length; i++) {
+            assertEq(
+                lockUpgrade.balanceOf(holders[i]),
+                balancesBefore[i],
+                "balanceOf changed across upgrade"
+            );
+            for (uint256 j = 0; j < balancesBefore[i]; j++) {
+                assertEq(
+                    lockUpgrade.tokenOfOwnerByIndex(holders[i], j),
+                    ownerTokensBefore[i][j],
+                    "tokenOfOwnerByIndex changed across upgrade"
+                );
+            }
+        }
+
+        // UUPSUpgradeable state — implementation must point to the new logic.
+        address implAfter = lockUpgrade.implementation();
+        assertTrue(implAfter != address(0), "implementation is zero");
+        assertTrue(implAfter != snap.impl, "implementation should be replaced by upgrade");
+    }
+
+    function test_upgradeLockStatePreserved() public {
+        // Whitelist a custom address before the upgrade so we can verify
+        // the `whitelisted` mapping survives the implementation swap.
+        vm.prank(address(dao));
+        lock.setWhitelisted(CUSTOM_WHITELIST, true);
+
+        // Capture pre-upgrade Lock state.
+        _captureLockSnapshot();
+
+        // Run the upgrade.
+        _upgrade();
+        lockUpgrade = LockV1_2_0(address(lock));
+
+        // Verify every captured field is unchanged.
+        _assertLockSnapshotPreserved();
+
+        // ReentrancyGuard state — `_status` must be intact (i.e. not stuck in
+        // the entered state). The simplest behavioural check is that the
+        // escrow can still mint a new lock, which calls `lock.mint` under
+        // the `nonReentrant` modifier; if `_status` were corrupted the call
+        // would revert with ReentrancyGuard's "reentrant call" error.
+        uint256 newToken = escrow.createLockFor(1_000 ether, ALICE_ADDRESS);
+        assertEq(lockUpgrade.ownerOf(newToken), ALICE_ADDRESS, "minted token has wrong owner");
+        assertEq(
+            lockUpgrade.totalSupply(),
+            snap.totalSupply + 1,
+            "totalSupply did not increment after mint"
+        );
+
+        // The newly added _baseURIValue storage variable must start empty.
+        assertEq(lockUpgrade.tokenURI(aliceToken), "", "new _baseURIValue not zero-initialised");
+    }
+
+    function test_upgradeSetBaseURI() public {
+        _upgrade();
+
+        lockUpgrade = LockV1_2_0(address(lock));
+
+        // pre-upgrade tokens should have empty tokenURI by default
+        assertEq(lockUpgrade.tokenURI(aliceToken), "");
+        assertEq(lockUpgrade.tokenURI(bobToken), "");
+
+        // governance sets the base URI
+        vm.prank(address(dao));
+        lockUpgrade.setBaseURI("https://metadata.example.com/token/");
+
+        // pre-upgrade tokens should now return the correct tokenURI
+        assertEq(
+            lockUpgrade.tokenURI(aliceToken),
+            string.concat("https://metadata.example.com/token/", vm.toString(aliceToken))
+        );
+        assertEq(
+            lockUpgrade.tokenURI(bobToken),
+            string.concat("https://metadata.example.com/token/", vm.toString(bobToken))
+        );
+
+        // new tokens minted after upgrade also get the base URI
+        uint256 newToken = escrow.createLockFor(1_000 ether, ALICE_ADDRESS);
+        assertEq(
+            lockUpgrade.tokenURI(newToken),
+            string.concat("https://metadata.example.com/token/", vm.toString(newToken))
+        );
+
+        // unauthorized caller cannot set base URI
+        vm.prank(ALICE_ADDRESS);
+        vm.expectRevert();
+        lockUpgrade.setBaseURI("https://evil.com/");
+    }
+
     function _compareCurveState() internal view {
         CachedView memory vLatest = fetchState(curve, args);
 
