@@ -189,7 +189,16 @@ deploy-1-4-sepolia :; forge script script/deploy/DeployGauges_v1_4_0.s.sol:Deplo
 	--etherscan-api-key $(ETHERSCAN_API_KEY) \
 	-vvvvv
 
-
+deploy-1-4-chiliz :; forge script script/deploy/DeployGauges_v1_4_0.s.sol:DeployGaugesV1_4_0 \
+	--rpc-url $(RPC_URL) \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	--broadcast \
+	--slow \
+	--legacy \
+	--verify \
+	--verifier-url "https://api.routescan.io/v2/network/mainnet/evm/88888/etherscan/" \
+	--etherscan-api-key $(ETHERSCAN_API_KEY) \
+	-vvv 2>&1 | tee script/deploy/chiliz-deployment-output.log
 
 
 ### Other scripts ###
