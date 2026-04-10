@@ -44,3 +44,5 @@ script/multisig-*.json
 
 # llm
 *.prompt
+
+.claude
