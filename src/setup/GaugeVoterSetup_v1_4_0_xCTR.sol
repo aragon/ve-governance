@@ -87,7 +87,7 @@ contract GaugeVoterSetupV1_4_0_xCTR is PluginSetup {
         address _dao,
         address _plugin,
         address _clock,
-        PermissionLib.Operation _op
+        PermissionLib.Operation _grantOrRevoke
     ) public view returns (PermissionLib.MultiTargetPermission[] memory permissions) {
         permissions = new PermissionLib.MultiTargetPermission[](3);
 
@@ -95,7 +95,7 @@ contract GaugeVoterSetupV1_4_0_xCTR is PluginSetup {
             permissionId: GaugeVoter(_plugin).GAUGE_ADMIN_ROLE(),
             where: _plugin,
             who: _dao,
-            operation: _op,
+            operation: _grantOrRevoke,
             condition: PermissionLib.NO_CONDITION
         });
 
@@ -103,7 +103,7 @@ contract GaugeVoterSetupV1_4_0_xCTR is PluginSetup {
             permissionId: GaugeVoter(_plugin).UPGRADE_PLUGIN_PERMISSION_ID(),
             where: _plugin,
             who: _dao,
-            operation: _op,
+            operation: _grantOrRevoke,
             condition: PermissionLib.NO_CONDITION
         });
 
@@ -111,7 +111,7 @@ contract GaugeVoterSetupV1_4_0_xCTR is PluginSetup {
             permissionId: Clock(_clock).CLOCK_ADMIN_ROLE(),
             where: _clock,
             who: _dao,
-            operation: _op,
+            operation: _grantOrRevoke,
             condition: PermissionLib.NO_CONDITION
         });
     }

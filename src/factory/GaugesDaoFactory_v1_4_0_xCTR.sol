@@ -27,11 +27,11 @@ struct DeploymentParameters {
     address daoExecutor;
     string daoMetadataURI;
     string daoSubdomain;
-    // Multisig
+    // Multisig settings
     uint16 minApprovals;
     address[] multisigMembers;
     bytes multisigMetadata;
-    // Gauge voter
+    // Gauge Voter
     address ivotesSource; // pre-deployed GaugeVotes (xCTR voting tracker)
     bool votingPaused;
     // Multisig repo
