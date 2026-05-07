@@ -143,8 +143,8 @@ contract DeployGaugesV1_4_0 is Script {
             tokenParameters = new TokenParameters[](2);
             tokenParameters[0] = TokenParameters({
                 token: createTestToken(multisigMembers),
-                veTokenName: "VE Token 1",
-                veTokenSymbol: "veTK1"
+                veTokenName: "VE KEPPER",
+                veTokenSymbol: "veKEPPER"
             });
             tokenParameters[1] = TokenParameters({
                 token: createTestToken(multisigMembers),

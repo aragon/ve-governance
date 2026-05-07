@@ -29,9 +29,9 @@ test-invariant-v1-3-0 :; forge test --match-path "test/v1_3_0/invariant/**/*.sol
 test-invariant-v1-4-0 :; forge test --match-path "test/v1_4_0/invariant/**/*.sol" --show-progress
 
 # run unit tests for specific version
-test-ui-100 :; forge test --match-path "test/v1_0_0/{unit,integration}/**/*.sol" 
-test-ui-110 :; forge test --match-path "test/v1_1_0/{unit,integration}/**/*.sol" 
-test-ui-120 :; forge test --match-path "test/v1_2_0/{unit,integration}/**/*.sol" 
+test-ui-100 :; forge test --match-path "test/v1_0_0/{unit,integration}/**/*.sol"
+test-ui-110 :; forge test --match-path "test/v1_1_0/{unit,integration}/**/*.sol"
+test-ui-120 :; forge test --match-path "test/v1_2_0/{unit,integration}/**/*.sol"
 test-ui-130 :; forge test --match-path "test/v1_3_0/{unit,integration}/**/*.sol"
 test-ui-140 :; forge test --match-path "test/v1_4_0/{unit,integration}/**/*.sol"
 test-ui-season :; forge test --match-path "test/season/{unit,integration}/**/*.sol"
@@ -40,12 +40,12 @@ test-ui-season :; forge test --match-path "test/season/{unit,integration}/**/*.s
 test-unit :; forge test --match-path "test/**/unit/**/*.sol"
 
 # run unit tests for specific version
-test-unit-100 :; forge test --match-path "test/v1_0_0/unit/**/*.sol" 
-test-unit-110 :; forge test --match-path "test/v1_1_0/unit/**/*.sol" 
-test-unit-120 :; forge test --match-path "test/v1_2_0/unit/**/*.sol" 
-test-unit-130 :; forge test --match-path "test/v1_3_0/unit/**/*.sol" 
-test-unit-140 :; forge test --match-path "test/v1_4_0/unit/**/*.sol" 
-test-unit-season :; forge test --match-path "test/season/unit/**/*.sol" 
+test-unit-100 :; forge test --match-path "test/v1_0_0/unit/**/*.sol"
+test-unit-110 :; forge test --match-path "test/v1_1_0/unit/**/*.sol"
+test-unit-120 :; forge test --match-path "test/v1_2_0/unit/**/*.sol"
+test-unit-130 :; forge test --match-path "test/v1_3_0/unit/**/*.sol"
+test-unit-140 :; forge test --match-path "test/v1_4_0/unit/**/*.sol"
+test-unit-season :; forge test --match-path "test/season/unit/**/*.sol"
 
 # regression and upgrade tests
 test-upgrade-110 :; forge test --match-path "test/v1_1_0/upgrade/**/*.sol" --force
@@ -148,7 +148,7 @@ upgrade-mode :; forge script UpgradeModeTo110 \
 deploy-preview-mode-sepolia-110 :; forge script DeployGaugesV1_1_0 \
   --rpc-url https://sepolia.mode.network \
 	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
-	-vvvvv	
+	-vvvvv
 
 deploy-mode-sepolia :; forge script DeployGauges \
 	--rpc-url https://sepolia.mode.network \
@@ -189,7 +189,22 @@ deploy-1-4-sepolia :; forge script script/deploy/DeployGauges_v1_4_0.s.sol:Deplo
 	--etherscan-api-key $(ETHERSCAN_API_KEY) \
 	-vvvvv
 
+pre-deploy-1-4-chiliz :; forge script script/deploy/DeployGauges_v1_4_0.s.sol:DeployGaugesV1_4_0 \
+	--rpc-url $(RPC_URL) \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	--legacy \
+	-vvvv
 
+deploy-1-4-chiliz :; forge script script/deploy/DeployGauges_v1_4_0.s.sol:DeployGaugesV1_4_0 \
+	--rpc-url $(RPC_URL) \
+	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
+	--broadcast \
+	--slow \
+	--legacy \
+	--verify \
+	--verifier-url "https://api.routescan.io/v2/network/mainnet/evm/88888/etherscan/" \
+	--etherscan-api-key $(ETHERSCAN_API_KEY) \
+	-vvv 2>&1 | tee script/deploy/chiliz-deployment-output.log
 
 
 ### Other scripts ###
@@ -209,7 +224,7 @@ seed-mode-sepolia :; forge script SeedState \
 deploy-preview-ethereum-sepolia :; forge script DeployGauges \
   --rpc-url $(RPC_URL) \
 	--private-key $(DEPLOYMENT_PRIVATE_KEY) \
-	-vvvvv	
+	-vvvvv
 
 deploy-ethereum-sepolia :; forge script DeployGauges \
 	--rpc-url $(RPC_URL) \
