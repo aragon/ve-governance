@@ -23,7 +23,7 @@
 
 For the system overview and integration guides, read link:https://github.com/aragon/protocol-doc/blob/main/plugins/ve-governance.md[protocol-doc]. Build and test instructions are in the link:https://github.com/aragon/ve-governance/blob/develop/README.md[repository README]. This page is generated from the contract sources.
 
-Use the link:https://github.com/aragon/ve-governance/blob/develop/docs/versions-and-upgrades.md[version map] to identify each setup's components. Their filename suffixes can differ from the setup version.
+Use the link:https://github.com/aragon/protocol-doc/blob/main/plugins/ve-governance/versions-and-upgrades.md[version map] to identify each setup's components. Their filename suffixes can differ from the setup version.
 
 == Lock NFT
 

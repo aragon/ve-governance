@@ -9,8 +9,8 @@ The guides and component references live in link:https://github.com/aragon/proto
 == Repository references
 
 * link:https://github.com/aragon/ve-governance/blob/develop/README.md[Technical stack, build, and tests]
-* link:https://github.com/aragon/ve-governance/blob/develop/docs/deployment.md[Deployment scripts and validation]
-* link:https://github.com/aragon/ve-governance/blob/develop/docs/versions-and-upgrades.md[Configuration map and upgrade paths]
+* link:https://github.com/aragon/protocol-doc/blob/main/deployment/ve-governance.md[Deployment scripts and validation]
+* link:https://github.com/aragon/protocol-doc/blob/main/plugins/ve-governance/versions-and-upgrades.md[Configuration map and upgrade paths]
 * link:https://github.com/aragon/ve-governance/tree/develop/src/specs[Contract specifications]
 * link:https://github.com/aragon/ve-governance/tree/develop/audits[Audit reports and review material]
 
