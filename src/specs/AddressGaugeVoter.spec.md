@@ -80,8 +80,8 @@ interface IAddressGaugeVoter {
     address _gauge
   ) external view returns (uint256);
 
-  /// @notice Get total votes for a gauge in current epoch
-  function gaugeVotes(address _address) external view returns (uint256);
+  /// @notice Get stored votes for a gauge: bucket 0 with hooks enabled, or an epoch ID with hooks disabled
+  function epochGaugeVotes(uint256 _bucket, address _gauge) external view returns (uint256);
 
   // Key Events
   event Voted(
@@ -111,7 +111,7 @@ interface IAddressGaugeVoter {
 - **Vote Persistence**: Votes persist across epochs when hook is enabled (epoch 0 storage)
 - **Gas Considerations**: Voting for many gauges or frequent resets can be gas intensive
 - **Delegation Complexity**: Auto-update behavior differs significantly based on hook setting
-- **Reset Requirement**: Must reset before any vote changes or NFT transfers
+- **Vote Replacement and Transfers**: A new vote resets the caller's previous allocation internally. NFT transfers update delegated voting power through the escrow and remain subject to transfer permissions.
 - **Gauge Uniqueness**: Cannot create duplicate gauges (by address)
 - **Vote Recasting**: With hook enabled and voting power decreases, votes auto-adjust downward
 - **No Vote Inflation**: System prevents using same tokens to vote multiple times per epoch

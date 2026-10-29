@@ -1,304 +1,170 @@
-# Aragon VE Governance Hub
+# Aragon VE Governance
 
-Welcome to Aragon's veGovernance Plugin - a flexible, modular and secure system which can be used to create custom DAOs that foster a strong alignment between token holders and capital flows.
+Aragon VE Governance lets token holders vote on how a protocol allocates incentives or other resources. Participants lock tokens, receive a position NFT, and assign voting power to pools, projects, or other registered destinations called gauges.
 
-## Setup
+VE holds the deposited tokens and tracks positions, voting power, delegation, votes, and withdrawals. Your protocol defines how votes become allocations and supplies the funds and payout mechanism. With the standard linear curve, a position gains voting power as it ages, up to a cap.
 
-To get started, ensure that [Foundry](https://getfoundry.sh/) is installed on your computer.
+## Is VE a fit for your protocol?
 
-<details>
-  <summary>Also make sure to install [GNU Make](https://www.gnu.org/software/make/).</summary>
-  
-  ```sh
-  # debian
-  sudo apt install build-essential
+VE suits protocols that want participants to influence recurring allocations and are willing to require token locking for voting power. Your team chooses the eligible gauges, voting-power curve, exit terms, and allocation rules. Some choices are contract settings; others require different implementations or additional integrations.
 
-# arch
+Your engineers will need to connect a participant interface, define and fund the allocation process, and validate the deployment. This repository provides the contracts and deployment tooling. The [integration guide](docs/integration.md) covers the application and allocation work.
 
-sudo pacman -S base-devel
+Participants give up immediate access to deposited tokens: withdrawals follow the configured minimum lock age, queue wait, and fees. The DAO retains control over gauge eligibility, administrative settings, pauses, and upgrades. The supplied factory initially puts DAO administration under a multisig; gauge votes do not themselves authorize these administrative actions.
 
-# nix
+For proposal governance, the delegation adapter can supply voting power to a compatible governance plugin. Proposal execution requires that separate plugin; the gauge voter records allocation preferences.
 
-nix-env -iA nixpkgs.gnumake
+For a new integration, start by evaluating the v1.4 configuration used in these guides. Earlier-version documentation supports maintenance and upgrades of existing deployments; Season is a separate variant. Files without a version suffix can be older implementations.
 
-# macOS
+## Start here
 
-brew install make
+| Goal | Read |
+| --- | --- |
+| Understand escrow, voting power, delegation, and exits | [How the system works](docs/architecture.md) |
+| Build an application or consume gauge results | [Integration guide](docs/integration.md) |
+| Install dependencies and run tests | [Local development](#local-development) |
+| Configure and simulate a deployment | [Deployment guide](docs/deployment.md) |
+| Identify a configuration or plan an upgrade | [Versions and upgrades](docs/versions-and-upgrades.md) |
+| Review individual contract requirements | [Contract specifications](src/specs/) |
+| Review audit material | [Security and reviews](#security-and-reviews) |
 
+## What you can build
+
+- Let participants assign voting power across registered destinations, then apply your allocation policy to the results.
+- Weight governance by the escrow's voting-power curve rather than liquid token balances. The checked-in linear coefficients increase a position's power as it ages, up to a cap.
+- Let holders vote through their own address or delegate to another address through the `EscrowIVotesAdapter`.
+- Set a minimum lock period and withdrawal wait. The v1.4 queue supports fixed, tiered, or linearly decreasing exit fees.
+
+The v1.4 escrow accepts an underlying token with 18 decimals and requires deposits to increase its balance by the exact amount requested. Fee-on-transfer tokens are unsupported. Review other nonstandard token behavior before integrating it.
+
+## How it fits together
+
+An Aragon OSx DAO manages gauges, component pauses, settings, and upgrades through its permission system. The v1.4 factory installs a multisig to administer the DAO and one VE component set per configured token.
+
+```mermaid
+flowchart LR
+    Holder[Token holder] -->|Deposit tokens| Escrow[Voting escrow]
+    Escrow -->|Mint position| NFT[Lock NFT]
+    Escrow --> Curve[Voting-power curve]
+    Holder -->|Delegate| Adapter[IVotes adapter]
+    Adapter -->|Voting power| Voter[Gauge voter]
+    Holder -->|Vote directly or through a delegate| Voter
+    Voter -->|Read weights| Allocator[External allocation process]
+    Escrow -->|Queue withdrawal| Queue[Exit queue]
+    Queue -->|Eligibility and fee| Escrow
 ```
 
-</details>
+Connect your reward distributor, emissions controller, or proposal-execution plugin separately, with the permissions it needs.
 
-### Using the Makefile
+### Components in the v1.4 setup
 
-The `Makefile` as the target launcher of the project. It's the recommended way to work with it. It manages the env variables of common tasks and executes only the steps that require being run.
+| Component | Responsibility | Source |
+| --- | --- | --- |
+| Voting escrow | Holds the underlying tokens and manages each position's lifecycle | [VotingEscrowIncreasing_v1_2_0.sol](src/escrow/VotingEscrowIncreasing_v1_2_0.sol) |
+| Lock NFT | Represents position ownership; restricts transfers according to its whitelist | [Lock_v1_2_0.sol](src/lock/Lock_v1_2_0.sol) |
+| Voting-power curve | Calculates position and total voting power from checkpointed history | [LinearIncreasingCurve.sol](src/curve/LinearIncreasingCurve.sol) |
+| Delegation adapter | Exposes current and historical voting power through an IVotes-style interface | [EscrowIVotesAdapter.sol](src/delegation/EscrowIVotesAdapter.sol) |
+| Gauge voter | Records address-based weights across active gauges | [AddressGaugeVoter.sol](src/voting/AddressGaugeVoter.sol) |
+| Clock | Defines epochs, checkpoints, and voting windows | [Clock_v1_2_0.sol](src/clock/Clock_v1_2_0.sol) |
+| Exit queue | Records withdrawal tickets, waiting periods, and fees | [DynamicExitQueue.sol](src/queue/DynamicExitQueue.sol) |
+| Plugin setup | Deploys component proxies and prepares OSx permissions | [GaugeVoterSetup_v1_4_0.sol](src/setup/GaugeVoterSetup_v1_4_0.sol) |
+| Deployment factory | Creates the DAO and plugins, connects the helpers, and records their addresses | [GaugesDaoFactory_v1_4_0.sol](src/factory/GaugesDaoFactory_v1_4_0.sol) |
 
-### Understanding `.env.example`
+## Position lifecycle
 
-The env.example file contains descriptions for all the initial settings. You don't need all of these right away but should review prior to fork tests and deployments
+1. Create a lock. Approve the escrow to spend the underlying token, then call `createLock(amount)` or `createLockFor(amount, recipient)`. The escrow holds the tokens; the recipient owns the position NFT.
+2. Accumulate voting power. In the v1.4 configuration, the recorded lock start is the beginning of the current weekly checkpoint interval. Voting power is calculated from that recorded start. There is no separate warmup delay in this configuration.
+3. Delegate. Call `delegate(address)` on the adapter. Self-delegation lets a holder vote through their own address. Delegation gives voting authority, not ownership of the NFT or its underlying tokens.
+4. Vote. During the voting window, call `vote(GaugeVote[])` with relative weights for active gauges. A new vote replaces that address's existing allocation. Holding a lock alone does not cast a vote.
+5. Use the results. An external process reads gauge weights at its chosen block and calculates allocations under its own rules. That process supplies the reward assets and payout mechanism.
+6. Begin an exit. After the minimum lock requirement is met, approve the escrow to transfer the NFT and call `beginWithdrawal(tokenId)`. The NFT moves into escrow custody and its voting power is removed. The queue records a withdrawal ticket for the owner.
+7. Withdraw or cancel. The ticket holder can withdraw once the ticket permits it, receiving the principal less any exit fee. The NFT is burned on withdrawal. A pending request can instead be cancelled through `cancelWithdrawalRequest(tokenId)`.
 
-## Running fork tests
+The [architecture](docs/architecture.md) and [integration guide](docs/integration.md) explain how transfers, merges, splits, and delegation affect position accounting.
 
-Fork testing has 2 modes:
+### Timing and configuration
 
-1. "new-factory" will run against the live network fork, deploying new contracts via a new instance of the factory. See `make test-fork-testnet`, `make test-fork-prodnet` and simmilar
+The checked-in v1.4 script uses a linear curve from approximately 1× to 2× the deposited amount over 52 two-week epochs, with integer rounding. Other deployments may use different coefficients.
 
-2. "existing-factory" will run against the live network fork, using the existing factory & therefore the existing contracts. See `make test-fork-factory-testnet`, `make test-fork-factory-prodnet` and simmilar
+The standard clock has two-week epochs and weekly checkpoints. Voting opens one hour after an epoch begins and closes one hour before the first week ends. The clock defines these windows; your protocol's separate allocation process handles payouts.
 
-In both cases, you will need to find the correct Aragon OSx contracts for the chain you wish to fork against. These can be found in the [OSx commons repo](https://github.com/aragon/osx-commons/tree/main/configs/src/deployments/json)
+Curve coefficients and clock durations depend on the implementations you select. Some require changes to implementation code or constructor arguments. The [deployment guide](docs/deployment.md) identifies what you can set at deployment or change through the DAO.
 
-> If running frequent fork tests it's recommended to pass a block number to enable caching
+### Gauge results and delegation
 
-## Deployment
+The v1.4 setup enables the voter's update hook. In this mode, allocations persist across epochs and use current delegated voting power when cast. A holder can recast during a voting window to include increased voting power. Hook-driven updates can reduce an existing allocation when voting power falls, including outside the voting window.
 
-Deployments are done using the deployment factory. This is a singleton contract that will:
+The same voter contract also supports a mode without that hook, using epoch-start snapshots and separate storage per epoch. Read [gauge result accounting](docs/integration.md#gauge-result-accounting) before choosing getters or building a reward snapshot.
 
-- Deploy all contracts
-- Set permissions
-- Transfer ownership to a freshly deployed multisig
-- Store the addresses of the deployment in a single source of truth that can be queried at any time.
+## Local development
 
-Check the available make targets to simulate and deploy the smart contracts:
+Install [Foundry](https://getfoundry.sh/), Git, and GNU Make. Python 3 runs the curve inspection script. Upgrade safety validation also requires Node.js and npm, which provides `npx`. Documentation generation has additional JavaScript dependencies described in the [deployment guide](docs/deployment.md#documentation-generation).
 
-```
+Check that `forge` is available in the shell where you run the commands. If you just installed Foundry, load your shell configuration or open a new terminal first.
 
-- make pre-deploy-testnet Simulate a deployment to the defined testnet
-- make pre-deploy-prodnet Simulate a deployment to the defined production network
-- make deploy-testnet Deploy to the defined testnet network and verify
-- make deploy-prodnet Deploy to the production network and verify
-
-````
-
-### Deployment Checklist
-
-
-- [ ] I have cloned the official repository on my computer and I have checked out the corresponding branch
-- [ ] I am using the latest official docker engine, running a Debian Linux (stable) image
-  - [ ] I have run `docker run --rm -it -v .:/deployment debian:bookworm-slim`
-  - [ ] I have run `apt update && apt install -y make curl git vim neovim bc`
-  - [ ] I have run `curl -L https://foundry.paradigm.xyz | bash`
-  - [ ] I have run `source /root/.bashrc && foundryup`
-  - [ ] I have run `cd /deployment`
-  - [ ] I have run `make init`
-  - [ ] I have printed the contents of `.env` and `.env.test` on the screen
-- [ ] I am opening an editor on the `/deployment` folder, within the Docker container
-- [ ] The `.env` file contains the correct parameters for the deployment
-  - [ ] I have created a brand new burner wallet with `cast wallet new` and copied the private key to `DEPLOYMENT_PRIVATE_KEY` within `.env`
-  - [ ] I have reviewed the target network and RPC URL
-  - [ ] I have checked that the JSON file under `MULTISIG_MEMBERS_JSON_FILE_NAME` contains the correct list of signers
-  - [ ] I have ensured all multisig members have undergone a proper security review and are aware of the security implications of being on said multisig
-  - [ ] I have checked that `MIN_APPROVALS` and `MULTISIG_PROPOSAL_EXPIRATION_PERIOD` are correct
-  - [ ] I have verified that `TOKEN1_ADDRESS` corresponds to an ERC20 contract on the target chain (same for TOKEN2 if applicable)
-  - [ ] I have checked that `VE_TOKEN1_NAME` and `VE_TOKEN1_SYMBOL` are correct (same for TOKEN2 if applicable)
-  - I have checked that fee percent, warmup period, cooldown period, min lock duration, and min deposit:
-    - [ ] Have the expected values
-    - [ ] Cannot leave the voting contract or user tokens locked out
-  - [ ] I have checked that `VOTING_PAUSED` is true, should voting not be active right away
-  - [ ] The multisig plugin repo and version:
-    - [ ] Correspond to the official contract on the target network
-    - [ ] Point to the latest stable release available
-  - The plugin ENS subdomain
-    - [ ] Contains a meaningful and unique value
-  - The given OSx addresses:
-    - [ ] Exist on the target network
-    - [ ] Contain the latest stable official version of the OSx DAO implementation, the Plugin Setup Processor and the Plugin Repo Factory
-    - [ ] I have verified the values on https://www.npmjs.com/package/@aragon/osx-commons-configs?activeTab=code > `/@aragon/osx-commons-configs/dist/deployments/json/`
-- [ ] I have updated the `CurveConstantLib` and `Clock` with any new constants.
-- [ ] All my unit tests pass (`make test`)
-- **Target test network**
-  - [ ] I have defined `FORK_TESTNET_BLOCK_NUMBER` on `.env.test`, with the current block number
-  - [ ] I have run a fork test in `new-factory` mode with minted tokens against the official OSx contracts on the testnet
-    - `make test-fork-mint-testnet`
-  - [ ] I have deployed my contracts successfully to the target testnet
-    - `make deploy-testnet`
-  - [ ] I have updated `FACTORY_ADDRESS` on `.env.test` with the address of the deployed factory
-  - If there is a live token with an address holding ≥ 3000 tokens on the testnet:
-    - [ ] I have defined `TEST_TOKEN_WHALE` on `.env.test`
-    - [ ] I have run a fork test in `new-factory` mode with the live token on the testnet
-      - `make test-fork-testnet`
-    - [ ] I have confirmed that tests still work in `existing-factory` mode with the live token(s) and the already deployed factory on the testnet.
-      - `make test-fork-factory-testnet`
-- **Target production network**
-  - [ ] I have defined `FORK_PRODNET_BLOCK_NUMBER` on `.env.test`, with the current block number
-  - [ ] I have run a fork test in `new-factory` mode with minted tokens against the official OSx contracts on the prodnet
-    - `make test-fork-mint-prodnet`
-  - If the live token has an address holding ≥ 3000 tokens on the prodnet:
-    - [ ] I have defined `TEST_TOKEN_WHALE` on `.env.test`
-    - [ ] I have updated `TOKEN1_ADDRESS` to have the address of the testnet token deployed above
-    - [ ] I have run a fork test in `new-factory` mode with the live token on the prodnet
-      - `make test-fork-prodnet`
-    - [ ] I have confirmed that tests still work in `existing-factory` mode with the live token(s) and the already deployed factory on the prodnet.
-      - `make test-fork-factory-prodnet`
-    - [ ] I have reverted `TOKEN1_ADDRESS` to the intended address of the token on the production network
-- [ ] My deployment wallet is a newly created account, ready for safe production deploys.
-- My computer:
-  - [ ] Is running in a safe physical location and a trusted network
-  - [ ] It exposes no services or ports
-  - [ ] The wifi or wired network used does does not have open ports to a WAN
-- [ ] I have previewed my deploy without any errors
-  - `make pre-deploy-prodnet`
-- [ ] My wallet has sufficient native token for gas
-  - At least, 15% more than the estimated simulation
-- [ ] Unit tests still run clean
-- [ ] I have run `git status` and it reports no local changes
-- [ ] The current local git branch corresponds to its counterpart on `origin`
-  - [ ] I confirm that the rest of members of the ceremony pulled the last commit of my branch and reported the same commit hash as my output for `git log -n 1`
-- [ ] I have initiated the production deployment with `make deploy-prodnet`
-
-### Post deployment checklist
-
-- [ ] The deployment process completed with no errors
-- [ ] The deployed factory was deployed by the deployment address
-- [ ] The reported contracts have been created created by the newly deployed factory
-- [ ] The smart contracts are correctly verified on Etherscan or the corresponding block explorer
-- [ ] The output of the latest `deployment-*.log` file corresponds to the console output
-- [ ] I have transferred the remaining funds of the deployment wallet to the address that originally funded it
-  - `make refund`
-
-### Manual from the command line
-
-You can of course run all commands from the command line:
+For a fresh clone:
 
 ```sh
-# Load the env vars
-source .env
-````
-
-```sh
-# run unit tests
-forge test --no-match-path "test/fork/**/*.sol"
+git clone --recurse-submodules https://github.com/aragon/ve-governance.git
+cd ve-governance
 ```
 
-```sh
-# Set the right RPC URL
-RPC_URL="https://eth-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}"
-```
+For an existing clone, fetch the pinned submodules and build:
 
 ```sh
-# Run the deployment script
-
-# If using Etherscan
-forge script --chain "$NETWORK" script/DeployGauges.s.sol:Deploy --rpc-url "$RPC_URL" --broadcast --verify
-
-# If using BlockScout
-forge script --chain "$NETWORK" script/DeployGauges.s.sol:Deploy --rpc-url "$RPC_URL" --broadcast --verify --verifier blockscout --verifier-url "https://sepolia.explorer.mode.network/api\?"
+git submodule update --init --recursive
+forge build
 ```
 
-If you get the error Failed to get EIP-1559 fees, add `--legacy` to the command:
+Run the v1.4 unit and integration suite, then inspect the configured curve:
 
 ```sh
-forge script --chain "$NETWORK" script/DeployGauges.s.sol:Deploy --rpc-url "$RPC_URL" --broadcast --verify --legacy
+make test-ui-140
+make check-curve
 ```
 
-If some contracts fail to verify on Etherscan, retry with this command:
+The curve command prints coefficients and sampled voting-power values for review. Run the contract tests as well.
 
-```sh
-forge script --chain "$NETWORK" script/DeployGauges.s.sol:Deploy --rpc-url "$RPC_URL" --verify --legacy --private-key "$DEPLOYMENT_PRIVATE_KEY" --resume
-```
+### Test commands
 
-## Contracts Overview
+| Command | Scope |
+| --- | --- |
+| `make test-ui` | Unit and integration tests across configurations |
+| `make test-ui-140` | v1.4 unit and integration tests |
+| `make test-unit` | Unit tests across configurations |
+| `make test-invariant-v1-4-0` | v1.4 invariant suite |
+| `make test-upgrade-140` | Tests under the v1.4 upgrade directory; currently reuses a v1.0-to-v1.3 regression path |
+| `make test-upgrade-130` | v1.3 upgrade tests, with a forced rebuild |
+| `make check-curve` | Print the current curve's shape and sampled values |
 
-The primary contracts in the governance hub are found in the `src` directory. The key contracts include
+The [Makefile](Makefile) has targets for other versions. Invariant suites can take much longer than unit tests; their run counts and depth are set in [foundry.toml](foundry.toml).
 
-- `VotingEscrowIncreasing.sol`: ERC721 veNFT designed to be used with escrow systems that reward users for longer lock times.
-- `GaugeVoter.sol`: allows split voting across arbitrary options. Votes are simply registered in the gauge voter, they do not perform any onchain actions
+Fork tests need a chain RPC and matching configuration. The v1.4 fork file is commented out, so selecting it will not test a deployment. See [fork validation](docs/deployment.md#fork-validation).
 
-The main workflow in the Aragon VE Governance build is as follows:
+## Deploying and upgrading
 
-## Escrow
+Start with the [deployment guide](docs/deployment.md). It covers the v1.4 script, environment variables, factory wiring, simulation, and post-deployment checks. The addresses in the example environment file are examples to verify, not a current registry of supported networks.
 
-- Users lock a whitelisted token into the Escrow Contract.
-- The user is minted a veNFT (ERC721Enumerable) which stores:
-  - The amount they locked
-  - The start of their lock - users begin their locks starting from the current deposit interval
-    - In the base case, this means a user will start their lock from the start of the current week (Thursday 00:00 UTC)
-- veNFT transfers are disabled by default, but can be enabled by governance.
-- The user's voting power increases over time, starting from a baseline of the locked amount, up to a maximum voting power
-- The user is unable to vote during an initial "warmup period".
+For an existing deployment, first identify the factory, proxy implementations, curve, clock, and permissions. Read [versions and upgrades](docs/versions-and-upgrades.md) before selecting an upgrade factory. The repository retains multiple generations of contracts, and shared source files can be used by several setup versions.
 
-## Withdrawing
+## Repository layout
 
-- The user can exit their position at any time. In this case, they are entered into an "Exit Queue", whereupon their NFT is held in the queue for a "cooldown" period of X Days. After the period ends, they can burn the NFT to receieve their underlying balance back.
-  - It's possible to add a `minLock` period whereby a user is prevented from entering the exit queue before a certain time. This means they have their NFT available to vote but can't enter the exit process.
-  - Voting power is removed from the NFT at this time
-  - The exit queue can optionally set an exit fee that will be charged on exit.
+| Path | Contents |
+| --- | --- |
+| [`src/`](src/) | Contracts, interfaces, and versioned setup and factory configurations |
+| [`src/specs/`](src/specs/) | Contract-level requirements and design notes |
+| [`test/`](test/) | Tests grouped by configuration, including unit, integration, upgrade, invariant, and fork tests |
+| [`script/deploy/`](script/deploy/) | Version-specific deployment scripts |
+| [`src/factory/upgrades/`](src/factory/upgrades/) | Upgrade factories for particular migration paths |
+| [`docs/`](docs/) | Guides and Antora documentation sources |
+| [`audits/`](audits/) | Audit reports, scope documents, and follow-up reviews |
 
-## Merging and Splitting
+Identify deployed contracts through the setup's imports and the [version map](docs/versions-and-upgrades.md). The package and Antora version fields apply to publishing.
 
-- veNFTs can be consolidated into a single veNFT via _merging_ or multiple sub-veNFTs can be created via _splitting_.
-- Splitting can be done at any time, provided it has been enabled by the DAO
-- Merging can only be done provided the veNFTs have the same start date or have reached maturity.
+## Security and reviews
 
-## Delegation
+Audit material is stored in [`audits/`](audits/), including the [initial review summary](audits/AUDIT_REPORT.md), [Halborn reports](audits/audit_halborn.pdf), [later Halborn report](audits/halborn-3.pdf), and subsequent [VE Governance updates](<audits/VE Governance Updates _ SSC.pdf>) and [Audit 4 report](<audits/VE Governance plugin - Audit 4 _ SSC.pdf>).
 
-- Delegation is an option that can be enabled.
-- Users can self delegate, or delegate to another address. Users can only delegate tokenIds to one address but not all tokenIDs need to be delegated.
-- Delegation is exposed behind the `EscrowIVotesAdapter` which exposes an IVotes-compatible interface, this allows the escrow to be used in standard governance
-- Delegation dynamically adjusts with voting power, once a user delegates, the delegates total voting power will keep increasing until the user's veNFT reaches maturity.
-- Delegation is updated on transfer, mint and burn.
+Check each report's scope and revision against the implementations, constants, and changes you plan to deploy. Scope notes, internal follow-ups, and material under `audits/llm/` are distinct from independent audits.
 
-## Voting
-
-- Administrators setup voting options on the GaugeVoter, we call these `gauges`.
-- Administrators can activate voting at which point a timestamp is recorded. By default there are 2 phases to a voting epoch:
-  - A Voting phase (default is 1 week), where votes are accepted.
-  - A distribution phase of (default is 1 week), where votes are not accepted (this is done in order to allow governance to compute and allocate rewards).
-- Users can vote as often as they want during the voting period, voting multiple times will calculate the latest voting power so it may be preferential to wait later in the period to maximise voting power.
-
-- Voting can be done using TokenIDs - see the `TokenGaugeVoter.sol` - or using Addresses - see the `AddressGaugeVoter.sol`
-
-### Token Gauge Voter
-
-- Users vote by tokenID, votes by tokenId are tracked independently.
-- Users' NFTs are locked unless they `reset` their votes and remove their voting power.
-
-### Address Gauge Voter
-
-- The address gauge voter requires an IVotes compatible voting token
-- Users must self delegate to vote on the voter
-- Delegates can vote on the user's behalf without recieving approval to transfer the token
-- The address voter exposes a hook that can be called to update voting power when delegate balances change.
-  - In our VE implementation, this automatically adjusts gauge votes when delegation changes
-
-## Parameterization
-
-- Various elements of these contracts can be parameterised in order to support different ve mechanisms. These include:
-
-  - Custom exit queue logic via custom exit queue managers
-  - Custom escrow curves
-  - Custom voting contracts other than SimpleGaugeVoter
-  - Custom epoch clock logic via the `Clock.sol` contract
-
-- Additionally, we use libraries like `CurveCoefficientLib` and `SignedFixedPointMathLib` that allow users to make minimal, consistent and gas-efficient customisations to things like epoch length and curve shapes.
-
-## Rewards
-
-- The current versions of the contracts assume an offchain rewards distribution mechanism.
-- Rewards are typically allocated in proportion to the voting power cast in the gauge.
-
-## Caveats
-
-- This version of the repository defines user-based logic and initial framework for:
-- Rewards and emissions are assumed to be offchain
-- delegateBySig is as-yet unsupported and will revert
-- Only time-based clocks are supported in this version, support for block-based clocks (i.e. ERC20Votes w. block.number) is currently unsupported
-
-## Curve design
-
-To build a flexible approach to curve design, we reviewed implementations such as seen in Curve and Aerodrome and attempted to generalise [Details on the curve design research can be found here](https://github.com/jordaniza/ve-explainer/blob/main/README.md)
-
-# Important note on upgrades and warmups
-
-If upgrading from 1-0-0 or 1-1-0 to 1-2-0+, please note the behaviour changes with regards to _new_ locks:
-
-- Locks created pre upgrade will have start dates recorded at the _end_ of the current weekly interval
-- Locks created post upgrade will have start dates recorded at the _start_ of the current weekly interval
-
-The main risk vector here is the potential underflow concerns for 1-2-0+ contracts assuming lock.start >= block.timestamp.
-
-While the contracts have been tested for this, we still recommend the following precautions:
-
-1. Set warmup periods to zero at least 1 deposit interval before the upgrade.
-2. Pause the contracts between the upgrade and the next deposit interval.
-
-This ensures that all stakers who would be placed into a warmup period pre-upgrade have consistent behaviour post upgrade. This also ensures all stakers post upgrade have active locks - consistent with the expectations of the 1-2-0 contracts.
+Administrative roles include upgrade authority. Review who can act through the DAO and which roles it grants. See the [architecture guide](docs/architecture.md#administration-and-permissions) for the roles and the [deployment guide](docs/deployment.md) for installation checks.
