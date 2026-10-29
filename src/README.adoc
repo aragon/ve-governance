@@ -1,6 +1,6 @@
 = VE Governance contract reference
 
-For an explanation of the system, read the link:https://github.com/aragon/ve-governance/blob/develop/README.md[README] and link:https://github.com/aragon/ve-governance/blob/develop/docs/architecture.md[architecture guide]. This page is generated from the contract sources.
+For the system overview and integration guides, read link:https://github.com/aragon/protocol-doc/blob/main/plugins/ve-governance.md[protocol-doc]. Build and test instructions are in the link:https://github.com/aragon/ve-governance/blob/develop/README.md[repository README]. This page is generated from the contract sources.
 
 Use the link:https://github.com/aragon/ve-governance/blob/develop/docs/versions-and-upgrades.md[version map] to identify each setup's components. Their filename suffixes can differ from the setup version.
 
@@ -8,6 +8,6 @@ Use the link:https://github.com/aragon/ve-governance/blob/develop/docs/versions-
 
 `LockV1_2_0` represents ownership of escrow positions. The escrow holds the underlying tokens and controls minting and burning. Transfers are subject to the NFT contract's whitelist and update delegated voting power through the escrow.
 
-This page includes the generated NFT reference. For escrow, voting, delegation, queue, and setup interfaces, follow the contract sources linked from the architecture guide.
+This page includes the generated NFT reference. For escrow, voting, delegation, queue, and setup interfaces, follow the source links in the repository README.
 
 {{ LockV1_2_0 }}

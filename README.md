@@ -1,62 +1,26 @@
 # Aragon VE Governance
 
-Aragon VE Governance lets token holders vote on how a protocol allocates incentives or other resources. Participants lock tokens, receive a position NFT, and assign voting power to pools, projects, or other registered destinations called gauges.
+Solidity contracts for token locking, delegated voting power, gauge voting, and queued withdrawals, built on Aragon OSx. Gauge weights are inputs to a protocol's allocation process; reward calculation and payouts require a separate integration.
 
-VE holds the deposited tokens and tracks positions, voting power, delegation, votes, and withdrawals. Your protocol defines how votes become allocations and supplies the funds and payout mechanism. With the standard linear curve, a position gains voting power as it ages, up to a cap.
+## Documentation
 
-## Is VE a fit for your protocol?
-
-VE suits protocols that want participants to influence recurring allocations and are willing to require token locking for voting power. Your team chooses the eligible gauges, voting-power curve, exit terms, and allocation rules. Some choices are contract settings; others require different implementations or additional integrations.
-
-Your engineers will need to connect a participant interface, define and fund the allocation process, and validate the deployment. This repository provides the contracts and deployment tooling. The [integration guide](docs/integration.md) covers the application and allocation work.
-
-Participants give up immediate access to deposited tokens: withdrawals follow the configured minimum lock age, queue wait, and fees. The DAO retains control over gauge eligibility, administrative settings, pauses, and upgrades. The supplied factory initially puts DAO administration under a multisig; gauge votes do not themselves authorize these administrative actions.
-
-For proposal governance, the delegation adapter can supply voting power to a compatible governance plugin. Proposal execution requires that separate plugin; the gauge voter records allocation preferences.
-
-For a new integration, start by evaluating the v1.4 configuration used in these guides. Earlier-version documentation supports maintenance and upgrades of existing deployments; Season is a separate variant. Files without a version suffix can be older implementations.
-
-## Start here
+User and developer guides live in [protocol-doc](https://github.com/aragon/protocol-doc). This repository covers the source, build, tests, deployment scripts, and version-specific upgrade paths.
 
 | Goal | Read |
 | --- | --- |
-| Understand escrow, voting power, delegation, and exits | [How the system works](docs/architecture.md) |
-| Build an application or consume gauge results | [Integration guide](docs/integration.md) |
-| Install dependencies and run tests | [Local development](#local-development) |
+| Evaluate VE and understand its components | [VE Governance overview](https://github.com/aragon/protocol-doc/blob/main/plugins/ve-governance.md) |
+| Deposit, delegate, vote, and read results | [VE integration walkthrough](https://github.com/aragon/protocol-doc/blob/main/guides/use-ve-governance.md) |
 | Configure and simulate a deployment | [Deployment guide](docs/deployment.md) |
 | Identify a configuration or plan an upgrade | [Versions and upgrades](docs/versions-and-upgrades.md) |
 | Review individual contract requirements | [Contract specifications](src/specs/) |
-| Review audit material | [Security and reviews](#security-and-reviews) |
 
-## What you can build
+## Technical stack
 
-- Let participants assign voting power across registered destinations, then apply your allocation policy to the results.
-- Weight governance by the escrow's voting-power curve rather than liquid token balances. The checked-in linear coefficients increase a position's power as it ages, up to a cap.
-- Let holders vote through their own address or delegate to another address through the `EscrowIVotesAdapter`.
-- Set a minimum lock period and withdrawal wait. The v1.4 queue supports fixed, tiered, or linearly decreasing exit fees.
+The repository uses Solidity 0.8.18, Foundry, OpenZeppelin upgradeable contracts, and the Aragon OSx permission and plugin framework. Dependencies are pinned Git submodules under `lib/`. [foundry.toml](foundry.toml) sets the compiler, Shanghai EVM target, optimizer, and test profiles.
 
-The v1.4 escrow accepts an underlying token with 18 decimals and requires deposits to increase its balance by the exact amount requested. Fee-on-transfer tokens are unsupported.
+The component map below follows `GaugeVoterSetup_v1_4_0`. Earlier setups and Season select different implementations; filename suffixes alone do not identify a complete configuration.
 
-## How it fits together
-
-An Aragon OSx DAO manages gauges, component pauses, settings, and upgrades through its permission system. The v1.4 factory installs a multisig to administer the DAO and one VE component set per configured token.
-
-```mermaid
-flowchart LR
-    Holder[Token holder] -->|Deposit tokens| Escrow[Voting escrow]
-    Escrow -->|Mint position| NFT[Lock NFT]
-    Escrow --> Curve[Voting-power curve]
-    Holder -->|Delegate| Adapter[IVotes adapter]
-    Adapter -->|Voting power| Voter[Gauge voter]
-    Holder -->|Vote directly or through a delegate| Voter
-    Voter -->|Read weights| Allocator[External allocation process]
-    Escrow -->|Queue withdrawal| Queue[Exit queue]
-    Queue -->|Eligibility and fee| Escrow
-```
-
-Connect your reward distributor, emissions controller, or proposal-execution plugin separately, with the permissions it needs.
-
-### Components in the v1.4 setup
+## Components in the v1.4 setup
 
 | Component | Responsibility | Source |
 | --- | --- | --- |
@@ -69,32 +33,6 @@ Connect your reward distributor, emissions controller, or proposal-execution plu
 | Exit queue | Records withdrawal tickets, waiting periods, and fees | [DynamicExitQueue.sol](src/queue/DynamicExitQueue.sol) |
 | Plugin setup | Deploys component proxies and prepares OSx permissions | [GaugeVoterSetup_v1_4_0.sol](src/setup/GaugeVoterSetup_v1_4_0.sol) |
 | Deployment factory | Creates the DAO and plugins, connects the helpers, and records their addresses | [GaugesDaoFactory_v1_4_0.sol](src/factory/GaugesDaoFactory_v1_4_0.sol) |
-
-## Position lifecycle
-
-1. Create a lock. Approve the escrow to spend the underlying token, then call `createLock(amount)` or `createLockFor(amount, recipient)`. The escrow holds the tokens; the recipient owns the position NFT.
-2. Accumulate voting power. In the v1.4 configuration, the recorded lock start is the beginning of the current weekly checkpoint interval. Voting power is calculated from that recorded start. There is no separate warmup delay in this configuration.
-3. Delegate. Call `delegate(address)` on the adapter. Self-delegation lets a holder vote through their own address. Delegation gives voting authority, not ownership of the NFT or its underlying tokens.
-4. Vote. During the voting window, call `vote(GaugeVote[])` with relative weights for active gauges. A new vote replaces that address's existing allocation. Holding a lock alone does not cast a vote.
-5. Use the results. An external process reads gauge weights at its chosen block and calculates allocations under its own rules. That process supplies the reward assets and payout mechanism.
-6. Begin an exit. After the minimum lock requirement is met, approve the escrow to transfer the NFT and call `beginWithdrawal(tokenId)`. The NFT moves into escrow custody and its voting power is removed. The queue records a withdrawal ticket for the owner.
-7. Withdraw or cancel. The ticket holder can withdraw once the ticket permits it, receiving the principal less any exit fee. The NFT is burned on withdrawal. A pending request can instead be cancelled through `cancelWithdrawalRequest(tokenId)`.
-
-The [architecture](docs/architecture.md) and [integration guide](docs/integration.md) explain how transfers, merges, splits, and delegation affect position accounting.
-
-### Timing and configuration
-
-The checked-in v1.4 script uses a linear curve from approximately 1× to 2× the deposited amount over 52 two-week epochs, with integer rounding. Other deployments may use different coefficients.
-
-The standard clock has two-week epochs and weekly checkpoints. Voting opens one hour after an epoch begins and closes one hour before the first week ends. The clock defines these windows; your protocol's separate allocation process handles payouts.
-
-Curve coefficients and clock durations depend on the implementations you select. Some require changes to implementation code or constructor arguments. The [deployment guide](docs/deployment.md) identifies what you can set at deployment or change through the DAO.
-
-### Gauge results and delegation
-
-The v1.4 setup enables the voter's update hook. In this mode, allocations persist across epochs and use current delegated voting power when cast. A holder can recast during a voting window to include increased voting power. Hook-driven updates can reduce an existing allocation when voting power falls, including outside the voting window.
-
-The same voter contract also supports a mode without that hook, using epoch-start snapshots and separate storage per epoch. The [gauge result accounting guide](docs/integration.md#gauge-result-accounting) explains which storage bucket each mode uses and how to read results at a fixed block.
 
 ## Local development
 
@@ -156,7 +94,7 @@ For an existing deployment, the applicable upgrade path depends on its factory, 
 | [`test/`](test/) | Tests grouped by configuration, including unit, integration, upgrade, invariant, and fork tests |
 | [`script/deploy/`](script/deploy/) | Version-specific deployment scripts |
 | [`src/factory/upgrades/`](src/factory/upgrades/) | Upgrade factories for particular migration paths |
-| [`docs/`](docs/) | Guides and Antora documentation sources |
+| [`docs/`](docs/) | Deployment and version references, guide links, and Antora sources |
 | [`audits/`](audits/) | Audit reports, scope documents, and follow-up reviews |
 
 Identify deployed contracts through the setup's imports and the [version map](docs/versions-and-upgrades.md). The package and Antora version fields apply to publishing.
@@ -167,4 +105,4 @@ Audit material is stored in [`audits/`](audits/), including the [initial review 
 
 Check each report's scope and revision against the implementations, constants, and changes you plan to deploy. Scope notes, internal follow-ups, and material under `audits/llm/` are distinct from independent audits.
 
-The [architecture guide](docs/architecture.md#administration-and-permissions) lists administrative roles, including upgrade authority. The [deployment guide](docs/deployment.md) covers verification of those grants and removal of the factory's temporary permissions.
+The [VE setup reference](https://github.com/aragon/protocol-doc/blob/main/plugins/ve-governance/setup.md) lists administrative roles, including upgrade authority. The [deployment guide](docs/deployment.md) covers verification of those grants and removal of the factory's temporary permissions.

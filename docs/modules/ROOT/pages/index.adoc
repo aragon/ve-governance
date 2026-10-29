@@ -1,48 +1,17 @@
 = Aragon VE Governance
 
-Aragon VE Governance provides vote-escrow and gauge-voting contracts for onchain organizations. Token holders deposit an ERC-20 token, receive an NFT representing the position, and use voting power to assign weights to registered gauges.
+VE Governance provides token escrow, position NFTs, delegated voting power, gauge voting, and queued withdrawals for Aragon OSx DAOs.
 
-Protocols can use the resulting weights to allocate incentives or other resources. The VE contracts account for positions, delegation, votes, and withdrawals. Reward calculation, funding, and payout require a separate integration.
+== User and developer guides
 
-== The participant's workflow
+The guides and component references live in link:https://github.com/aragon/protocol-doc/blob/main/plugins/ve-governance.md[protocol-doc]. Start with the link:https://github.com/aragon/protocol-doc/blob/main/guides/use-ve-governance.md[VE integration walkthrough] for deposits, delegation, voting, result accounting, and withdrawals.
 
-. Approve the underlying token and create a lock in the escrow.
-. Receive a position NFT. The curve determines its voting power from its amount and recorded start.
-. Delegate to your own address or another participant through the IVotes adapter.
-. Assign relative weights to active gauges during the voting window.
-. Begin withdrawal when the minimum lock requirement is met, then withdraw according to the exit ticket's waiting period and fee. A pending withdrawal can also be cancelled.
+== Repository references
 
-For a new integration, start by evaluating v1.4, the configuration described in these guides. Earlier-version documentation supports existing deployments and their upgrade paths; Season is a separate variant.
-
-The v1.4 configuration combines a linear curve with address-based voting, delegation, and an exit queue that supports several fee models. Its gauge allocations persist across epochs and can decrease when delegated power falls, including after voting closes. Reward calculations therefore need weights read at a specified block.
-
-== Components
-
-[cols="1,3",options="header"]
-|===
-|Component |Responsibility
-|Voting escrow |Holds the underlying tokens and manages positions and withdrawals.
-|Lock NFT |Represents ownership of each position and enforces transfer permissions.
-|Curve |Calculates position and total voting power from checkpointed history.
-|IVotes adapter |Aggregates delegated voting power by address and exposes timestamp-based queries.
-|Gauge voter |Records participants' weighted preferences across registered addresses.
-|Clock |Defines epochs, checkpoint intervals, and the voting window.
-|Exit queue |Records withdrawal tickets, eligibility, and fees.
-|OSx DAO and plugins |Control administration, permissions, and upgrades.
-|===
-
-Your protocol supplies proposal execution, reward payouts, and the emission schedule through separate governance and distribution components.
-
-== Read the guides
-
-Guides:
-
-* link:https://github.com/aragon/ve-governance/blob/develop/README.md[Repository overview and local development]
-* link:https://github.com/aragon/ve-governance/blob/develop/docs/architecture.md[Escrow, voting power, delegation, exits, and permissions]
-* link:https://github.com/aragon/ve-governance/blob/develop/docs/integration.md[Application integration and gauge-result accounting]
-* link:https://github.com/aragon/ve-governance/blob/develop/docs/deployment.md[Configuration, simulation, deployment, and validation]
-* link:https://github.com/aragon/ve-governance/blob/develop/docs/versions-and-upgrades.md[Configuration map and upgrade considerations]
+* link:https://github.com/aragon/ve-governance/blob/develop/README.md[Technical stack, build, and tests]
+* link:https://github.com/aragon/ve-governance/blob/develop/docs/deployment.md[Deployment scripts and validation]
+* link:https://github.com/aragon/ve-governance/blob/develop/docs/versions-and-upgrades.md[Configuration map and upgrade paths]
 * link:https://github.com/aragon/ve-governance/tree/develop/src/specs[Contract specifications]
 * link:https://github.com/aragon/ve-governance/tree/develop/audits[Audit reports and review material]
 
-Earlier configurations and Season use different component sets, listed in the version map. The site's version label identifies the documentation publication, not a deployed component set.
+The site's version label identifies the documentation publication. Use the configuration map to identify deployed components.
