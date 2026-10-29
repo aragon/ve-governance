@@ -14,7 +14,7 @@ Protocols can use the resulting weights to allocate incentives or other resource
 
 For a new integration, start by evaluating v1.4, the configuration described in these guides. Earlier-version documentation supports existing deployments and their upgrade paths; Season is a separate variant.
 
-The v1.4 configuration combines a linear curve with address-based voting, delegation, and an exit queue that supports several fee models. Its gauge allocations persist across epochs and can decrease when delegated power falls. Choose a snapshot block when using those results for rewards.
+The v1.4 configuration combines a linear curve with address-based voting, delegation, and an exit queue that supports several fee models. Its gauge allocations persist across epochs and can decrease when delegated power falls, including after voting closes. Reward calculations therefore need weights read at a specified block.
 
 == Components
 
@@ -45,4 +45,4 @@ Guides:
 * link:https://github.com/aragon/ve-governance/tree/develop/src/specs[Contract specifications]
 * link:https://github.com/aragon/ve-governance/tree/develop/audits[Audit reports and review material]
 
-For older configurations or the Season variant, match the guides, tests, and audit scope to the selected implementations. The site's version label applies to the documentation publication.
+Earlier configurations and Season use different component sets, listed in the version map. The site's version label identifies the documentation publication, not a deployed component set.

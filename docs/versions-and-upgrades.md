@@ -2,7 +2,7 @@
 
 A setup selects component implementations, and a factory creates and connects them. This repository keeps several configurations together, so component filename suffixes can differ from the setup version.
 
-For example, v1.4 uses `VotingEscrowV1_2_0`, `LockV1_2_0`, and `ClockV1_2_0` with the shared address voter and dynamic queue. Use the setup's actual imports when selecting components.
+For example, v1.4 imports `VotingEscrowV1_2_0`, `LockV1_2_0`, and `ClockV1_2_0` with the shared address voter and dynamic queue. The setup's imports define the component set shown below.
 
 ## Configuration map
 
@@ -19,9 +19,9 @@ This table follows the imports in each setup at the current checkout:
 | [v1.4](../src/setup/GaugeVoterSetup_v1_4_0.sol) | `AddressGaugeVoter` | `LinearIncreasingCurve` | `DynamicExitQueue` | v1.2 escrow, NFT, and clock; adapter; updated factory integration |
 | [Season](../src/setup/GaugeVoterSetupSeason.sol) | `TokenGaugeVoterSeason` | `QuadraticIncreasingCurveSeason` | `ExitQueue` | Original escrow and NFT with `ClockSeason` |
 
-The v1.2 no-supply curve's `supplyAt` reverts. Do not use a consumer that depends on total historical voting power without checking the deployed curve's capability.
+The v1.2 no-supply curve's `supplyAt` reverts, so a governance consumer cannot use it to calculate quorum from total historical escrow voting power.
 
-Season is a separate variant with its own clock, curve, and voter. Review its components, tests, and audit coverage together.
+Season uses its own clock, curve, and voter; the v1.4 timing and voting rules in these guides do not describe that configuration.
 
 ## Identifying an existing deployment
 
@@ -33,7 +33,7 @@ Record:
 - Curve and adapter construction parameters, clock behavior, and withdrawal terms.
 - DAO execution, component administration, pause, and upgrade permissions.
 
-Start with the factory getters, then check live proxies and settings. Factory, npm, and Antora version labels each describe only part of a deployment.
+The factory getters identify the original deployment. Current proxy implementations and settings reflect later changes. The npm package version and Antora publication version do not identify the implementations a DAO is running.
 
 Shared source changes affect more than one setup configuration. When reviewing an older setup on a newer branch, compare the complete source revision and dependency commits with the deployment's originals.
 
@@ -57,7 +57,7 @@ The original escrow records new positions at the next weekly checkpoint. The v1.
 
 These changes matter for positions created near an upgrade. A pre-upgrade position can have a recorded start in the future while newer code normally receives starts in the past.
 
-Test positions with future recorded starts and positions still subject to the original warmup. Include deposits around checkpoint boundaries, pending withdrawals, delegation state, and pause permissions in the migration rehearsal. Determine the transaction sequence and timing for the specific deployed versions and live state.
+The migration rehearsal must cover positions with future recorded starts, positions still subject to the original warmup, and deposits around checkpoint boundaries. It must also exercise pending withdrawals and delegation under the pause permissions available to the DAO.
 
 Sources: [original escrow](../src/escrow/VotingEscrowIncreasing.sol), [newer escrow](../src/escrow/VotingEscrowIncreasing_v1_2_0.sol), [original curve](../src/curve/QuadraticIncreasingCurve.sol), [Audit 4 scope notes](../audits/AUDIT_4.md).
 
@@ -65,6 +65,6 @@ Sources: [original escrow](../src/escrow/VotingEscrowIncreasing.sol), [newer esc
 
 The [`audits/`](../audits/) directory contains reports, scope notes, internal review material, and post-audit findings. The [Audit 3 scope](../audits/AUDIT_3.md) and [Audit 4 scope](../audits/AUDIT_4.md) describe different changes and explicitly distinguish some excluded components.
 
-Match the migration's code and constants to the reviewed scope and follow-up changes. Different implementations, custom curves, and additional migration paths need their own coverage.
+An audit report covers the code revision, components, and assumptions named in its scope. A deployment using different curve coefficients, implementation changes, or a different migration path needs a separate assessment of those differences.
 
-Return to the [README](../README.md) for development commands or the [deployment guide](deployment.md) for environment and factory details.
+Development commands are in the [README](../README.md); environment configuration and factory wiring are in the [deployment guide](deployment.md).

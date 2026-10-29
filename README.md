@@ -35,7 +35,7 @@ For a new integration, start by evaluating the v1.4 configuration used in these 
 - Let holders vote through their own address or delegate to another address through the `EscrowIVotesAdapter`.
 - Set a minimum lock period and withdrawal wait. The v1.4 queue supports fixed, tiered, or linearly decreasing exit fees.
 
-The v1.4 escrow accepts an underlying token with 18 decimals and requires deposits to increase its balance by the exact amount requested. Fee-on-transfer tokens are unsupported. Review other nonstandard token behavior before integrating it.
+The v1.4 escrow accepts an underlying token with 18 decimals and requires deposits to increase its balance by the exact amount requested. Fee-on-transfer tokens are unsupported.
 
 ## How it fits together
 
@@ -94,7 +94,7 @@ Curve coefficients and clock durations depend on the implementations you select.
 
 The v1.4 setup enables the voter's update hook. In this mode, allocations persist across epochs and use current delegated voting power when cast. A holder can recast during a voting window to include increased voting power. Hook-driven updates can reduce an existing allocation when voting power falls, including outside the voting window.
 
-The same voter contract also supports a mode without that hook, using epoch-start snapshots and separate storage per epoch. Read [gauge result accounting](docs/integration.md#gauge-result-accounting) before choosing getters or building a reward snapshot.
+The same voter contract also supports a mode without that hook, using epoch-start snapshots and separate storage per epoch. The [gauge result accounting guide](docs/integration.md#gauge-result-accounting) explains which storage bucket each mode uses and how to read results at a fixed block.
 
 ## Local development
 
@@ -123,7 +123,7 @@ make test-ui-140
 make check-curve
 ```
 
-The curve command prints coefficients and sampled voting-power values for review. Run the contract tests as well.
+The curve command prints the coefficients and sampled voting-power values.
 
 ### Test commands
 
@@ -145,7 +145,7 @@ Fork tests need a chain RPC and matching configuration. The v1.4 fork file is co
 
 Start with the [deployment guide](docs/deployment.md). It covers the v1.4 script, environment variables, factory wiring, simulation, and post-deployment checks. The addresses in the example environment file are examples to verify, not a current registry of supported networks.
 
-For an existing deployment, first identify the factory, proxy implementations, curve, clock, and permissions. Read [versions and upgrades](docs/versions-and-upgrades.md) before selecting an upgrade factory. The repository retains multiple generations of contracts, and shared source files can be used by several setup versions.
+For an existing deployment, the applicable upgrade path depends on its factory, proxy implementations, curve, clock, and permissions. [Versions and upgrades](docs/versions-and-upgrades.md) maps the retained configurations and the transitions supported by each upgrade factory. Several setup versions import shared source files.
 
 ## Repository layout
 
@@ -167,4 +167,4 @@ Audit material is stored in [`audits/`](audits/), including the [initial review 
 
 Check each report's scope and revision against the implementations, constants, and changes you plan to deploy. Scope notes, internal follow-ups, and material under `audits/llm/` are distinct from independent audits.
 
-Administrative roles include upgrade authority. Review who can act through the DAO and which roles it grants. See the [architecture guide](docs/architecture.md#administration-and-permissions) for the roles and the [deployment guide](docs/deployment.md) for installation checks.
+The [architecture guide](docs/architecture.md#administration-and-permissions) lists administrative roles, including upgrade authority. The [deployment guide](docs/deployment.md) covers verification of those grants and removal of the factory's temporary permissions.

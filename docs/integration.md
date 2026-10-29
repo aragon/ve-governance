@@ -6,9 +6,9 @@ Start with the deployed component addresses and implementations. This guide desc
 
 The deployment factory exposes `getDeployment()` and `getDeploymentParameters()`. The v1.4 deployment contains the DAO, multisig, gauge-voter plugin repository, and an array of `GaugePluginSet` records. Each set contains the voter, curve, exit queue, escrow, clock, NFT, and delegation adapter for one underlying token.
 
-An organization using two underlying tokens has two independent VE component sets. Configure the escrow address separately from the factory, and keep each token's escrow, adapter, queue, and voter together.
+An organization using two underlying tokens has two independent VE component sets. Application calls use the escrow, adapter, queue, and voter from the same `GaugePluginSet`; the factory address is only the entry point for discovering those records.
 
-The factory records the original deployment. Read the live contracts for current implementations, permissions, and mutable references.
+The factory getters retain the addresses and parameters from installation. Upgrades and later DAO actions can change proxy implementations, permissions, and mutable component references without updating that record.
 
 Source: [factory structs and getters](../src/factory/GaugesDaoFactory_v1_4_0.sol).
 
@@ -24,9 +24,9 @@ adapter.delegate(holderAddress)       // self-delegate to vote directly
 
 These are separate contract calls unless an integration explicitly batches them. `amount` is in the underlying token's smallest units. Check the token's decimals and the escrow's `minDeposit()` before requesting an approval.
 
-`createLockFor(amount, recipient)` supports deposits on another address's behalf. The caller supplies and approves the tokens; the recipient receives the NFT. For contract recipients, verify ERC-721 receipt support.
+`createLockFor(amount, recipient)` supports deposits on another address's behalf. The caller supplies and approves the tokens; the recipient receives the NFT. Minting to a contract requires that contract to accept safe ERC-721 transfers.
 
-Read `locked(tokenId)` for principal and recorded start, `ownedTokens(account)` for owned position IDs, and `votingPower(tokenId)` for current position power. The adapter's `getVotes(account)` gives the power delegated to an address. Label each value according to what it measures.
+Read `locked(tokenId)` for principal and recorded start, `ownedTokens(account)` for owned position IDs, and `votingPower(tokenId)` for current position power. The adapter's `getVotes(account)` gives the power delegated to an address, which can include positions owned by other holders.
 
 The position's recorded start is a weekly boundary, which can precede the transaction. Display the transaction time separately if a user needs to know when they deposited.
 
@@ -34,7 +34,7 @@ Source: [escrow interface](../src/escrow/IVotingEscrowIncreasing_v1_2_0.sol), [a
 
 ## Casting votes
 
-Before submitting a vote, read the voter's pause state, `votingActive()`, the delegate's voting power, and the active gauges. `getAllGauges()` also includes registered gauges that may have been deactivated; check each gauge's status.
+Before submitting a vote, read the voter's pause state, `votingActive()`, the delegate's voting power, and the active gauges. `getAllGauges()` includes deactivated gauges; `isActive(gauge)` identifies those that accept new votes.
 
 Deactivating a gauge prevents new votes for it but does not clear its stored weights. Your allocation policy must specify whether to include those weights in a payout calculation.
 
@@ -66,7 +66,7 @@ Read `enableUpdateVotingPowerHook()` before interpreting results. The v1.4 setup
 | Allocation lifetime | Persists until replaced, reset, or reduced | Stored separately for each epoch |
 | Delegation or position changes | Escrow hook can reduce stored allocations | Integration relies on the epoch-start snapshot model |
 
-Read `epochGaugeVotes(bucket, gauge)` and `epochTotalVotingPowerCast(bucket)` using the mode's storage bucket. Hook mode uses `0`, including when the wall-clock epoch ID differs. `votes(account, gauge)` selects the correct bucket internally.
+Read `epochGaugeVotes(bucket, gauge)` and `epochTotalVotingPowerCast(bucket)` with the bucket returned by `getWriteEpochId()` at the query block. Hook mode uses `0`, including when the wall-clock epoch ID differs. `votes(account, gauge)` selects that bucket internally. Changing the hook setting does not move allocations already stored under another bucket.
 
 Events include a wall-clock epoch identifier even when persistent totals use bucket `0`. An indexer must distinguish event timing from the contract's storage key.
 
@@ -79,7 +79,7 @@ An allocation integration needs to specify:
 3. How weights become entitlements, including rounding, unallocated funds, and zero-vote periods.
 4. The reward budget and the contract or process that pays recipients.
 
-In hook mode, voting-power reductions can change totals after the window closes. For a historical snapshot, read at the chosen block or reconstruct state through an indexer. Current storage holds the latest totals.
+In hook mode, voting-power reductions can change totals after the window closes. Read all snapshot values at the chosen historical block, either through an RPC that supports historical state or an indexer that reconstructs it. A query at the latest block can return different totals.
 
 Your protocol defines its emission schedule, bribe market if any, reward asset, and payout contract.
 
@@ -92,7 +92,7 @@ Suppose a protocol sets a budget of 10,000 reward tokens for a cycle. Its policy
 | A | 300 | 75% | 7,500 tokens |
 | B | 100 | 25% | 2,500 tokens |
 
-The integration reads both weights at the same block using the appropriate storage bucket, calculates the allocations, and pays the recipients defined by its policy through a separate distribution process. A gauge address identifies a voting option; the policy must establish who receives its allocation.
+The integration reads both weights at the same block using that block's `getWriteEpochId()`, calculates the allocations, and pays recipients through its distribution process. The protocol's policy identifies the recipient for each gauge address.
 
 This is an illustrative allocation policy. The VE contracts provide the weights; they do not reserve this budget or execute these payouts. Whether votes bind the payout depends on how the protocol implements and controls that distribution process.
 
@@ -111,19 +111,19 @@ Keep these stages distinct:
 | Complete withdrawal | Escrow's `withdraw(tokenId)` from the ticket holder |
 | Cancel request | Escrow's `cancelWithdrawalRequest(tokenId)` from the ticket holder |
 
-Use each ticket's stored terms and fee quote; global settings may have changed since it was queued. Tiered fees stay at the higher rate through equality with `cooldown`. Query `calculateFee` for the current quote.
+`calculateFee(tokenId)` uses the ticket's stored terms, even if global settings have since changed. In tiered mode, the higher rate applies when elapsed time equals `cooldown`; the lower rate starts afterward.
 
-Starting withdrawal removes voting power immediately. Completing withdrawal burns the NFT and returns principal minus the fee. Refresh delegation and gauge state after either a position change or a cancellation.
+Starting withdrawal removes the position's voting power and can reduce its delegate's stored gauge allocation. Completing withdrawal burns the NFT and returns principal minus the fee. Cancellation restores the position and updates delegation, but the delegate must recast during a voting window to include restored power in gauge votes.
 
 Sources: [escrow withdrawal functions](../src/escrow/VotingEscrowIncreasing_v1_2_0.sol), [dynamic queue](../src/queue/DynamicExitQueue.sol).
 
 ## Using the IVotes adapter in proposal governance
 
-The adapter exposes current votes, timestamp-based historical votes, and total historical escrow supply. An external proposal system must use a compatible timestamp clock and choose an appropriate snapshot policy.
+The adapter exposes current votes, timestamp-based historical votes, and total historical escrow supply. A proposal plugin must pass timestamps to the historical queries and define which timestamp determines a proposal's voting power.
 
 `getPastTotalSupply` includes voting power that has not been delegated. A quorum based on that supply therefore has a different denominator from a quorum based only on participating or delegated power. The v1.2 no-supply curve does not provide the same total-supply capability as the v1.3 and v1.4 setups.
 
-The adapter's `balanceOf` counts NFTs, and `delegateBySig` reverts. Check whether the consuming plugin supports those behaviors.
+The adapter's `balanceOf` counts NFTs, so it cannot supply a voting-power balance to a plugin that uses that method for voting weight. Delegation requires a direct contract call because `delegateBySig` reverts.
 
 To execute proposals, install a proposal plugin and grant it execution authority through governance. The gauge voter only records allocations.
 

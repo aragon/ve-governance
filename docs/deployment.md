@@ -1,6 +1,6 @@
 # Development and deployment
 
-This guide covers [`DeployGauges_v1_4_0.s.sol`](../script/deploy/DeployGauges_v1_4_0.s.sol). Check the [version map](versions-and-upgrades.md) before choosing a script and dependencies.
+This guide covers [`DeployGauges_v1_4_0.s.sol`](../script/deploy/DeployGauges_v1_4_0.s.sol). The [version map](versions-and-upgrades.md) identifies the components used by each retained configuration.
 
 ## Build the checkout
 
@@ -15,7 +15,7 @@ make check-curve
 
 The Solidity build uses [foundry.toml](../foundry.toml), [remappings.txt](../remappings.txt), and pinned Git submodules. Keep those dependency revisions when reproducing a deployment.
 
-The [CI workflow](../.github/workflows/test.yml) shows the commands used for build, unit and integration tests, upgrades, coverage, invariants, and forks. Its invariant job currently selects the v1.3 directory. Run the intended configuration's tests explicitly when validating changes outside that selection.
+The [CI workflow](../.github/workflows/test.yml) shows the commands used for build, unit and integration tests, upgrades, coverage, invariants, and forks. Its invariant job currently selects the v1.3 directory. The v1.4 invariant suite runs separately through `make test-invariant-v1-4-0`.
 
 ### Upgrade safety validation prerequisites
 
@@ -30,7 +30,7 @@ The first validation run may download the validator through npm and needs networ
 
 ## Configure the v1.4 script
 
-If you do not have a local `.env`, copy [`.env.example`](../.env.example). Check its values against the selected script; some variables belong to older flows. Keep private keys out of commits and logs.
+If you do not have a local `.env`, copy [`.env.example`](../.env.example) and configure the variables below. The file also contains variables used only by older scripts. Keep private keys out of commits and logs.
 
 The v1.4 script reads these variables:
 
@@ -61,7 +61,7 @@ The Makefile's v1.4 preview and deployment targets also use `RPC_URL`. The broad
 
 The v1.4 script does not read `WARMUP_PERIOD` or `MULTISIG_PROPOSAL_EXPIRATION_PERIOD`. Editing them does not change this configuration. Its token-handling path still reads `TOKEN2_ADDRESS` when mock-token mode is off, so set it explicitly to zero for a single-token deployment.
 
-The example contains historical network settings and contract addresses. Choose a target chain, verify the RPC's chain ID, and confirm every OSx and multisig dependency there.
+The example contains historical network settings and contract addresses. Each OSx and multisig dependency must exist on the chain served by `RPC_URL`; the example addresses are not a deployment registry.
 
 ### Deployment settings versus implementation choices
 
@@ -69,7 +69,7 @@ Minimum deposit, the initial fixed exit fee, cooldown, minimum lock age, voting 
 
 The clock's epoch, checkpoint, and voting-window constants are compiled into its implementation. The curve and adapter receive their coefficients and maximum epoch count in their implementation constructors. Changing the curve therefore requires compatible implementations with matching parameters, rather than new proxy initialization settings.
 
-Run `make check-curve` after editing coefficients, and validate their effect in the relevant contract tests. The flat-coefficient library is an alternative source, not a runtime switch in the current v1.4 script.
+`make check-curve` prints the curve produced by the coefficient library. Contract tests cover its use in position, delegation, and voting accounting. The v1.4 script imports the linear library; using the flat-coefficient library requires changing the implementation construction code.
 
 ## Simulate a deployment
 
@@ -79,7 +79,7 @@ After completing the environment configuration, the existing Makefile target run
 make deploy-preview-1-4-sepolia
 ```
 
-That target uses `RPC_URL` even if it points outside Sepolia. Verify the RPC chain before interpreting the result.
+The target name does not select the chain: the simulation runs against whichever network `RPC_URL` serves.
 
 The equivalent direct simulation, with `RPC_URL` exported, is:
 
@@ -89,7 +89,7 @@ forge script script/deploy/DeployGauges_v1_4_0.s.sol:DeployGaugesV1_4_0 \
   -vvvv
 ```
 
-Review the simulated multisig members and threshold, token addresses, implementation construction parameters, plugin dependencies, fee units, and pause state. `MINT_TEST_TOKENS` must match the intended use; mock-token deployments are useful for testing, not a substitute for testing the real token.
+Compare the simulated multisig members and threshold, token addresses, implementation construction parameters, plugin dependencies, fee units, and pause state with the intended configuration. With `MINT_TEST_TOKENS=true`, the simulation deploys mock tokens and does not exercise the configured underlying token contracts.
 
 ## What the factory does
 
@@ -106,7 +106,7 @@ The factory:
 
 When using `GaugeVoterSetupV1_4_0` directly, connect its helper contracts after installation. `prepareInstallation` alone leaves that wiring incomplete.
 
-The factory accepts an optional additional DAO executor, but the checked-in v1.4 script sets `daoExecutor` to the zero address. Custom scripts should document any extra execution authority they introduce.
+The checked-in v1.4 script sets `daoExecutor` to the zero address. Supplying a nonzero address through a custom script grants that address additional DAO execution authority.
 
 Sources: [script](../script/deploy/DeployGauges_v1_4_0.s.sol), [factory](../src/factory/GaugesDaoFactory_v1_4_0.sol), [setup](../src/setup/GaugeVoterSetup_v1_4_0.sol).
 
@@ -114,9 +114,9 @@ Sources: [script](../script/deploy/DeployGauges_v1_4_0.s.sol), [factory](../src/
 
 Earlier configurations have active fork suites. The v1.4 [`fork/e2e.t.sol`](../test/v1_4_0/fork/e2e.t.sol) is commented out, so filtering for that file will not test v1.4 on a target network.
 
-Validate the selected factory, setup, dependencies, and real token through an active fork test or equivalent reviewed procedure. Record the chain and fork block. Exercise the full position lifecycle: create, delegate, vote, begin withdrawal, wait, and withdraw or cancel. Include the chosen transfer, split, merge, and fee settings.
+An active fork test must use the selected factory, setup, dependencies, and real token at a recorded chain and block. It should exercise the full position lifecycle: create, delegate, vote, begin withdrawal, wait, and withdraw or cancel, with the chosen transfer, split, merge, and fee settings.
 
-The tests under [`test/v1_4_0/upgrade/`](../test/v1_4_0/upgrade/) exercise a v1.0-to-v1.3 regression path. Check their imports and assertions before using the results to support a different migration, including one to the dynamic exit queue.
+The tests under [`test/v1_4_0/upgrade/`](../test/v1_4_0/upgrade/) exercise a v1.0-to-v1.3 regression path. Passing them does not validate a migration to the v1.4 dynamic exit queue.
 
 ## Broadcast and verify
 
@@ -137,7 +137,7 @@ After deployment:
 - Check gauge-voter, escrow, and delegation pause states separately. `VOTING_PAUSED` initializes the voter; it does not pause every component.
 - Register the intended gauges through an authorized DAO action and validate the application against the deployed component set.
 
-The factory records its original output. Maintain a separate deployment record when implementations, permissions, or references change later.
+Later upgrades and permission or reference changes do not update the factory's original deployment record.
 
 ## Documentation generation
 

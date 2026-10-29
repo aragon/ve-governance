@@ -24,7 +24,7 @@ voting power ≈ deposited amount × (1 + age / maximum growth time)
 maximum growth time = 52 × 2 weeks = 104 weeks
 ```
 
-This formula describes the current linear coefficients for an active position. Checkpoint history accounts for position changes and exits; use contract queries for withdrawn or nonexistent positions.
+This formula describes an active position under the current linear coefficients. The escrow's `votingPower(tokenId)` query uses checkpoint history to account for position changes and exits.
 
 The recorded start is the beginning of the current weekly checkpoint interval. A new position can therefore have more than the baseline power. The minimum lock requirement also counts from this recorded start, which can precede the deposit transaction.
 
@@ -32,7 +32,7 @@ At maximum voting power, tokens remain in escrow until the holder completes the 
 
 Holders do not choose an unlock date when creating a position. The creation methods take an amount and, optionally, a recipient. There is no direct top-up or lock-extension method in this escrow: an additional deposit creates a new position, which can be merged with another only when the merge conditions permit it.
 
-[`CurveConstantLibFlat`](../src/libs/CurveConstantLibFlat.sol) supplies flat coefficients. To use them, change how the script constructs the implementations; the v1.4 script currently imports `CurveConstantLib`. Use matching coefficients for the curve and adapter.
+[`CurveConstantLibFlat`](../src/libs/CurveConstantLibFlat.sol) supplies flat coefficients. The v1.4 script currently imports `CurveConstantLib`; selecting the flat curve requires changing that construction code and passing the same coefficients to both the curve and adapter.
 
 The newer linear curve retains a `warmupPeriod` storage field for compatibility, but does not use it as the older quadratic curve's warmup gate. See [migration timing](versions-and-upgrades.md#migration-timing).
 
@@ -55,7 +55,7 @@ For an epoch starting at `E`, the voting window is:
 E + 1 hour <= timestamp < E + 1 week - 1 hour
 ```
 
-Epochs follow Unix time independently of deployment and pause state. Use `votingActive()` and the timestamp getters to find the voting window.
+Epoch boundaries follow Unix time and do not shift when contracts are deployed or paused. `votingActive()` reports whether the current timestamp falls inside the voting window; the voter checks its pause state separately.
 
 An allocation process can operate outside the voting window. It runs separately from the clock, which only calculates timing.
 
@@ -99,13 +99,13 @@ The v1.4 setup initializes `AddressGaugeVoter` with `enableUpdateVotingPowerHook
 - A new voting window permits changes; it does not automatically clear the preceding allocation.
 - Growth of voting power over time does not continuously increase the stored votes. Recasting during a voting window captures the current power.
 - Delegation and position changes reach the voter through the adapter and escrow hook. The hook reduces stored voting power when required; increases do not automatically expand an allocation.
-- Reductions can occur outside the voting window. A closed window is not an immutable reward snapshot.
+- The hook can reduce allocations after voting closes, so totals read later can differ from the totals at closing. A fixed reward calculation needs results from a specified block.
 
 ### The hook-disabled configuration
 
 With the hook disabled, `_vote` uses `getPastVotes(account, currentEpochStart())` and stores votes under the current epoch ID. This provides a separate accounting model for a compatible voting token that does not update the voter through transfer or delegation hooks.
 
-Changing the hook setting changes the voting-power source and storage selection. Keep queries consistent with the chosen accounting mode.
+The hook setter changes the mode without migrating existing allocations between storage buckets. `getWriteEpochId()` returns the bucket selected by the current setting: `0` with the hook enabled, or the current epoch ID with it disabled.
 
 Source: [`AddressGaugeVoter`](../src/voting/AddressGaugeVoter.sol). The [integration guide](integration.md#gauge-result-accounting) explains how to consume these results.
 
@@ -115,7 +115,7 @@ The v1.4 NFT contract initially allows transfers involving the escrow. Other tra
 
 A merge requires approval for both positions and a common owner. Their recorded starts must match, or both positions must be past the curve's maturity boundary. Splitting requires the owner to be permitted by the escrow's split whitelist, unless splitting has been enabled globally. Both resulting amounts must meet the minimum deposit.
 
-These operations update delegation in v1.4. Older token-ID voting has different voting locks and reset rules; check the deployed escrow and NFT implementations.
+Merges and splits update delegation along with the position balances; a permitted transfer updates the delegates of the previous and new owners.
 
 Source: [merge and split logic](../src/escrow/VotingEscrowIncreasing_v1_2_0.sol), [NFT transfer rules](../src/lock/Lock_v1_2_0.sol).
 
@@ -128,7 +128,9 @@ Withdrawal has two stages:
 
 The owner must approve the escrow to transfer the NFT before beginning withdrawal. A position cannot begin withdrawal at the timestamp recorded by its same-block withdrawal guard. The minimum lock requirement is checked against `locked.start + minLock`.
 
-The ticket holder can cancel a pending withdrawal to remove the ticket, restore curve accounting, and recover the NFT. Refresh delegation state afterward.
+The ticket holder can cancel a pending withdrawal to remove the ticket and recover the NFT with its original amount and recorded start. Cancellation restores the position's voting power and updates delegation as the NFT returns to its holder. Restored power does not automatically increase existing gauge votes; the delegate can include it by recasting during a voting window.
+
+In the original token-ID configuration, `beginWithdrawal` rejects a position that still has active votes. `resetVotesAndBeginWithdrawal(tokenId)` clears those votes before starting the exit. The v1.4 configuration removes the position's power through the hook when withdrawal begins, without a separate reset.
 
 ### DynamicExitQueue modes
 
@@ -169,6 +171,6 @@ OSx permissions connect an authorized caller, a target contract, and a permissio
 
 The supplied factory installs an OSx multisig to administer the DAO. Governance can change permissions later. The component contracts are upgradeable, so a deployment's control model includes whoever can authorize those upgrades.
 
-The implementation allows some escrow references to be set only once; the voter has an administrative setter. Check the installed revision's setters and upgrade permissions before replacing a component.
+The v1.4 escrow's curve, queue, clock, and adapter setters reject changes once their references are nonzero. Its NFT setter can be called only once. `setVoter` remains available to callers with `ESCROW_ADMIN_ROLE`; the other references cannot be replaced through their existing setters after installation.
 
 Sources: [setup permissions](../src/setup/GaugeVoterSetup_v1_4_0.sol), [factory wiring](../src/factory/GaugesDaoFactory_v1_4_0.sol).
