@@ -109,6 +109,8 @@ contract LinearDecreasingCurve is
         __DaoAuthorizableUpgradeable_init(IDAO(_dao));
 
         // other initializers are empty
+
+        require(maxTime() <= 255 * IClock(clock).checkpointInterval(), "maxTime exceeds checkpoint loop limit");
     }
 
     /*//////////////////////////////////////////////////////////////

@@ -1,6 +1,8 @@
 pragma solidity ^0.8.17;
 
-import {Base} from "./Base.sol";
+import {Base, EscrowIVotesAdapterA} from "./Base.sol";
+import {EscrowIVotesAdapter, CurveConstantLib} from "../../versions.sol";
+import {ProxyLib} from "@libs/ProxyLib.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {console2 as console} from "forge-std/console2.sol";
 
@@ -247,6 +249,118 @@ contract TestVPAndCheckpoints is Base {
         uint256 expectedTs = block.timestamp;
 
         assertGlobalPoint(alice, 2, 0, 0, expectedTs);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                     Stale Delegate Checkpoints
+    //////////////////////////////////////////////////////////////*/
+
+    function test_StaleDelegate_NewLockDatedAtNextCheckpoint() public {
+        dg.setDelegateAddress(alice);
+
+        uint256 permanentId = 1;
+        uint256 oldTimedId = 2;
+        uint256 newTimedId = 3;
+        uint256 permanentAmount = getFlooredAmount(10e18);
+        uint256 oldTimedAmount = getFlooredAmount(20e18);
+        uint256 newTimedAmount = getFlooredAmount(30e18);
+        uint256 staleWeeks = 260;
+        uint256 midWeekOffset = 1 days;
+        uint256 weeksAfterDelegation = 10;
+        _mockVotingPower(newTimedId, 1);
+
+        // Week 0: alice holds a permanent lock and a timed lock that fully decays after maxTime.
+        uint256 firstStart = weekStartTs(block.timestamp);
+        vm.warp(firstStart);
+        _mockLocked(permanentId, permanentAmount, 0);
+        _mockLocked(oldTimedId, oldTimedAmount, firstStart);
+        dg.delegate(getIds(permanentId, oldTimedId));
+
+        // Leave alice untouched for more than 255 weeks, then delegate a new lock mid-week.
+        uint256 delegateTs = firstStart + staleWeeks * checkpointInterval + midWeekOffset;
+        uint256 nextCheckpoint = weekStartTs(delegateTs);
+        vm.warp(delegateTs);
+        _mockLocked(newTimedId, newTimedAmount, nextCheckpoint);
+        dg.delegate(getIds(newTimedId));
+
+        // Before the next checkpoint, only the permanent lock counts.
+        assertEq(dg.getPastVotes(alice, delegateTs), permanentAmount);
+
+        // From the next checkpoint, the new lock adds its power and decays from that date.
+        uint256 laterTs = nextCheckpoint + weeksAfterDelegation * checkpointInterval;
+        vm.warp(laterTs);
+        assertEq(dg.getPastVotes(alice, nextCheckpoint), permanentAmount + bias(newTimedAmount, 0));
+        assertEq(
+            dg.getPastVotes(alice, laterTs),
+            permanentAmount + bias(newTimedAmount, laterTs - nextCheckpoint)
+        );
+    }
+
+    function test_StaleDelegate_UndelegationDatedAtNextCheckpoint() public {
+        dg.setDelegateAddress(alice);
+
+        uint256 permanentAmount = getFlooredAmount(10e18);
+        uint256 staleWeeks = 260;
+        uint256 midWeekOffset = 1 days;
+
+        uint256 firstStart = weekStartTs(block.timestamp);
+        vm.warp(firstStart);
+        _mockLocked(singleId[0], permanentAmount, 0);
+        dg.delegate(singleId);
+
+        // Leave alice untouched for more than 255 weeks, then undelegate mid-week.
+        uint256 snapshotTs = firstStart + staleWeeks * checkpointInterval;
+        uint256 undelegateTs = snapshotTs + midWeekOffset;
+        uint256 nextCheckpoint = weekStartTs(undelegateTs);
+        vm.warp(undelegateTs);
+        dg.undelegate(singleId);
+
+        // The removal takes effect from the next checkpoint, not retroactively.
+        assertEq(dg.getPastVotes(alice, snapshotTs), permanentAmount);
+        assertEq(dg.getPastVotes(alice, nextCheckpoint), 0);
+    }
+
+    function test_StaleDelegate_ManualTransitionJumpsOnlyFromMaxTime() public {
+        uint256 oneStep = 1;
+        uint256 staleWeeks = 260;
+        uint256 midWeekOffset = 1 days;
+        uint256 secondPointIndex = 2;
+        uint256 maxTimeSteps = maxTime / checkpointInterval;
+        uint256 belowMaxTimeSteps = maxTimeSteps - 1;
+
+        // Week 0: create empty records for alice and bob, then leave both untouched.
+        uint256 firstStart = weekStartTs(block.timestamp);
+        vm.warp(firstStart);
+        dg.checkpointTransition(alice, oneStep);
+        dg.checkpointTransition(bob, oneStep);
+
+        vm.warp(firstStart + staleWeeks * checkpointInterval + midWeekOffset);
+        uint256 nextCheckpoint = weekStartTs(block.timestamp);
+
+        // Fewer steps than maxTime may leave slope changes pending, so the record stops where the loop ends.
+        dg.checkpointTransition(alice, belowMaxTimeSteps);
+        assertGlobalPoint(alice, secondPointIndex, 0, 0, firstStart + belowMaxTimeSteps * checkpointInterval);
+
+        // Covering maxTime processes every slope change, so the record moves to the next checkpoint.
+        dg.checkpointTransition(bob, maxTimeSteps);
+        assertGlobalPoint(bob, secondPointIndex, 0, 0, nextCheckpoint);
+    }
+
+    function test_InitializeRevertsIfMaxTimeExceedsLoopLimit() public {
+        uint256 loopLimit = 255;
+        uint256 tooManyEpochs = loopLimit * checkpointInterval / clock.epochDuration() + 1;
+        bool startPaused = false;
+
+        (int256 constantCoefficient, int256 linearDenominator, ) = CurveConstantLib.getParams();
+        EscrowIVotesAdapterA impl = new EscrowIVotesAdapterA(constantCoefficient, linearDenominator, tooManyEpochs);
+        bytes memory initCalldata = abi.encodeCall(
+            EscrowIVotesAdapter.initialize,
+            (address(dao), address(escrow), address(clock), startPaused)
+        );
+
+        // maxTime would be 256 weeks, more than one checkpoint's 255-interval loop can process.
+        vm.expectRevert("maxTime exceeds checkpoint loop limit");
+        ProxyLib.deployUUPSProxy(address(impl), initCalldata);
     }
 
     /*//////////////////////////////////////////////////////////////

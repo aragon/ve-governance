@@ -10,6 +10,7 @@ import {
     IDeprecated
 } from "../../../versions.sol";
 import {CurveBase} from "./CurveBase.t.sol";
+import {ProxyLib} from "@libs/ProxyLib.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 contract TestDecreasingCurveLogic is CurveBase {
@@ -35,6 +36,22 @@ contract TestDecreasingCurveLogic is CurveBase {
         vm.prank(attacker);
         vm.expectRevert(err);
         curve.upgradeTo(newImpl);
+    }
+
+    function test_InitializeRevertsIfMaxTimeExceedsLoopLimit() public {
+        uint256 loopLimit = 255;
+        uint256 tooManyEpochs = loopLimit * clock.checkpointInterval() / clock.epochDuration() + 1;
+
+        (int256 constantCoefficient, int256 linearDenominator, ) = CurveConstantLib.getParams();
+        Curve impl = new Curve(constantCoefficient, linearDenominator, tooManyEpochs);
+        bytes memory initCalldata = abi.encodeCall(
+            Curve.initialize,
+            (address(escrow), address(dao), address(clock))
+        );
+
+        // maxTime would be 256 weeks, more than one checkpoint's 255-interval loop can process.
+        vm.expectRevert("maxTime exceeds checkpoint loop limit");
+        ProxyLib.deployUUPSProxy(address(impl), initCalldata);
     }
 
     function testCannotWriteNewCheckpointInPast() public {

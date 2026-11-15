@@ -102,6 +102,7 @@ contract EscrowIVotesAdapterDecreasing is
 
         maxTime = IClock(escrowClock).epochDuration() * MAX_EPOCHS;
         checkpointInterval = IClock(escrowClock).checkpointInterval();
+        require(maxTime <= 255 * checkpointInterval, "maxTime exceeds checkpoint loop limit");
     }
 
     function pause() external auth(DELEGATION_ADMIN_ROLE) {
@@ -367,8 +368,8 @@ contract EscrowIVotesAdapterDecreasing is
         int256 _totalSlope,
         address _delegatee
     ) internal override {
-        // If the system hasn't been touched for > 255 intervals (~5 years), this will end prematurely
-        // We assume the system gets checkpointed more frequently than that.
+        // Processes at most 255 intervals. A longer gap is closed linearly in one extra step, 
+        // because no slope changes can remain beyond `maxTime`.
         _checkpoint(_totalBias, _totalSlope, _delegatee, 255);
     }
 
@@ -431,6 +432,14 @@ contract EscrowIVotesAdapterDecreasing is
                     break;
                 }
             }
+        }
+
+        // The loop stopped short of the next checkpoint, but has already passed every pending slope change.
+        // Extend the point linearly so new voting power is dated at the next checkpoint, not in the past.
+        if (expectedWrittenTs < nextCheckpointStart && _transitionCount * checkpointInterval >= maxTime) {
+            lastPoint.bias += lastPoint.slope * int256(nextCheckpointStart - expectedWrittenTs);
+            if (lastPoint.bias < 0) lastPoint.bias = 0;
+            expectedWrittenTs = nextCheckpointStart;
         }
 
         // totalBias and totalSlope can be negative, in which case
