@@ -2,7 +2,7 @@
 
 This repository is Polaris's fork of [Aragon's ve-governance](https://github.com/aragon/ve-governance). Polaris uses it for vePOLAR: holders lock POLAR in an escrow and receive an NFT for each lock. The lock's voting power lets them vote in the Polaris DAO, and earns them a share of the protocol's interest.
 
-This README primarily describes what Polaris changed relative to Aragon. It assumes the ready is already familiar with Aragon's ve contracts: the escrow, curve, lock NFT, clock and `EscrowIVotesAdapter`. For Aragon's original documentation, see the [upstream README](https://github.com/aragon/ve-governance/blob/develop/README.md).
+This README primarily describes what Polaris changed relative to Aragon. It assumes the reader is already familiar with Aragon's ve contracts: the escrow, curve, lock NFT, clock and `EscrowIVotesAdapter`. For Aragon's original documentation, see the [upstream README](https://github.com/aragon/ve-governance/blob/develop/README.md).
 
 The main changes are:
 
@@ -136,9 +136,11 @@ A lock with `start == 0` is permanent. Its voting power stays at `A` and does no
 
 ### Rounding
 
-Voting power is computed in two places. The curve computes each lock's voting power and the total voting power. The delegation adapter computes each delegate's individual voting power. Both first round the number of tokens in each lock down to a multiple of 125,798,400 wei, which is about 1.26e-10 tokens. This number is `maxTime` in seconds. Voting power falls by `A / maxTime` per second, where `A` is the rounded amount. Because `A` is a multiple of `maxTime`, this division has no remainder, so voting power reaches exactly zero at `end`.
+The escrow rounds every deposit down to a multiple of 125,798,400 wei, which is about 1.26e-10 tokens. This number is `maxTime` in seconds. The rounding applies to `createLock`, `createLockFor`, `increaseAmount` and `split`. Only the rounded amount is transferred from the caller, and the remainder stays in their wallet. A deposit smaller than 125,798,400 wei reverts with `ZeroAmount`.
 
-Only the voting power calculation uses the rounded token amount. The locked token amount is not rounded, and `withdraw` returns the full amount.
+Because every locked amount `A` is a multiple of `maxTime`, voting power falls by exactly `A / maxTime` per second, with no remainder. It therefore reaches exactly zero at `end`. Voting power is also exactly additive. For example, if lock X has 30 voting power and lock Y has 70 at some time, a delegate holding both has exactly 100. The delegation adapter relies on this, because it adds and removes single locks from a delegate's total.
+
+Voting power is computed in two places. The curve computes each lock's voting power and the total voting power. The delegation adapter computes each delegate's voting power. Both also round each lock's amount down in the same way before computing voting power. Since the stored amounts are already multiples, this has no effect. `withdraw` returns the locked amount.
 
 ### Points and slope changes
 
@@ -183,7 +185,7 @@ Aragon's increasing escrow has a warmup period, an exit queue with a cooldown, a
 `createLock(value, duration)` and `createLockFor(value, duration, to)` have these rules:
 
 - `duration` must be a whole number of weeks, from one week to 208 weeks.
-- `value` must be at least `minDeposit`, which Polaris sets to 1 wei.
+- The escrow rounds `value` down to a multiple of 125,798,400 wei (section 3), and transfers only the rounded amount. The rounded amount must be non-zero and at least `minDeposit`, which Polaris sets to 1 wei. So the smallest possible lock is 125,798,400 wei.
 - The caller pays the tokens. With `createLockFor`, the NFT goes to `to`. Anyone can create a lock for any address.
 - The lock is recorded at the next checkpoint (section 2).
 - If the new owner has set a delegate, the lock is delegated to that address automatically (section 5).
@@ -196,7 +198,7 @@ The owner of a lock, or an address approved for its NFT, can change it. Each cha
 
 | Function | Effect | Conditions |
 |---|---|---|
-| `increaseAmount(tokenId, value)` | Adds `value` to the lock. The end date does not change. | The lock must not be expired at the next checkpoint. Permanent locks are allowed. |
+| `increaseAmount(tokenId, value)` | Adds `value`, rounded down to a multiple of 125,798,400 wei. The remainder stays with the caller. The end date does not change. | The rounded `value` must be non-zero. The lock must not be expired at the next checkpoint. Permanent locks are allowed. |
 | `increaseUnlockTime(tokenId, duration)` | Sets the new end to `nextCheckpointTs() + duration`. | The lock must not be permanent, and must not be expired at the next checkpoint. The new end must be later than the current end. |
 | `lockPermanent(tokenId)` | Makes the lock permanent, by setting `start = 0`. Its voting power then stays constant. | The lock must not already be permanent, and must not be expired at the next checkpoint. |
 | `unlockPermanent(tokenId)` | Turns a permanent lock back into a 208-week lock, starting at the next checkpoint. | The lock must be permanent. |
@@ -219,12 +221,12 @@ Aragon also allows two locks to merge once both have reached maturity. Polaris o
 
 ### Expiry and withdrawal
 
-A lock has expired at time `t` if `end ≤ t`. The escrow checks this at two different times:
+A lock has expired once its end time has been reached. At the end time itself, the lock already counts as expired.The escrow checks this at two different times:
 
-- `increaseAmount`, `increaseUnlockTime`, `lockPermanent` and delegation check whether the lock has expired at the next checkpoint (`isLockExpiredAtNextCheckpoint`).
+- `increaseAmount`, `increaseUnlockTime`, `lockPermanent` and `delegate(uint256[])` check whether the lock has expired at the next checkpoint (`isLockExpiredAtNextCheckpoint`).
 - `withdraw` checks whether the lock has expired at the current time (`isLockCurrentlyExpired`).
 
-As a result, a lock cannot be changed, delegated or withdrawn during the last week before it ends. For example, if a lock ends on a Thursday at 00:00 UTC, the next checkpoint during the seven days before that time is the end itself. So the lock already counts as expired for changes and delegation, but `withdraw` still reverts. The owner can withdraw from the end time onward.
+As a result, a lock cannot be changed, delegated by token ID, or withdrawn during the last week before it ends. For example, if a lock ends on a Thursday at 00:00 UTC, the next checkpoint during the seven days before that time is the end itself. So the lock already counts as expired for changes and delegation, but `withdraw` still reverts. The owner can withdraw from the end time onward.
 
 `withdraw(tokenId)` has these rules:
 
@@ -263,10 +265,10 @@ Undelegated locks still count in `getPastTotalSupply`, which returns the escrow'
 
 ### What Polaris changed
 
-1. Delegate history points are recorded at the next checkpoint (section 2). Aragon records them at `block.timestamp`. The adapter computes each lock's voting power at the next checkpoint, using `elapsed = nextCheckpoint − virtualStart`.
+1. Delegate history points are recorded at the _next_ checkpoint (section 2). Aragon records them at `block.timestamp`. The adapter computes each lock's voting power at the next checkpoint, using `elapsed = nextCheckpoint − virtualStart`.
 2. A delegate's voting power falls as their delegated locks decrease. Each delegated lock adds a slope change at its end time, in the same way as the curve's global history.
 3. When a delegated lock changes, the delegate's voting power is updated. `DelegationHelper.updateDelegateVotes` is new. The escrow calls it from `increaseAmount`, `increaseUnlockTime`, `lockPermanent` and `unlockPermanent`. If the lock is delegated, the delegate's history removes the old lock and adds the changed one.
-4. Expired locks cannot be delegated. `_delegate` reverts with `LockExpired` for any lock that has expired at the next checkpoint. This applies to `delegate(uint256[])`. It also applies to `delegate(address)`, because that function delegates every lock the caller owns.
+4. `delegate(uint256[])` reverts with `LockExpired` for a lock that has expired at the next checkpoint. `delegate(address)` does not check expiry. It delegates every lock the caller owns, and an expired lock adds zero voting power.
 5. Each delegate's history uses the same 255-week loop as the curve, and the same single linear step for any remaining time. `initialize` requires `maxTime ≤ 255 × checkpointInterval`.
 
 ### TokenVoting settings
@@ -357,7 +359,7 @@ The DAO is Polaris's Stewardship. The Polaris core contracts use the DAO's addre
 | Parameter | Value |
 |---|---|
 | Locked token | POLAR |
-| `minDeposit` | 1 wei |
+| `minDeposit` | 1 wei. Deposits are rounded down first, so the smallest lock is 125,798,400 wei. |
 | `maxTime` | 208 weeks |
 | Checkpoint interval | 1 week |
 | Epoch | 2 weeks |
@@ -375,7 +377,7 @@ The deploy script grants these permissions:
 
 During deployment, the deployer holds some admin roles, for example to link the contracts and to enable lock transfers. It revokes them afterwards. The script then checks that neither the deployer nor the DAO holds any of these:
 
-- `ROOT_PERMISSION` and `UPGRADE_DAO_PERMISSION` on the DAO
+- `ROOT_PERMISSION`, `UPGRADE_DAO_PERMISSION`, `SET_METADATA_PERMISSION`, `SET_TRUSTED_FORWARDER_PERMISSION`, `REGISTER_STANDARD_CALLBACK_PERMISSION` and `VALIDATE_SIGNATURE_PERMISSION` on the DAO
 - `ESCROW_ADMIN_ROLE`, `PAUSER_ROLE` and `SWEEPER_ROLE` on the escrow
 - `CURVE_ADMIN_ROLE` on the curve
 - `DELEGATION_ADMIN_ROLE` on the adapter
