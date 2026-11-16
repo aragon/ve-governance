@@ -44,7 +44,7 @@ Polaris's changes are on the `develop-polaris` branch. This branch was created f
 | `CurveConstantLib` | [src/libs/CurveConstantLibDecreasing.sol](src/libs/CurveConstantLibDecreasing.sol) | New | Library, used at deployment |
 | `RewardsDistributor` | [src/rewards/RewardsDistributor.sol](src/rewards/RewardsDistributor.sol) | New | Regular contract, one per Polaris branch |
 | `RewardsClaimAggregator` | [src/rewards/RewardsClaimAggregator.sol](src/rewards/RewardsClaimAggregator.sol) | New | Regular contract |
-| `TokenVoting` | Aragon's token-voting plugin | Unchanged | Proxy (UUPS) |
+| `TokenVoting` | Polaris's fork of Aragon's token-voting plugin | Modified: adds a maximum proposal duration | Proxy (UUPS) |
 
 Section 8 explains why none of the proxies can be upgraded after deployment.
 
@@ -273,15 +273,16 @@ Undelegated locks still count in `getPastTotalSupply`, which returns the escrow'
 
 ### TokenVoting settings
 
-Polaris uses Aragon's token-voting plugin without changes, with the adapter as its voting token. The settings are in `src/Constants.sol` in the Polaris repository:
+Polaris uses its fork of Aragon's token-voting plugin, with the adapter as its voting token. The fork adds a maximum proposal duration. The settings are in `script/launch/*.json` in the Polaris repository, with one file per network. The table shows the values in `mainnet.json`:
 
 | Setting | Value |
 |---|---|
 | Voting mode | Standard |
 | Support threshold | 50% |
-| Minimum participation | 10% |
+| Minimum participation | 4% |
 | Minimum duration | 1 week |
-| Minimum voting power to create a proposal | 1,000 |
+| Maximum duration | 4 weeks |
+| Minimum voting power to create a proposal | 10,000 |
 | Minimum approvals | 0 |
 
 Anyone can execute a proposal that has passed. Only accounts with the minimum voting power above can create proposals. This is checked by a `VotingPowerCondition`.
