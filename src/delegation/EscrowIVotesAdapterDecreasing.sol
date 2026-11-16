@@ -187,10 +187,25 @@ contract EscrowIVotesAdapterDecreasing is
         delegatees_[sender] = _delegatee;
 
         if (!autoDelegationDisabled(sender) && _delegatee != address(0) && ownedTokenLength != 0) {
-            uint256[] memory nonExpiredTokenIds = _getNonExpiredTokens(tokenIds);
+            bool[] memory isExpired = new bool[](ownedTokenLength);
+            uint256 nonExpiredCount;
+            for (uint256 i = 0; i < ownedTokenLength; ++i) {
+                isExpired[i] = IVotingEscrow(escrow).isLockExpiredAtNextCheckpoint(tokenIds[i]);
+                if (!isExpired[i]) {
+                    nonExpiredCount++;
+                }
+            }
+
             // If every owned token is expired, there is nothing to delegate. Don't revert, so that
             // the sender can still set a delegatee, in the same way as a sender with no tokens.
-            if (nonExpiredTokenIds.length != 0) {
+            if (nonExpiredCount != 0) {
+                uint256[] memory nonExpiredTokenIds = new uint256[](nonExpiredCount);
+                uint256 j;
+                for (uint256 i = 0; i < ownedTokenLength; ++i) {
+                    if (!isExpired[i]) {
+                        nonExpiredTokenIds[j++] = tokenIds[i];
+                    }
+                }
                 _delegate(sender, _delegatee, nonExpiredTokenIds, false);
             }
         }
@@ -336,30 +351,6 @@ contract EscrowIVotesAdapterDecreasing is
         }
 
         return delegatedTokenIds;
-    }
-
-    /// @notice It returns the tokens from `_tokenIds` that are not expired at the next checkpoint.
-    function _getNonExpiredTokens(
-        uint256[] memory _tokenIds
-    ) internal view virtual returns (uint256[] memory nonExpiredTokenIds) {
-        bool[] memory isExpired = new bool[](_tokenIds.length);
-        uint256 count;
-
-        for (uint256 i = 0; i < _tokenIds.length; ++i) {
-            isExpired[i] = IVotingEscrow(escrow).isLockExpiredAtNextCheckpoint(_tokenIds[i]);
-            if (!isExpired[i]) {
-                count++;
-            }
-        }
-
-        nonExpiredTokenIds = new uint256[](count);
-        uint256 j;
-
-        for (uint256 i = 0; i < _tokenIds.length; ++i) {
-            if (!isExpired[i]) {
-                nonExpiredTokenIds[j++] = _tokenIds[i];
-            }
-        }
     }
 
     /// @notice Whether an `account` has disabled auto delegation or not.
