@@ -167,6 +167,7 @@ contract EscrowIVotesAdapterDecreasing is
 
     /// @dev Undelegates currently delegated tokens from the current delegatee
     ///      and delegates all owned tokens by the sender to the new delegatee.
+    ///      Tokens that are expired at the next checkpoint are skipped and stay undelegated.
     /// @param _delegatee The new delegatee address.
     // TODO: auth(DELEGATION_TOKEN_ROLE) ?
     function delegate(address _delegatee) public virtual whenNotPaused {
@@ -186,7 +187,12 @@ contract EscrowIVotesAdapterDecreasing is
         delegatees_[sender] = _delegatee;
 
         if (!autoDelegationDisabled(sender) && _delegatee != address(0) && ownedTokenLength != 0) {
-            _delegate(sender, _delegatee, tokenIds, false);
+            uint256[] memory nonExpiredTokenIds = _getNonExpiredTokens(tokenIds);
+            // If every owned token is expired, there is nothing to delegate. Don't revert, so that
+            // the sender can still set a delegatee, in the same way as a sender with no tokens.
+            if (nonExpiredTokenIds.length != 0) {
+                _delegate(sender, _delegatee, nonExpiredTokenIds, false);
+            }
         }
 
         emit DelegateChanged(sender, currentDelegatee, _delegatee);
@@ -218,7 +224,8 @@ contract EscrowIVotesAdapterDecreasing is
     /// @param _delegatee The new delegatee address to which `_tokenIds` will be delegated.
     /// @param _tokenIds The array of token ids. Note that it's caller's responsibility to not
     ///                  call this function for empty list of `_tokenIds`.
-    /// @param _validate The boolean flag of whether to validate that token ids are owned by the `_sender` or not.
+    /// @param _validate The boolean flag of whether to validate that token ids are owned by the `_sender`,
+    ///                  not yet delegated and not expired, or not.
     ///                  In some cases, validation is not needed as caller already knows that there's no need.
     function _delegate(
         address _sender,
@@ -241,11 +248,11 @@ contract EscrowIVotesAdapterDecreasing is
                 if (tokenIsDelegated(tokenId)) {
                     revert TokenAlreadyDelegated(tokenId);
                 }
-            }
 
-            // Ensure that lock is not expired
-            if (IVotingEscrow(escrow).isLockExpiredAtNextCheckpoint(tokenId)) {
-                revert LockExpired(tokenId);
+                // Ensure that lock is not expired
+                if (IVotingEscrow(escrow).isLockExpiredAtNextCheckpoint(tokenId)) {
+                    revert LockExpired(tokenId);
+                }
             }
 
             _setDelegated(tokenId, true);
@@ -329,6 +336,30 @@ contract EscrowIVotesAdapterDecreasing is
         }
 
         return delegatedTokenIds;
+    }
+
+    /// @notice It returns the tokens from `_tokenIds` that are not expired at the next checkpoint.
+    function _getNonExpiredTokens(
+        uint256[] memory _tokenIds
+    ) internal view virtual returns (uint256[] memory nonExpiredTokenIds) {
+        bool[] memory isExpired = new bool[](_tokenIds.length);
+        uint256 count;
+
+        for (uint256 i = 0; i < _tokenIds.length; ++i) {
+            isExpired[i] = IVotingEscrow(escrow).isLockExpiredAtNextCheckpoint(_tokenIds[i]);
+            if (!isExpired[i]) {
+                count++;
+            }
+        }
+
+        nonExpiredTokenIds = new uint256[](count);
+        uint256 j;
+
+        for (uint256 i = 0; i < _tokenIds.length; ++i) {
+            if (!isExpired[i]) {
+                nonExpiredTokenIds[j++] = _tokenIds[i];
+            }
+        }
     }
 
     /// @notice Whether an `account` has disabled auto delegation or not.

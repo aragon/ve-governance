@@ -269,7 +269,7 @@ Undelegated locks still count in `getPastTotalSupply`, which returns the escrow'
 1. Delegate history points are recorded at the _next_ checkpoint (section 2). Aragon records them at `block.timestamp`. The adapter computes each lock's voting power at the next checkpoint, using `elapsed = nextCheckpoint − virtualStart`.
 2. A delegate's voting power falls as their delegated locks decrease. Each delegated lock adds a slope change at its end time, in the same way as the curve's global history.
 3. When a delegated lock changes, the delegate's voting power is updated. `DelegationHelper.updateDelegateVotes` is new. The escrow calls it from `increaseAmount`, `increaseUnlockTime`, `lockPermanent` and `unlockPermanent`. If the lock is delegated, the delegate's history removes the old lock and adds the changed one.
-4. `delegate(uint256[])` reverts with `LockExpired` for a lock that has expired at the next checkpoint. `delegate(address)` does not check expiry. It delegates every lock the caller owns, and an expired lock adds zero voting power.
+4. `delegate(uint256[])` reverts with `LockExpired` for a lock that has expired at the next checkpoint. `delegate(address)` leaves out locks that have expired at the next checkpoint. They stay undelegated.
 5. Each delegate's history uses the same 255-week loop as the curve, and the same single linear step for any remaining time. `initialize` requires `maxTime ≤ 255 × checkpointInterval`.
 
 ### TokenVoting settings
@@ -514,7 +514,7 @@ No fix is planned. No voting power is created or lost, and the lock is counted o
 
 ### G6 - `delegate(address)` can run out of gas if the caller owns many locks
 
-`delegate(address)` processes every lock the caller owns in one transaction. It lists them with `ownedTokens`, undelegates the ones that are delegated, and then delegates all of them to the new delegate. Its gas cost therefore grows O(N) with the number of locks.
+`delegate(address)` processes every lock the caller owns in one transaction. It lists them with `ownedTokens`, undelegates the ones that are delegated, and then delegates the ones that have not expired to the new delegate. Its gas cost therefore grows O(N) with the number of locks.
 
 Anyone can create a lock for any address with `createLockFor` (section 4), and the smallest lock is 125,798,400 wei. The tokens needed are negligible, so the main cost of creating a lock for someone else is the gas for each `createLockFor` call.
 

@@ -221,8 +221,6 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
         address newDelegatee = _getDelegatee(_delegateeSeed);
         address currentDelegatee = ivotesAdapter.delegates(msgSender);
 
-        _assumeNonExpired(msgSender);
-
         _transitionIfTooOld(newDelegatee);
         _transitionIfTooOld(currentDelegatee);
 
@@ -233,8 +231,10 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
         // stops there, so snapshot the delegated ones before the call.
         bool autoDelegationOff = ivotesAdapter.autoDelegationDisabled(msgSender);
         bool[] memory wasDelegated = new bool[](tokens.length);
+        bool[] memory isExpired = new bool[](tokens.length);
         for (uint256 i = 0; i < tokens.length; i++) {
             wasDelegated[i] = ivotesAdapter.tokenIsDelegated(tokens[i]);
+            isExpired[i] = escrow.isLockExpiredAtNextCheckpoint(tokens[i]);
         }
 
         vm.prank(msgSender);
@@ -245,7 +245,8 @@ contract DelegationHandler is StdUtils, StdCheats, CommonBase {
             if (wasDelegated[i] && currentDelegatee != address(0)) {
                 _updateDelegationState(tokens[i], msgSender, Action.REMOVE, currentDelegatee);
             }
-            if (!autoDelegationOff && newDelegatee != address(0)) {
+            // `delegate(address)` skips tokens that are expired at the next checkpoint
+            if (!autoDelegationOff && newDelegatee != address(0) && !isExpired[i]) {
                 _updateDelegationState(tokens[i], msgSender, Action.ADD, newDelegatee);
             }
         }
