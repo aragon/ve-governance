@@ -161,14 +161,14 @@ contract LinearDecreasingCurve is
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Returns the bias for the given time elapsed and amount, up to the maximum time
+     @dev Returned value is in fixed point representation.
     function getBias(uint256 timeElapsed, uint256 amount) external view returns (uint256) {
         int256[2] memory coefficients = _getCoefficients(getFlooredAmount(amount));
         return _getBias(timeElapsed, coefficients[0], coefficients[1]);
     }
 
     /// @notice Returns the bias for the given time elapsed and amount, up to the maximum time
-    /// @dev Returned values from these functions are in fixed point representation
-    ///    which is not the case in `getBias`.
+    /// @dev Returned values from these functions are in fixed point representation.
     function _getBias(
         uint256 _timeElapsed,
         int256 _constantCoeff,

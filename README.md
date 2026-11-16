@@ -24,6 +24,7 @@ The main changes are:
 7. [Lock NFT artwork](#7-lock-nft-artwork)
 8. [Deployment and permissions](#8-deployment-and-permissions)
 9. [Development](#9-development)
+10. [Known issues](#10-known-issues)
 
 ---
 
@@ -432,3 +433,145 @@ These commands do not run the fork test in `test/v1_4_0_decreasing/fork`.
 
 - Aragon's [upstream README](https://github.com/aragon/ve-governance/blob/develop/README.md) covers the original contracts, the factory and Aragon's deployment process.
 - Aragon's [curve design notes](https://github.com/jordaniza/ve-explainer/blob/main/README.md) explain the general approach to escrow curves.
+
+---
+
+## 10. Known issues
+
+This section lists known issues in Polaris's ve-governance contracts. 
+
+### G1 - Withdrawing or merging a lock loses its unclaimed rewards
+
+Each `RewardsDistributor` pays rewards per lock. A holder claims them with `claim(tokenId)`, which checks that the caller owns the lock or is approved for it.
+
+`withdraw` and `merge` burn a lock NFT, and neither claims its rewards first. After the burn, the distributor can no longer pay that lock's rewards:
+
+- `claimable` returns 0, because the lock's amount is now zero.
+- `claim` reverts, because the NFT no longer exists, so nobody owns it or is approved for it.
+
+Example: Alice's lock earns rewards every week, but she has not claimed for six months. Her lock expires and she calls `withdraw`. She receives her POLAR, but her six months of debt asset rewards stay in each distributor permanently. The same happens to the `from` lock when she merges it into another lock. The distributor has no function to recover these funds.
+
+#### Solution
+
+No contract fix is planned. A fix would need `withdraw` and `merge` to claim from every distributor before burning the lock. A revert in any distributor would then block users from withdrawing their POLAR. A single claim also covers at most 52 weeks.
+
+Instead, the front-end should claim all of a lock's rewards before it lets the user withdraw or merge that lock, for example with `RewardsClaimAggregator`. The merge case is also noted in a warning at the top of [RewardsDistributor.sol](src/rewards/RewardsDistributor.sol).
+
+### G2 - A lock NFT sent to the escrow cannot be recovered
+
+Lock NFT transfers are enabled for every address (section 8). If a holder sends their lock NFT to the escrow's address with `transferFrom`, the transfer succeeds. The escrow then owns the lock, so the holder can no longer withdraw, delegate or transfer it.
+
+Only `sweepNFT` can move an NFT out of the escrow, and it requires `SWEEPER_ROLE`. Nobody holds that role, and nobody can grant it (section 8). The lock and its POLAR are therefore lost.
+
+`safeTransferFrom` to the escrow reverts, because the escrow does not implement `onERC721Received`.
+
+#### Solution
+
+No fix is planned. This issue occurs by user mistake. The Polaris core NFTs behave in the same way. For example, a CDP NFT sent to the CDP manager with `transferFrom` is also lost. The ve-governance contracts follow the same approach for consistency, and it is up to users to carefully check the recipient address of their transfer.
+
+### G3 - Rewards for weeks with zero total voting power are lost
+
+The distributor assigns each reward payment to one or more weeks (section 6). When a lock claims, the distributor skips any week in which the total voting power at the start of the week was zero. Rewards assigned to such a week are never paid to anyone, and stay in the distributor.
+
+This can happen in the distributor's first week. Its first reward week is the week in which it is deployed, which started at the previous checkpoint. Locks created during that week only count from the next checkpoint (section 2). So unless some lock already counted at the start of that week, the total voting power for that week is zero.
+
+For example, the distributors are deployed on a Monday, and the first CDPs are opened on the same day. Interest paid on the Tuesday is assigned to the week that started on the previous Thursday. Total voting power at that Thursday was zero, so the interest is lost.
+
+The same can happen in any later week with zero total voting power. That requires every lock to have ended before the start of the week.
+
+#### Solution
+
+No contract fix is planned. Only interest paid during the deployment week is at risk, and the amount should be small. A fix would change `checkpointToken`, which runs inside every CDP operation that pays interest, so a mistake there would block those operations.
+
+The contract also has a general warning that rewards are lost in weeks with zero total supply.
+
+### G4 - In its final week, a lock can be neither changed nor withdrawn
+
+The escrow checks whether a lock has expired at two different times (section 4). Changes and delegation by token ID check at the next checkpoint. `withdraw` checks at the current time. During the last week before a lock ends, the next checkpoint is the lock's end. So in that week:
+
+- `increaseAmount`, `increaseUnlockTime`, `lockPermanent` and `delegate(uint256[])` revert, because the lock counts as expired at the next checkpoint.
+- `withdraw` reverts, because the lock has not yet expired at the current time.
+
+For example, Alice's lock ends on a Thursday at 00:00 UTC. On the Monday before, she tries to extend it, and the call reverts. She must wait until the Thursday, withdraw, and create a new lock. If she creates it after 00:00 UTC that Thursday, it only counts from the following Thursday. She then has no voting power, and earns no rewards, for that week.
+
+#### Solution
+
+No fix is planned. The holder loses at most about one week of voting power and rewards, and no funds. Allowing changes in the final week would change how the curve handles a lock at its end, where the old lock's slope change and the new point fall on the same checkpoint.
+
+To avoid the gap, a user should extend their lock before its final week.
+
+### G5 - The auto-delegation opt-out does not apply to new or received locks
+
+`setAutoDelegationDisabled(true)` only changes the behaviour of `delegate(address)`. That function then sets the caller's delegate without delegating their locks. The opt-out does not affect locks that arrive later. When a user who has a delegate creates a lock, receives one by transfer, or receives one through `createLockFor`, the adapter delegates it to their current delegate.
+
+For example, Alice delegates to Bob. She then calls `setAutoDelegationDisabled(true)`, because she wants to choose which locks Bob gets. Someone creates a lock for her with `createLockFor`. The new lock is delegated to Bob, and from the next checkpoint Bob can vote with it.
+
+This is Aragon's behaviour. Aragon's spec describes the opt-out only for the moment a delegate is set.
+
+#### Solution
+
+No fix is planned. No voting power is created or lost, and the lock is counted only once. Alice can undo the delegation with `undelegate([tokenId])`, which every address can call for its own locks.
+
+### G6 - `delegate(address)` can run out of gas if the caller owns many locks
+
+`delegate(address)` processes every lock the caller owns in one transaction. It lists them with `ownedTokens`, undelegates the ones that are delegated, and then delegates all of them to the new delegate. Its gas cost therefore grows O(N) with the number of locks.
+
+Anyone can create a lock for any address with `createLockFor` (section 4), and the smallest lock is 125,798,400 wei. The tokens needed are negligible, so the main cost of creating a lock for someone else is the gas for each `createLockFor` call.
+
+For example, Alice has delegated to Bob. An attacker creates a large number of tiny locks for her, and each one is delegated to Bob automatically (G5). Alice now wants to delegate to Carol instead, but `delegate(carol)` needs more gas than a block allows.
+
+#### Solution
+
+No fix is planned. No funds are at risk, and the attacker gains nothing.
+
+Alice can still change her delegate in batches, as described in the NatSpec of `setDelegateAddress`:
+
+1. Call `undelegate(uint256[])` in batches until none of her locks is delegated.
+2. Call `setDelegateAddress(carol)`. This only changes the delegate, and it requires that none of her locks is delegated.
+3. Call `delegate(uint256[])` in batches. Expired locks must be left out, because `delegate(uint256[])` reverts for them (section 5).
+
+### G7 - `getPastVotes` and `getPastTotalSupply` accept current and future timestamps
+
+ERC-5805 says that `getPastVotes` and `getPastTotalSupply` should revert for a timestamp at or after the current time. The adapter does not revert. It returns the value that its current history gives for that time.
+
+Only values for times before the current time are final (section 2). A change made now is recorded at the next checkpoint, so it can still change the value at a later time.
+
+For example, Alice's lock is delegated to A, and has 100 voting power at time `T`, two weeks from now. A contract reads `getPastVotes(A, T)` and records 100. Alice then changes her delegate to B. The change is recorded at the next checkpoint, which is before `T`. The contract reads `getPastVotes(B, T)` and records 100 again. It has now counted 200 voting power from a lock that has 100.
+
+No Polaris contract reads these times. TokenVoting reads at `block.timestamp - 1`. The `RewardsDistributor` reads voting power from the escrow, not from the adapter, and only for weeks that have ended. So only external readers are affected.
+
+#### Solution
+
+No fix is planned. A revert would break `AddressGaugeVoterDecreasing`, which reads `getPastVotes` at `nextCheckpointTs()`. Polaris does not deploy that contract (section 1), but it is part of this repository.
+
+External readers should only read times before the current time.
+
+### G8 - `checkpointToken` runs inside CDP operations
+
+Every CDP operation that pays interest calls the branch's `PrimaryInterestRouter`, which calls `checkpointToken` on the branch's distributor in the same transaction (section 6). This has two effects on CDP users.
+
+First, if `checkpointToken` ever reverted, those CDP operations would revert too. The distributor cannot be changed after deployment (section 6).
+
+Second, the gas cost of `checkpointToken` grows with the number of weeks since the previous payment. It writes one new storage entry for each of those weeks, up to 208. For example, if no interest is paid for 208 weeks, the next CDP operation that pays interest writes 208 entries. Each write to a new storage slot costs about 22,100 gas, so that operation costs about 4.6 million extra gas.
+
+#### Solution
+
+No fix is planned. No path was found in which `checkpointToken` reverts with the contracts Polaris deploys:
+
+- Only the router can call it, and the distributor's `rewardsSender` cannot be changed.
+- `checkpointToken` subtracts its recorded balance from its actual balance. The debt asset can only leave the distributor through claims, which also reduce the recorded balance. So this subtraction cannot underflow.
+- The loop is capped at 208 weeks, so its gas cost stays well below the block gas limit.
+
+A gap of 208 weeks would need four years in which the branch pays no interest at all.
+
+Any change to the Polaris core contracts before deployment must keep `checkpointToken` from reverting.
+
+### G9 - The curve's `getBias` returns voting power multiplied by 1e18
+
+`LinearDecreasingCurve.getBias(timeElapsed, amount)` returns the curve's internal fixed-point value, which is 1e18 times the voting power. The other voting power functions, such as `votingPowerAt`, divide by 1e18 before they return. The interface describes `getBias` as "the token's voting weight". Aragon's increasing curves do divide by 1e18 in `getBias`.
+
+For example, for a new lock of 100 POLAR (100e18 wei), `votingPowerAt` returns 100e18 at the lock's start, but `getBias(0, 100e18)` returns 100e36.
+
+#### Solution
+
+No fix is planned. No Polaris contract calls `getBias`. A reader that uses it should divide the result by 1e18, or use `votingPowerAt` instead.
